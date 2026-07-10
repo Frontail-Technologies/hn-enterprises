@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+/* =====================================================
+   Build Pro — Global Design System
+   All color changes must happen here only.
+   Components use semantic class names (bg-primary,
+   text-muted-foreground, etc.) — never raw color values.
+   ===================================================== */
+
+/* -------------------------------------------------------
+   @theme inline — maps CSS variables → Tailwind classes
+   e.g. --color-primary → bg-primary, text-primary, etc.
+   ------------------------------------------------------- */
+@theme inline {
+  /* Typography */
+  --font-sans: var(--font-inter, system-ui, sans-serif);
+
+  /* Core semantic colors */
+  --color-background:          var(--background);
+  --color-foreground:          var(--foreground);
+  --color-card:                var(--card);
+  --color-card-foreground:     var(--card-foreground);
+  --color-popover:             var(--popover);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-primary:             var(--primary);
+  --color-primary-foreground:  var(--primary-foreground);
+  --color-secondary:           var(--secondary);
+  --color-secondary-foreground:var(--secondary-foreground);
+  --color-muted:               var(--muted);
+  --color-muted-foreground:    var(--muted-foreground);
+  --color-accent:              var(--accent);
+  --color-accent-foreground:   var(--accent-foreground);
+  --color-destructive:         var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:              var(--border);
+  --color-input:               var(--input);
+  --color-ring:                var(--ring);
+
+  /* Status semantic colors — for StatusBadge */
+  --color-status-success:      var(--status-success);
+  --color-status-success-fg:   var(--status-success-foreground);
+  --color-status-success-bg:   var(--status-success-bg);
+  --color-status-warning:      var(--status-warning);
+  --color-status-warning-fg:   var(--status-warning-foreground);
+  --color-status-warning-bg:   var(--status-warning-bg);
+  --color-status-info:         var(--status-info);
+  --color-status-info-fg:      var(--status-info-foreground);
+  --color-status-info-bg:      var(--status-info-bg);
+  --color-status-purple:       var(--status-purple);
+  --color-status-purple-fg:    var(--status-purple-foreground);
+  --color-status-purple-bg:    var(--status-purple-bg);
+
+  /* Sidebar dimensions (not colors, but layout tokens) */
+  --sidebar-width:             240px;
+  --sidebar-collapsed-width:   64px;
+
+  /* Border radius scale */
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+}
+
+/* -------------------------------------------------------
+   :root — Token Definitions
+   This is the ONLY place to change the brand colors.
+   Changing --primary here changes every component.
+   ------------------------------------------------------- */
+:root {
+  /* === Backgrounds === */
+  --background:           oklch(0.978 0.003 247.86);   /* page bg (slate-50) */
+  --foreground:           oklch(0.208 0.042 265.755);  /* primary text (slate-900) */
+
+  /* === Card / Popover === */
+  --card:                 oklch(1 0 0);                /* white */
+  --card-foreground:      oklch(0.208 0.042 265.755);
+  --popover:              oklch(1 0 0);
+  --popover-foreground:   oklch(0.208 0.042 265.755);
+
+  /* === Primary Brand Color — CHANGE THIS TO RETHEME ===
+     Currently: orange-500
+     To change theme: replace these two values only.   */
+  --primary:              oklch(0.705 0.213 47.604);   /* orange-500 */
+  --primary-foreground:   oklch(1 0 0);                /* white */
+
+  /* === Secondary === */
+  --secondary:            oklch(0.968 0.007 247.896);  /* slate-100 */
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+
+  /* === Muted / Subtle === */
+  --muted:                oklch(0.968 0.007 247.896);  /* slate-100 */
+  --muted-foreground:     oklch(0.554 0.046 257.417);  /* slate-500 */
+
+  /* === Accent — light tint of primary for hover states === */
+  --accent:               oklch(0.98 0.018 73.684);    /* orange-50 */
+  --accent-foreground:    oklch(0.553 0.195 38.402);   /* orange-700 */
+
+  /* === Destructive / Error === */
+  --destructive:          oklch(0.577 0.245 27.325);   /* red-600 */
+  --destructive-foreground: oklch(1 0 0);
+
+  /* === Border / Input / Ring === */
+  --border:               oklch(0.929 0.013 255.508);  /* slate-200 */
+  --input:                oklch(0.929 0.013 255.508);
+  --ring:                 oklch(0.705 0.213 47.604);   /* matches primary */
+
+  /* === Border Radius === */
+  --radius: 0.5rem;
+
+  /* =======================================================
+     Status Semantic Colors
+     Define status-specific tokens here so StatusBadge
+     components never reference a hardcoded color.
+     ======================================================= */
+
+  /* Success — green */
+  --status-success:            oklch(0.527 0.154 150.069);  /* green-600 */
+  --status-success-foreground: oklch(0.452 0.124 151.328);  /* green-700 */
+  --status-success-bg:         oklch(0.982 0.018 155.826);  /* green-50 */
+
+  /* Warning — amber */
+  --status-warning:            oklch(0.666 0.179 58.318);   /* amber-600 */
+  --status-warning-foreground: oklch(0.555 0.163 48.998);   /* amber-700 */
+  --status-warning-bg:         oklch(0.987 0.022 95.277);   /* amber-50 */
+
+  /* Info — blue */
+  --status-info:               oklch(0.546 0.245 262.881);  /* blue-600 */
+  --status-info-foreground:    oklch(0.424 0.199 265.638);  /* blue-800 */
+  --status-info-bg:            oklch(0.97 0.014 254.604);   /* blue-50 */
+
+  /* Purple — for "Sent Back" */
+  --status-purple:             oklch(0.558 0.288 302.321);  /* purple-600 */
+  --status-purple-foreground:  oklch(0.452 0.241 302.717);  /* purple-700 */
+  --status-purple-bg:          oklch(0.977 0.014 308.299);  /* purple-50 */
+}
+
+/* -------------------------------------------------------
+   Base Styles
+   ------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* -------------------------------------------------------
+   Custom Scrollbar
+   ------------------------------------------------------- */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* -------------------------------------------------------
+   Focus ring — uses --ring (= primary color)
+   ------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
