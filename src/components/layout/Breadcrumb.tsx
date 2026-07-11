@@ -2,34 +2,9 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { CaretRight } from '@phosphor-icons/react'
+import { CaretRightIcon as CaretRight } from '@phosphor-icons/react'
 
-const ROUTE_LABELS: Record<string, string> = {
-  dashboard: 'Dashboard',
-  projects: 'Projects',
-  customers: 'Customers',
-  surveys: 'Surveys',
-  planning: 'Planning & DPR',
-  'work-progress': 'Work Progress',
-  'gc-uploads': 'GC Uploads',
-  'pre-commissioning': 'Pre-Commissioning',
-  'pressure-observation': 'Testing / Pressure',
-  jmr: 'JMR & Field Reports',
-  reports: 'Reports Center',
-  approvals: 'Approvals',
-  inventory: 'Inventory & Material',
-  billing: 'Billing',
-  payments: 'Payments & Expenses',
-  staff: 'Staff & Resources',
-  documents: 'Documents',
-  users: 'Users & Roles',
-  masters: 'Masters',
-  settings: 'Settings',
-  'audit-logs': 'Audit Logs',
-  new: 'New',
-  edit: 'Edit',
-  profile: 'Profile',
-}
+import { ROUTE_LABELS } from '@/constants/navigation'
 
 export function Breadcrumb() {
   const pathname = usePathname()
@@ -48,7 +23,14 @@ export function Breadcrumb() {
     <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs">
       {crumbs.map((crumb, idx) => (
         <span key={crumb.href} className="flex items-center gap-1">
-          {idx > 0 && <CaretRight size={11} className="text-border" />}
+          {idx > 0 && (
+            <CaretRight
+              aria-hidden="true"
+              size={13}
+              weight="bold"
+              className="shrink-0 text-muted-foreground/70"
+            />
+          )}
           {crumb.isLast ? (
             <span className="text-foreground font-semibold truncate max-w-[200px]">
               {crumb.label}

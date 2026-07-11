@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { House } from '@phosphor-icons/react/dist/ssr'
+import { HouseIcon as House } from '@phosphor-icons/react/dist/ssr'
 import { LoginForm } from '@/features/auth/components/LoginForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 

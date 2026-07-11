@@ -1,12 +1,5 @@
 import { cn } from '@/lib/utils'
 
-/**
- * StatusBadge — all colors come from CSS variables defined in globals.css.
- * Status groups map to semantic token classes, not raw color utilities.
- *
- * To change status colors, update the --status-* variables in globals.css.
- * Components here remain unchanged.
- */
 
 export type StatusValue =
   | 'Draft'
@@ -28,8 +21,7 @@ export type StatusValue =
   | 'Not Workable'
   | 'Partially Workable'
 
-// Maps each status to a semantic group
-// Colors for each group are defined in globals.css as --status-* variables
+
 type StatusGroup = 'success' | 'warning' | 'primary' | 'info' | 'purple' | 'destructive' | 'neutral'
 
 const STATUS_GROUP: Record<StatusValue, StatusGroup> = {
@@ -53,7 +45,7 @@ const STATUS_GROUP: Record<StatusValue, StatusGroup> = {
   'Not Started':       'neutral',
 }
 
-// Tailwind classes that reference CSS variables from globals.css
+
 const GROUP_CLASSES: Record<StatusGroup, string> = {
   success:     'bg-status-success-bg text-status-success-fg border-status-success/20',
   warning:     'bg-status-warning-bg text-status-warning-fg border-status-warning/20',

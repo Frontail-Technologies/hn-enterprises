@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { FolderOpen } from '@phosphor-icons/react/dist/ssr'
+import { FolderOpenIcon as FolderOpen } from '@phosphor-icons/react/dist/ssr'
 
 interface EmptyStateProps {
   icon?: React.ReactNode

@@ -1,18 +1,26 @@
 'use client'
 
+import { useState } from 'react'
 import {
-  SquaresFour, Buildings, Users, ClipboardText, CalendarBlank, ChartBar,
-  FolderOpen, Wrench, Gauge, FileText, ChartPieSlice, CheckSquare, Package,
-  Receipt, CurrencyInr, UsersThree, Folder, UserGear, Database, Gear,
-  ClockCounterClockwise, House, SignOut, User, Lock, CaretUpDown,
+  SquaresFourIcon as SquaresFour, BuildingsIcon as Buildings, UsersIcon as Users,
+  ClipboardTextIcon as ClipboardText, CalendarBlankIcon as CalendarBlank,
+  ChartBarIcon as ChartBar, FolderOpenIcon as FolderOpen, WrenchIcon as Wrench,
+  GaugeIcon as Gauge, FileTextIcon as FileText, ChartPieSliceIcon as ChartPieSlice,
+  CheckSquareIcon as CheckSquare, PackageIcon as Package, ReceiptIcon as Receipt,
+  CurrencyInrIcon as CurrencyInr, UsersThreeIcon as UsersThree, FolderIcon as Folder,
+  UserGearIcon as UserGear, DatabaseIcon as Database, GearIcon as Gear,
+  ClockCounterClockwiseIcon as ClockCounterClockwise, HouseIcon as House,
+  SignOutIcon as SignOut, UserIcon as User, LockIcon as Lock,
+  CaretUpDownIcon as CaretUpDown, CaretDownIcon as CaretDown,
 } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { NAV_ITEMS } from '@/constants/navigation'
+import { NAV_ITEMS, NAV_GROUPS } from '@/constants/navigation'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { NavItem } from '@/types/navigation'
+import { NavItem, NavGroup } from '@/types/navigation'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -23,6 +31,12 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FolderOpen, Wrench, Gauge, FileText, ChartPieSlice, CheckSquare, Package,
   Receipt, CurrencyInr, UsersThree, Folder, UserGear, Database, Gear,
   ClockCounterClockwise,
+}
+
+const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
+  operations: true,
+  commercial: true,
+  management: true,
 }
 
 interface SidebarProps {
@@ -36,11 +50,12 @@ function NavLink({ item, collapsed, active }: { item: NavItem; collapsed: boolea
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
+      style={active ? { color: '#fff' } : undefined}
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
         collapsed && 'justify-center px-0',
         active
-          ? 'bg-primary text-primary-foreground shadow-sm'
+          ? 'bg-primary text-white shadow-sm'
           : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
       )}
     >
@@ -48,9 +63,10 @@ function NavLink({ item, collapsed, active }: { item: NavItem; collapsed: boolea
         <IconComponent
           size={20}
           weight={active ? 'fill' : 'regular'}
+          style={active ? { color: '#fff' } : undefined}
           className={cn(
             'shrink-0',
-            active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-accent-foreground'
+            active ? 'text-white' : 'text-muted-foreground group-hover:text-accent-foreground'
           )}
         />
       )}
@@ -66,20 +82,76 @@ function NavLink({ item, collapsed, active }: { item: NavItem; collapsed: boolea
   )
 }
 
+function NavGroupSection({
+  group,
+  collapsed,
+  isOpen,
+  onToggle,
+  isItemActive,
+}: {
+  group: NavGroup
+  collapsed: boolean
+  isOpen: boolean
+  onToggle: () => void
+  isItemActive: (item: NavItem) => boolean
+}) {
+  if (collapsed) {
+    return (
+      <div className="pt-2 mt-2 border-t border-border first:mt-0 first:border-0 first:pt-0 space-y-0.5">
+        {group.items.map((item) => (
+          <NavLink key={item.id} item={item} collapsed active={isItemActive(item)} />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle} className="pt-1">
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none">
+        <span>{group.label}</span>
+        <CaretDown
+          size={12}
+          className={cn('shrink-0 transition-transform duration-200', !isOpen && '-rotate-90')}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="space-y-0.5 pt-0.5 pb-1">
+          {group.items.map((item) => (
+            <NavLink key={item.id} item={item} collapsed={false} active={isItemActive(item)} />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 export function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const router = useRouter()
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(DEFAULT_OPEN_GROUPS)
 
   const handleLogout = () => {
     logout()
     router.push('/login')
   }
 
-  const visibleItems = NAV_ITEMS.filter((item) => {
+  const isAllowed = (item: NavItem) => {
     if (!item.allowedRoles) return true
     return user ? item.allowedRoles.includes(user.role) : false
-  })
+  }
+
+  const isItemActive = (item: NavItem) =>
+    pathname === item.href || pathname.startsWith(item.href + '/')
+
+  const visibleTopItems = NAV_ITEMS.filter(isAllowed)
+  const visibleGroups = NAV_GROUPS
+    .map((group) => ({ ...group, items: group.items.filter(isAllowed) }))
+    .filter((group) => group.items.length > 0)
+
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }))
+  }
 
   const initials = user?.fullName
     .split(' ')
@@ -92,7 +164,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     <aside
       className={cn(
         'fixed top-0 left-0 h-screen bg-card border-r border-border flex flex-col z-40 transition-all duration-300 ease-in-out',
-        collapsed ? 'w-16' : 'w-60'
+        collapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0 w-60'
       )}
     >
       {/* Logo */}
@@ -113,10 +185,20 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
       {/* Nav Items */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-0.5">
-        {visibleItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
-          return <NavLink key={item.id} item={item} collapsed={collapsed} active={active} />
-        })}
+        {visibleTopItems.map((item) => (
+          <NavLink key={item.id} item={item} collapsed={collapsed} active={isItemActive(item)} />
+        ))}
+
+        {visibleGroups.map((group) => (
+          <NavGroupSection
+            key={group.id}
+            group={group}
+            collapsed={collapsed}
+            isOpen={openGroups[group.id] ?? true}
+            onToggle={() => toggleGroup(group.id)}
+            isItemActive={isItemActive}
+          />
+        ))}
       </nav>
 
       {/* User Profile */}

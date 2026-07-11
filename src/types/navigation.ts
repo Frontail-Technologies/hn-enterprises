@@ -9,3 +9,9 @@ export interface NavItem {
   children?: NavItem[]
   allowedRoles?: UserRole[]
 }
+
+export interface NavGroup {
+  id: string
+  label: string
+  items: NavItem[]
+}

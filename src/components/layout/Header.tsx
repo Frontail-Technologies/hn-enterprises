@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, List } from '@phosphor-icons/react'
+import { BellIcon as Bell, ListIcon as List } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Breadcrumb } from './Breadcrumb'

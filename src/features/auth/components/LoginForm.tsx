@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeSlash, Warning } from '@phosphor-icons/react'
+import { EyeIcon as Eye, EyeSlashIcon as EyeSlash, WarningIcon as Warning } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { loginSchema, LoginFormValues } from '@/features/auth/schemas/login.schema'
