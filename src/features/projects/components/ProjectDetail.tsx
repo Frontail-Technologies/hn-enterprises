@@ -16,6 +16,7 @@ import {
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import {
   Dialog,
   DialogContent,
@@ -133,7 +134,7 @@ export function ProjectDetail({ project }: { project: Project }) {
       <Tabs
         defaultValue="overview"
         orientation="vertical"
-        className="grid gap-4 lg:grid-cols-[190px_1fr] lg:items-start"
+        className="grid gap-4 lg:grid-cols-[220px_1fr] lg:items-start"
       >
         <div className="rounded-xl border border-border bg-card p-2 shadow-sm">
           <TabsList
@@ -185,11 +186,11 @@ function ProjectTab({
 }) {
   return (
     <TabsTrigger
-      className="project-detail-tab h-8 w-full cursor-pointer justify-start gap-2 rounded-md border border-transparent bg-accent/35 px-3 font-medium text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-accent-foreground data-active:after:opacity-0"
+      className="project-detail-tab min-h-8 w-full cursor-pointer justify-start gap-2 rounded-md border border-transparent bg-accent/35 px-3 py-1.5 font-medium text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-accent-foreground data-active:after:opacity-0"
       value={value}
     >
       <span className="min-w-4 text-xs font-bold tabular-nums">{index}.</span>
-      <span>{children}</span>
+      <span className="min-w-0 whitespace-normal text-left leading-snug">{children}</span>
     </TabsTrigger>
   );
 }
@@ -270,29 +271,33 @@ function ProjectSites() {
       header: "Actions",
       render: (site) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="View site map"
-            onClick={() => {
-              setSelectedSite(site);
-              setMapOpen(true);
-            }}
-          >
-            <MapPinIcon size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Edit site"
-            onClick={() => {
-              setEditingId(site.id);
-              setDraft(site);
-              setDialogOpen(true);
-            }}
-          >
-            <NotePencilIcon size={14} />
-          </Button>
+          <ActionTooltip label="View Map">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="View site map"
+              onClick={() => {
+                setSelectedSite(site);
+                setMapOpen(true);
+              }}
+            >
+              <MapPinIcon size={14} />
+            </Button>
+          </ActionTooltip>
+          <ActionTooltip label="Edit">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Edit site"
+              onClick={() => {
+                setEditingId(site.id);
+                setDraft(site);
+                setDialogOpen(true);
+              }}
+            >
+              <NotePencilIcon size={14} />
+            </Button>
+          </ActionTooltip>
         </div>
       ),
     },
@@ -501,29 +506,33 @@ function ProjectDocuments() {
         <div className="flex flex-wrap items-center gap-1">
           <ActionButton label="Preview" icon={<EyeIcon size={13} />} />
           <ActionButton label="Download" icon={<DownloadSimpleIcon size={13} />} />
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Edit document"
-            onClick={() => {
-              setEditingId(doc.id);
-              setDraft(doc);
-              setDialogOpen(true);
-            }}
-          >
-            <NotePencilIcon size={13} />
-          </Button>
+          <ActionTooltip label="Edit">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Edit document"
+              onClick={() => {
+                setEditingId(doc.id);
+                setDraft(doc);
+                setDialogOpen(true);
+              }}
+            >
+              <NotePencilIcon size={13} />
+            </Button>
+          </ActionTooltip>
           <ActionButton label="Replace" icon={<UploadSimpleIcon size={13} />} />
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Delete document"
-            onClick={() =>
-              setDocuments((current) => current.filter((item) => item.id !== doc.id))
-            }
-          >
-            <TrashIcon size={13} />
-          </Button>
+          <ActionTooltip label="Delete">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Delete document"
+              onClick={() =>
+                setDocuments((current) => current.filter((item) => item.id !== doc.id))
+              }
+            >
+              <TrashIcon size={13} />
+            </Button>
+          </ActionTooltip>
         </div>
       ),
     },
@@ -619,28 +628,32 @@ function ProjectTeam() {
       header: "Actions",
       render: (user) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Edit assignment"
-            onClick={() => {
-              setEditingId(user.id);
-              setDraft(user);
-              setDialogOpen(true);
-            }}
-          >
-            <NotePencilIcon size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Remove assignment"
-            onClick={() =>
-              setUsers((current) => current.filter((item) => item.id !== user.id))
-            }
-          >
-            <TrashIcon size={14} />
-          </Button>
+          <ActionTooltip label="Edit">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Edit assignment"
+              onClick={() => {
+                setEditingId(user.id);
+                setDraft(user);
+                setDialogOpen(true);
+              }}
+            >
+              <NotePencilIcon size={14} />
+            </Button>
+          </ActionTooltip>
+          <ActionTooltip label="Remove">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Remove assignment"
+              onClick={() =>
+                setUsers((current) => current.filter((item) => item.id !== user.id))
+              }
+            >
+              <TrashIcon size={14} />
+            </Button>
+          </ActionTooltip>
         </div>
       ),
     },
@@ -1066,10 +1079,11 @@ function InfoGrid({ items }: { items: string[][] }) {
 
 function ActionButton({ label, icon }: { label: string; icon: React.ReactNode }) {
   return (
-    <Button variant="ghost" size="xs">
-      {icon}
-      {label}
-    </Button>
+    <ActionTooltip label={label}>
+      <Button variant="ghost" size="icon-xs" aria-label={label}>
+        {icon}
+      </Button>
+    </ActionTooltip>
   );
 }
 

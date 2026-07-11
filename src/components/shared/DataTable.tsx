@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { LoadingSpinner } from './LoadingSpinner'
-import { EmptyState } from './EmptyState'
+import { TableEmptyRow } from './TableEmptyRow'
 
 export interface ColumnDef<T> {
   key: string
@@ -42,14 +42,11 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
-  if (!data.length) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />
-  }
-
   const striped = variant === 'striped'
+  const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0)
 
   return (
-    <div className={cn('rounded-xl overflow-hidden bg-card border [&_tbody_svg]:text-primary', striped ? 'border-border/60' : 'border-border')}>
+    <div className={cn('w-full overflow-x-auto rounded-xl bg-card border [&_tbody_svg]:text-primary', striped ? 'border-border/60' : 'border-border')}>
       <Table>
         <TableHeader>
           <TableRow className={cn('hover:bg-transparent border-b', striped ? 'border-border/70 bg-muted/80' : 'border-border bg-muted/70')}>
@@ -66,7 +63,7 @@ export function DataTable<T extends { id: string }>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row, index) => (
+          {data.length ? data.map((row, index) => (
             <TableRow
               key={row.id}
               className={cn(
@@ -87,7 +84,13 @@ export function DataTable<T extends { id: string }>({
                 </TableCell>
               ))}
             </TableRow>
-          ))}
+          )) : (
+            <TableEmptyRow
+              colSpan={visibleColumnCount}
+              title={emptyTitle}
+              description={emptyDescription}
+            />
+          )}
         </TableBody>
       </Table>
     </div>
@@ -96,6 +99,7 @@ export function DataTable<T extends { id: string }>({
 
 function renderCellValue<T extends { id: string }>(row: T, key: string) {
   const value = row[key as keyof T]
-  if (value == null) return null
-  return String(value)
+  if (value == null) return '-'
+  const text = String(value).trim()
+  return text || '-'
 }

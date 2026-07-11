@@ -43,15 +43,19 @@ export function FilterBar({ filters, values, onChange, onReset, searchKey, searc
       )}
       {filters.map((f) => (
         <Select key={f.key} value={values[f.key] ?? 'all'} onValueChange={(v) => onChange(f.key, v ?? 'all')}>
-          <SelectTrigger className="h-9 w-40">
-            <span className="truncate text-left">
+          <SelectTrigger className="h-9 w-44" title={getFilterLabel(f, values[f.key] ?? 'all')}>
+            <span className="min-w-0 truncate text-left">
               {getFilterLabel(f, values[f.key] ?? 'all')}
             </span>
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{f.placeholder}</SelectItem>
+          <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
+            <SelectItem value="all" title={f.placeholder}>
+              <span className="block min-w-0 truncate">{f.placeholder}</span>
+            </SelectItem>
             {f.options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              <SelectItem key={opt.value} value={opt.value} title={opt.label}>
+                <span className="block min-w-0 truncate">{opt.label}</span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -109,7 +109,9 @@ a {
 }
 
 .project-detail-tab[data-active],
-.project-detail-tab[aria-selected="true"] {
+.project-detail-tab[aria-selected="true"],
+.customer-detail-tab[data-active],
+.customer-detail-tab[aria-selected="true"] {
   background-color: color-mix(in oklch, var(--primary) 10%, transparent) !important;
   border-color: color-mix(in oklch, var(--primary) 45%, transparent) !important;
   color: var(--primary) !important;

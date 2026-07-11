@@ -8,13 +8,13 @@ import {
   PlusIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterBar } from "@/components/shared/FilterBar";
 import { Pagination } from "@/components/shared/Pagination";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { usePagination } from "@/lib/hooks/usePagination";
-import { ProjectBreadcrumb } from "./ProjectBreadcrumb";
 import {
   cityOptions,
   projects,
@@ -82,20 +82,24 @@ export function ProjectsList() {
       className: "w-28",
       render: (project) => (
         <div className="flex items-center gap-1">
-          <Link
-            href={`/projects/${project.id}`}
-            aria-label="View project"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
+          <ActionTooltip label="View">
+            <Link
+              href={`/projects/${project.id}`}
+              aria-label="View project"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
               <EyeIcon size={15} />
-          </Link>
-          <Link
-            href={`/projects/${project.id}/edit`}
-            aria-label="Edit project"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
+            </Link>
+          </ActionTooltip>
+          <ActionTooltip label="Edit">
+            <Link
+              href={`/projects/${project.id}/edit`}
+              aria-label="Edit project"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
               <NotePencilIcon size={15} />
-          </Link>
+            </Link>
+          </ActionTooltip>
         </div>
       ),
     },
@@ -103,8 +107,6 @@ export function ProjectsList() {
 
   return (
     <div>
-      <ProjectBreadcrumb items={[{ label: "Projects" }]} />
-
       <PageHeader
         title="Projects"
         subtitle="Manage project contracts, cities, clients, and status."
