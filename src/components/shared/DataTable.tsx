@@ -22,6 +22,7 @@ interface DataTableProps<T extends { id: string }> {
   variant?: 'default' | 'striped'
   showSerialNumber?: boolean
   serialNumberStart?: number
+  tableClassName?: string
 }
 
 export function DataTable<T extends { id: string }>({
@@ -33,6 +34,7 @@ export function DataTable<T extends { id: string }>({
   variant = 'default',
   showSerialNumber = true,
   serialNumberStart = 1,
+  tableClassName,
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
@@ -46,17 +48,17 @@ export function DataTable<T extends { id: string }>({
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0)
 
   return (
-    <div className={cn('w-full overflow-x-auto rounded-xl bg-card border [&_tbody_svg]:text-primary', striped ? 'border-border/60' : 'border-border')}>
-      <Table>
+    <div className={cn('w-full overflow-x-auto rounded-xl border border-border/70 bg-card [&_tbody_svg]:text-primary')}>
+      <Table className={tableClassName}>
         <TableHeader>
-          <TableRow className={cn('hover:bg-transparent border-b', striped ? 'border-border/70 bg-muted/80' : 'border-border bg-muted/70')}>
+          <TableRow className="border-b border-border/70 bg-secondary/80 hover:bg-secondary/80">
             {showSerialNumber && (
-              <TableHead className="w-14 text-center font-bold text-foreground">
+              <TableHead className="w-14 border-r border-border/45 px-4 text-center font-semibold text-foreground last:border-r-0">
                 No.
               </TableHead>
             )}
             {columns.map((col) => (
-              <TableHead key={col.key} className={cn('font-bold text-foreground', col.headerClassName ?? col.className)}>
+              <TableHead key={col.key} className={cn('border-r border-border/45 px-4 font-semibold text-foreground last:border-r-0', col.headerClassName ?? col.className)}>
                 {col.header}
               </TableHead>
             ))}
@@ -67,19 +69,19 @@ export function DataTable<T extends { id: string }>({
             <TableRow
               key={row.id}
               className={cn(
-                'border-b last:border-0 transition-colors',
+                'border-b border-border/65 bg-card transition-colors last:border-0',
                 striped
-                  ? 'border-border/60 odd:bg-transparent even:bg-muted/25 hover:bg-muted/50'
-                  : 'border-border hover:bg-muted/40'
+                  ? 'hover:bg-muted/35'
+                  : 'hover:bg-muted/35'
                 )}
             >
               {showSerialNumber && (
-                <TableCell className="w-14 text-center text-xs font-bold text-muted-foreground">
+                <TableCell className="w-14 border-r border-border/35 px-4 text-center text-xs font-bold text-muted-foreground last:border-r-0">
                   {serialNumberStart + index}
                 </TableCell>
               )}
               {columns.map((col) => (
-                <TableCell key={col.key} className={col.className}>
+                <TableCell key={col.key} className={cn('border-r border-border/35 px-4 last:border-r-0', col.className)}>
                   {col.render ? col.render(row) : renderCellValue(row, col.key)}
                 </TableCell>
               ))}

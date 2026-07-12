@@ -1,9 +1,10 @@
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import {
-  ArrowSquareOutIcon,
-  ImageSquareIcon,
+  FileImageIcon,
   NotePencilIcon,
+  PlusIcon,
+  UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -31,21 +32,22 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
       <WorkProgressBreadcrumb
         items={[
           { label: "Work Progress", href: "/work-progress" },
-          { label: record.customerName },
+          { label: `${record.customerName} (${record.bpTrNumber})` },
         ]}
       />
 
-      <header className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+      <header className="rounded-xl border border-border/60 bg-card px-4 py-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold text-foreground">{record.customerName}</h1>
-              <span className="text-sm font-bold text-muted-foreground">
-                {record.bpTrNumber}
-              </span>
-            </div>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              {record.projectName} / {record.siteArea}
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              {record.customerName}
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <span>{record.bpTrNumber}</span>
+              <span>•</span>
+              <span>{record.projectName}</span>
+              <span>•</span>
+              <span>{record.siteArea}</span>
             </p>
           </div>
           <Link
@@ -58,19 +60,12 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
         </div>
       </header>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(320px,0.85fr)_1fr]">
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
-            <div>
-              <p className="text-sm font-bold text-foreground">Stage Timeline</p>
-              <p className="text-xs font-medium text-muted-foreground">
-                Survey and Workable are inherited from Surveys.
-              </p>
-            </div>
-          </div>
-          <div className="relative mt-3 space-y-3 pl-7 before:absolute before:bottom-4 before:left-2.5 before:top-4 before:w-px before:bg-border">
+      <section className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)_18rem]">
+        <aside className="rounded-xl border border-border/60 bg-card p-3">
+          <p className="text-sm font-bold text-foreground">Stage Progress</p>
+          <div className="relative mt-4 space-y-4 pl-7 before:absolute before:bottom-5 before:left-2.5 before:top-4 before:w-px before:bg-border">
             {workStageDetails.map((stage, index) => (
-              <StageTimelineItem
+              <StageProgressItem
                 key={stage.id}
                 stage={stage}
                 active={stage.stage === record.currentStage}
@@ -78,66 +73,152 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
               />
             ))}
           </div>
-        </div>
+        </aside>
 
-        <div className="space-y-4">
-          <CurrentWorkPanel record={record} detail={currentDetail} />
+        <main className="space-y-4">
+          <section className="rounded-xl border border-border/60 bg-card p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-sm font-bold text-foreground">Current Stage</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-bold text-foreground">
+                    {record.currentStage}
+                  </h2>
+                  <StatusBadge status={currentDetail.status} />
+                </div>
+              </div>
+              <p className="rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs font-bold text-muted-foreground">
+                Next: {record.expectedNextStage}
+              </p>
+            </div>
 
-          <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm font-bold text-foreground">Latest Evidence</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              {workProgressPhotos.map((photo) => (
+            <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs font-bold text-primary">
+                {record.status === "Sent Back" ? "Sent Back Reason" : "Next Required Action"}
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {record.status === "Sent Back"
+                  ? "Please upload a clearer GC image and correct pipe quantity."
+                  : record.nextRequiredAction}
+              </p>
+            </div>
+
+            <dl className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                ["Updated By", currentDetail.updatedBy],
+                ["Updated On", formatDate(currentDetail.completionDate || record.stageDate)],
+                ["Next Action", record.nextRequiredAction],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+                  <dd className="mt-1 text-sm font-bold text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section className="rounded-xl border border-border/60 bg-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold text-foreground">Latest Evidence</p>
+              <Link
+                href={`/documents?workProgressId=${record.id}`}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {workProgressPhotos.slice(0, 2).map((photo) => (
                 <Link
                   key={photo.id}
                   href={`/documents?workProgressId=${record.id}&photoId=${photo.id}`}
-                  className="overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-primary/35 hover:bg-accent/35"
+                  className="overflow-hidden rounded-lg border border-border/60 bg-muted/40"
                 >
-                  <div className="flex h-20 items-center justify-center bg-muted/35">
-                    <ImageSquareIcon size={25} className="text-primary" />
+                  <div className="flex h-24 items-center justify-center bg-muted">
+                    <FileImageIcon size={26} className="text-primary" />
                   </div>
-                  <div className="p-2.5">
-                    <p className="text-sm font-bold text-foreground">{photo.title}</p>
-                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      {formatDate(photo.date)}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {photo.fileName}
-                    </p>
-                  </div>
+                  <p className="truncate px-2 py-1.5 text-xs font-bold text-foreground">
+                    {photo.title}
+                  </p>
+                </Link>
+              ))}
+              <Link
+                href={`/work-progress/${record.id}/update`}
+                className="flex h-full min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-primary"
+              >
+                <PlusIcon size={18} />
+                Add More
+              </Link>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border/60 bg-card p-4">
+            <p className="text-sm font-bold text-foreground">Remarks</p>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              {currentDetail.remarks}
+            </p>
+          </section>
+        </main>
+
+        <aside className="space-y-4">
+          <section className="rounded-xl border border-border/60 bg-card p-4">
+            <p className="text-sm font-bold text-foreground">Summary</p>
+            <dl className="mt-3 space-y-3">
+              {[
+                ["Supervisor", record.supervisor],
+                ["Mobile", record.mobileNumber],
+                ["Last Updated", formatDate(record.lastUpdated)],
+                ["Customer Availability", "Yes"],
+                ["Site Address", `${record.siteArea}, Jaipur, Rajasthan 302019`],
+              ].map(([label, value]) => (
+                <div key={label} className="grid grid-cols-[1fr_1.2fr] gap-3">
+                  <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+                  <dd className="text-xs font-bold text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section className="rounded-xl border border-border/60 bg-card p-4">
+            <p className="text-sm font-bold text-foreground">Quick Actions</p>
+            <div className="mt-3 divide-y divide-border/60">
+              {[
+                ["View Survey", `/surveys?customerId=${record.customerId}`],
+                ["View Customer", `/customers/${record.customerId}`],
+                ["View GC Uploads", `/gc-uploads?customerId=${record.customerId}`],
+                ["View History", `/work-progress/${record.id}/history`],
+              ].map(([label, href]) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="flex items-center gap-2 py-2 text-sm font-bold text-foreground hover:text-primary"
+                >
+                  <UserIcon size={14} className="text-primary" />
+                  {label}
                 </Link>
               ))}
             </div>
           </section>
-
-          <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm font-bold text-foreground">Remarks</p>
-            <div className="mt-3 rounded-lg bg-muted/25 p-3">
-              <p className="text-sm text-muted-foreground">{currentDetail.remarks}</p>
-              <Link
-                href={currentDetail.relatedHref}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
-              >
-                {currentDetail.relatedRecord}
-                <ArrowSquareOutIcon size={13} />
-              </Link>
-            </div>
-          </section>
-        </div>
+        </aside>
       </section>
 
-      <section id="history" className="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <p className="text-sm font-bold text-foreground">Stage History</p>
-        <div className="mt-3 grid gap-2 lg:grid-cols-3">
+      <section id="history" className="rounded-xl border border-border/60 bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-bold text-foreground">History Timeline (Latest)</p>
+          <Link
+            href={`/work-progress/${record.id}/history`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            View All History
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
           {workProgressHistory.map((item) => (
-            <div key={item.id} className="rounded-lg border border-border bg-background p-3">
-              <div className="flex flex-wrap justify-between gap-2">
-                <p className="font-bold text-foreground">{item.title}</p>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {formatDateTime(item.dateTime)}
-                </p>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{item.remarks}</p>
-              <p className="mt-2 text-xs font-semibold text-muted-foreground">{item.actor}</p>
+            <div key={item.id} className="relative border-l border-border pl-3">
+              <span className="absolute -left-1 top-1.5 size-2 rounded-full bg-primary" />
+              <p className="text-sm font-bold text-foreground">{item.title}</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">{item.actor}</p>
+              <p className="text-xs text-muted-foreground">{formatDateTime(item.dateTime)}</p>
             </div>
           ))}
         </div>
@@ -146,50 +227,7 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
   );
 }
 
-function CurrentWorkPanel({
-  record,
-  detail,
-}: {
-  record: WorkProgressRecord;
-  detail: WorkStageDetail;
-}) {
-  return (
-    <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-sm font-bold text-foreground">Current Work</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusBadge status={detail.status} />
-            <span className="text-lg font-bold text-foreground">{record.currentStage}</span>
-          </div>
-        </div>
-        <Link
-          href={`/work-progress/${record.id}/update`}
-          className={buttonVariants({ variant: "default", size: "sm" })}
-        >
-          <NotePencilIcon size={14} />
-          Update Stage
-        </Link>
-      </div>
-
-      <dl className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Assigned User", record.supervisor],
-          ["Start Date", formatDate(record.stageDate)],
-          ["Next Required Action", record.nextRequiredAction],
-          ["Expected Next Stage", record.expectedNextStage],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-muted/25 p-2.5">
-            <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
-            <dd className="mt-1 text-sm font-bold text-foreground">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-function StageTimelineItem({
+function StageProgressItem({
   stage,
   active,
   complete,
@@ -199,38 +237,23 @@ function StageTimelineItem({
   complete: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "relative rounded-lg border p-3",
-        active
-          ? "border-primary/35 bg-primary/10"
-          : "border-border bg-background",
-      )}
-    >
+    <div className="relative">
       <span
         className={cn(
-          "absolute -left-[1.62rem] top-3.5 flex size-4 items-center justify-center rounded-full border-2 border-card",
+          "absolute -left-[1.6rem] top-1 flex size-4 items-center justify-center rounded-full border-2 border-card",
           active
-            ? "bg-primary"
+            ? "bg-destructive"
             : complete
-              ? "bg-primary/70"
-              : "bg-muted-foreground/40",
+              ? "bg-status-success"
+              : "border border-border bg-background",
         )}
       />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-bold text-foreground">{stage.stage}</p>
-          {stage.readOnly ? (
-            <p className="text-[11px] font-semibold text-muted-foreground">
-              Read-only source
-            </p>
-          ) : null}
-        </div>
-        <StatusBadge status={stage.status} />
-      </div>
-      <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
-        <span>{formatDate(stage.completionDate)}</span>
-        <span>{stage.updatedBy}</span>
+      <div>
+        <p className="text-sm font-bold text-foreground">{stage.stage}</p>
+        <StatusBadge status={stage.status} className="mt-1" />
+        <p className="mt-1 text-xs font-medium text-muted-foreground">
+          {formatDate(stage.completionDate)}
+        </p>
       </div>
     </div>
   );

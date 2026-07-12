@@ -16,7 +16,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
-import { FilterBar } from "@/components/shared/FilterBar";
+import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -42,6 +43,25 @@ const initialFilters = {
   dateTo: "",
 };
 
+const surveyImportFields: ImportField[] = [
+  { key: "customerIdentifier", label: "Customer / BP TR Number", required: true },
+  { key: "project", label: "Project", required: true },
+  { key: "siteArea", label: "Site / Area", required: true },
+  { key: "surveyDate", label: "Survey Date", required: true },
+  { key: "supervisor", label: "Supervisor", required: true },
+  { key: "gpsLocation", label: "GPS Location" },
+  { key: "houseType", label: "House Type" },
+  { key: "connectionType", label: "Connection Type" },
+  { key: "siteAccessibility", label: "Site Accessibility" },
+  { key: "meterPlacement", label: "Meter Placement Possibility" },
+  { key: "pipelineRoute", label: "Pipeline Route Availability" },
+  { key: "civilWorkRequired", label: "Civil Work Required" },
+  { key: "workableStatus", label: "Workable Status" },
+  { key: "reason", label: "Reason" },
+  { key: "recommendedAction", label: "Recommended Action" },
+  { key: "remarks", label: "Survey Remarks" },
+];
+
 export function SurveysList() {
   const [filters, setFilters] = useState(initialFilters);
   const [state] = useState<"ready" | "loading" | "error">("ready");
@@ -61,9 +81,11 @@ export function SurveysList() {
         survey.fullAddress.toLowerCase().includes(search);
       const matchesProject =
         filters.project === "all" || survey.projectId === filters.project;
-      const matchesSite = filters.site === "all" || survey.siteArea === filters.site;
+      const matchesSite =
+        filters.site === "all" || survey.siteArea === filters.site;
       const matchesSupervisor =
-        filters.supervisor === "all" || survey.supervisor === filters.supervisor;
+        filters.supervisor === "all" ||
+        survey.supervisor === filters.supervisor;
       const matchesWorkable =
         filters.workableStatus === "all" ||
         survey.workableStatus === filters.workableStatus;
@@ -142,16 +164,16 @@ export function SurveysList() {
       key: "photoCount",
       header: "Photos",
       render: (survey) => (
-        <span className="font-semibold text-foreground">{survey.photoCount}</span>
+        <span className="font-semibold text-foreground">
+          {survey.photoCount}
+        </span>
       ),
     },
     {
       key: "actions",
       header: "Actions",
       className: "w-28",
-      render: (survey) => (
-        <SurveyRowActions survey={survey} />
-      ),
+      render: (survey) => <SurveyRowActions survey={survey} />,
     },
   ];
 
@@ -162,23 +184,39 @@ export function SurveysList() {
         subtitle="Capture field conditions, workable status, and survey approvals."
         actions={
           <>
+            <ImportDataDialog
+              moduleName="Surveys"
+              fields={surveyImportFields}
+              description="Upload survey records using the fixed survey import template."
+              trigger={
+                <button
+                  type="button"
+                  className={buttonVariants({
+                    variant: "outline",
+                    size: "default",
+                  })}
+                >
+                  <UploadSimpleIcon size={15} />
+                  Import Excel
+                </button>
+              }
+            />
             <button
               type="button"
-              className={buttonVariants({ variant: "outline", size: "default" })}
-            >
-              <UploadSimpleIcon size={15} />
-              Import Excel
-            </button>
-            <button
-              type="button"
-              className={buttonVariants({ variant: "outline", size: "default" })}
+              className={buttonVariants({
+                variant: "outline",
+                size: "default",
+              })}
             >
               <DownloadSimpleIcon size={15} />
               Export Excel
             </button>
             <Link
               href="/surveys/new"
-              className={buttonVariants({ variant: "default", size: "default" })}
+              className={buttonVariants({
+                variant: "default",
+                size: "default",
+              })}
             >
               <PlusIcon size={15} />
               New Survey
@@ -188,25 +226,25 @@ export function SurveysList() {
       />
 
       <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-3">
-          <div>
-            <p className="text-sm font-bold text-foreground">Survey Register</p>
-            <p className="text-xs font-medium text-muted-foreground">
-              Filter by assignment, status and survey date.
-            </p>
-          </div>
-        </div>
-
-        <FilterBar
+        <FilterSheetButton
           searchKey="search"
           searchPlaceholder="Search survey, customer, BP/TR or address..."
+          title="Survey Filters"
+          description="Filter surveys by assignment, status and survey date."
           values={filters}
           filters={[
-            { key: "project", placeholder: "All Projects", options: surveyProjectOptions },
+            {
+              key: "project",
+              placeholder: "All Projects",
+              options: surveyProjectOptions,
+            },
             {
               key: "site",
               placeholder: "All Area / Site",
-              options: surveySiteOptions.map((site) => ({ label: site, value: site })),
+              options: surveySiteOptions.map((site) => ({
+                label: site,
+                value: site,
+              })),
             },
             {
               key: "supervisor",
@@ -241,25 +279,22 @@ export function SurveysList() {
             setFilters(initialFilters);
             pagination.setPage(1);
           }}
-        />
-
-        <DateRangeControl
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onDateFromChange={(value) => {
-            setFilters((current) => ({ ...current, dateFrom: value }));
-            pagination.setPage(1);
-          }}
-          onDateToChange={(value) => {
-            setFilters((current) => ({ ...current, dateTo: value }));
-            pagination.setPage(1);
-          }}
+          renderExtra={({ values, onChange }) => (
+            <DateRangeControl
+              dateFrom={values.dateFrom}
+              dateTo={values.dateTo}
+              onDateFromChange={(value) => onChange("dateFrom", value)}
+              onDateToChange={(value) => onChange("dateTo", value)}
+            />
+          )}
         />
 
         {state === "error" ? (
           <Alert variant="destructive">
             <AlertTitle>Unable to load surveys</AlertTitle>
-            <AlertDescription>Try refreshing the page or clearing filters.</AlertDescription>
+            <AlertDescription>
+              Try refreshing the page or clearing filters.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -288,7 +323,8 @@ export function SurveysList() {
 
 function SurveyRowActions({ survey }: { survey: Survey }) {
   const editable =
-    survey.submissionStatus === "Draft" || survey.submissionStatus === "Sent Back";
+    survey.submissionStatus === "Draft" ||
+    survey.submissionStatus === "Sent Back";
   const canResubmit = survey.submissionStatus === "Sent Back";
 
   return (
@@ -340,13 +376,19 @@ function DateRangeControl({
   onDateToChange: (value: string) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background p-1.5">
-      <span className="px-1.5 text-xs font-bold text-muted-foreground">Survey Date</span>
-      <div className="w-40">
-        <DatePicker value={dateFrom} placeholder="From" onChange={onDateFromChange} />
-      </div>
-      <span className="text-xs font-semibold text-muted-foreground">to</span>
-      <div className="w-40">
+    <div className="space-y-2">
+      <span className="text-xs font-semibold text-muted-foreground">
+        Survey Date
+      </span>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+        <DatePicker
+          value={dateFrom}
+          placeholder="From"
+          onChange={onDateFromChange}
+        />
+        <span className="hidden text-xs font-semibold text-muted-foreground sm:block">
+          to
+        </span>
         <DatePicker value={dateTo} placeholder="To" onChange={onDateToChange} />
       </div>
     </div>

@@ -15,7 +15,8 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
-import { FilterBar } from "@/components/shared/FilterBar";
+import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -44,6 +45,29 @@ const initialFilters = {
   currentStage: "all",
   status: "all",
 };
+
+const customerImportFields: ImportField[] = [
+  { key: "customerName", label: "Customer Name", required: true },
+  { key: "mobileNumber", label: "Mobile Number", required: true },
+  { key: "fullAddress", label: "Full Address", required: true },
+  { key: "project", label: "Project", required: true },
+  { key: "siteArea", label: "Site / Area", required: true },
+  { key: "bpTrNumber", label: "BP / TR Number", required: true },
+  { key: "connectionType", label: "Connection Type", required: true },
+  { key: "gpsLocation", label: "GPS Location" },
+  { key: "houseType", label: "House Type" },
+  { key: "scheme", label: "Scheme" },
+  { key: "paymentStatus", label: "Connection Payment Status" },
+  { key: "paymentMode", label: "Payment Mode" },
+  { key: "initialAmount", label: "Initial Amount" },
+  { key: "supervisor", label: "Supervisor" },
+  { key: "plumberGroup", label: "Plumber / Group" },
+  { key: "fieldExecutive", label: "Field Executive" },
+  { key: "meterNumber", label: "Meter Number" },
+  { key: "meterType", label: "Meter Type" },
+  { key: "regulatorNumber", label: "Regulator Number" },
+  { key: "regulatorPressure", label: "Regulator Pressure" },
+];
 
 export function CustomersList() {
   const [filters, setFilters] = useState(initialFilters);
@@ -190,13 +214,20 @@ export function CustomersList() {
         subtitle="Manage customer connections, field assignment, meters, and stages."
         actions={
           <>
-            <Link
-              href="/customers/import"
-              className={buttonVariants({ variant: "outline", size: "default" })}
-            >
-              <UploadSimpleIcon size={15} />
-              Import Excel
-            </Link>
+            <ImportDataDialog
+              moduleName="Customers"
+              fields={customerImportFields}
+              description="Upload customer master data using the fixed customer template."
+              trigger={
+                <button
+                  type="button"
+                  className={buttonVariants({ variant: "outline", size: "default" })}
+                >
+                  <UploadSimpleIcon size={15} />
+                  Import Excel
+                </button>
+              }
+            />
             <button
               type="button"
               className={buttonVariants({ variant: "outline", size: "default" })}
@@ -216,9 +247,11 @@ export function CustomersList() {
       />
 
       <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <FilterBar
+        <FilterSheetButton
           searchKey="search"
           searchPlaceholder="Search name, mobile, BP/TR, meter or address..."
+          title="Customer Filters"
+          description="Filter customer records by project, area, connection type, stage and status."
           values={filters}
           filters={[
             {

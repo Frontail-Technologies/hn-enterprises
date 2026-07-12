@@ -10,7 +10,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
-import { FilterBar } from "@/components/shared/FilterBar";
+import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { Pagination } from "@/components/shared/Pagination";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -122,9 +122,11 @@ export function ProjectsList() {
       />
 
       <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-4">
-        <FilterBar
+        <FilterSheetButton
           searchKey="search"
           searchPlaceholder="Search projects..."
+          title="Project Filters"
+          description="Filter projects by city and current status."
           values={filters}
           filters={[
             {

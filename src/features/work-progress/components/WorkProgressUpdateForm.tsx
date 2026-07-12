@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CaretDownIcon, MapPinIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import {
+  CaretDownIcon,
+  FileImageIcon,
+  MapPinIcon,
+  PlusIcon,
+  WarningCircleIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Collapsible,
@@ -25,6 +32,7 @@ import { LocationPicker } from "@/components/shared/LocationPicker";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
 import {
+  workProgressPhotos,
   workProgressStatuses,
   workStageDetails,
   workStages,
@@ -46,10 +54,14 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
       ? record.expectedNextStage
       : record.currentStage,
   );
-  const [status, setStatus] = useState<WorkProgressStatus>(record.status);
+  const [status, setStatus] = useState<WorkProgressStatus>(
+    record.status === "Sent Back" ? "Completed" : record.status,
+  );
   const [workDate, setWorkDate] = useState(record.stageDate);
-  const [quantity, setQuantity] = useState("");
-  const [remarks, setRemarks] = useState("");
+  const [quantity, setQuantity] = useState("18.5 m");
+  const [remarks, setRemarks] = useState(
+    "Attached clearer GC images and corrected pipe quantity as per site measurement.",
+  );
   const [locationOpen, setLocationOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [overrideSequence, setOverrideSequence] = useState(false);
@@ -72,8 +84,7 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
 
   const selectedStageIndex = workStages.indexOf(stage);
   const nextAllowedIndex = workStages.indexOf(nextAllowedStage);
-  const isSequenceOverride = selectedStageIndex > nextAllowedIndex;
-  const needsOverrideReason = overrideSequence || isSequenceOverride;
+  const needsOverrideReason = overrideSequence || selectedStageIndex > nextAllowedIndex;
 
   return (
     <form className="space-y-4">
@@ -85,12 +96,12 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
         ]}
       />
 
-      <header className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-xl border border-border/60 bg-card">
+        <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">Update Stage</h1>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              {record.customerName} / {record.bpTrNumber}
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Update Stage</h1>
+            <p className="mt-1 text-sm font-bold text-primary">
+              Resubmit {record.currentStage} Report
             </p>
           </div>
           <Link
@@ -100,55 +111,53 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
             Cancel
           </Link>
         </div>
-      </header>
 
-      <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
-          <div>
-            <p className="text-sm font-bold text-foreground">Customer / Project Summary</p>
-            <dl className="mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                ["Customer", record.customerName],
-                ["BP / TR", record.bpTrNumber],
-                ["Project", record.projectName],
-                ["Site", record.siteArea],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
-                  <dd className="text-sm font-bold text-foreground">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+        <div className="grid gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <dl className="grid gap-x-8 gap-y-3 md:grid-cols-4">
+            {[
+              ["Customer", record.customerName],
+              ["BP / TR No.", record.bpTrNumber],
+              ["Project", record.projectName],
+              ["Site", record.siteArea],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+                <dd className="mt-1 text-sm font-bold text-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <p className="text-xs font-bold text-muted-foreground">Current Stage</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold text-muted-foreground">Current Stage</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-sm font-bold text-foreground">{record.currentStage}</span>
               <StatusBadge status={record.status} />
-              <span className="text-base font-bold text-foreground">
-                {record.currentStage}
-              </span>
             </div>
-            <p className="mt-2 text-xs font-semibold text-muted-foreground">
-              Expected next: <span className="text-foreground">{record.expectedNextStage}</span>
+            <p className="mt-3 text-xs font-semibold text-muted-foreground">
+              Expected Next
             </p>
+            <p className="text-sm font-bold text-foreground">{record.expectedNextStage}</p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
-          <div>
-            <p className="text-sm font-bold text-foreground">Stage Update</p>
-            <p className="text-xs font-medium text-muted-foreground">
-              Survey and Workable remain read-only from the Survey module.
-            </p>
-          </div>
-          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
-            Selected: {stage}
-          </span>
+      <section className="rounded-xl border border-border/60 bg-card p-4">
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <p className="text-sm font-bold text-foreground">
+            Sent Back Reason by {record.updatedBy} on 12 Feb 2025, 04:30 PM
+          </p>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
+            Please upload a clearer GC image and correct pipe quantity.
+          </p>
         </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <p className="mt-4 text-sm font-bold text-foreground">Update Details</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <Field label="Work Date *">
+            <DatePicker value={workDate} onChange={setWorkDate} />
+          </Field>
+          <Field label="Quantity (if applicable)">
+            <Input value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+          </Field>
           <Field label="Stage">
             <Select value={stage} onValueChange={(value) => setStage(value as WorkStage)}>
               <SelectTrigger className="w-full">
@@ -177,28 +186,13 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Work Date">
-            <DatePicker value={workDate} onChange={setWorkDate} />
-          </Field>
-          <Field label="Quantity if applicable">
-            <Input
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              placeholder="e.g. 18.5 m"
-            />
-          </Field>
         </div>
 
         <div className="mt-3">
-          <Field label="Stage Remarks">
+          <Field label="Remarks *">
             <Textarea
               value={remarks}
               onChange={(event) => setRemarks(event.target.value)}
-              placeholder={
-                needsOverrideReason
-                  ? "Mandatory reason for sequence override"
-                  : "Add field remarks for this stage"
-              }
               aria-invalid={needsOverrideReason && !remarks.trim()}
               className="min-h-20"
             />
@@ -206,24 +200,47 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
         </div>
 
         <div className="mt-3">
-          <Field label="Evidence">
-            <Input type="file" multiple accept="image/*,.pdf" />
-          </Field>
-          <p className="mt-1 text-xs font-medium text-muted-foreground">
-            Attach stage evidence only. Customer master data is not changed by this update.
+          <p className="text-xs font-bold text-foreground">
+            Evidence (GC Photos / Documents) *
           </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {workProgressPhotos.map((photo) => (
+              <div
+                key={photo.id}
+                className="relative flex h-20 w-32 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted"
+              >
+                <FileImageIcon size={24} className="text-primary" />
+                <span className="absolute bottom-1 left-1 right-1 truncate rounded bg-background/90 px-1 text-[10px] font-bold text-foreground">
+                  {photo.title}
+                </span>
+                <button
+                  type="button"
+                  className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground"
+                  aria-label="Remove evidence"
+                >
+                  <XIcon size={12} />
+                </button>
+              </div>
+            ))}
+            <label className="flex h-20 w-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-primary">
+              <PlusIcon size={18} />
+              Add More
+              <span className="mt-1 text-[10px] font-medium">JPG, PNG, PDF</span>
+              <Input type="file" multiple accept="image/*,.pdf" className="sr-only" />
+            </label>
+          </div>
         </div>
       </section>
 
       <Collapsible
         open={locationOpen}
         onOpenChange={setLocationOpen}
-        className="rounded-xl border border-border bg-card shadow-sm"
+        className="rounded-xl border border-border/60 bg-card"
       >
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
+        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
           <span className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
             <MapPinIcon size={16} className="text-primary" />
-            Optional Location
+            Location Evidence (Optional)
           </span>
           <CaretDownIcon
             size={16}
@@ -231,7 +248,7 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
           />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="grid gap-3 border-t border-border p-3 xl:grid-cols-[1fr_320px]">
+          <div className="grid gap-3 border-t border-border/60 p-4 xl:grid-cols-[1fr_320px]">
             <LocationPicker
               latitude={coordinates.latitude}
               longitude={coordinates.longitude}
@@ -253,12 +270,12 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
       <Collapsible
         open={advancedOpen}
         onOpenChange={setAdvancedOpen}
-        className="rounded-xl border border-border bg-card shadow-sm"
+        className="rounded-xl border border-border/60 bg-card"
       >
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
+        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
           <span className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
             <WarningCircleIcon size={16} className="text-primary" />
-            Advanced
+            Advanced / Override
           </span>
           <CaretDownIcon
             size={16}
@@ -266,7 +283,7 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
           />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="border-t border-border p-3">
+          <div className="border-t border-border/60 p-4">
             <label className="flex items-start gap-2 text-sm font-bold text-foreground">
               <input
                 type="checkbox"
@@ -277,14 +294,9 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
               Admin override sequence
             </label>
             <p className="mt-2 text-xs font-medium text-muted-foreground">
-              Next expected stage is {nextAllowedStage}. Enable only after field verification.
-              Override or skipped-stage updates require remarks and create history.
+              Next expected stage is {nextAllowedStage}. Override or skipped-stage updates
+              require remarks and create history.
             </p>
-            {needsOverrideReason ? (
-              <p className="mt-2 text-xs font-bold text-primary">
-                Stage remarks are mandatory before submitting.
-              </p>
-            ) : null}
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -299,7 +311,7 @@ export function WorkProgressUpdateForm({ record }: { record: WorkProgressRecord 
         <Button type="button" variant="outline">
           Save Draft
         </Button>
-        <Button type="button">Submit Update</Button>
+        <Button type="button">Resubmit {record.currentStage}</Button>
       </footer>
     </form>
   );

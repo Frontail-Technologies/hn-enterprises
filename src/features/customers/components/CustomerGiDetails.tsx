@@ -7,6 +7,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { customerGiDetails } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
 import { CustomerBreadcrumb } from "./CustomerBreadcrumb";
+import { CustomerInfoLine } from "./CustomerInfoLine";
 
 export function CustomerGiDetails({ customer }: { customer: Customer }) {
   const giDetails = customerGiDetails;
@@ -40,7 +41,7 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
 
       <PageHeader
         title="GI Details"
-        subtitle={`${customer.name} - ${customer.bpTrNumber}`}
+        subtitle={`${customer.name} · ${customer.bpTrNumber}`}
         actions={
           <Link
             href={`/customers/${customer.id}`}
@@ -90,14 +91,11 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
 
 function InfoGrid({ items }: { items: [string, string][] }) {
   return (
-    <dl className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+    <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
       {items.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[110px_1fr] gap-3">
-          <dt className="text-sm font-bold text-foreground">{label}</dt>
-          <dd className="text-sm text-muted-foreground">{value}</dd>
-        </div>
+        <CustomerInfoLine key={label} label={label} value={value} />
       ))}
-    </dl>
+    </div>
   );
 }
 

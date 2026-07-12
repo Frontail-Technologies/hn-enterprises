@@ -6,14 +6,13 @@ import Link from "next/link";
 import {
   ClockCounterClockwiseIcon,
   EyeIcon,
-  ImagesSquareIcon,
+  FileImageIcon,
   NotePencilIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
-import { FilterBar } from "@/components/shared/FilterBar";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { Pagination } from "@/components/shared/Pagination";
 import { usePagination } from "@/lib/hooks/usePagination";
 import { cn } from "@/lib/utils";
@@ -26,10 +25,8 @@ import {
 } from "../services/work-progress.service";
 import type { WorkProgressRecord, WorkStage } from "../types/work-progress.types";
 
-const queueViews = ["Needs Action", "In Progress", "Recently Completed"] as const;
-type QueueView = (typeof queueViews)[number];
-
 const initialFilters = {
+  search: "",
   customerId: "",
   project: "all",
   site: "all",
@@ -46,7 +43,6 @@ export function WorkProgressList({
   initialProjectId,
   initialCustomerId,
 }: WorkProgressListProps = {}) {
-  const [activeView, setActiveView] = useState<QueueView>("Needs Action");
   const [filters, setFilters] = useState({
     ...initialFilters,
     customerId: initialCustomerId ?? "",
@@ -54,8 +50,14 @@ export function WorkProgressList({
   });
 
   const filteredRecords = useMemo(() => {
+    const search = filters.search.trim().toLowerCase();
+
     return workProgressRecords.filter((record) => {
-      const matchesView = getRecordView(record) === activeView;
+      const matchesSearch =
+        !search ||
+        record.customerName.toLowerCase().includes(search) ||
+        record.bpTrNumber.toLowerCase().includes(search) ||
+        record.projectName.toLowerCase().includes(search);
       const matchesProject =
         filters.project === "all" || record.projectId === filters.project;
       const matchesCustomer =
@@ -67,7 +69,7 @@ export function WorkProgressList({
         filters.stage === "all" || record.currentStage === filters.stage;
 
       return (
-        matchesView &&
+        matchesSearch &&
         matchesProject &&
         matchesCustomer &&
         matchesSite &&
@@ -75,20 +77,7 @@ export function WorkProgressList({
         matchesStage
       );
     });
-  }, [activeView, filters]);
-
-  const viewCounts = useMemo(
-    () =>
-      queueViews.reduce(
-        (counts, view) => ({
-          ...counts,
-          [view]: workProgressRecords.filter((record) => getRecordView(record) === view)
-            .length,
-        }),
-        {} as Record<QueueView, number>,
-      ),
-    [],
-  );
+  }, [filters]);
 
   const pagination = usePagination({ items: filteredRecords, pageSize: 8 });
 
@@ -96,8 +85,9 @@ export function WorkProgressList({
     {
       key: "customer",
       header: "Customer / BP No.",
+      className: "w-[14%] whitespace-normal",
       render: (record) => (
-        <div className="min-w-44">
+        <div>
           <Link
             href={`/work-progress/${record.id}`}
             className="font-bold text-foreground hover:text-primary"
@@ -111,8 +101,9 @@ export function WorkProgressList({
     {
       key: "site",
       header: "Site",
+      className: "w-[14%] whitespace-normal",
       render: (record) => (
-        <div className="min-w-44">
+        <div>
           <p className="font-medium text-foreground">{record.siteArea}</p>
           <p className="text-xs text-muted-foreground">{record.projectName}</p>
         </div>
@@ -121,7 +112,7 @@ export function WorkProgressList({
     {
       key: "stageSummary",
       header: "Stage Summary",
-      className: "min-w-[28rem]",
+      className: "w-[17%] whitespace-normal",
       render: (record) => (
         <StageWorkflow currentStage={record.currentStage} currentStatus={record.status} />
       ),
@@ -129,9 +120,10 @@ export function WorkProgressList({
     {
       key: "nextRequiredAction",
       header: "Next Required Action",
+      className: "w-[16%] whitespace-normal",
       render: (record) => (
-        <div className="min-w-44">
-          <p className="font-bold text-foreground">{record.nextRequiredAction}</p>
+        <div>
+          <p className="font-semibold text-foreground">{record.nextRequiredAction}</p>
           <p className="text-xs text-muted-foreground">
             Expected: {record.expectedNextStage}
           </p>
@@ -141,34 +133,47 @@ export function WorkProgressList({
     {
       key: "stageDate",
       header: "Stage Date",
+      className: "w-[9%] whitespace-normal",
       render: (record) => formatDate(record.stageDate),
     },
     {
       key: "ageDays",
-      header: "Delay / Age",
+      header: "Delay",
+      className: "w-[7%] whitespace-normal",
       render: (record) => (
         <span
           className={cn(
-            "inline-flex rounded-full border px-2 py-0.5 text-xs font-bold",
-            record.ageDays > 5
-              ? "border-primary/25 bg-primary/10 text-primary"
-              : "border-border bg-muted text-muted-foreground",
+            "font-bold",
+            record.ageDays > 5 ? "text-destructive" : "text-primary",
           )}
         >
           {record.ageDays} days
         </span>
       ),
     },
-    { key: "supervisor", header: "Supervisor" },
+    {
+      key: "supervisor",
+      header: "Supervisor",
+      className: "w-[12%] whitespace-normal",
+      render: (record) => (
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+            {getInitials(record.supervisor)}
+          </span>
+          <span className="min-w-0 font-medium text-foreground">{record.supervisor}</span>
+        </div>
+      ),
+    },
     {
       key: "evidence",
       header: "Evidence",
+      className: "w-[6%] whitespace-normal",
       render: (record) => (
         <Link
           href={`/documents?workProgressId=${record.id}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 text-xs font-bold text-foreground hover:border-primary/35 hover:text-primary"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground hover:text-primary"
         >
-          <ImagesSquareIcon size={14} />
+          <FileImageIcon size={14} className="text-primary" />
           {record.evidenceCount}
         </Link>
       ),
@@ -176,7 +181,7 @@ export function WorkProgressList({
     {
       key: "actions",
       header: "Actions",
-      className: "w-28",
+      className: "w-[8%]",
       render: (record) => (
         <div className="flex items-center gap-1">
           <ActionTooltip label="View">
@@ -199,7 +204,7 @@ export function WorkProgressList({
           </ActionTooltip>
           <ActionTooltip label="View History">
             <Link
-              href={`/work-progress/${record.id}#history`}
+              href={`/work-progress/${record.id}/history`}
               aria-label="View history"
               className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
@@ -212,95 +217,77 @@ export function WorkProgressList({
   ];
 
   return (
-    <div>
-      <PageHeader
-        title="Work Progress"
-        subtitle="Queue field work by stage, action needed, evidence and ageing."
-      />
+    <div className="space-y-5">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Work Progress</h1>
+        <p className="mt-1 text-sm font-medium text-muted-foreground">
+          Track field stage updates, photos and customer work history.
+        </p>
+      </header>
 
-      <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {queueViews.map((view) => {
-            const active = activeView === view;
-            return (
-              <button
-                key={view}
-                type="button"
-                onClick={() => {
-                  setActiveView(view);
-                  pagination.setPage(1);
-                }}
-                className={cn(
-                  "inline-flex h-8 items-center gap-2 rounded-lg border px-3 text-sm font-bold transition-colors",
-                  active
-                    ? "border-primary/35 bg-primary/10 text-primary"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {view}
-                <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                  {viewCounts[view]}
-                </span>
-              </button>
-            );
-          })}
+      <section className="rounded-xl border border-border/60 bg-card">
+        <div className="space-y-3 p-3">
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search customer, BP/TR no..."
+            title="Work Progress Filters"
+            description="Filter field progress by project, site, supervisor and stage."
+            values={filters}
+            filters={[
+              { key: "project", placeholder: "All Projects", options: workProgressProjectOptions },
+              {
+                key: "site",
+                placeholder: "All Sites",
+                options: workProgressSiteOptions.map((site) => ({ label: site, value: site })),
+              },
+              {
+                key: "supervisor",
+                placeholder: "All Supervisors",
+                options: workProgressSupervisorOptions.map((supervisor) => ({
+                  label: supervisor,
+                  value: supervisor,
+                })),
+              },
+              {
+                key: "stage",
+                placeholder: "All Stages",
+                options: workStages.map((stage) => ({ label: stage, value: stage })),
+              },
+            ]}
+            onChange={(key, value) => {
+              setFilters((current) => ({ ...current, [key]: value }));
+              pagination.setPage(1);
+            }}
+            onReset={() => {
+              setFilters({
+                ...initialFilters,
+                customerId: initialCustomerId ?? "",
+                project: initialProjectId ?? "all",
+              });
+              pagination.setPage(1);
+            }}
+          />
+
+          <DataTable
+            data={pagination.paginatedItems}
+            columns={columns}
+            variant="default"
+            emptyTitle="No work items in this queue"
+            emptyDescription="Try another queue view or adjust the filters."
+            serialNumberStart={pagination.startItem}
+            tableClassName="table-fixed"
+          />
+
+          <Pagination
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
+          />
         </div>
-
-        <FilterBar
-          values={filters}
-          filters={[
-            { key: "project", placeholder: "All Projects", options: workProgressProjectOptions },
-            {
-              key: "site",
-              placeholder: "All Sites",
-              options: workProgressSiteOptions.map((site) => ({ label: site, value: site })),
-            },
-            {
-              key: "supervisor",
-              placeholder: "All Supervisors",
-              options: workProgressSupervisorOptions.map((supervisor) => ({
-                label: supervisor,
-                value: supervisor,
-              })),
-            },
-            {
-              key: "stage",
-              placeholder: "All Stages",
-              options: workStages.map((stage) => ({ label: stage, value: stage })),
-            },
-          ]}
-          onChange={(key, value) => {
-            setFilters((current) => ({ ...current, [key]: value }));
-            pagination.setPage(1);
-          }}
-          onReset={() => {
-            setFilters({
-              ...initialFilters,
-              customerId: initialCustomerId ?? "",
-              project: initialProjectId ?? "all",
-            });
-            pagination.setPage(1);
-          }}
-        />
-
-        <DataTable
-          data={pagination.paginatedItems}
-          columns={columns}
-          variant="striped"
-          emptyTitle="No work items in this queue"
-          emptyDescription="Try another queue view or adjust the filters."
-          serialNumberStart={pagination.startItem}
-        />
-
-        <Pagination
-          page={pagination.page}
-          pageCount={pagination.pageCount}
-          totalItems={pagination.totalItems}
-          startItem={pagination.startItem}
-          endItem={pagination.endItem}
-          onPageChange={pagination.setPage}
-        />
-      </div>
+      </section>
     </div>
   );
 }
@@ -315,37 +302,27 @@ function StageWorkflow({
   const currentIndex = workStages.indexOf(currentStage);
 
   return (
-    <div className="grid min-w-[27rem] grid-cols-6 gap-1.5">
+    <div className="grid grid-cols-3 gap-1 xl:grid-cols-6">
       {workStages.map((stage, index) => {
         const complete = index < currentIndex;
         const current = index === currentIndex;
         const status = complete ? getCompletedStatus(stage) : current ? currentStatus : "Pending";
 
         return (
-          <div
+          <span
             key={stage}
             title={`${stage}: ${status}`}
             className={cn(
-              "rounded-lg border px-2 py-1.5",
+              "flex size-6 items-center justify-center rounded-full border text-[9px] font-bold",
               current
-                ? "border-primary/35 bg-primary/10"
+                ? "border-destructive bg-destructive/10 text-destructive"
                 : complete
-                  ? "border-primary/20 bg-primary/5"
-                  : "border-border bg-muted/35",
+                  ? "border-status-success/30 bg-status-success-bg text-status-success-fg"
+                  : "border-border bg-muted text-muted-foreground",
             )}
           >
-            <p
-              className={cn(
-                "truncate text-[11px] font-bold",
-                current || complete ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {shortStageLabel(stage)}
-            </p>
-            <p className="mt-0.5 truncate text-[10px] font-semibold text-muted-foreground">
-              {status}
-            </p>
-          </div>
+            {shortStageLabel(stage)}
+          </span>
         );
       })}
     </div>
@@ -357,15 +334,20 @@ function getCompletedStatus(stage: WorkStage) {
 }
 
 function shortStageLabel(stage: WorkStage) {
+  if (stage === "Survey") return "45";
+  if (stage === "Workable") return "WK";
   if (stage === "Plumbing / GI") return "GI";
-  if (stage === "Commissioning") return "Comm.";
-  return stage;
+  if (stage === "Commissioning") return "CM";
+  if (stage === "Conversion") return "CV";
+  return "GC";
 }
 
-function getRecordView(record: WorkProgressRecord): QueueView {
-  if (record.status === "Completed") return "Recently Completed";
-  if (record.status === "In Progress") return "In Progress";
-  return "Needs Action";
+function getInitials(value: string) {
+  return value
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
 }
 
 function formatDate(value: string) {

@@ -1,0 +1,235 @@
+import type {
+  GcChecklistItem,
+  GcEvidenceItem,
+  GcReviewComment,
+  GcUploadRecord,
+  GcUploadStatus,
+} from "../types/gc-uploads.types";
+
+export const gcUploadStatuses: GcUploadStatus[] = [
+  "Pending",
+  "In Review",
+  "Approved",
+  "Sent Back",
+  "Rejected",
+];
+
+export const gcUploadRecords: GcUploadRecord[] = [
+  {
+    id: "gcu-001",
+    submissionId: "GCU-2025-00056",
+    customerId: "cust-002",
+    customerName: "Meena Sharma",
+    bpTrNumber: "TR-553901",
+    mobileNumber: "9823411122",
+    projectId: "shyam-nagar-cgd",
+    projectName: "Shyam Nagar CGD Project",
+    siteArea: "Shyam Nagar Block B",
+    siteAddress: "House No. 12, Shanti Nagar, Jaipur, Rajasthan 302019",
+    gcCategory: "Domestic",
+    pipelineType: "Steel",
+    submittedBy: "Vikas Saini",
+    submittedOn: "2025-02-14 09:10",
+    reviewer: "Amit Rathore",
+    reviewedOn: "2025-02-14 16:30",
+    fileCount: 6,
+    checklistDone: 5,
+    checklistTotal: 6,
+    remarks: "Obstruction photo requires clearer angle with meter reading and joint details.",
+    status: "In Review",
+  },
+  {
+    id: "gcu-002",
+    submissionId: "GCU-2025-00055",
+    customerId: "cust-001",
+    customerName: "Rajesh Kumar",
+    bpTrNumber: "BP-100245",
+    mobileNumber: "9876543210",
+    projectId: "shyam-nagar-cgd",
+    projectName: "Shyam Nagar CGD Project",
+    siteArea: "Shyam Nagar Block A",
+    siteAddress: "Shyam Nagar Block A, Jaipur, Rajasthan",
+    gcCategory: "Domestic",
+    pipelineType: "MDPE",
+    submittedBy: "Vikas Saini",
+    submittedOn: "2025-02-12 15:42",
+    reviewer: "Demo Admin",
+    reviewedOn: "2025-02-12 18:10",
+    fileCount: 4,
+    checklistDone: 6,
+    checklistTotal: 6,
+    remarks: "All required evidence uploaded.",
+    status: "Approved",
+  },
+  {
+    id: "gcu-003",
+    submissionId: "GCU-2025-00054",
+    customerId: "cust-003",
+    customerName: "Green Mart Store",
+    bpTrNumber: "BP-220118",
+    mobileNumber: "9810012200",
+    projectId: "green-city-phase-1",
+    projectName: "Green City Phase 1",
+    siteArea: "Commercial Block",
+    siteAddress: "Commercial Block, Green City Phase 1",
+    gcCategory: "Commercial",
+    pipelineType: "Steel",
+    submittedBy: "Neha Verma",
+    submittedOn: "2025-02-10 11:28",
+    reviewer: "Amit Rathore",
+    reviewedOn: "2025-02-10 17:05",
+    fileCount: 3,
+    checklistDone: 4,
+    checklistTotal: 6,
+    remarks: "Please upload GC PDF and route photo.",
+    status: "Sent Back",
+  },
+  {
+    id: "gcu-004",
+    submissionId: "GCU-2025-00053",
+    customerId: "cust-004",
+    customerName: "Rafiq Khan",
+    bpTrNumber: "TR-783441",
+    mobileNumber: "9901122334",
+    projectId: "sunrise-enclave-cgd",
+    projectName: "Sunrise Enclave CGD",
+    siteArea: "Sunrise Enclave",
+    siteAddress: "Sunrise Enclave, Udaipur",
+    gcCategory: "Domestic",
+    pipelineType: "MDPE",
+    submittedBy: "Priya Nair",
+    submittedOn: "2025-02-08 06:15",
+    reviewer: "Demo Admin",
+    reviewedOn: "",
+    fileCount: 2,
+    checklistDone: 3,
+    checklistTotal: 6,
+    remarks: "Initial upload pending reviewer check.",
+    status: "Pending",
+  },
+];
+
+export const gcChecklistItems: GcChecklistItem[] = [
+  {
+    id: "check-1",
+    label: "Meter Location Photo",
+    type: "Image",
+    status: "Approved",
+    required: true,
+    remarks: "Clear image uploaded",
+  },
+  {
+    id: "check-2",
+    label: "Meter Photo With Reading",
+    type: "Image",
+    status: "Approved",
+    required: true,
+    remarks: "Reading visible",
+  },
+  {
+    id: "check-3",
+    label: "Pipeline Route Photo",
+    type: "Image",
+    status: "Approved",
+    required: true,
+    remarks: "Route visible",
+  },
+  {
+    id: "check-4",
+    label: "Obstruction Photo",
+    type: "Image",
+    status: "Sent Back",
+    required: true,
+    remarks: "Needs clearer angle",
+  },
+  {
+    id: "check-5",
+    label: "GC Document",
+    type: "PDF",
+    status: "Approved",
+    required: true,
+    remarks: "Signed copy available",
+  },
+  {
+    id: "check-6",
+    label: "Other Documents",
+    type: "Document",
+    status: "Pending",
+    required: false,
+    remarks: "Optional supporting document",
+  },
+];
+
+export const gcEvidenceItems: GcEvidenceItem[] = [
+  {
+    id: "evidence-1",
+    title: "Meter location",
+    type: "Image",
+    fileName: "meter-location-tr-553901.jpg",
+    uploadedBy: "Vikas Saini",
+    uploadedOn: "2025-02-14 09:10",
+    status: "Approved",
+  },
+  {
+    id: "evidence-2",
+    title: "GC joint close-up",
+    type: "Image",
+    fileName: "gc-joint-tr-553901.jpg",
+    uploadedBy: "Vikas Saini",
+    uploadedOn: "2025-02-14 09:12",
+    status: "In Review",
+  },
+  {
+    id: "evidence-3",
+    title: "Pipeline route",
+    type: "Image",
+    fileName: "pipeline-route-tr-553901.jpg",
+    uploadedBy: "Vikas Saini",
+    uploadedOn: "2025-02-14 09:14",
+    status: "Approved",
+  },
+  {
+    id: "evidence-4",
+    title: "GC document",
+    type: "PDF",
+    fileName: "gc-document-tr-553901.pdf",
+    uploadedBy: "Vikas Saini",
+    uploadedOn: "2025-02-14 09:18",
+    status: "Approved",
+  },
+];
+
+export const gcReviewComments: GcReviewComment[] = [
+  {
+    id: "comment-1",
+    actor: "Amit Rathore",
+    role: "Reviewer",
+    dateTime: "2025-02-14 16:30",
+    comment: "Obstruction photo is not clear. Please upload a closer image with pipe quantity correction.",
+    status: "Sent Back",
+  },
+  {
+    id: "comment-2",
+    actor: "Vikas Saini",
+    role: "Field Executive",
+    dateTime: "2025-02-14 09:18",
+    comment: "GC evidence submitted with meter location, route and document.",
+    status: "In Review",
+  },
+];
+
+export function getGcUploadById(id: string) {
+  return gcUploadRecords.find((record) => record.id === id) ?? gcUploadRecords[0];
+}
+
+export const gcProjectOptions = Array.from(
+  new Map(gcUploadRecords.map((record) => [record.projectId, record.projectName])),
+).map(([value, label]) => ({ value, label }));
+
+export const gcSiteOptions = Array.from(
+  new Set(gcUploadRecords.map((record) => record.siteArea)),
+);
+
+export const gcReviewerOptions = Array.from(
+  new Set(gcUploadRecords.map((record) => record.reviewer).filter(Boolean)),
+);

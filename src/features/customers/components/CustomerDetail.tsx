@@ -29,6 +29,7 @@ import type {
   CustomerWorkStageRecord,
 } from "../types/customer.types";
 import { CustomerBreadcrumb } from "./CustomerBreadcrumb";
+import { CustomerInfoLine } from "./CustomerInfoLine";
 
 const relatedModuleLinks = [
   { label: "Surveys", href: "/surveys", count: 1 },
@@ -73,12 +74,10 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
             <StatusBadge status={customer.currentStage} />
             <StatusBadge status={customer.status} />
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
-            <span>{customer.bpTrNumber}</span>
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
-            <span>{customer.mobileNumber}</span>
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
-            <span>{customer.siteArea}</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+            <CustomerInfoLine label="BP/TR Number" value={customer.bpTrNumber} />
+            <CustomerInfoLine label="Mobile" value={customer.mobileNumber} />
+            <CustomerInfoLine label="Site" value={customer.siteArea} />
           </div>
         </div>
         <Link
@@ -237,15 +236,12 @@ function CustomerOverview({ customer }: { customer: Customer }) {
         <OverviewPanel title="Contact & Address">
           <InfoGrid items={contactDetails} compact />
           <div className="mt-3 rounded-md bg-muted/25 px-3 py-2.5">
-            <p className="text-xs font-semibold text-muted-foreground">
-              Address
-            </p>
-            <p className="mt-1 text-sm font-semibold text-foreground">
-              {customer.fullAddress}
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              GPS: {customer.latitude}, {customer.longitude}
-            </p>
+            <CustomerInfoLine label="Address" value={customer.fullAddress} />
+            <CustomerInfoLine
+              label="GPS"
+              value={`${customer.latitude}, ${customer.longitude}`}
+              className="mt-0.5"
+            />
           </div>
         </OverviewPanel>
 
@@ -383,11 +379,15 @@ function CustomerWorkProgress({ customer }: { customer: Customer }) {
         </div>
         <div className="mt-4 border-t border-border/60 pt-3">
           <p className="text-xs font-bold text-foreground">Latest Update</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {customer.currentStage} updated by Ramesh Kumar on{" "}
-            {formatDate(customer.commissioningDate || customer.installationDate)} for{" "}
-            {customer.bpTrNumber}.
-          </p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+            <CustomerInfoLine label="Stage" value={customer.currentStage} />
+            <CustomerInfoLine label="Updated By" value="Ramesh Kumar" />
+            <CustomerInfoLine
+              label="Date"
+              value={formatDate(customer.commissioningDate || customer.installationDate)}
+            />
+            <CustomerInfoLine label="Record" value={customer.bpTrNumber} />
+          </div>
         </div>
       </SectionCard>
 
@@ -423,12 +423,8 @@ function StageRow({ stage }: { stage: CustomerWorkStageRecord }) {
         </Link>
       </div>
       <StatusBadge status={stage.status} />
-      <span className="text-xs font-medium text-muted-foreground">
-        {formatDate(stage.date)}
-      </span>
-      <span className="text-xs font-semibold text-muted-foreground">
-        {stage.updatedBy}
-      </span>
+      <CustomerInfoLine label="Date" value={formatDate(stage.date)} />
+      <CustomerInfoLine label="Updated By" value={stage.updatedBy} />
     </div>
   );
 }
@@ -599,21 +595,29 @@ function CustomerActivityTimeline({
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-bold text-foreground">{item.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                <CustomerInfoLine
+                  label="Details"
+                  value={item.description}
+                  className="mt-0.5"
+                  valueClassName="font-medium"
+                />
               </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {formatDateTime(item.dateTime)}
-              </span>
+              <CustomerInfoLine label="Date" value={formatDateTime(item.dateTime)} />
             </div>
-            <p className="mt-2 text-xs font-semibold text-muted-foreground">
-              {item.actor} -{" "}
+            <div className="mt-1">
+              <CustomerInfoLine
+                label="Actor"
+                value={item.actor}
+                className="inline"
+              />
+              <span className="mx-2 text-muted-foreground">-</span>
               <Link
                 href={getRelatedRecordHref(item, customerId)}
-                className="text-muted-foreground hover:text-primary"
+                className="text-xs font-semibold text-foreground hover:text-primary"
               >
                 {item.relatedRecord}
               </Link>
-            </p>
+            </div>
           </div>
         ))}
       </div>
@@ -631,21 +635,13 @@ function InfoGrid({
   compact?: boolean;
 }) {
   return (
-    <dl
-      className={`grid ${compact ? "gap-x-5 gap-y-2" : "gap-x-8 gap-y-2"} md:grid-cols-2 ${columns}`}
+    <div
+      className={`grid ${compact ? "gap-x-5 gap-y-1" : "gap-x-8 gap-y-1"} md:grid-cols-2 ${columns}`}
     >
       {items.map(([label, value]) => (
-        <div
-          key={label}
-          className={`grid ${compact ? "grid-cols-[112px_1fr]" : "grid-cols-[130px_1fr]"} items-start gap-3`}
-        >
-          <dt className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-            {label}
-          </dt>
-          <dd className="min-w-0 text-sm font-semibold text-foreground">{value || "-"}</dd>
-        </div>
+        <CustomerInfoLine key={label} label={label} value={value} />
       ))}
-    </dl>
+    </div>
   );
 }
 

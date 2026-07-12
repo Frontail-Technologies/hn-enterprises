@@ -29,7 +29,7 @@ interface FilterBarProps {
 
 export function FilterBar({ filters, values, onChange, onReset, searchKey, searchPlaceholder = 'Search...', className }: FilterBarProps) {
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+    <div className={cn('flex flex-wrap items-center gap-3', className)}>
       {searchKey && (
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
@@ -37,13 +37,13 @@ export function FilterBar({ filters, values, onChange, onReset, searchKey, searc
             placeholder={searchPlaceholder}
             value={values[searchKey] ?? ''}
             onChange={(e) => onChange(searchKey, e.target.value)}
-            className="pl-9 h-9 w-56"
+            className="h-9 w-64 pl-9"
           />
         </div>
       )}
       {filters.map((f) => (
         <Select key={f.key} value={values[f.key] ?? 'all'} onValueChange={(v) => onChange(f.key, v ?? 'all')}>
-          <SelectTrigger className="h-9 w-44" title={getFilterLabel(f, values[f.key] ?? 'all')}>
+          <SelectTrigger className="h-9 w-48" title={getFilterLabel(f, values[f.key] ?? 'all')}>
             <span className="min-w-0 truncate text-left">
               {getFilterLabel(f, values[f.key] ?? 'all')}
             </span>
