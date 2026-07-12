@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import { EyeIcon } from "@phosphor-icons/react";
+import { CheckCircleIcon, EyeIcon, HourglassMediumIcon, WarningIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
@@ -17,6 +17,7 @@ import {
   preCommissioningRecords,
   preCommissioningStatuses,
 } from "../services/pre-commissioning.service";
+import { PreCommissioningRecordSheet } from "./PreCommissioningRecordSheet";
 import type {
   PreCommissioningRecord,
   PreCommissioningStatus,
@@ -115,40 +116,46 @@ export function PreCommissioningList() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-24",
+      className: "w-28",
       render: (record) => (
-        <ActionTooltip label="View pre-commissioning">
-          <Link
-            href={`/pre-commissioning/${record.id}`}
-            aria-label="View pre-commissioning"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
-            <EyeIcon size={15} />
-          </Link>
-        </ActionTooltip>
+        <div className="flex items-center gap-1">
+          <ActionTooltip label="View pre-commissioning">
+            <Link
+              href={`/pre-commissioning/${record.id}`}
+              aria-label="View pre-commissioning"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <EyeIcon size={15} />
+            </Link>
+          </ActionTooltip>
+          <PreCommissioningRecordSheet record={record} mode="edit" iconOnly />
+        </div>
       ),
     },
   ];
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Pre-Commissioning
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-          Track post-GC readiness checks before commissioning.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Pre-Commissioning
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
+            Track post-GC readiness checks before commissioning.
+          </p>
+        </div>
+        <PreCommissioningRecordSheet mode="add" />
       </header>
+
+      <div className="flex flex-wrap gap-2.5">
+        <SummaryStat label="Pending" value={countStatus("Pending")} icon={<WarningIcon size={17} />} />
+        <SummaryStat label="In Review" value={countStatus("In Review")} icon={<HourglassMediumIcon size={17} />} />
+        <SummaryStat label="Approved" value={countStatus("Approved")} icon={<CheckCircleIcon size={17} />} />
+      </div>
 
       <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
         <div className="space-y-3 p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SummaryStat label="Pending" value={countStatus("Pending")} />
-            <SummaryStat label="In Review" value={countStatus("In Review")} />
-            <SummaryStat label="Approved" value={countStatus("Approved")} />
-          </div>
-
           <FilterSheetButton
             searchKey="search"
             searchPlaceholder="Search customer, BP/TR or reference..."
@@ -207,11 +214,14 @@ export function PreCommissioningList() {
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
+function SummaryStat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xl font-bold leading-none text-foreground">{value}</p>
+    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
+      </div>
+      <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
     </div>
   );
 }

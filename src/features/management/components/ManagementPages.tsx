@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 
 const staff = [
@@ -45,12 +46,6 @@ const documents = [
   { id: "doc-1", name: "LOA_SHYAM_2025.pdf", category: "Project Documents", module: "Projects", uploadedBy: "Demo Admin", date: "2025-02-12", status: "Approved" },
   { id: "doc-2", name: "Meter_Photo_BP100245.jpg", category: "Customer Documents", module: "Customers", uploadedBy: "Amit Rathore", date: "2025-02-15", status: "In Review" },
   { id: "doc-3", name: "Pressure_Report_TR553901.pdf", category: "Reports", module: "Testing / Pressure", uploadedBy: "Vikas Saini", date: "2025-02-17", status: "Pending" },
-];
-
-const reports = [
-  { id: "rep-1", name: "Daily GC Upload Register", module: "GC Uploads", generatedDate: "2025-02-18", createdBy: "Demo Admin", status: "Completed" },
-  { id: "rep-2", name: "Pending Pre-Commissioning", module: "Pre-Commissioning", generatedDate: "2025-02-18", createdBy: "Amit Rathore", status: "Pending" },
-  { id: "rep-3", name: "Customer Billing Summary", module: "Billing", generatedDate: "2025-02-17", createdBy: "Accounts", status: "Completed" },
 ];
 
 const users = [
@@ -124,7 +119,7 @@ export function StaffResourcesPage() {
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
         onReset={() => setFilters({ search: "", role: "all", status: "all" })}
       />
-      <DataTable data={data} columns={columns} />
+      <PaginatedDataTable data={data} columns={columns} />
     </PageShell>
   );
 }
@@ -141,51 +136,37 @@ export function DocumentsPage() {
   ];
   return (
     <PageShell title="Documents" subtitle="Central document management for operational files." actions={<DocumentDrawer />}>
-      <div className="grid gap-3 sm:grid-cols-5">
-        {["Customer Documents", "Project Documents", "Reports", "Certificates", "Other"].map((item) => (
-          <MiniStat key={item} label={item} value={documents.filter((row) => row.category === item).length} />
-        ))}
-      </div>
-      <DataTable data={documents} columns={columns} />
+      <PaginatedDataTable data={documents} columns={columns} />
     </PageShell>
   );
 }
 
 export function ReportsPage() {
-  const [filters, setFilters] = useState({ search: "", module: "all" });
-  const data = reports.filter((row) =>
-    (!filters.search || row.name.toLowerCase().includes(filters.search.toLowerCase())) &&
-    (filters.module === "all" || row.module === filters.module)
-  );
-  const columns: ColumnDef<(typeof reports)[number]>[] = [
-    { key: "name", header: "Report Name", render: (row) => <b>{row.name}</b> },
-    { key: "module", header: "Module" },
-    { key: "generatedDate", header: "Generated Date", render: (row) => formatDate(row.generatedDate) },
-    { key: "createdBy", header: "Created By" },
-    { key: "actions", header: "Action", className: "w-24", render: () => <IconActions preview download /> },
-  ];
   return (
-    <PageShell title="Reports" subtitle="View generated operational reports and export data." actions={<Button type="button"><DownloadSimpleIcon size={15} />Export</Button>}>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <MiniStat label="Total Reports" value={reports.length} />
-        <MiniStat label="Pending Reports" value={reports.filter((row) => row.status === "Pending").length} />
-        <MiniStat label="Completed Reports" value={reports.filter((row) => row.status === "Completed").length} />
+    <div className="space-y-5">
+      <Header title="Reports" subtitle="Operational reports and exports." />
+      <div className="rounded-xl border border-border/70 bg-card p-8">
+        <div className="mx-auto max-w-md text-center">
+          <p className="text-base font-bold text-foreground">Reports module coming soon</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+            Generated reports, saved exports and scheduled operational summaries will be configured here.
+          </p>
+        </div>
       </div>
-      <FilterSheetButton
-        searchKey="search"
-        searchPlaceholder="Search reports..."
-        title="Report Filters"
-        values={filters}
-        filters={[{ key: "module", placeholder: "All Modules", options: uniqOptions(reports.map((row) => row.module)) }]}
-        onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-        onReset={() => setFilters({ search: "", module: "all" })}
-      />
-      <DataTable data={data} columns={columns} />
-    </PageShell>
+    </div>
   );
 }
 
 export function UsersRolesPage() {
+  const [filters, setFilters] = useState({ search: "", role: "all", status: "all" });
+  const data = useMemo(() => {
+    const search = filters.search.toLowerCase();
+    return users.filter((row) =>
+      (!search || row.name.toLowerCase().includes(search) || row.contact.toLowerCase().includes(search)) &&
+      (filters.role === "all" || row.role === filters.role) &&
+      (filters.status === "all" || row.status === filters.status)
+    );
+  }, [filters]);
   const columns: ColumnDef<(typeof users)[number]>[] = [
     { key: "name", header: "User Name", render: (row) => <b>{row.name}</b> },
     { key: "contact", header: "Email/Mobile" },
@@ -196,25 +177,21 @@ export function UsersRolesPage() {
     { key: "actions", header: "Actions", className: "w-20", render: () => <UserDrawer mode="edit" iconOnly /> },
   ];
   return (
-    <div className="space-y-5">
-      <Header title="Users & Roles" subtitle="Admin access management and permission control." actions={<UserDrawer />} />
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="rounded-xl border border-border/70 bg-card p-4">
-          <DataTable data={users} columns={columns} />
-        </div>
-        <aside className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-sm font-bold text-foreground">Role Management</p>
-          <div className="mt-3 space-y-2">
-            {roles.map((role) => (
-              <div key={role} className="flex items-center justify-between rounded-lg border border-border/60 bg-background px-3 py-2">
-                <span className="text-sm font-semibold">{role}</span>
-                <StatusBadge status="Active" />
-              </div>
-            ))}
-          </div>
-        </aside>
-      </section>
-    </div>
+    <PageShell title="Users & Roles" subtitle="Admin access management and permission control." actions={<UserDrawer />}>
+      <FilterSheetButton
+        searchKey="search"
+        searchPlaceholder="Search users or contact..."
+        title="User Filters"
+        values={filters}
+        filters={[
+          { key: "role", placeholder: "All Roles", options: uniqOptions(users.map((row) => row.role)) },
+          { key: "status", placeholder: "All Statuses", options: uniqOptions(users.map((row) => row.status)) },
+        ]}
+        onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+        onReset={() => setFilters({ search: "", role: "all", status: "all" })}
+      />
+      <PaginatedDataTable data={data} columns={columns} />
+    </PageShell>
   );
 }
 
@@ -246,7 +223,7 @@ export function MastersPage() {
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
         onReset={() => setFilters({ search: "", category: "all" })}
       />
-      <DataTable data={data} columns={columns} />
+      <PaginatedDataTable data={data} columns={columns} />
     </PageShell>
   );
 }
@@ -298,7 +275,7 @@ export function AuditLogsPage() {
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
         onReset={() => setFilters({ search: "", module: "all" })}
       />
-      <DataTable data={data} columns={columns} />
+      <PaginatedDataTable data={data} columns={columns} />
     </PageShell>
   );
 }
@@ -326,11 +303,38 @@ function Header({ title, subtitle, actions }: { title: string; subtitle: string;
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function PaginatedDataTable<T extends { id: string }>({
+  data,
+  columns,
+  pageSize = 6,
+}: {
+  data: T[];
+  columns: ColumnDef<T>[];
+  pageSize?: number;
+}) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(data.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pagedData = data.slice(startIndex, startIndex + pageSize);
+  const startItem = data.length ? startIndex + 1 : 0;
+  const endItem = Math.min(startIndex + pagedData.length, data.length);
+
   return (
-    <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xl font-bold leading-none text-foreground">{value}</p>
+    <div className="space-y-3">
+      <DataTable
+        data={pagedData}
+        columns={columns}
+        serialNumberStart={startIndex + 1}
+      />
+      <Pagination
+        page={currentPage}
+        pageCount={pageCount}
+        totalItems={data.length}
+        startItem={startItem}
+        endItem={endItem}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

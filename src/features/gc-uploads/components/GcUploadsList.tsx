@@ -5,6 +5,9 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import {
   EyeIcon,
+  FileTextIcon,
+  PaperPlaneTiltIcon,
+  WarningIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
@@ -130,14 +133,14 @@ export function GcUploadsList() {
         </div>
       </header>
 
+      <div className="flex flex-wrap gap-2.5">
+        <SummaryStat label="Pending Review" value={countStatus("Pending")} icon={<WarningIcon size={17} />} />
+        <SummaryStat label="Approved" value={countStatus("Approved")} icon={<FileTextIcon size={17} />} />
+        <SummaryStat label="Sent Back" value={countStatus("Sent Back")} icon={<PaperPlaneTiltIcon size={17} />} />
+      </div>
+
       <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
         <div className="space-y-3 p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SummaryStat label="Pending Review" value={countStatus("Pending")} />
-            <SummaryStat label="Approved" value={countStatus("Approved")} />
-            <SummaryStat label="Sent Back" value={countStatus("Sent Back")} />
-          </div>
-
           <FilterSheetButton
             searchKey="search"
             searchPlaceholder="Search submission, customer, BP/TR..."
@@ -201,11 +204,14 @@ export function GcUploadsList() {
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
+function SummaryStat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xl font-bold leading-none text-foreground">{value}</p>
+    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
+      </div>
+      <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
     </div>
   );
 }

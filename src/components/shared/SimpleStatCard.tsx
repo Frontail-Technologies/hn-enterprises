@@ -11,16 +11,18 @@ interface SimpleStatCardProps {
 
 export function SimpleStatCard({ label, value, icon, helperText, iconClassName, className }: SimpleStatCardProps) {
   return (
-    <div className={cn('bg-card rounded-xl ring-1 ring-foreground/5 p-4 shadow-sm flex items-center gap-3', className)}>
-      <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', iconClassName ?? 'bg-primary/10 text-primary')}>
-        {icon}
+    <div className={cn('flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40', className)}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <div className={cn('flex shrink-0 items-center justify-center rounded-lg p-1.5', iconClassName ?? 'bg-primary/10 text-primary')}>
+          {icon}
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground font-medium leading-tight">{label}</p>
-        <p className="text-2xl font-bold text-foreground mt-1 leading-none">{value}</p>
-        {helperText && (
-          <p className="text-xs text-muted-foreground mt-1 leading-tight">{helperText}</p>
-        )}
+      <div>
+        <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
+        {helperText ? (
+          <p className="mt-0.5 truncate text-xs font-medium leading-tight text-muted-foreground">{helperText}</p>
+        ) : null}
       </div>
     </div>
   )

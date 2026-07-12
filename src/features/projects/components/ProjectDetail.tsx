@@ -211,11 +211,11 @@ function ProjectOverview({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SmallStat label="Active Sites" value="3" helper="Field locations" />
-        <SmallStat label="Total Connections" value="5,200" helper="Planned" />
-        <SmallStat label="Surveys Completed" value="12 / 15" helper="Completed" />
-        <SmallStat label="Pending Reports" value="9" helper="Awaiting approval" />
+      <section className="flex flex-wrap gap-2.5">
+        <SmallStat label="Active Sites" value="3" helper="Field locations" icon={<MapPinIcon size={17} />} />
+        <SmallStat label="Total Connections" value="5,200" helper="Planned" icon={<UserPlusIcon size={17} />} />
+        <SmallStat label="Surveys Completed" value="12 / 15" helper="Completed" icon={<FileArrowUpIcon size={17} />} />
+        <SmallStat label="Pending Reports" value="9" helper="Awaiting approval" icon={<FileArrowUpIcon size={17} />} />
       </section>
 
       <SectionCard title="Project Information">
@@ -739,16 +739,23 @@ function SmallStat({
   label,
   value,
   helper,
+  icon,
 }: {
   label: string;
   value: string;
   helper: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-bold leading-none text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border bg-card p-3 sm:w-40">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
+      </div>
+      <div>
+        <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
+        <p className="mt-0.5 text-xs font-medium text-muted-foreground">{helper}</p>
+      </div>
     </div>
   );
 }

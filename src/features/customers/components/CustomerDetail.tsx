@@ -89,26 +89,30 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         </Link>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="flex flex-wrap gap-2.5">
         <CustomerSummaryCard
           label="Connection Type"
           value={customer.connectionType}
           helper={customer.houseType}
+          icon={<LinkIcon size={17} />}
         />
         <CustomerSummaryCard
           label="Current Stage"
           value={customer.currentStage}
           helper="Field workflow"
+          icon={<ClockCounterClockwiseIcon size={17} />}
         />
         <CustomerSummaryCard
           label="Meter Number"
           value={customer.meterNumber || "-"}
           helper={customer.meterType || "Not assigned"}
+          icon={<FileTextIcon size={17} />}
         />
         <CustomerSummaryCard
           label="Billing"
           value={`${[customer.giBillDone, customer.gcBillDone, customer.conversionBillDone].filter(Boolean).length}/3`}
           helper="Milestones done"
+          icon={<DownloadSimpleIcon size={17} />}
         />
       </section>
 
@@ -185,16 +189,23 @@ function CustomerSummaryCard({
   label,
   value,
   helper,
+  icon,
 }: {
   label: string;
   value: string;
   helper: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-lg font-bold leading-tight text-foreground">{value}</p>
-      <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{helper}</p>
+    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border bg-card p-3 sm:w-40">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
+      </div>
+      <div>
+        <p className="truncate text-lg font-bold leading-tight text-foreground">{value}</p>
+        <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{helper}</p>
+      </div>
     </div>
   );
 }

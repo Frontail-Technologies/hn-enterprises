@@ -21,33 +21,31 @@ export function MetricCard({
   return (
     <article
       className={cn(
-        "bg-card rounded-lg ring-1 ring-foreground/5 shadow-sm px-4 py-3.5 min-h-28 flex flex-col justify-between",
+        "flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40",
         className,
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-xs font-semibold leading-4 text-muted-foreground">
+          {label}
+        </p>
         <div
           className={cn(
-            "h-7 w-7 shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center",
+            "flex shrink-0 items-center justify-center rounded-lg bg-primary/10 p-1.5 text-primary",
             iconClassName,
           )}
         >
-          <Icon size={16} weight="bold" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground leading-tight">
-            {label}
-          </p>
-          <p className="mt-2 text-2xl font-bold text-foreground leading-none">
-            {value}
-          </p>
+          <Icon size={17} weight="bold" />
         </div>
       </div>
-      {helperText ? (
-        <p className="pl-10 text-xs font-medium text-muted-foreground leading-none">
-          {helperText}
-        </p>
-      ) : null}
+      <div>
+        <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
+        {helperText ? (
+          <p className="mt-0.5 truncate text-xs font-medium leading-tight text-muted-foreground">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
     </article>
   );
 }

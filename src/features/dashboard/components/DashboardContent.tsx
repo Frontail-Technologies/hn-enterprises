@@ -26,7 +26,7 @@ export function DashboardContent() {
         <DashboardPeriodFilter value={period} onChange={setPeriod} />
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="flex flex-wrap gap-2.5">
         {dashboardMetrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}

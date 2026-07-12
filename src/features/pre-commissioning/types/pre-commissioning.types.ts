@@ -21,6 +21,15 @@ export type PreCommissioningRecord = {
   assignedPerson: string;
   status: PreCommissioningStatus;
   updatedDate: string;
+  customerMobile?: string;
+  evidenceCount?: number;
+  purgingDate: string;
+  purgingPressure: string;
+  purgingDuration: string;
+  purgingRemarks: string;
+  locationSection: string;
+  pipeLengths: string;
+  valveChambers: string;
   safetyVerification: string;
   installationVerification: string;
   fieldObservation: string;
@@ -44,6 +53,7 @@ export type PreCommissioningEvidence = {
   status: StatusValue;
   uploadedBy: string;
   uploadedOn: string;
+  remarks?: string;
 };
 
 export type PreCommissioningHistoryItem = {

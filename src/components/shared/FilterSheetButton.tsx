@@ -57,6 +57,7 @@ export function FilterSheetButton({
 }: FilterSheetButtonProps) {
   const [open, setOpen] = useState(false);
   const [draftValues, setDraftValues] = useState(values);
+  const showInlineFilters = filters.length <= 2 && !children && !renderExtra;
 
   const activeCount = filters.reduce((count, filter) => {
     const value = values[filter.key];
@@ -100,74 +101,110 @@ export function FilterSheetButton({
         </div>
       ) : null}
 
-      <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetTrigger
-          render={
-            <Button type="button" variant="outline" size="default" className="h-9" />
-          }
-        >
-          <FunnelIcon size={14} />
-          Filters
-          {activeCount > 0 ? (
-            <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
-              {activeCount}
-            </span>
+      {showInlineFilters ? (
+        <>
+          {filters.map((filter) => (
+            <Select
+              key={filter.key}
+              value={values[filter.key] ?? "all"}
+              onValueChange={(value) => onChange(filter.key, value ?? "all")}
+            >
+              <SelectTrigger
+                className="h-9 w-48 max-w-full"
+                title={getFilterLabel(filter, values[filter.key] ?? "all")}
+              >
+                <span className="min-w-0 truncate text-left">
+                  {getFilterLabel(filter, values[filter.key] ?? "all")}
+                </span>
+              </SelectTrigger>
+              <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
+                <SelectItem value="all" title={filter.placeholder}>
+                  <span className="block min-w-0 truncate">{filter.placeholder}</span>
+                </SelectItem>
+                {filter.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value} title={option.label}>
+                    <span className="block min-w-0 truncate">{option.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+          {activeCount > 0 || (searchKey && values[searchKey]) ? (
+            <Button type="button" variant="outline" size="default" className="h-9" onClick={onReset}>
+              Reset
+            </Button>
           ) : null}
-        </SheetTrigger>
-        <SheetContent className="w-full border-border bg-card sm:max-w-md">
-          <SheetHeader className="border-b border-border/70">
-            <SheetTitle>{title}</SheetTitle>
-            <SheetDescription>{description}</SheetDescription>
-          </SheetHeader>
+        </>
+      ) : (
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+          <SheetTrigger
+            render={
+              <Button type="button" variant="outline" size="default" className="h-9" />
+            }
+          >
+            <FunnelIcon size={14} />
+            Filters
+            {activeCount > 0 ? (
+              <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+                {activeCount}
+              </span>
+            ) : null}
+          </SheetTrigger>
+          <SheetContent className="w-full border-border bg-card sm:max-w-md">
+            <SheetHeader className="border-b border-border/70">
+              <SheetTitle>{title}</SheetTitle>
+              <SheetDescription>{description}</SheetDescription>
+            </SheetHeader>
 
-          <div className="flex-1 space-y-4 overflow-y-auto px-4">
-            {filters.map((filter) => (
-              <div key={filter.key} className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">
-                  {filter.placeholder}
-                </Label>
-                <Select
-                  value={draftValues[filter.key] ?? "all"}
-                  onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
-                >
-                  <SelectTrigger
-                    className="h-9 w-full"
-                    title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
+            <div className="flex-1 space-y-4 overflow-y-auto px-4">
+              {filters.map((filter) => (
+                <div key={filter.key} className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">
+                    {filter.placeholder}
+                  </Label>
+                  <Select
+                    value={draftValues[filter.key] ?? "all"}
+                    onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
                   >
-                    <span className="min-w-0 truncate text-left">
-                      {getFilterLabel(filter, draftValues[filter.key] ?? "all")}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent className="w-80 max-w-[calc(100vw-2rem)]">
-                    <SelectItem value="all" title={filter.placeholder}>
-                      <span className="block min-w-0 truncate">{filter.placeholder}</span>
-                    </SelectItem>
-                    {filter.options.map((option) => (
-                      <SelectItem key={option.value} value={option.value} title={option.label}>
-                        <span className="block min-w-0 truncate">{option.label}</span>
+                    <SelectTrigger
+                      className="h-9 w-full"
+                      title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
+                    >
+                      <span className="min-w-0 truncate text-left">
+                        {getFilterLabel(filter, draftValues[filter.key] ?? "all")}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent className="w-80 max-w-[calc(100vw-2rem)]">
+                      <SelectItem value="all" title={filter.placeholder}>
+                        <span className="block min-w-0 truncate">{filter.placeholder}</span>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
+                      {filter.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value} title={option.label}>
+                          <span className="block min-w-0 truncate">{option.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
 
-            {renderExtra?.({ values: draftValues, onChange: updateDraft })}
-            {children}
-          </div>
-
-          <SheetFooter className="border-t border-border/70">
-            <div className="flex items-center justify-between gap-2">
-              <Button type="button" variant="outline" onClick={resetFilters}>
-                Reset
-              </Button>
-              <SheetClose render={<Button type="button" onClick={applyFilters} />}>
-                Apply Filters
-              </SheetClose>
+              {renderExtra?.({ values: draftValues, onChange: updateDraft })}
+              {children}
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+
+            <SheetFooter className="border-t border-border/70">
+              <div className="flex items-center justify-between gap-2">
+                <Button type="button" variant="outline" onClick={resetFilters}>
+                  Reset
+                </Button>
+                <SheetClose render={<Button type="button" onClick={applyFilters} />}>
+                  Apply Filters
+                </SheetClose>
+              </div>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
