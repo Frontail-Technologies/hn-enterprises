@@ -6,6 +6,9 @@ import Link from "next/link";
 import {
   CalendarPlusIcon,
   CameraIcon,
+  CheckCircleIcon,
+  WarningIcon,
+  ClockIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,8 +52,11 @@ export function PlanningPage() {
         record.activity.toLowerCase().includes(search) ||
         record.siteArea.toLowerCase().includes(search) ||
         record.supervisor.toLowerCase().includes(search);
-      const matchesProject = filters.project === "all" || record.projectName === filters.project;
-      const matchesSupervisor = filters.supervisor === "all" || record.supervisor === filters.supervisor;
+      const matchesProject =
+        filters.project === "all" || record.projectName === filters.project;
+      const matchesSupervisor =
+        filters.supervisor === "all" ||
+        record.supervisor === filters.supervisor;
       return matchesSearch && matchesProject && matchesSupervisor;
     });
   }, [filters]);
@@ -69,7 +75,9 @@ export function PlanningPage() {
       render: (record) => (
         <div>
           <p className="font-semibold text-foreground">{record.activity}</p>
-          <p className="text-xs font-medium text-muted-foreground">{record.siteArea}</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {record.siteArea}
+          </p>
         </div>
       ),
     },
@@ -86,7 +94,9 @@ export function PlanningPage() {
       header: "Delay Reason + Photos",
       render: (record) => (
         <div>
-          <p className="font-medium text-foreground">{record.delayReason || "-"}</p>
+          <p className="font-medium text-foreground">
+            {record.delayReason || "-"}
+          </p>
           <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
             <CameraIcon size={13} />
             {record.photoCount} photos
@@ -100,25 +110,51 @@ export function PlanningPage() {
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Planning & DPR</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Planning & DPR
+          </h1>
           <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-            Plan supervisor work, capture daily progress and track delays with photos.
+            Plan supervisor work, capture daily progress and track delays with
+            photos.
           </p>
         </div>
         <PlanSheet />
       </header>
 
       <section className="grid gap-3 md:grid-cols-4">
-        <Metric icon={<CalendarPlusIcon size={18} />} label="Planned Work" value="62" helper="Today" />
-        <Metric icon={<CheckCircleIcon size={18} />} label="Completed" value="50" helper="Today" />
-        <Metric icon={<WarningIcon size={18} />} label="Delayed" value="12" helper="Need follow-up" />
-        <Metric icon={<ClockIcon size={18} />} label="Completion" value="80%" helper="Planned vs completed" />
+        <Metric
+          icon={<CalendarPlusIcon size={18} />}
+          label="Planned Work"
+          value="62"
+          helper="Today"
+        />
+        <Metric
+          icon={<CheckCircleIcon size={18} />}
+          label="Completed"
+          value="50"
+          helper="Today"
+        />
+        <Metric
+          icon={<WarningIcon size={18} />}
+          label="Delayed"
+          value="12"
+          helper="Need follow-up"
+        />
+        <Metric
+          icon={<ClockIcon size={18} />}
+          label="Completion"
+          value="80%"
+          helper="Planned vs completed"
+        />
       </section>
 
       <nav className="flex flex-wrap gap-2">
         <PlanningLink href="/planning/supervisor" label="Supervisor Planning" />
         <PlanningLink href="/planning/dpr" label="Daily Progress Report" />
-        <PlanningLink href="/planning/planned-vs-completed" label="Planned vs Completed" />
+        <PlanningLink
+          href="/planning/planned-vs-completed"
+          label="Planned vs Completed"
+        />
         <PlanningLink href="/planning/delays" label="Delay Reason + Photos" />
       </nav>
 
@@ -129,8 +165,16 @@ export function PlanningPage() {
             searchPlaceholder="Search activity, site or supervisor..."
             values={filters}
             filters={[
-              { key: "project", placeholder: "All Projects", options: planningProjectOptions },
-              { key: "supervisor", placeholder: "All Supervisors", options: planningSupervisorOptions },
+              {
+                key: "project",
+                placeholder: "All Projects",
+                options: planningProjectOptions,
+              },
+              {
+                key: "supervisor",
+                placeholder: "All Supervisors",
+                options: planningSupervisorOptions,
+              },
             ]}
             onChange={(key, value) => {
               setFilters((current) => ({ ...current, [key]: value }));
@@ -142,7 +186,12 @@ export function PlanningPage() {
             }}
           />
           <div className="mt-3">
-            <DataTable data={pagination.paginatedItems} columns={columns} serialNumberStart={pagination.startItem} emptyTitle="No planning records found" />
+            <DataTable
+              data={pagination.paginatedItems}
+              columns={columns}
+              serialNumberStart={pagination.startItem}
+              emptyTitle="No planning records found"
+            />
           </div>
           <Pagination
             className="mt-3"
@@ -157,19 +206,31 @@ export function PlanningPage() {
 
         <aside className="space-y-4">
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Daily Progress Report</p>
+            <p className="text-sm font-bold text-foreground">
+              Daily Progress Report
+            </p>
             <div className="mt-3 space-y-2">
               {planningRecords.slice(0, 3).map((record) => (
-                <div key={record.id} className="rounded-lg border border-border/60 bg-background px-3 py-2">
-                  <p className="text-sm font-bold text-foreground">{record.activity}</p>
-                  <p className="text-xs font-medium text-muted-foreground">{record.completedQty} of {record.plannedQty} · {record.supervisor}</p>
+                <div
+                  key={record.id}
+                  className="rounded-lg border border-border/60 bg-background px-3 py-2"
+                >
+                  <p className="text-sm font-bold text-foreground">
+                    {record.activity}
+                  </p>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {record.completedQty} of {record.plannedQty} ·{" "}
+                    {record.supervisor}
+                  </p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Planned vs Completed</p>
+            <p className="text-sm font-bold text-foreground">
+              Planned vs Completed
+            </p>
             <div className="mt-3 space-y-3">
               <ProgressRow label="GI Installation" value={82} />
               <ProgressRow label="GC Corrections" value={67} />
@@ -206,19 +267,26 @@ export function PlanningSubPage({
     },
   }[type];
 
-  const rows = type === "delays"
-    ? planningRecords.filter((record) => record.status === "Delayed")
-    : planningRecords;
+  const rows =
+    type === "delays"
+      ? planningRecords.filter((record) => record.status === "Delayed")
+      : planningRecords;
 
   const columns: ColumnDef<PlanningRecord>[] = [
-    { key: "date", header: "Date", render: (record) => formatDate(record.date) },
+    {
+      key: "date",
+      header: "Date",
+      render: (record) => formatDate(record.date),
+    },
     {
       key: "project",
       header: "Project / Site",
       render: (record) => (
         <div>
           <p className="font-semibold text-foreground">{record.projectName}</p>
-          <p className="text-xs font-medium text-muted-foreground">{record.siteArea}</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {record.siteArea}
+          </p>
         </div>
       ),
     },
@@ -226,7 +294,11 @@ export function PlanningSubPage({
     { key: "plannedQty", header: "Planned Qty" },
     { key: "completedQty", header: "Completed Qty" },
     { key: "supervisor", header: "Supervisor" },
-    { key: "status", header: "Status", render: (record) => <StatusBadge status={record.status} /> },
+    {
+      key: "status",
+      header: "Status",
+      render: (record) => <StatusBadge status={record.status} />,
+    },
     {
       key: "delayReason",
       header: "Delay / Photos",
@@ -237,19 +309,29 @@ export function PlanningSubPage({
   return (
     <div className="space-y-4">
       <nav className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <Link href="/planning" className="hover:text-primary">Planning & DPR</Link>
+        <Link href="/planning" className="hover:text-primary">
+          Planning & DPR
+        </Link>
         <span>/</span>
         <span className="font-semibold text-foreground">{config.title}</span>
       </nav>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{config.title}</h1>
-          <p className="mt-1 text-sm font-medium text-muted-foreground">{config.subtitle}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {config.title}
+          </h1>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
+            {config.subtitle}
+          </p>
         </div>
         <PlanSheet />
       </header>
       <section className="rounded-xl border border-border/70 bg-card p-4">
-        <DataTable data={rows} columns={columns} emptyTitle="No planning records found" />
+        <DataTable
+          data={rows}
+          columns={columns}
+          emptyTitle="No planning records found"
+        />
       </section>
     </div>
   );
@@ -265,7 +347,9 @@ function PlanSheet() {
       <SheetContent className="w-full border-border bg-card sm:max-w-lg">
         <SheetHeader className="border-b border-border/70">
           <SheetTitle>Supervisor Planning</SheetTitle>
-          <SheetDescription>Create a compact plan and expected DPR target.</SheetDescription>
+          <SheetDescription>
+            Create a compact plan and expected DPR target.
+          </SheetDescription>
         </SheetHeader>
         <div className="flex-1 space-y-3 overflow-y-auto px-4">
           <div className="grid gap-3 md:grid-cols-2">
@@ -277,14 +361,21 @@ function PlanSheet() {
             <Field label="Planned Quantity" defaultValue="34 customers" />
           </div>
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Delay Reason / Notes</span>
-            <Textarea className="min-h-28" placeholder="Add expected constraints or delay reason" />
+            <span className="text-xs font-bold text-foreground">
+              Delay Reason / Notes
+            </span>
+            <Textarea
+              className="min-h-28"
+              placeholder="Add expected constraints or delay reason"
+            />
           </label>
           <Field label="Photos" type="file" />
         </div>
         <SheetFooter className="border-t border-border/70">
           <div className="flex items-center justify-between gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
+            <SheetClose render={<Button type="button" variant="outline" />}>
+              Cancel
+            </SheetClose>
             <SheetClose render={<Button type="button" />}>Save Plan</SheetClose>
           </div>
         </SheetFooter>
@@ -304,10 +395,22 @@ function PlanningLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function Metric({ icon, label, value, helper }: { icon: React.ReactNode; label: string; value: string; helper: string }) {
+function Metric({
+  icon,
+  label,
+  value,
+  helper,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  helper: string;
+}) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-4">
-      <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</span>
+      <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary">
+        {icon}
+      </span>
       <div>
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         <p className="text-xl font-bold text-foreground">{value}</p>
@@ -325,17 +428,32 @@ function ProgressRow({ label, value }: { label: string; value: number }) {
         <span className="text-foreground">{value}%</span>
       </div>
       <div className="mt-1 h-1.5 rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${value}%` }}
+        />
       </div>
     </div>
   );
 }
 
-function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue?: string; type?: string }) {
+function Field({
+  label,
+  defaultValue,
+  type = "text",
+}: {
+  label: string;
+  defaultValue?: string;
+  type?: string;
+}) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs font-bold text-foreground">{label}</span>
-      <Input type={type} defaultValue={type === "file" ? undefined : defaultValue} className="h-9" />
+      <Input
+        type={type}
+        defaultValue={type === "file" ? undefined : defaultValue}
+        className="h-9"
+      />
     </label>
   );
 }
