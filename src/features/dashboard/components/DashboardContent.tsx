@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
 import { MetricCard } from "@/components/shared/MetricCard";
+import { PageShell } from "@/components/shared/PageShell";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
 import { WorkProgressCard } from "@/features/dashboard/components/WorkProgressCard";
@@ -15,27 +17,25 @@ export function DashboardContent() {
   const dashboardMetrics = dashboardMetricsByPeriod[period];
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Project, site, survey, and billing overview
-          </p>
-        </div>
-        <DashboardPeriodFilter value={period} onChange={setPeriod} />
-      </div>
-
-      <section className="flex flex-wrap gap-2.5">
+    <PageShell
+      title="Dashboard"
+      subtitle="Project, site, survey, and billing overview"
+      actions={<DashboardPeriodFilter value={period} onChange={setPeriod} />}
+    >
+      <CompactStatGrid dashboard>
         {dashboardMetrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
+          <MetricCard
+            key={metric.label}
+            {...metric}
+            className="h-28 max-w-none p-4 sm:w-full"
+          />
         ))}
-      </section>
+      </CompactStatGrid>
 
       <section className="grid gap-4 xl:grid-cols-2">
         <WorkProgressCard />
         <RecentActivityCard />
       </section>
-    </div>
+    </PageShell>
   );
 }

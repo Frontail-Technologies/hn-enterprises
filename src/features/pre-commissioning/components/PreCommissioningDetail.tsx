@@ -56,7 +56,7 @@ export function PreCommissioningDetail({
       header: "Check",
       render: (item) => (
         <div>
-          <p className="font-bold text-foreground">{item.label}</p>
+          <p className="font-semibold text-foreground">{item.label}</p>
           <InfoLine label="Category" value={item.category} className="leading-5" />
         </div>
       ),
@@ -108,7 +108,7 @@ export function PreCommissioningDetail({
               <StatusBadge status={record.status} />
             </div>
             <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Section: {record.locationSection} · Updated {formatDateTime(record.updatedDate)}
+              Section: {record.locationSection} - Updated {formatDateTime(record.updatedDate)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -235,7 +235,7 @@ export function PreCommissioningDetail({
                   className="rounded-lg border border-border/60 bg-background px-3 py-2"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-foreground">{item.action}</p>
+                    <p className="text-sm font-semibold text-foreground">{item.action}</p>
                     <StatusBadge status={item.status} />
                   </div>
                   <InfoLine label="Actor" value={item.actor} className="mt-1" />
@@ -263,7 +263,7 @@ function EvidenceCard({ item }: { item: PreCommissioningEvidence }) {
           {item.type === "PDF" ? <FileTextIcon size={22} /> : <FileImageIcon size={22} />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
           <InfoLine label="File" value={item.fileName} className="truncate leading-5" />
           <InfoLine label="Uploaded" value={formatDateTime(item.uploadedOn)} className="leading-5" />
           <InfoLine label="By" value={item.uploadedBy} className="leading-5" />
@@ -296,7 +296,7 @@ function EvidenceUploadSheet() {
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Type</span>
+            <span className="text-xs font-medium text-foreground">Type</span>
             <Select defaultValue="Image">
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
@@ -312,12 +312,12 @@ function EvidenceUploadSheet() {
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">File</span>
+            <span className="text-xs font-medium text-foreground">File</span>
             <Input type="file" className="h-9" />
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Status</span>
+            <span className="text-xs font-medium text-foreground">Status</span>
             <Select defaultValue="Pending">
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
@@ -333,7 +333,7 @@ function EvidenceUploadSheet() {
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Remarks</span>
+            <span className="text-xs font-medium text-foreground">Remarks</span>
             <Textarea className="min-h-28" placeholder="Evidence remarks" />
           </label>
         </div>
@@ -380,7 +380,7 @@ function ChecklistItemSheet({ item }: { item: PreCommissioningChecklistItem }) {
           </div>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Status</span>
+            <span className="text-xs font-medium text-foreground">Status</span>
             <Select defaultValue={item.status}>
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
@@ -396,7 +396,7 @@ function ChecklistItemSheet({ item }: { item: PreCommissioningChecklistItem }) {
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Remarks</span>
+            <span className="text-xs font-medium text-foreground">Remarks</span>
             <Textarea defaultValue={item.remarks} className="min-h-28" />
           </label>
         </div>
@@ -431,7 +431,7 @@ function StatusUpdateSheet({ record }: { record: PreCommissioningRecord }) {
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <section className="rounded-lg border border-border/70 bg-background p-3">
-            <p className="text-sm font-bold text-foreground">Checklist Summary</p>
+            <p className="text-sm font-semibold text-foreground">Checklist Progress</p>
             <div className="mt-2 space-y-1">
               <InfoLine label="Completed" value={`${record.checklistDone}/${record.checklistTotal}`} />
               <InfoLine label="Current Status" value={record.status} />
@@ -439,7 +439,7 @@ function StatusUpdateSheet({ record }: { record: PreCommissioningRecord }) {
           </section>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">New Status</span>
+            <span className="text-xs font-medium text-foreground">New Status</span>
             <Select defaultValue={record.status}>
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
@@ -455,7 +455,7 @@ function StatusUpdateSheet({ record }: { record: PreCommissioningRecord }) {
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Remarks</span>
+            <span className="text-xs font-medium text-foreground">Remarks</span>
             <Textarea
               defaultValue={record.remarks}
               className="min-h-28"
@@ -486,7 +486,7 @@ function SectionHeading({
 }) {
   return (
     <div>
-      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? (
         <p className="mt-0.5 text-xs font-medium text-muted-foreground">
           {description}

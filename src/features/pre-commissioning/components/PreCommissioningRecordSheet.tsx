@@ -101,7 +101,7 @@ export function PreCommissioningRecordSheet({
           </section>
 
           <section>
-            <p className="text-sm font-bold text-foreground">Checklist Progress</p>
+            <p className="text-sm font-semibold text-foreground">Checklist Progress</p>
             <div className="mt-2 grid gap-3 md:grid-cols-2">
               <Field label="Completed Items" defaultValue={String(data.checklistDone ?? 0)} />
               <Field label="Total Items" defaultValue={String(data.checklistTotal ?? 8)} />
@@ -109,7 +109,7 @@ export function PreCommissioningRecordSheet({
           </section>
 
           <section>
-            <p className="text-sm font-bold text-foreground">Purging Details</p>
+            <p className="text-sm font-semibold text-foreground">Purging Details</p>
             <div className="mt-2 grid gap-3 md:grid-cols-3">
               <Field label="Purging Date" defaultValue={data.purgingDate} />
               <Field label="Pressure" defaultValue={data.purgingPressure} />
@@ -162,7 +162,7 @@ function Field({
 }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <Input defaultValue={defaultValue ?? ""} className="h-9" />
     </label>
   );
@@ -179,7 +179,7 @@ function TextareaField({
 }) {
   return (
     <label className={`grid gap-1.5 ${className ?? ""}`}>
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <Textarea defaultValue={defaultValue ?? ""} className="min-h-20" />
     </label>
   );
@@ -188,7 +188,7 @@ function TextareaField({
 function StatusSelect({ defaultValue }: { defaultValue: string }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold text-foreground">Status</span>
+      <span className="text-xs font-medium text-foreground">Status</span>
       <Select defaultValue={defaultValue}>
         <SelectTrigger className="h-9 w-full">
           <SelectValue />

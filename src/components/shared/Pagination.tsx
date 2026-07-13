@@ -17,6 +17,7 @@ interface PaginationProps {
   endItem: number;
   onPageChange: (page: number) => void;
   className?: string;
+  compact?: boolean;
 }
 
 export function Pagination({
@@ -27,17 +28,19 @@ export function Pagination({
   endItem,
   onPageChange,
   className,
+  compact,
 }: PaginationProps) {
   const pages = getVisiblePages(page, pageCount);
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+        compact && "gap-2",
         className,
       )}
     >
-      <p className="text-xs font-medium text-muted-foreground">
+      <p className="whitespace-nowrap text-xs font-medium text-muted-foreground">
         Showing {startItem} to {endItem} of {totalItems} records
       </p>
 
@@ -66,7 +69,7 @@ export function Pagination({
             key={pageNumber}
             variant={pageNumber === page ? "default" : "outline"}
             size="sm"
-            className="h-7 min-w-7 px-2"
+            className={cn("h-7 min-w-7 px-2", compact && "h-6 min-w-6 text-xs")}
             onClick={() => onPageChange(pageNumber)}
           >
             {pageNumber}

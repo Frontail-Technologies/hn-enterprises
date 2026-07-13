@@ -29,7 +29,7 @@ export function GcUploadsBreadcrumb({ items }: { items: BreadcrumbItem[] }) {
                 {item.label}
               </Link>
             ) : (
-              <span className="max-w-60 truncate font-bold text-foreground">
+              <span className="max-w-60 truncate font-semibold text-foreground">
                 {item.label}
               </span>
             )}

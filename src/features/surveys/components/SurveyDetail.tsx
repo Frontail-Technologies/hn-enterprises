@@ -13,6 +13,9 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { DetailHeader } from "@/components/shared/DetailHeader";
+import { DetailSection } from "@/components/shared/DetailSection";
+import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { LocationPreview } from "@/components/shared/LocationPreview";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
@@ -40,22 +43,22 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
         ]}
       />
 
-      <header className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold text-foreground">{survey.surveyId}</h1>
-              <StatusBadge status={survey.workableStatus} />
-              <StatusBadge status={survey.submissionStatus} />
-            </div>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              {survey.customerName} - {survey.projectName} / {survey.siteArea}
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Survey Date: {formatDate(survey.surveyDate)}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <DetailHeader
+        title={survey.surveyId}
+        badges={
+          <>
+            <StatusBadge status={survey.workableStatus} />
+            <StatusBadge status={survey.submissionStatus} />
+          </>
+        }
+        meta={
+          <>
+            <span>{survey.customerName} - {survey.projectName} / {survey.siteArea}</span>
+            <span>Survey Date: {formatDate(survey.surveyDate)}</span>
+          </>
+        }
+        actions={
+          <>
             {canEdit ? (
               <Link
                 href={`/surveys/${survey.id}/edit`}
@@ -74,49 +77,49 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
                 Review Survey
               </Link>
             ) : null}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <main className="space-y-4">
           <OperationalPanel title="Location & Customer Summary">
-            <DetailGrid
+            <KeyValueGrid
+              columns={2}
               items={[
-                ["Customer", survey.customerName],
-                ["Mobile", survey.mobileNumber],
-                ["BP / TR Number", survey.bpTrNumber],
-                ["Project", survey.projectName],
-                ["Site / Area", survey.siteArea],
-                ["Address", survey.fullAddress],
+                { label: "Customer", value: survey.customerName },
+                { label: "Mobile", value: survey.mobileNumber },
+                { label: "BP / TR Number", value: survey.bpTrNumber },
+                { label: "Project", value: survey.projectName },
+                { label: "Site / Area", value: survey.siteArea },
+                { label: "Address", value: survey.fullAddress },
               ]}
             />
           </OperationalPanel>
 
           <OperationalPanel title="Site Condition Responses">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <ConditionItem label="House Type" value={survey.houseType} />
-              <ConditionItem label="Connection Type" value={survey.connectionType} />
-              <ConditionItem label="Site Accessibility" value={survey.siteAccessibility} badge />
-              <ConditionItem label="Meter Placement" value={survey.meterPlacement} badge />
-              <ConditionItem label="Pipeline Route" value={survey.pipelineRoute} badge />
-              <ConditionItem label="Civil Work Required" value={survey.civilWorkRequired} />
-            </div>
-            <div className="mt-3 rounded-lg bg-muted/25 px-3 py-2">
-              <p className="text-xs font-bold text-muted-foreground">Obstruction Details</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {survey.obstructionDetails}
-              </p>
-            </div>
+            <KeyValueGrid
+              columns={3}
+              items={[
+                { label: "House Type", value: survey.houseType },
+                { label: "Connection Type", value: survey.connectionType },
+                { label: "Site Accessibility", value: <StatusBadge status={survey.siteAccessibility} /> },
+                { label: "Meter Placement", value: <StatusBadge status={survey.meterPlacement} /> },
+                { label: "Pipeline Route", value: <StatusBadge status={survey.pipelineRoute} /> },
+                { label: "Civil Work Required", value: survey.civilWorkRequired },
+                { label: "Obstruction Details", value: survey.obstructionDetails },
+              ]}
+            />
           </OperationalPanel>
 
           <OperationalPanel title="Workable Assessment">
-            <DetailGrid
+            <KeyValueGrid
+              columns={2}
               items={[
-                ["Assessment", survey.workableStatus],
-                ["Reason", survey.reason || "-"],
-                ["Recommended Action", survey.recommendedAction],
-                ["Expected Resolution", formatDate(survey.expectedResolutionDate)],
+                { label: "Assessment", value: survey.workableStatus },
+                { label: "Reason", value: survey.reason || "-" },
+                { label: "Recommended Action", value: survey.recommendedAction },
+                { label: "Expected Resolution", value: formatDate(survey.expectedResolutionDate) },
               ]}
             />
           </OperationalPanel>
@@ -138,7 +141,7 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
                     <ImageSquareIcon size={28} className="text-primary" />
                   </div>
                   <div className="p-3">
-                    <p className="text-sm font-bold text-foreground">{photo.label}</p>
+                    <p className="text-sm font-semibold text-foreground">{photo.label}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{photo.caption}</p>
                     <p className="mt-2 truncate text-xs font-semibold text-muted-foreground">
                       {photo.fileName}
@@ -151,8 +154,7 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
         </main>
 
         <aside className="space-y-3">
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm font-bold text-foreground">Field Capture</p>
+          <DetailSection title="Field Capture">
             <div className="mt-3 space-y-2">
               <MetaRow label="Assigned Supervisor" value={survey.supervisor} />
               <MetaRow label="Submitted By" value={survey.submittedBy} />
@@ -162,10 +164,9 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
               <MetaRow label="Submission Date" value={formatDateTime(survey.submissionDate)} />
               <MetaRow label="Approval Status" value={survey.submissionStatus} />
             </div>
-          </div>
+          </DetailSection>
 
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm font-bold text-foreground">Map Preview</p>
+          <DetailSection title="Map Preview">
             <LocationPreview latitude={survey.latitude} longitude={survey.longitude} className="mt-3" />
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -191,14 +192,13 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
                 Accuracy is poor. Verify this capture before approval.
               </div>
             ) : null}
-          </div>
+          </DetailSection>
 
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm font-bold text-foreground">Approval Comments</p>
+          <DetailSection title="Approval Comments">
             <p className="mt-2 text-sm font-medium text-muted-foreground">
               {survey.approvalComments || "No approval comments yet."}
             </p>
-          </div>
+          </DetailSection>
         </aside>
       </div>
 
@@ -208,7 +208,7 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
             <div key={activity.id} className="relative rounded-lg bg-muted/25 p-3">
               <span className="absolute -left-[1.35rem] top-3 h-3 w-3 rounded-full border-2 border-card bg-primary" />
               <div className="flex flex-wrap justify-between gap-2">
-                <p className="font-bold text-foreground">{activity.title}</p>
+                <p className="font-semibold text-foreground">{activity.title}</p>
                 <p className="text-xs font-medium text-muted-foreground">
                   {formatDateTime(activity.dateTime)}
                 </p>
@@ -227,7 +227,7 @@ export function SurveyDetail({ survey }: { survey: Survey }) {
           <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-xl">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div>
-                <p className="font-bold text-foreground">{selectedPhoto.label}</p>
+                <p className="font-semibold text-foreground">{selectedPhoto.label}</p>
                 <p className="text-xs font-medium text-muted-foreground">
                   {selectedPhoto.fileName}
                 </p>
@@ -262,44 +262,7 @@ function OperationalPanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="border-b border-border px-3 py-2">
-        <h2 className="text-sm font-bold text-foreground">{title}</h2>
-      </div>
-      <div className="p-3">{children}</div>
-    </section>
-  );
-}
-
-function DetailGrid({ items }: { items: [string, string][] }) {
-  return (
-    <dl className="grid gap-x-5 gap-y-2 md:grid-cols-2">
-      {items.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[130px_1fr] gap-3">
-          <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
-          <dd className="text-sm font-bold text-foreground">{value || "-"}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function ConditionItem({
-  label,
-  value,
-  badge,
-}: {
-  label: string;
-  value: string;
-  badge?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-background p-2.5">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <div className="mt-1">
-        {badge ? <StatusBadge status={value} /> : <p className="text-sm font-bold">{value}</p>}
-      </div>
-    </div>
+    <DetailSection title={title}>{children}</DetailSection>
   );
 }
 
@@ -307,7 +270,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-2 last:border-0 last:pb-0">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      <span className="text-right text-xs font-bold text-foreground">{value || "-"}</span>
+      <span className="text-right text-xs font-semibold text-foreground">{value || "-"}</span>
     </div>
   );
 }

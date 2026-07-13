@@ -17,9 +17,10 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   DropdownMenu,
@@ -208,8 +209,7 @@ export function CustomersList() {
   ];
 
   return (
-    <div>
-      <PageHeader
+    <PageShell
         title="Customers"
         subtitle="Manage customer connections, field assignment, meters, and stages."
         actions={
@@ -244,60 +244,75 @@ export function CustomersList() {
             </Link>
           </>
         }
-      />
-
-      <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search name, mobile, BP/TR, meter or address..."
-          title="Customer Filters"
-          description="Filter customer records by project, area, connection type, stage and status."
-          values={filters}
-          filters={[
-            {
-              key: "project",
-              placeholder: "All Projects",
-              options: projectOptions,
-            },
-            {
-              key: "cityArea",
-              placeholder: "All City / Area",
-              options: cityAreaOptions.map((area) => ({ label: area, value: area })),
-            },
-            {
-              key: "connectionType",
-              placeholder: "All Types",
-              options: connectionTypeOptions.map((type) => ({
-                label: type,
-                value: type,
-              })),
-            },
-            {
-              key: "currentStage",
-              placeholder: "All Stages",
-              options: customerStageOptions.map((stage) => ({
-                label: stage,
-                value: stage,
-              })),
-            },
-            {
-              key: "status",
-              placeholder: "All Statuses",
-              options: customerStatusOptions.map((status) => ({
-                label: status,
-                value: status,
-              })),
-            },
-          ]}
-          onChange={(key, value) => {
-            setFilters((current) => ({ ...current, [key]: value }));
-            pagination.setPage(1);
-          }}
-          onReset={() => {
-            setFilters(initialFilters);
-            pagination.setPage(1);
-          }}
-        />
+      >
+      <TablePanel
+        title="Customer Records"
+        subtitle="Search and review customer master workflow status."
+        toolbar={
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search name, mobile, BP/TR, meter or address..."
+            title="Customer Filters"
+            description="Filter customer records by project, area, connection type, stage and status."
+            values={filters}
+            filters={[
+              {
+                key: "project",
+                placeholder: "All Projects",
+                options: projectOptions,
+              },
+              {
+                key: "cityArea",
+                placeholder: "All City / Area",
+                options: cityAreaOptions.map((area) => ({ label: area, value: area })),
+              },
+              {
+                key: "connectionType",
+                placeholder: "All Types",
+                options: connectionTypeOptions.map((type) => ({
+                  label: type,
+                  value: type,
+                })),
+              },
+              {
+                key: "currentStage",
+                placeholder: "All Stages",
+                options: customerStageOptions.map((stage) => ({
+                  label: stage,
+                  value: stage,
+                })),
+              },
+              {
+                key: "status",
+                placeholder: "All Statuses",
+                options: customerStatusOptions.map((status) => ({
+                  label: status,
+                  value: status,
+                })),
+              },
+            ]}
+            onChange={(key, value) => {
+              setFilters((current) => ({ ...current, [key]: value }));
+              pagination.setPage(1);
+            }}
+            onReset={() => {
+              setFilters(initialFilters);
+              pagination.setPage(1);
+            }}
+          />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
+          />
+        }
+      >
 
         <DataTable
           data={pagination.paginatedItems}
@@ -306,17 +321,11 @@ export function CustomersList() {
           emptyTitle="No customers found"
           emptyDescription="Try changing filters or add a customer."
           serialNumberStart={pagination.startItem}
+          stickyHeader
+          stickyLastColumn
+          containerClassName="rounded-none border-0"
         />
-
-        <Pagination
-          page={pagination.page}
-          pageCount={pagination.pageCount}
-          totalItems={pagination.totalItems}
-          startItem={pagination.startItem}
-          endItem={pagination.endItem}
-          onPageChange={pagination.setPage}
-        />
-      </div>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }

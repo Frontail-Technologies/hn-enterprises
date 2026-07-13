@@ -58,6 +58,9 @@ export function FilterSheetButton({
   const [open, setOpen] = useState(false);
   const [draftValues, setDraftValues] = useState(values);
   const showInlineFilters = filters.length <= 2 && !children && !renderExtra;
+  const hasDraftChanges = Object.entries(draftValues).some(
+    ([key, value]) => values[key] !== value,
+  );
 
   const activeCount = filters.reduce((count, filter) => {
     const value = values[filter.key];
@@ -72,10 +75,15 @@ export function FilterSheetButton({
     Object.entries(draftValues).forEach(([key, value]) => {
       if (values[key] !== value) onChange(key, value);
     });
+    setOpen(false);
   }
 
   function resetFilters() {
     onReset();
+    setDraftValues({
+      ...Object.fromEntries(filters.map((filter) => [filter.key, "all"])),
+      ...(searchKey ? { [searchKey]: "" } : {}),
+    });
     setOpen(false);
   }
 
@@ -85,7 +93,7 @@ export function FilterSheetButton({
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-3", className)}>
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
       {searchKey ? (
         <div className="relative min-w-0">
           <MagnifyingGlassIcon
@@ -96,7 +104,7 @@ export function FilterSheetButton({
             placeholder={searchPlaceholder}
             value={values[searchKey] ?? ""}
             onChange={(event) => onChange(searchKey, event.target.value)}
-            className="h-9 w-72 max-w-full pl-9"
+            className="h-8 w-72 max-w-full pl-9"
           />
         </div>
       ) : null}
@@ -106,15 +114,15 @@ export function FilterSheetButton({
           {filters.map((filter) => (
             <Select
               key={filter.key}
-              value={values[filter.key] ?? "all"}
-              onValueChange={(value) => onChange(filter.key, value ?? "all")}
+              value={draftValues[filter.key] ?? "all"}
+              onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
             >
               <SelectTrigger
-                className="h-9 w-48 max-w-full"
-                title={getFilterLabel(filter, values[filter.key] ?? "all")}
+                className="h-8 w-48 max-w-full"
+                title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
               >
                 <span className="min-w-0 truncate text-left">
-                  {getFilterLabel(filter, values[filter.key] ?? "all")}
+                  {getFilterLabel(filter, draftValues[filter.key] ?? "all")}
                 </span>
               </SelectTrigger>
               <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
@@ -129,8 +137,13 @@ export function FilterSheetButton({
               </SelectContent>
             </Select>
           ))}
+          {hasDraftChanges ? (
+            <Button type="button" size="default" className="h-8" onClick={applyFilters}>
+              Apply Filters
+            </Button>
+          ) : null}
           {activeCount > 0 || (searchKey && values[searchKey]) ? (
-            <Button type="button" variant="outline" size="default" className="h-9" onClick={onReset}>
+            <Button type="button" variant="outline" size="default" className="h-8" onClick={resetFilters}>
               Reset
             </Button>
           ) : null}
@@ -139,7 +152,7 @@ export function FilterSheetButton({
         <Sheet open={open} onOpenChange={handleOpenChange}>
           <SheetTrigger
             render={
-              <Button type="button" variant="outline" size="default" className="h-9" />
+              <Button type="button" variant="outline" size="default" className="h-8" />
             }
           >
             <FunnelIcon size={14} />
@@ -159,7 +172,7 @@ export function FilterSheetButton({
             <div className="flex-1 space-y-4 overflow-y-auto px-4">
               {filters.map((filter) => (
                 <div key={filter.key} className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">
+                  <Label className="text-xs font-medium text-muted-foreground">
                     {filter.placeholder}
                   </Label>
                   <Select
@@ -167,7 +180,7 @@ export function FilterSheetButton({
                     onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
                   >
                     <SelectTrigger
-                      className="h-9 w-full"
+                      className="h-8 w-full"
                       title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
                     >
                       <span className="min-w-0 truncate text-left">

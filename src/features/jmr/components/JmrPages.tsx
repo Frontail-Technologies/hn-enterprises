@@ -17,8 +17,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   getJmrById,
@@ -62,7 +64,7 @@ export function JmrList() {
       header: "Report",
       render: (record) => (
         <div>
-          <Link href={`/jmr/${record.id}`} className="font-bold text-foreground hover:text-primary">
+          <Link href={`/jmr/${record.id}`} className="font-semibold text-foreground hover:text-primary">
             {record.reportNo}
           </Link>
           <p className="text-xs font-medium text-muted-foreground">{record.reportType}</p>
@@ -127,53 +129,61 @@ export function JmrList() {
   ];
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">JMR & Field Reports</h1>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-            Upload JMRs, field reports, FIM, conjunction and LMC documents.
-          </p>
-        </div>
+    <PageShell
+      title="JMR & Field Reports"
+      subtitle="Upload JMRs, field reports, FIM, conjunction and LMC documents."
+      actions={
         <Link href="/jmr/jmr-001/upload" className={buttonVariants({ variant: "default" })}>
           <UploadSimpleIcon size={15} />
           Upload JMR
         </Link>
-      </header>
-
-      <section className="rounded-xl border border-border/70 bg-card p-4">
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search report, customer or BP/TR..."
-          values={filters}
-          filters={[
-            { key: "project", placeholder: "All Projects", options: jmrProjectOptions },
-            { key: "status", placeholder: "All Statuses", options: jmrStatuses.map((status) => ({ label: status, value: status })) },
-          ]}
-          onChange={(key, value) => {
-            setFilters((current) => ({ ...current, [key]: value }));
-            pagination.setPage(1);
-          }}
-          onReset={() => {
-            setFilters(initialFilters);
-            pagination.setPage(1);
-          }}
+      }
+    >
+      <TablePanel
+        title="JMR Register"
+        subtitle="Measurement reports, attachments and approval status."
+        toolbar={
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search report, customer or BP/TR..."
+            values={filters}
+            filters={[
+              { key: "project", placeholder: "All Projects", options: jmrProjectOptions },
+              { key: "status", placeholder: "All Statuses", options: jmrStatuses.map((status) => ({ label: status, value: status })) },
+            ]}
+            onChange={(key, value) => {
+              setFilters((current) => ({ ...current, [key]: value }));
+              pagination.setPage(1);
+            }}
+            onReset={() => {
+              setFilters(initialFilters);
+              pagination.setPage(1);
+            }}
+          />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
+          />
+        }
+      >
+        <DataTable
+          data={pagination.paginatedItems}
+          columns={columns}
+          serialNumberStart={pagination.startItem}
+          emptyTitle="No JMR records found"
+          stickyHeader
+          stickyLastColumn
+          containerClassName="rounded-none border-0"
         />
-
-        <div className="mt-3">
-          <DataTable data={pagination.paginatedItems} columns={columns} serialNumberStart={pagination.startItem} emptyTitle="No JMR records found" />
-        </div>
-        <Pagination
-          className="mt-3"
-          page={pagination.page}
-          pageCount={pagination.pageCount}
-          totalItems={pagination.totalItems}
-          startItem={pagination.startItem}
-          endItem={pagination.endItem}
-          onPageChange={pagination.setPage}
-        />
-      </section>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }
 
@@ -270,10 +280,10 @@ export function JmrDetail({ id }: { id: string }) {
               {jmrRevisions.map((item) => (
                 <div key={item.id} className="rounded-lg border border-border/60 bg-background px-3 py-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-foreground">{item.revision}</p>
+                    <p className="text-sm font-semibold text-foreground">{item.revision}</p>
                     <StatusBadge status={item.status} />
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground">{item.actor} · {formatDateTime(item.dateTime)}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{item.actor} - {formatDateTime(item.dateTime)}</p>
                   <p className="mt-1 text-xs font-medium text-muted-foreground">{item.remarks}</p>
                 </div>
               ))}
@@ -305,7 +315,7 @@ export function JmrUploadPage({ id, uploadType = "JMR" }: { id: string; uploadTy
             <Field label="Meter Photo" type="file" />
           </div>
           <label className="mt-3 grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Remarks</span>
+            <span className="text-xs font-medium text-foreground">Remarks</span>
             <Textarea defaultValue={record.remarks} className="min-h-28" />
           </label>
           <div className="mt-4 flex justify-end gap-2">
@@ -352,7 +362,7 @@ function PreviewPanel({ title, file, icon }: { title: string; file: string; icon
       <div className="mt-3 grid min-h-72 place-items-center rounded-xl border border-dashed border-border bg-muted/25 text-center">
         <div>
           <div className="mx-auto grid size-14 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</div>
-          <p className="mt-3 text-sm font-bold text-foreground">{file}</p>
+          <p className="mt-3 text-sm font-semibold text-foreground">{file}</p>
           <p className="mt-1 text-xs font-medium text-muted-foreground">Preview placeholder for uploaded file.</p>
         </div>
       </div>
@@ -365,8 +375,8 @@ function AttachmentRow({ item }: { item: JmrAttachment }) {
     <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background px-3 py-2">
       <FileTextIcon size={16} className="text-primary" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
-        <p className="truncate text-xs font-medium text-muted-foreground">{item.fileName} · {formatDateTime(item.uploadedOn)}</p>
+        <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
+        <p className="truncate text-xs font-medium text-muted-foreground">{item.fileName} - {formatDateTime(item.uploadedOn)}</p>
       </div>
       <StatusBadge status={item.status} />
     </div>
@@ -379,7 +389,7 @@ function PreviewCard({ icon, title, file }: { icon: React.ReactNode; title: stri
       <div className="flex items-center gap-3">
         <span className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary">{icon}</span>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-foreground">{title}</p>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
           <p className="truncate text-xs font-medium text-muted-foreground">{file}</p>
         </div>
       </div>
@@ -390,7 +400,7 @@ function PreviewCard({ icon, title, file }: { icon: React.ReactNode; title: stri
 function UploadLink({ href, label, status }: { href: string; label: string; status: string }) {
   return (
     <Link href={href} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-background px-3 py-2 hover:bg-muted/35">
-      <span className="text-sm font-bold text-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{label}</span>
       <StatusBadge status={status} />
     </Link>
   );
@@ -399,7 +409,7 @@ function UploadLink({ href, label, status }: { href: string; label: string; stat
 function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue?: string; type?: string }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <Input type={type} defaultValue={type === "file" ? undefined : defaultValue} className="h-9" />
     </label>
   );
@@ -408,7 +418,7 @@ function Field({ label, defaultValue, type = "text" }: { label: string; defaultV
 function SectionHeading({ title, description }: { title: string; description?: string }) {
   return (
     <div>
-      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? <p className="mt-0.5 text-xs font-medium text-muted-foreground">{description}</p> : null}
     </div>
   );

@@ -5,10 +5,8 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import {
   CameraIcon,
-  CheckCircleIcon,
   EyeIcon,
   FileTextIcon,
-  GaugeIcon,
   NotePencilIcon,
   PlusIcon,
   UploadSimpleIcon,
@@ -24,10 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { CountTabs } from "@/components/shared/CountTabs";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   getPressureTestById,
@@ -78,7 +79,7 @@ export function TestingPressureList() {
       header: "Test / Reference",
       render: (record) => (
         <div>
-          <Link href={`/pressure-observation/${record.id}`} className="font-bold text-foreground hover:text-primary">
+          <Link href={`/pressure-observation/${record.id}`} className="font-semibold text-foreground hover:text-primary">
             {record.testNo}
           </Link>
           <p className="text-xs font-medium text-muted-foreground">{record.bpTrNumber}</p>
@@ -143,54 +144,76 @@ export function TestingPressureList() {
   ];
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Testing / Pressure Observation</h1>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-            Record field pressure readings, test results and supporting evidence.
-          </p>
-        </div>
+    <PageShell
+      title="Testing / Pressure Observation"
+      subtitle="Record field pressure readings, test results and supporting evidence."
+      actions={
         <Link href="/pressure-observation/tp-001/readings/new" className={buttonVariants({ variant: "default" })}>
           <PlusIcon size={15} />
           Add Readings
         </Link>
-      </header>
+      }
+    >
+      <CountTabs
+        items={[
+          {
+            label: "All Tests",
+            value: pressureTests.length,
+            active: filters.status === "all",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "all" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "In Review",
+            value: countStatus("In Review"),
+            active: filters.status === "In Review",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "In Review" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "Approved",
+            value: countStatus("Approved"),
+            active: filters.status === "Approved",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Approved" }));
+              pagination.setPage(1);
+            },
+          },
+        ]}
+      />
 
-      <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="rounded-xl border border-border/70 bg-card p-4">
+      <TablePanel
+        title="Pressure Test Records"
+        subtitle="Field tests, readings and result evidence."
+        toolbar={
           <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search customer, BP/TR or test no..."
-            title="Pressure Test Filters"
-            description="Filter pressure observations by project, supervisor and status."
-            values={filters}
-            filters={[
-              { key: "project", placeholder: "All Projects", options: pressureProjectOptions },
-              { key: "supervisor", placeholder: "All Supervisors", options: pressureSupervisorOptions },
-              { key: "status", placeholder: "All Statuses", options: pressureStatuses.map((status) => ({ label: status, value: status })) },
-            ]}
-            onChange={(key, value) => {
-              setFilters((current) => ({ ...current, [key]: value }));
-              pagination.setPage(1);
-            }}
-            onReset={() => {
-              setFilters(initialFilters);
-              pagination.setPage(1);
-            }}
-          />
-
-          <div className="mt-3">
-            <DataTable
-              data={pagination.paginatedItems}
-              columns={columns}
-              serialNumberStart={pagination.startItem}
-              emptyTitle="No pressure tests found"
+              searchKey="search"
+              searchPlaceholder="Search customer, BP/TR or test no..."
+              title="Pressure Test Filters"
+              description="Filter pressure observations by project, supervisor and status."
+              values={filters}
+              filters={[
+                { key: "project", placeholder: "All Projects", options: pressureProjectOptions },
+                { key: "supervisor", placeholder: "All Supervisors", options: pressureSupervisorOptions },
+                { key: "status", placeholder: "All Statuses", options: pressureStatuses.map((status) => ({ label: status, value: status })) },
+              ]}
+              onChange={(key, value) => {
+                setFilters((current) => ({ ...current, [key]: value }));
+                pagination.setPage(1);
+              }}
+              onReset={() => {
+                setFilters(initialFilters);
+                pagination.setPage(1);
+              }}
             />
-          </div>
-
+        }
+        pagination={
           <Pagination
-            className="mt-3"
+            compact
             page={pagination.page}
             pageCount={pagination.pageCount}
             totalItems={pagination.totalItems}
@@ -198,15 +221,19 @@ export function TestingPressureList() {
             endItem={pagination.endItem}
             onPageChange={pagination.setPage}
           />
-        </div>
-
-        <aside className="space-y-3">
-          <CompactSummary icon={<GaugeIcon size={18} />} label="In Review" value={countStatus("In Review")} />
-          <CompactSummary icon={<CheckCircleIcon size={18} />} label="Approved" value={countStatus("Approved")} />
-          <CompactSummary icon={<CameraIcon size={18} />} label="Evidence Files" value={pressureEvidence.length} />
-        </aside>
-      </section>
-    </div>
+        }
+      >
+        <DataTable
+          data={pagination.paginatedItems}
+          columns={columns}
+          serialNumberStart={pagination.startItem}
+          emptyTitle="No pressure tests found"
+          stickyHeader
+          stickyLastColumn
+          containerClassName="rounded-none border-0"
+        />
+      </TablePanel>
+    </PageShell>
   );
 }
 
@@ -294,7 +321,7 @@ export function TestingPressureDetail({ id }: { id: string }) {
               {pressureHistory.map((item) => (
                 <div key={item.id} className="rounded-lg border border-border/60 bg-background px-3 py-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-bold text-foreground">{item.action}</p>
+                    <p className="text-sm font-semibold text-foreground">{item.action}</p>
                     <StatusBadge status={item.status} />
                   </div>
                   <InfoLine label="By" value={item.actor} />
@@ -341,7 +368,7 @@ export function PressureReadingForm({ id, mode }: { id: string; mode: "add" | "e
             <Field label="Observation Time" defaultValue={mode === "edit" ? "10:45 AM" : ""} />
           </div>
           <label className="mt-3 grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Remarks</span>
+            <span className="text-xs font-medium text-foreground">Remarks</span>
             <Textarea defaultValue={mode === "edit" ? record.remarks : ""} className="min-h-28" />
           </label>
           <div className="mt-4 flex justify-end gap-2">
@@ -384,7 +411,7 @@ export function PressureResultUpload({ id }: { id: string }) {
           <SectionHeading title="Result" />
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <label className="grid gap-1.5">
-              <span className="text-xs font-bold text-foreground">Result</span>
+              <span className="text-xs font-medium text-foreground">Result</span>
               <Select defaultValue={record.result}>
                 <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -399,7 +426,7 @@ export function PressureResultUpload({ id }: { id: string }) {
             <Field label="Gauge Photo" type="file" />
           </div>
           <label className="mt-3 grid gap-1.5">
-            <span className="text-xs font-bold text-foreground">Reviewer / Field Remarks</span>
+            <span className="text-xs font-medium text-foreground">Reviewer / Field Remarks</span>
             <Textarea defaultValue={record.remarks} className="min-h-28" />
           </label>
           <div className="mt-4 flex justify-end gap-2">
@@ -418,25 +445,13 @@ export function PressureResultUpload({ id }: { id: string }) {
   );
 }
 
-function CompactSummary({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3">
-      <span className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">{icon}</span>
-      <div>
-        <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-        <p className="text-xl font-bold text-foreground">{value}</p>
-      </div>
-    </div>
-  );
-}
-
 function EvidenceRow({ item }: { item: PressureEvidence }) {
   return (
     <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
       <div className="flex items-start gap-2">
         <span className="mt-0.5 text-primary">{item.type === "PDF" ? <FileTextIcon size={16} /> : <CameraIcon size={16} />}</span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
           <InfoLine label="File" value={item.fileName} />
           <InfoLine label="Uploaded" value={formatDateTime(item.uploadedOn)} />
         </div>
@@ -448,7 +463,7 @@ function EvidenceRow({ item }: { item: PressureEvidence }) {
 function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue?: string; type?: string }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <Input type={type} defaultValue={type === "file" ? undefined : defaultValue} className="h-9" />
     </label>
   );
@@ -457,7 +472,7 @@ function Field({ label, defaultValue, type = "text" }: { label: string; defaultV
 function SectionHeading({ title, description }: { title: string; description?: string }) {
   return (
     <div>
-      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? <p className="mt-0.5 text-xs font-medium text-muted-foreground">{description}</p> : null}
     </div>
   );
@@ -488,7 +503,7 @@ function ResultBadge({ result }: { result: PressureTestRecord["result"] }) {
         ? "bg-destructive/10 text-destructive border-destructive/20"
         : "bg-status-warning-bg text-status-warning-fg border-status-warning/20";
 
-  return <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold ${className}`}>{result}</span>;
+  return <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}>{result}</span>;
 }
 
 function ModuleBreadcrumb({ items }: { items: ([string] | [string, string])[] }) {

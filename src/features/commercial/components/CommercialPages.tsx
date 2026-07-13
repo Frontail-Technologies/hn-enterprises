@@ -144,7 +144,7 @@ export function InventoryPage() {
     );
   }, [filters]);
   const columns: ColumnDef<(typeof materials)[number]>[] = [
-    { key: "name", header: "Material Name", render: (row) => <Link className="font-bold text-foreground hover:text-primary" href={`/inventory/${row.id}`}>{row.name}</Link> },
+    { key: "name", header: "Material Name", render: (row) => <Link className="font-semibold text-foreground hover:text-primary" href={`/inventory/${row.id}`}>{row.name}</Link> },
     { key: "category", header: "Category" },
     { key: "unit", header: "Unit" },
     { key: "availableStock", header: "Available Stock", render: (row) => <b>{row.availableStock}</b> },
@@ -249,7 +249,7 @@ export function BillingPage() {
     );
   }, [filters]);
   const columns: ColumnDef<(typeof bills)[number]>[] = [
-    { key: "billNumber", header: "Bill Number", render: (row) => <Link href={`/billing/${row.id}`} className="font-bold text-foreground hover:text-primary">{row.billNumber}</Link> },
+    { key: "billNumber", header: "Bill Number", render: (row) => <Link href={`/billing/${row.id}`} className="font-semibold text-foreground hover:text-primary">{row.billNumber}</Link> },
     { key: "projectCustomer", header: "Project / Customer" },
     { key: "stage", header: "Billing Stage" },
     { key: "billDate", header: "Bill Date", render: (row) => formatDate(row.billDate) },
@@ -371,7 +371,7 @@ function CommercialBreadcrumb({ items }: { items: BreadcrumbItem[] }) {
                 {item.label}
               </Link>
             ) : (
-              <span className="max-w-64 truncate font-bold text-foreground">{item.label}</span>
+              <span className="max-w-64 truncate font-semibold text-foreground">{item.label}</span>
             )}
           </span>
         );
@@ -447,7 +447,7 @@ function AlertLine({ label, value, tone }: { label: string; value: string; tone:
       tone === "danger" ? "border-destructive/20 bg-destructive/5" : "border-primary/20 bg-primary/5",
     )}>
       <WarningIcon size={16} className={tone === "danger" ? "text-destructive" : "text-primary"} />
-      <span className="font-bold text-foreground">{label}:</span>
+      <span className="font-semibold text-foreground">{label}:</span>
       <span className="font-medium text-muted-foreground">{value}</span>
     </div>
   );
@@ -581,18 +581,17 @@ function CommercialDrawer({
 
 function TableSection({ children }: { children: ReactNode }) {
   return (
-    <section className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+    <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
       {children}
     </section>
   );
 }
 
-function Header({ title, subtitle, actions }: { title: string; subtitle: string; actions?: ReactNode }) {
+function Header({ title, actions }: { title: string; subtitle: string; actions?: ReactNode }) {
   return (
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-        <p className="mt-1 text-sm font-medium text-muted-foreground">{subtitle}</p>
+        <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
@@ -609,9 +608,9 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4">
+    <section className="rounded-lg border border-border/70 bg-card p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm font-bold text-foreground">{title}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
         {actions}
       </div>
       {children}
@@ -639,15 +638,15 @@ function DetailSummaryCard({
   rightItems: SummaryItem[];
 }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4">
+    <section className="rounded-lg border border-border/70 bg-card p-3">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-bold text-foreground">{title}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
         {status}
       </div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.8fr)]">
         <KeyValueList items={leftItems} />
         <div className="border-border/70 xl:border-l xl:pl-5">
-          <p className="mb-2 text-xs font-bold text-muted-foreground">{rightTitle}</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">{rightTitle}</p>
           <KeyValueList items={rightItems} compact />
         </div>
       </div>
@@ -685,20 +684,20 @@ function KeyValueList({
 
 function SummaryValue({ label, value, icon, warn }: { label: string; value: string; icon?: ReactNode; warn?: boolean }) {
   return (
-    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40">
+    <div className="flex h-24 w-full flex-col justify-between rounded-lg border border-border/70 bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium leading-4 text-muted-foreground">{label}</p>
         <span className={cn("rounded-lg bg-primary/10 p-1.5 text-primary", warn && "bg-destructive/10 text-destructive")}>
           {icon ?? <CurrencyInrIcon size={17} />}
         </span>
       </div>
-      <p className={cn("text-xl font-bold leading-tight text-foreground", warn && "text-primary")}>{value}</p>
+      <p className={cn("text-xl font-semibold leading-tight text-foreground", warn && "text-primary")}>{value}</p>
     </div>
   );
 }
 
 function StatCardRow({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap gap-2.5">{children}</div>;
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
 }
 
 function StockStatus({ row }: { row: { availableStock: number; reorderLevel: number; status: string } }) {
@@ -717,8 +716,8 @@ function PaginatedDataTable<T extends { id: string }>({ data, columns, pageSize 
 
   return (
     <div className="space-y-3">
-      <DataTable data={pagedData} columns={columns} serialNumberStart={startIndex + 1} />
-      <Pagination page={currentPage} pageCount={pageCount} totalItems={data.length} startItem={startItem} endItem={endItem} onPageChange={setPage} />
+      <Pagination compact page={currentPage} pageCount={pageCount} totalItems={data.length} startItem={startItem} endItem={endItem} onPageChange={setPage} />
+      <DataTable data={pagedData} columns={columns} serialNumberStart={startIndex + 1} stickyHeader stickyLastColumn />
     </div>
   );
 }
@@ -726,7 +725,7 @@ function PaginatedDataTable<T extends { id: string }>({ data, columns, pageSize 
 function Field({ label, select, textarea, options = [] }: { label: string; select?: boolean; textarea?: boolean; options?: string[] }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       {select ? (
         <Select defaultValue={options[0]}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>

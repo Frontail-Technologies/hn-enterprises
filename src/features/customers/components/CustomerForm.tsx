@@ -369,7 +369,7 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <Label className="mb-1.5 block text-xs font-bold text-foreground">{label}</Label>
+      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
       {children}
     </div>
   );

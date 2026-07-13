@@ -14,6 +14,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DetailHeader } from "@/components/shared/DetailHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,65 +68,41 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         ]}
       />
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-foreground">{customer.name}</h1>
+      <DetailHeader
+        title={customer.name}
+        badges={
+          <>
             <StatusBadge status={customer.currentStage} />
             <StatusBadge status={customer.status} />
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+          </>
+        }
+        meta={
+          <>
             <CustomerInfoLine label="BP/TR Number" value={customer.bpTrNumber} />
             <CustomerInfoLine label="Mobile" value={customer.mobileNumber} />
             <CustomerInfoLine label="Site" value={customer.siteArea} />
-          </div>
-        </div>
-        <Link
-          href={`/customers/${customer.id}/edit`}
-          className={buttonVariants({ variant: "outline", size: "default" })}
-        >
-          <NotePencilIcon size={15} />
-          Edit
-        </Link>
-      </div>
-
-      <section className="flex flex-wrap gap-2.5">
-        <CustomerSummaryCard
-          label="Connection Type"
-          value={customer.connectionType}
-          helper={customer.houseType}
-          icon={<LinkIcon size={17} />}
-        />
-        <CustomerSummaryCard
-          label="Current Stage"
-          value={customer.currentStage}
-          helper="Field workflow"
-          icon={<ClockCounterClockwiseIcon size={17} />}
-        />
-        <CustomerSummaryCard
-          label="Meter Number"
-          value={customer.meterNumber || "-"}
-          helper={customer.meterType || "Not assigned"}
-          icon={<FileTextIcon size={17} />}
-        />
-        <CustomerSummaryCard
-          label="Billing"
-          value={`${[customer.giBillDone, customer.gcBillDone, customer.conversionBillDone].filter(Boolean).length}/3`}
-          helper="Milestones done"
-          icon={<DownloadSimpleIcon size={17} />}
-        />
-      </section>
+          </>
+        }
+        actions={
+          <Link
+            href={`/customers/${customer.id}/edit`}
+            className={buttonVariants({ variant: "outline", size: "default" })}
+          >
+            <NotePencilIcon size={15} />
+            Edit
+          </Link>
+        }
+      />
 
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value ?? "overview")}
-        orientation="vertical"
-        className="grid gap-4 lg:grid-cols-[220px_1fr] lg:items-start"
+        className="flex flex-col gap-3"
       >
-        <div className="rounded-xl border border-border bg-card p-2 shadow-sm">
+        <div className="border-b border-border/70">
           <TabsList
             variant="line"
-            className="flex w-full flex-col items-stretch justify-start gap-1 p-0"
+            className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0"
           >
             <CustomerTab index={1} value="overview">Overview</CustomerTab>
             <CustomerTab index={2} value="connection">Connection</CustomerTab>
@@ -176,37 +153,12 @@ function CustomerTab({
 }) {
   return (
     <TabsTrigger
-      className="customer-detail-tab min-h-8 w-full cursor-pointer justify-start gap-2 rounded-md border border-transparent bg-accent/35 px-3 py-1.5 font-medium text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-accent-foreground data-active:after:opacity-0"
+      className="min-h-8 flex-none cursor-pointer justify-start gap-1.5 rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
       value={value}
     >
-      <span className="min-w-4 text-xs font-bold tabular-nums">{index}.</span>
+      <span className="text-xs font-medium tabular-nums text-muted-foreground">{index}.</span>
       <span className="min-w-0 whitespace-normal text-left leading-snug">{children}</span>
     </TabsTrigger>
-  );
-}
-
-function CustomerSummaryCard({
-  label,
-  value,
-  helper,
-  icon,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border bg-card p-3 sm:w-40">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
-        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
-      </div>
-      <div>
-        <p className="truncate text-lg font-bold leading-tight text-foreground">{value}</p>
-        <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{helper}</p>
-      </div>
-    </div>
   );
 }
 
@@ -284,7 +236,7 @@ function CustomerOverview({ customer }: { customer: Customer }) {
             >
               <LinkIcon size={14} />
               {link.label}
-              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                 {link.count}
               </span>
             </Link>
@@ -321,9 +273,9 @@ function OverviewPanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card shadow-sm">
+    <section className="rounded-lg border border-border/70 bg-card">
       <div className="flex items-center justify-between border-b border-border/55 px-3 py-2">
-        <h2 className="text-sm font-bold text-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           {title}
         </h2>
       </div>
@@ -389,7 +341,7 @@ function CustomerWorkProgress({ customer }: { customer: Customer }) {
           ))}
         </div>
         <div className="mt-4 border-t border-border/60 pt-3">
-          <p className="text-xs font-bold text-foreground">Latest Update</p>
+          <p className="text-xs font-medium text-foreground">Latest Update</p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
             <CustomerInfoLine label="Stage" value={customer.currentStage} />
             <CustomerInfoLine label="Updated By" value="Ramesh Kumar" />
@@ -425,7 +377,7 @@ function StageRow({ stage }: { stage: CustomerWorkStageRecord }) {
   return (
     <div className="grid gap-2 px-3 py-2.5 transition-colors hover:bg-accent/30 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
       <div>
-        <p className="text-sm font-bold text-foreground">{stage.stage}</p>
+        <p className="text-sm font-semibold text-foreground">{stage.stage}</p>
         <Link
           href={stage.href}
           className="text-xs font-medium text-muted-foreground hover:text-primary"
@@ -474,7 +426,7 @@ function ConnectedStageTracker({
           >
             <div className="flex items-center gap-2">
               <span
-                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-bold ${
+                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold ${
                   completed || current
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-muted text-muted-foreground"
@@ -483,7 +435,7 @@ function ConnectedStageTracker({
                 {index + 1}
               </span>
               <p
-                className={`min-w-0 text-xs font-bold leading-snug ${
+                className={`min-w-0 text-xs font-semibold leading-snug ${
                   completed || current ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -503,7 +455,7 @@ function ConnectedStageTracker({
 function BillingStatus({ label, done }: { label: string; done: boolean }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
-      <p className="text-xs font-bold text-foreground">{label}</p>
+      <p className="text-xs font-medium text-foreground">{label}</p>
       <StatusBadge status={done ? "Completed" : "Pending"} />
     </div>
   );
@@ -605,7 +557,7 @@ function CustomerActivityTimeline({
             <span className="absolute -left-[1.35rem] top-3 h-3 w-3 rounded-full border-2 border-card bg-primary" />
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-bold text-foreground">{item.title}</p>
+                <p className="font-semibold text-foreground">{item.title}</p>
                 <CustomerInfoLine
                   label="Details"
                   value={item.description}

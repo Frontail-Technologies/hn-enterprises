@@ -44,14 +44,14 @@ export function SurveyApproval({ survey }: { survey: Survey }) {
 
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
         <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-          <p className="text-sm font-bold text-foreground">Decision</p>
+          <p className="text-sm font-semibold text-foreground">Decision</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {(["Approve", "Reject", "Send Back"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setDecision(item)}
-                className={`h-8 rounded-lg border px-3 text-sm font-bold ${
+                className={`h-8 rounded-lg border px-3 text-sm font-semibold ${
                   decision === item
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted/40"
@@ -73,7 +73,7 @@ export function SurveyApproval({ survey }: { survey: Survey }) {
 
           {showRemarks ? (
             <div className="mt-3">
-              <Label className="mb-1.5 block text-xs font-bold text-foreground">
+              <Label className="mb-1.5 block text-xs font-medium text-foreground">
                 {remarksRequired ? "Remarks (required)" : "Approval Remarks (optional)"}
               </Label>
               <Textarea
@@ -100,12 +100,12 @@ export function SurveyApproval({ survey }: { survey: Survey }) {
         </section>
 
         <aside className="rounded-xl border border-border bg-card p-3 shadow-sm">
-          <p className="text-sm font-bold text-foreground">Previous Revisions</p>
+          <p className="text-sm font-semibold text-foreground">Previous Revisions</p>
           <div className="mt-2 space-y-2">
             {surveyRevisions.map((revision) => (
               <div key={revision.id} className="rounded-lg border border-border bg-muted/20 p-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {revision.revisionNumber}
                   </p>
                   <StatusBadge status={revision.status} />

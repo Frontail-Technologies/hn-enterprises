@@ -86,7 +86,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
           <section className="rounded-xl border border-border/60 bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-foreground">Uploaded Evidence</p>
+                <p className="text-sm font-semibold text-foreground">Uploaded Evidence</p>
                 <p className="mt-0.5 text-xs font-medium text-muted-foreground">
                   Replace images or upload corrected GC evidence.
                 </p>
@@ -109,7 +109,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-foreground">
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {item.title}
                       </p>
                       <GcInfoLine
@@ -148,7 +148,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
         <aside className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start">
           <div className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border/60 bg-card">
             <div className="border-b border-border/60 px-4 py-3">
-              <p className="text-sm font-bold text-foreground">Edit Controls</p>
+              <p className="text-sm font-semibold text-foreground">Edit Controls</p>
               <p className="text-xs font-medium text-muted-foreground">
                 Checklist, remarks and change tracking.
               </p>
@@ -156,7 +156,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
 
             <div className="flex-1 space-y-4 overflow-y-auto p-4">
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Checklist Details</p>
+            <p className="text-sm font-semibold text-foreground">Checklist Details</p>
             <div className="mt-3 space-y-2">
               {gcChecklistItems.map((item) => (
                 <ChecklistStatusRow key={item.id} item={item} />
@@ -165,7 +165,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
           </section>
 
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <label className="text-sm font-bold text-foreground">Remarks</label>
+            <label className="text-sm font-medium text-foreground">Remarks</label>
             <Textarea
               defaultValue={record.remarks}
               className="mt-2 min-h-32"
@@ -174,7 +174,7 @@ export function GcUploadEdit({ record }: { record: GcUploadRecord }) {
           </section>
 
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Change History</p>
+            <p className="text-sm font-semibold text-foreground">Change History</p>
             <div className="mt-2 space-y-2">
               <HistoryLine
                 label="Evidence replaced"
@@ -239,7 +239,7 @@ function EvidenceUploadSheet({
             <div className="mx-auto grid size-12 place-items-center rounded-xl bg-primary/10 text-primary">
               <UploadSimpleIcon size={24} />
             </div>
-            <p className="mt-3 text-sm font-bold text-foreground">
+            <p className="mt-3 text-sm font-semibold text-foreground">
               Drop evidence file here
             </p>
             <p className="mt-1 text-xs font-medium text-muted-foreground">
@@ -252,7 +252,7 @@ function EvidenceUploadSheet({
           </div>
 
           <div className="rounded-lg border border-border/70 bg-background p-3">
-            <p className="text-sm font-bold text-foreground">Evidence Details</p>
+            <p className="text-sm font-semibold text-foreground">Evidence Details</p>
             <div className="mt-2 grid gap-2">
               <input
                 className="h-9 rounded-lg border border-border bg-card px-2.5 text-sm outline-none focus:border-primary/60"

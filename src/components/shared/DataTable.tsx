@@ -23,6 +23,10 @@ interface DataTableProps<T extends { id: string }> {
   showSerialNumber?: boolean
   serialNumberStart?: number
   tableClassName?: string
+  containerClassName?: string
+  dense?: boolean
+  stickyHeader?: boolean
+  stickyLastColumn?: boolean
 }
 
 export function DataTable<T extends { id: string }>({
@@ -35,6 +39,10 @@ export function DataTable<T extends { id: string }>({
   showSerialNumber = true,
   serialNumberStart = 1,
   tableClassName,
+  containerClassName,
+  dense = true,
+  stickyHeader,
+  stickyLastColumn,
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
@@ -48,17 +56,25 @@ export function DataTable<T extends { id: string }>({
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0)
 
   return (
-    <div className={cn('w-full overflow-x-auto rounded-xl border border-border/70 bg-card [&_tbody_svg]:text-primary')}>
+    <div className={cn('w-full overflow-x-auto rounded-lg border border-border/70 bg-card [&_tbody_svg]:text-primary', containerClassName)}>
       <Table className={tableClassName}>
-        <TableHeader>
+        <TableHeader className={cn(stickyHeader && 'sticky top-0 z-10')}>
           <TableRow className="border-b border-border/70 bg-secondary/80 hover:bg-secondary/80">
             {showSerialNumber && (
-              <TableHead className="w-14 border-r border-border/45 px-4 text-center font-semibold text-foreground last:border-r-0">
+              <TableHead className={cn('w-12 border-r border-border/45 px-3 text-center text-xs font-semibold text-muted-foreground last:border-r-0', dense && 'h-8')}>
                 No.
               </TableHead>
             )}
-            {columns.map((col) => (
-              <TableHead key={col.key} className={cn('border-r border-border/45 px-4 font-semibold text-foreground last:border-r-0', col.headerClassName ?? col.className)}>
+            {columns.map((col, index) => (
+              <TableHead
+                key={col.key}
+                className={cn(
+                  'border-r border-border/45 px-3 text-xs font-semibold text-muted-foreground last:border-r-0',
+                  dense && 'h-8',
+                  stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-secondary/95 shadow-[-8px_0_12px_-12px_var(--foreground)]',
+                  col.headerClassName ?? col.className,
+                )}
+              >
                 {col.header}
               </TableHead>
             ))}
@@ -76,12 +92,20 @@ export function DataTable<T extends { id: string }>({
                 )}
             >
               {showSerialNumber && (
-                <TableCell className="w-14 border-r border-border/35 px-4 text-center text-xs font-bold text-muted-foreground last:border-r-0">
+                <TableCell className={cn('w-12 border-r border-border/35 px-3 text-center text-xs font-medium text-muted-foreground last:border-r-0', dense && 'py-2')}>
                   {serialNumberStart + index}
                 </TableCell>
               )}
-              {columns.map((col) => (
-                <TableCell key={col.key} className={cn('border-r border-border/35 px-4 last:border-r-0', col.className)}>
+              {columns.map((col, index) => (
+                <TableCell
+                  key={col.key}
+                  className={cn(
+                    'border-r border-border/35 px-3 text-sm font-normal text-foreground last:border-r-0',
+                    dense && 'py-2',
+                    stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-card shadow-[-8px_0_12px_-12px_var(--foreground)]',
+                    col.className,
+                  )}
+                >
                   {col.render ? col.render(row) : renderCellValue(row, col.key)}
                 </TableCell>
               ))}

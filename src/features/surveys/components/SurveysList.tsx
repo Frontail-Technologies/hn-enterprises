@@ -18,9 +18,10 @@ import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   submissionStatusOptions,
@@ -117,7 +118,7 @@ export function SurveysList() {
       render: (survey) => (
         <Link
           href={`/surveys/${survey.id}`}
-          className="font-bold text-foreground hover:text-primary"
+          className="font-semibold text-foreground hover:text-primary"
         >
           {survey.surveyId}
         </Link>
@@ -178,8 +179,7 @@ export function SurveysList() {
   ];
 
   return (
-    <div>
-      <PageHeader
+    <PageShell
         title="Surveys"
         subtitle="Capture field conditions, workable status, and survey approvals."
         actions={
@@ -223,71 +223,86 @@ export function SurveysList() {
             </Link>
           </>
         }
-      />
-
-      <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search survey, customer, BP/TR or address..."
-          title="Survey Filters"
-          description="Filter surveys by assignment, status and survey date."
-          values={filters}
-          filters={[
-            {
-              key: "project",
-              placeholder: "All Projects",
-              options: surveyProjectOptions,
-            },
-            {
-              key: "site",
-              placeholder: "All Area / Site",
-              options: surveySiteOptions.map((site) => ({
-                label: site,
-                value: site,
-              })),
-            },
-            {
-              key: "supervisor",
-              placeholder: "All Supervisors",
-              options: surveySupervisorOptions.map((supervisor) => ({
-                label: supervisor,
-                value: supervisor,
-              })),
-            },
-            {
-              key: "workableStatus",
-              placeholder: "All Workable",
-              options: workableStatusOptions.map((status) => ({
-                label: status,
-                value: status,
-              })),
-            },
-            {
-              key: "submissionStatus",
-              placeholder: "All Submissions",
-              options: submissionStatusOptions.map((status) => ({
-                label: status,
-                value: status,
-              })),
-            },
-          ]}
-          onChange={(key, value) => {
-            setFilters((current) => ({ ...current, [key]: value }));
-            pagination.setPage(1);
-          }}
-          onReset={() => {
-            setFilters(initialFilters);
-            pagination.setPage(1);
-          }}
-          renderExtra={({ values, onChange }) => (
-            <DateRangeControl
-              dateFrom={values.dateFrom}
-              dateTo={values.dateTo}
-              onDateFromChange={(value) => onChange("dateFrom", value)}
-              onDateToChange={(value) => onChange("dateTo", value)}
-            />
-          )}
-        />
+      >
+      <TablePanel
+        title="Survey Queue"
+        subtitle="Review survey submissions, evidence and approval state."
+        toolbar={
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search survey, customer, BP/TR or address..."
+            title="Survey Filters"
+            description="Filter surveys by assignment, status and survey date."
+            values={filters}
+            filters={[
+              {
+                key: "project",
+                placeholder: "All Projects",
+                options: surveyProjectOptions,
+              },
+              {
+                key: "site",
+                placeholder: "All Area / Site",
+                options: surveySiteOptions.map((site) => ({
+                  label: site,
+                  value: site,
+                })),
+              },
+              {
+                key: "supervisor",
+                placeholder: "All Supervisors",
+                options: surveySupervisorOptions.map((supervisor) => ({
+                  label: supervisor,
+                  value: supervisor,
+                })),
+              },
+              {
+                key: "workableStatus",
+                placeholder: "All Workable",
+                options: workableStatusOptions.map((status) => ({
+                  label: status,
+                  value: status,
+                })),
+              },
+              {
+                key: "submissionStatus",
+                placeholder: "All Submissions",
+                options: submissionStatusOptions.map((status) => ({
+                  label: status,
+                  value: status,
+                })),
+              },
+            ]}
+            onChange={(key, value) => {
+              setFilters((current) => ({ ...current, [key]: value }));
+              pagination.setPage(1);
+            }}
+            onReset={() => {
+              setFilters(initialFilters);
+              pagination.setPage(1);
+            }}
+            renderExtra={({ values, onChange }) => (
+              <DateRangeControl
+                dateFrom={values.dateFrom}
+                dateTo={values.dateTo}
+                onDateFromChange={(value) => onChange("dateFrom", value)}
+                onDateToChange={(value) => onChange("dateTo", value)}
+              />
+            )}
+          />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
+          />
+        }
+      >
 
         {state === "error" ? (
           <Alert variant="destructive">
@@ -306,18 +321,12 @@ export function SurveysList() {
           emptyTitle="No surveys found"
           emptyDescription="Try changing the filters or create a new survey."
           serialNumberStart={pagination.startItem}
+          stickyHeader
+          stickyLastColumn
+          containerClassName="rounded-none border-0"
         />
-
-        <Pagination
-          page={pagination.page}
-          pageCount={pagination.pageCount}
-          totalItems={pagination.totalItems}
-          startItem={pagination.startItem}
-          endItem={pagination.endItem}
-          onPageChange={pagination.setPage}
-        />
-      </div>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }
 

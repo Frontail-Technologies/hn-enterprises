@@ -26,6 +26,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   gcChecklistItems,
@@ -43,7 +44,7 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
       header: "Checklist Item",
       render: (item) => (
         <div className="min-w-44">
-          <p className="font-bold text-foreground">{item.label}</p>
+          <p className="font-semibold text-foreground">{item.label}</p>
           <GcInfoLine label="Type" value={item.type} className="leading-5" />
         </div>
       ),
@@ -74,7 +75,7 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
         ]}
       />
 
-      <header className="rounded-xl border border-border/60 bg-card px-4 py-3">
+      <header className="rounded-lg border border-border/70 bg-card px-3 py-2.5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -100,15 +101,15 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
         </div>
       </header>
 
-      <section className="rounded-xl border border-border/60 bg-card p-4">
+      <section className="rounded-lg border border-border/70 bg-card p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-foreground">Evidence Gallery</p>
+            <p className="text-sm font-semibold text-foreground">Evidence Gallery</p>
             <p className="mt-0.5 text-xs font-medium text-muted-foreground">
               Field photos and uploaded GC documents for reviewer validation.
             </p>
           </div>
-          <span className="rounded-full bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
+          <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
             {record.fileCount} files
           </span>
         </div>
@@ -127,7 +128,7 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
                 )}
               </div>
               <div className="p-2.5">
-                <p className="truncate text-sm font-bold text-foreground group-hover:text-primary">
+                <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">
                   {item.title}
                 </p>
                 <GcInfoLine
@@ -143,21 +144,24 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-xl border border-border/60 bg-card p-3">
-          <p className="text-sm font-bold text-foreground">Summary</p>
-          <div className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
-            <GcInfoLine label="Customer" value={record.customerName} />
-            <GcInfoLine label="BP/TR Number" value={record.bpTrNumber} />
-            <GcInfoLine label="Project" value={record.projectName} />
-            <GcInfoLine label="Site" value={record.siteArea} />
-            <GcInfoLine label="Submitted By" value={record.submittedBy} />
-            <GcInfoLine label="Submitted On" value={formatDateTime(record.submittedOn)} />
-          </div>
+        <div className="rounded-lg border border-border/70 bg-card p-3">
+          <p className="text-sm font-semibold text-foreground">Summary</p>
+          <KeyValueGrid
+            className="mt-2"
+            items={[
+              { label: "Customer", value: record.customerName },
+              { label: "BP/TR Number", value: record.bpTrNumber },
+              { label: "Project", value: record.projectName },
+              { label: "Site", value: record.siteArea },
+              { label: "Submitted By", value: record.submittedBy },
+              { label: "Submitted On", value: formatDateTime(record.submittedOn) },
+            ]}
+          />
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-card p-3">
+        <div className="rounded-lg border border-border/70 bg-card p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-            <p className="text-sm font-bold text-foreground">Checklist</p>
+            <p className="text-sm font-semibold text-foreground">Checklist</p>
             <p className="text-xs font-medium text-muted-foreground">
               {record.checklistDone}/{record.checklistTotal} completed
             </p>
@@ -167,6 +171,7 @@ export function GcUploadDetail({ record }: { record: GcUploadRecord }) {
             columns={checklistColumns}
             showSerialNumber={false}
             emptyTitle="No checklist configured"
+            containerClassName="rounded-md"
           />
         </div>
       </section>
@@ -198,8 +203,8 @@ function ReviewGcSheet({ record }: { record: GcUploadRecord }) {
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <section className="rounded-lg border border-border/70 bg-background p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-foreground">Checklist Summary</p>
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+              <p className="text-sm font-semibold text-foreground">Checklist Summary</p>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                 {record.checklistDone}/{record.checklistTotal}
               </span>
             </div>
@@ -222,7 +227,7 @@ function ReviewGcSheet({ record }: { record: GcUploadRecord }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-foreground">
+            <label className="text-xs font-medium text-foreground">
               Reviewer Remarks
             </label>
             <Textarea
@@ -251,7 +256,7 @@ function ActivityHistory() {
     <Collapsible>
       <section className="rounded-xl border border-border/60 bg-card">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
-          <span className="text-sm font-bold text-foreground">Activity History</span>
+          <span className="text-sm font-semibold text-foreground">Activity History</span>
           <span className="text-xs font-semibold text-muted-foreground">
             Edits and reviews
           </span>
@@ -294,7 +299,7 @@ function ActivityLine({
   return (
     <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-bold text-foreground">{action}</p>
+        <p className="text-sm font-semibold text-foreground">{action}</p>
         <span className="text-xs font-medium text-muted-foreground">
           {formatDateTime(dateTime)}
         </span>

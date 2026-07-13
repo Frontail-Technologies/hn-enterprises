@@ -3,13 +3,16 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import { CheckCircleIcon, EyeIcon, HourglassMediumIcon, WarningIcon } from "@phosphor-icons/react";
+import { EyeIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { CountTabs } from "@/components/shared/CountTabs";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageShell } from "@/components/shared/PageShell";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   preCommissioningAssignedOptions,
@@ -59,23 +62,23 @@ export function PreCommissioningList() {
   const columns: ColumnDef<PreCommissioningRecord>[] = [
     {
       key: "customer",
-      header: "Customer",
+      header: "Report / Reference",
       render: (record) => (
         <Link
           href={`/pre-commissioning/${record.id}`}
-          className="font-bold text-foreground hover:text-primary"
+            className="font-semibold text-foreground hover:text-primary"
         >
-          {record.customerName}
+          {record.referenceNo}
         </Link>
       ),
     },
     { key: "bpTrNumber", header: "BP/TR Number" },
     {
       key: "projectSite",
-      header: "Project/Site",
+      header: "Location / Section",
       render: (record) => (
         <div>
-          <p className="font-semibold text-foreground">{record.projectName}</p>
+          <p className="font-semibold text-foreground">{record.locationSection}</p>
           <p className="text-xs font-medium text-muted-foreground">{record.siteArea}</p>
         </div>
       ),
@@ -85,7 +88,7 @@ export function PreCommissioningList() {
       header: "Checklist Completion",
       render: (record) => (
         <div className="min-w-32">
-          <div className="flex items-center justify-between gap-2 text-xs font-bold text-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs font-medium text-foreground">
             <span>
               {record.checklistDone}/{record.checklistTotal}
             </span>
@@ -135,72 +138,86 @@ export function PreCommissioningList() {
   ];
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Pre-Commissioning
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-            Track post-GC readiness checks before commissioning.
-          </p>
-        </div>
-        <PreCommissioningRecordSheet mode="add" />
-      </header>
+    <PageShell
+      title="Pre-Commissioning"
+      subtitle="Track post-GC readiness checks before commissioning."
+      actions={<PreCommissioningRecordSheet mode="add" />}
+    >
+      <CountTabs
+        items={[
+          {
+            label: "Pending",
+            value: countStatus("Pending"),
+            active: filters.status === "Pending",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Pending" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "In Review",
+            value: countStatus("In Review"),
+            active: filters.status === "In Review",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "In Review" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "Approved",
+            value: countStatus("Approved"),
+            active: filters.status === "Approved",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Approved" }));
+              pagination.setPage(1);
+            },
+          },
+        ]}
+      />
 
-      <div className="flex flex-wrap gap-2.5">
-        <SummaryStat label="Pending" value={countStatus("Pending")} icon={<WarningIcon size={17} />} />
-        <SummaryStat label="In Review" value={countStatus("In Review")} icon={<HourglassMediumIcon size={17} />} />
-        <SummaryStat label="Approved" value={countStatus("Approved")} icon={<CheckCircleIcon size={17} />} />
-      </div>
-
-      <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
-        <div className="space-y-3 p-4">
+      <TablePanel
+        title="Readiness Records"
+        subtitle="Pre-commissioning tasks grouped by reference and location."
+        toolbar={
           <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search customer, BP/TR or reference..."
-            title="Pre-Commissioning Filters"
-            description="Filter readiness checks by project, assignee and status."
-            values={filters}
-            filters={[
-              {
-                key: "project",
-                placeholder: "All Projects",
-                options: preCommissioningProjectOptions,
-              },
-              {
-                key: "assignedPerson",
-                placeholder: "All Assigned",
-                options: preCommissioningAssignedOptions,
-              },
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: preCommissioningStatuses.map((status) => ({
-                  label: status,
-                  value: status,
-                })),
-              },
-            ]}
-            onChange={(key, value) => {
-              setFilters((current) => ({ ...current, [key]: value }));
-              pagination.setPage(1);
-            }}
-            onReset={() => {
-              setFilters(initialFilters);
-              pagination.setPage(1);
-            }}
-          />
-
-          <DataTable
-            data={pagination.paginatedItems}
-            columns={columns}
-            serialNumberStart={pagination.startItem}
-            emptyTitle="No pre-commissioning records found"
-            emptyDescription="Try changing filters or check back after GC completion."
-          />
-
+              searchKey="search"
+              searchPlaceholder="Search customer, BP/TR or reference..."
+              title="Pre-Commissioning Filters"
+              description="Filter readiness checks by project, assignee and status."
+              values={filters}
+              filters={[
+                {
+                  key: "project",
+                  placeholder: "All Projects",
+                  options: preCommissioningProjectOptions,
+                },
+                {
+                  key: "assignedPerson",
+                  placeholder: "All Assigned",
+                  options: preCommissioningAssignedOptions,
+                },
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: preCommissioningStatuses.map((status) => ({
+                    label: status,
+                    value: status,
+                  })),
+                },
+              ]}
+              onChange={(key, value) => {
+                setFilters((current) => ({ ...current, [key]: value }));
+                pagination.setPage(1);
+              }}
+              onReset={() => {
+                setFilters(initialFilters);
+                pagination.setPage(1);
+              }}
+            />
+        }
+        pagination={
           <Pagination
+            compact
             page={pagination.page}
             pageCount={pagination.pageCount}
             totalItems={pagination.totalItems}
@@ -208,21 +225,21 @@ export function PreCommissioningList() {
             endItem={pagination.endItem}
             onPageChange={pagination.setPage}
           />
-        </div>
-      </section>
-    </div>
-  );
-}
+        }
+      >
 
-function SummaryStat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return (
-    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
-        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
-      </div>
-      <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
-    </div>
+          <DataTable
+            data={pagination.paginatedItems}
+            columns={columns}
+            serialNumberStart={pagination.startItem}
+            emptyTitle="No pre-commissioning records found"
+            emptyDescription="Try changing filters or check back after GC completion."
+            stickyHeader
+            stickyLastColumn
+            containerClassName="rounded-none border-0"
+          />
+      </TablePanel>
+    </PageShell>
   );
 }
 

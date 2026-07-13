@@ -83,7 +83,7 @@ export function CustomerImport() {
         >
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
-              <label className="mb-1.5 block text-xs font-bold text-foreground">
+              <label className="mb-1.5 block text-xs font-medium text-foreground">
                 Customer master XLSX
               </label>
               <Input type="file" accept=".xlsx,.xls" />
@@ -132,8 +132,8 @@ export function CustomerImport() {
 function ImportStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }

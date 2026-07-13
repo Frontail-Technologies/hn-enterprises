@@ -67,7 +67,7 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
             {giDetails.photos.map((photo) => (
               <div key={photo} className="rounded-lg border border-border bg-muted/30 p-3">
                 <ImageSquareIcon size={20} className="mb-2 text-primary" />
-                <p className="text-sm font-bold text-foreground">{photo}</p>
+                <p className="text-sm font-semibold text-foreground">{photo}</p>
                 <p className="text-xs text-muted-foreground">GI installation photo</p>
               </div>
             ))}

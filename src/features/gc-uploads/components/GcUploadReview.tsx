@@ -72,8 +72,8 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
         <main className="space-y-4">
           <section className="rounded-xl border border-border/60 bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-bold text-foreground">Evidence</p>
-              <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+              <p className="text-sm font-semibold text-foreground">Evidence</p>
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
                 {record.checklistDone}/{record.checklistTotal} checks complete
               </span>
             </div>
@@ -92,7 +92,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
                   </div>
                   <div className="p-2.5">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-sm font-bold text-foreground">{item.title}</p>
+                      <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
                       <StatusBadge status={item.status} />
                     </div>
                     <GcInfoLine
@@ -108,7 +108,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
           </section>
 
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Checklist</p>
+            <p className="text-sm font-semibold text-foreground">Checklist</p>
             <div className="mt-3 divide-y divide-border/60 rounded-lg border border-border/60">
               {gcChecklistItems.map((item) => (
                 <div key={item.id} className="grid gap-3 p-3 md:grid-cols-[1fr_120px_1.4fr] md:items-center">
@@ -123,7 +123,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
                       )}
                     />
                   <div>
-                    <p className="font-bold text-foreground">{item.label}</p>
+                    <p className="font-semibold text-foreground">{item.label}</p>
                     <GcInfoLine
                       label="Type"
                       value={`${item.type} ${item.required ? "- Required" : "- Optional"}`}
@@ -144,7 +144,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
           </section>
 
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Current Remarks</p>
+            <p className="text-sm font-semibold text-foreground">Current Remarks</p>
             <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
               <GcInfoLine
                 label="Reviewer Remarks"
@@ -157,7 +157,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
           <Collapsible>
             <section className="rounded-xl border border-border/60 bg-card">
               <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
-                <span className="text-sm font-bold text-foreground">Review History</span>
+                <span className="text-sm font-semibold text-foreground">Review History</span>
                 <CaretDownIcon size={15} className="text-muted-foreground" />
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -165,7 +165,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
                   {gcReviewComments.map((comment) => (
                     <div key={comment.id} className="border-l border-border pl-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-bold text-foreground">{comment.actor}</p>
+                        <p className="font-semibold text-foreground">{comment.actor}</p>
                         <StatusBadge status={comment.status} />
                       </div>
                       <div className="mt-1 space-y-0.5">
@@ -186,7 +186,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
 
         <aside className="space-y-4">
           <section className="rounded-xl border border-border/60 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">Review Decision</p>
+            <p className="text-sm font-semibold text-foreground">Review Decision</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
               {decisions.map((item) => (
                 <button
@@ -194,7 +194,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
                   type="button"
                   onClick={() => setDecision(item)}
                   className={cn(
-                    "rounded-lg border px-2 py-2 text-xs font-bold transition-colors",
+                    "rounded-lg border px-2 py-2 text-xs font-semibold transition-colors",
                     decision === item
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border/60 bg-background text-muted-foreground hover:text-foreground",
@@ -206,7 +206,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
             </div>
 
             <div className="mt-3">
-              <label className="text-xs font-bold text-foreground">
+              <label className="text-xs font-medium text-foreground">
                 Reviewer Comments {requiresComment ? "*" : "(optional)"}
               </label>
               <Textarea
@@ -216,7 +216,7 @@ export function GcUploadReview({ record }: { record: GcUploadRecord }) {
                 aria-invalid={requiresComment && !comments.trim()}
               />
               {requiresComment && !comments.trim() ? (
-                <p className="mt-1 text-xs font-bold text-destructive">
+                <p className="mt-1 text-xs font-medium text-destructive">
                   Comments are required for Send Back or Reject.
                 </p>
               ) : null}

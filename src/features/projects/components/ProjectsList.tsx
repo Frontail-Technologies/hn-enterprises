@@ -12,7 +12,8 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { Pagination } from "@/components/shared/Pagination";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageShell } from "@/components/shared/PageShell";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
@@ -106,8 +107,7 @@ export function ProjectsList() {
   ];
 
   return (
-    <div>
-      <PageHeader
+    <PageShell
         title="Projects"
         subtitle="Manage project contracts, cities, clients, and status."
         actions={
@@ -119,39 +119,54 @@ export function ProjectsList() {
             New Project
           </Link>
         }
-      />
-
-      <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-4">
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search projects..."
-          title="Project Filters"
-          description="Filter projects by city and current status."
-          values={filters}
-          filters={[
-            {
-              key: "city",
-              placeholder: "All Cities",
-              options: cityOptions.map((city) => ({ label: city, value: city })),
-            },
-            {
-              key: "status",
-              placeholder: "All Statuses",
-              options: projectStatusOptions.map((status) => ({
-                label: status,
-                value: status,
-              })),
-            },
-          ]}
-          onChange={(key, value) => {
-            setFilters((current) => ({ ...current, [key]: value }));
-            pagination.setPage(1);
-          }}
-          onReset={() => {
-            setFilters(initialFilters);
-            pagination.setPage(1);
-          }}
-        />
+      >
+      <TablePanel
+        title="Project Records"
+        subtitle="Showing project contracts and delivery ownership."
+        toolbar={
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search projects..."
+            title="Project Filters"
+            description="Filter projects by city and current status."
+            values={filters}
+            filters={[
+              {
+                key: "city",
+                placeholder: "All Cities",
+                options: cityOptions.map((city) => ({ label: city, value: city })),
+              },
+              {
+                key: "status",
+                placeholder: "All Statuses",
+                options: projectStatusOptions.map((status) => ({
+                  label: status,
+                  value: status,
+                })),
+              },
+            ]}
+            onChange={(key, value) => {
+              setFilters((current) => ({ ...current, [key]: value }));
+              pagination.setPage(1);
+            }}
+            onReset={() => {
+              setFilters(initialFilters);
+              pagination.setPage(1);
+            }}
+          />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
+          />
+        }
+      >
         <DataTable
           columns={columns}
           data={pagination.paginatedItems}
@@ -159,16 +174,11 @@ export function ProjectsList() {
           emptyTitle="No projects found"
           emptyDescription="Try changing the search or filters."
           variant="striped"
+          stickyHeader
+          stickyLastColumn
+          containerClassName="rounded-none border-0"
         />
-        <Pagination
-          page={pagination.page}
-          pageCount={pagination.pageCount}
-          totalItems={pagination.totalItems}
-          startItem={pagination.startItem}
-          endItem={pagination.endItem}
-          onPageChange={pagination.setPage}
-        />
-      </div>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }

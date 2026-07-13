@@ -3,18 +3,16 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import {
-  EyeIcon,
-  FileTextIcon,
-  PaperPlaneTiltIcon,
-  WarningIcon,
-} from "@phosphor-icons/react";
+import { EyeIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { CountTabs } from "@/components/shared/CountTabs";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageShell } from "@/components/shared/PageShell";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import {
   gcProjectOptions,
@@ -72,7 +70,7 @@ export function GcUploadsList() {
         <div>
           <Link
             href={`/gc-uploads/${record.id}`}
-            className="font-bold text-foreground hover:text-primary"
+            className="font-semibold text-foreground hover:text-primary"
           >
             {record.customerName}
           </Link>
@@ -123,63 +121,98 @@ export function GcUploadsList() {
   ];
 
   return (
-    <div className="space-y-5">
-      <header>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">GC Uploads</h1>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-muted-foreground">
-            Verify gas connection evidence, checklist completion and reviewer comments.
-          </p>
-        </div>
-      </header>
+    <PageShell
+      title="GC Uploads"
+      subtitle="Verify gas connection evidence, checklist completion and reviewer comments."
+    >
+      <CountTabs
+        items={[
+          {
+            label: "Pending Review",
+            value: countStatus("Pending"),
+            active: filters.status === "Pending",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Pending" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "Approved",
+            value: countStatus("Approved"),
+            active: filters.status === "Approved",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Approved" }));
+              pagination.setPage(1);
+            },
+          },
+          {
+            label: "Sent Back",
+            value: countStatus("Sent Back"),
+            active: filters.status === "Sent Back",
+            onClick: () => {
+              setFilters((current) => ({ ...current, status: "Sent Back" }));
+              pagination.setPage(1);
+            },
+          },
+        ]}
+      />
 
-      <div className="flex flex-wrap gap-2.5">
-        <SummaryStat label="Pending Review" value={countStatus("Pending")} icon={<WarningIcon size={17} />} />
-        <SummaryStat label="Approved" value={countStatus("Approved")} icon={<FileTextIcon size={17} />} />
-        <SummaryStat label="Sent Back" value={countStatus("Sent Back")} icon={<PaperPlaneTiltIcon size={17} />} />
-      </div>
-
-      <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
-        <div className="space-y-3 p-4">
+      <TablePanel
+        title="Verification Queue"
+        subtitle="Evidence submissions awaiting validation and approval."
+        toolbar={
           <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search submission, customer, BP/TR..."
-            title="GC Upload Filters"
-            description="Filter upload submissions by project, site, status and reviewer."
-            values={filters}
-            filters={[
-              { key: "project", placeholder: "All Projects", options: gcProjectOptions },
-              {
-                key: "site",
-                placeholder: "All Sites",
-                options: gcSiteOptions.map((site) => ({ label: site, value: site })),
-              },
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: gcUploadStatuses.map((status) => ({
-                  label: status,
-                  value: status,
-                })),
-              },
-              {
-                key: "reviewer",
-                placeholder: "All Reviewers",
-                options: gcReviewerOptions.map((reviewer) => ({
-                  label: reviewer,
-                  value: reviewer,
-                })),
-              },
-            ]}
-            onChange={(key, value) => {
-              setFilters((current) => ({ ...current, [key]: value }));
-              pagination.setPage(1);
-            }}
-            onReset={() => {
-              setFilters(initialFilters);
-              pagination.setPage(1);
-            }}
+              searchKey="search"
+              searchPlaceholder="Search submission, customer, BP/TR..."
+              title="GC Upload Filters"
+              description="Filter upload submissions by project, site, status and reviewer."
+              values={filters}
+              filters={[
+                { key: "project", placeholder: "All Projects", options: gcProjectOptions },
+                {
+                  key: "site",
+                  placeholder: "All Sites",
+                  options: gcSiteOptions.map((site) => ({ label: site, value: site })),
+                },
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: gcUploadStatuses.map((status) => ({
+                    label: status,
+                    value: status,
+                  })),
+                },
+                {
+                  key: "reviewer",
+                  placeholder: "All Reviewers",
+                  options: gcReviewerOptions.map((reviewer) => ({
+                    label: reviewer,
+                    value: reviewer,
+                  })),
+                },
+              ]}
+              onChange={(key, value) => {
+                setFilters((current) => ({ ...current, [key]: value }));
+                pagination.setPage(1);
+              }}
+              onReset={() => {
+                setFilters(initialFilters);
+                pagination.setPage(1);
+              }}
+            />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
           />
+        }
+      >
 
           <DataTable
             data={pagination.paginatedItems}
@@ -188,31 +221,12 @@ export function GcUploadsList() {
             emptyTitle="No GC uploads found"
             emptyDescription="Try changing filters or review new field submissions."
             serialNumberStart={pagination.startItem}
+            stickyHeader
+            stickyLastColumn
+            containerClassName="rounded-none border-0"
           />
-
-          <Pagination
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            totalItems={pagination.totalItems}
-            startItem={pagination.startItem}
-            endItem={pagination.endItem}
-            onPageChange={pagination.setPage}
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function SummaryStat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return (
-    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border/70 bg-card p-3 sm:w-40">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
-        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
-      </div>
-      <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }
 

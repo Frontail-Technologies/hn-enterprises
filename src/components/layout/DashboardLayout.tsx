@@ -32,7 +32,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       >
         <Header onToggleSidebar={() => setCollapsed((c) => !c)} />
-        <main className="flex-1 container mx-auto p-6">{children}</main>
+        <main className="flex-1 w-full px-3 py-4 sm:px-4 lg:px-5">{children}</main>
       </div>
     </div>
   );

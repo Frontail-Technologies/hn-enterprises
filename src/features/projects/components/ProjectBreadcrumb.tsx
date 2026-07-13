@@ -34,7 +34,7 @@ export function ProjectBreadcrumb({ items }: ProjectBreadcrumbProps) {
                 {item.label}
               </Link>
             ) : (
-              <span className="max-w-56 truncate font-bold text-foreground">
+              <span className="max-w-56 truncate font-semibold text-foreground">
                 {item.label}
               </span>
             )}

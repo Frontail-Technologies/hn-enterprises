@@ -37,6 +37,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { LocationPicker } from "@/components/shared/LocationPicker";
 import { LocationPreview } from "@/components/shared/LocationPreview";
 import { SectionCard } from "@/components/shared/SectionCard";
@@ -133,13 +134,12 @@ export function ProjectDetail({ project }: { project: Project }) {
 
       <Tabs
         defaultValue="overview"
-        orientation="vertical"
-        className="grid gap-4 lg:grid-cols-[220px_1fr] lg:items-start"
+        className="flex flex-col gap-3"
       >
-        <div className="rounded-xl border border-border bg-card p-2 shadow-sm">
+        <div className="border-b border-border/70">
           <TabsList
             variant="line"
-            className="flex w-full flex-col items-stretch justify-start gap-1 p-0"
+            className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0"
           >
             <ProjectTab index={1} value="overview">Overview</ProjectTab>
             <ProjectTab index={2} value="sites">Sites</ProjectTab>
@@ -186,10 +186,10 @@ function ProjectTab({
 }) {
   return (
     <TabsTrigger
-      className="project-detail-tab min-h-8 w-full cursor-pointer justify-start gap-2 rounded-md border border-transparent bg-accent/35 px-3 py-1.5 font-medium text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-accent-foreground data-active:after:opacity-0"
+      className="min-h-8 flex-none cursor-pointer justify-start gap-1.5 rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
       value={value}
     >
-      <span className="min-w-4 text-xs font-bold tabular-nums">{index}.</span>
+      <span className="text-xs font-medium tabular-nums text-muted-foreground">{index}.</span>
       <span className="min-w-0 whitespace-normal text-left leading-snug">{children}</span>
     </TabsTrigger>
   );
@@ -211,13 +211,6 @@ function ProjectOverview({ project }: { project: Project }) {
 
   return (
     <div className="space-y-4">
-      <section className="flex flex-wrap gap-2.5">
-        <SmallStat label="Active Sites" value="3" helper="Field locations" icon={<MapPinIcon size={17} />} />
-        <SmallStat label="Total Connections" value="5,200" helper="Planned" icon={<UserPlusIcon size={17} />} />
-        <SmallStat label="Surveys Completed" value="12 / 15" helper="Completed" icon={<FileArrowUpIcon size={17} />} />
-        <SmallStat label="Pending Reports" value="9" helper="Awaiting approval" icon={<FileArrowUpIcon size={17} />} />
-      </section>
-
       <SectionCard title="Project Information">
         <InfoGrid items={summary} />
       </SectionCard>
@@ -735,31 +728,6 @@ function ActivityTimeline({ items }: { items: ActivityItem[] }) {
   );
 }
 
-function SmallStat({
-  label,
-  value,
-  helper,
-  icon,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-xl border border-border bg-card p-3 sm:w-40">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold leading-4 text-muted-foreground">{label}</p>
-        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">{icon}</span>
-      </div>
-      <div>
-        <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
-        <p className="mt-0.5 text-xs font-medium text-muted-foreground">{helper}</p>
-      </div>
-    </div>
-  );
-}
-
 function TargetsDialog({
   open,
   draftTargets,
@@ -1073,14 +1041,10 @@ function TeamDialog({
 
 function InfoGrid({ items }: { items: string[][] }) {
   return (
-    <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-      {items.map(([label, value]) => (
-        <div key={label} className="grid grid-cols-[150px_1fr] gap-3 text-sm">
-          <dt className="font-semibold text-foreground">{label}</dt>
-          <dd className="text-muted-foreground">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <KeyValueGrid
+      items={items.map(([label, value]) => ({ label, value }))}
+      columns={2}
+    />
   );
 }
 

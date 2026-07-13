@@ -9,8 +9,8 @@ interface SectionCardProps {
 
 export function SectionCard({ title, action, className, children }: SectionCardProps) {
   return (
-    <div className={cn('bg-card rounded-xl ring-1 ring-foreground/5 p-4 shadow-sm', className)}>
-      <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-border/60 gap-3">
+    <div className={cn('bg-card rounded-lg border border-border/70 p-3', className)}>
+      <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/60 gap-3">
         <h2 className="text-sm font-semibold text-foreground tracking-tight">{title}</h2>
         {action}
       </div>

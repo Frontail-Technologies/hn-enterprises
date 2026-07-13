@@ -13,7 +13,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
+import { TablePanel } from "@/components/shared/TablePanel";
 import { usePagination } from "@/lib/hooks/usePagination";
 import { cn } from "@/lib/utils";
 import {
@@ -217,56 +219,67 @@ export function WorkProgressList({
   ];
 
   return (
-    <div className="space-y-5">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Work Progress</h1>
-        <p className="mt-1 text-sm font-medium text-muted-foreground">
-          Track field stage updates, photos and customer work history.
-        </p>
-      </header>
-
-      <section className="rounded-xl border border-border/60 bg-card">
-        <div className="space-y-3 p-3">
+    <PageShell
+      title="Work Progress"
+      subtitle="Track field stage updates, photos and customer work history."
+    >
+      <TablePanel
+        title="Work Progress Records"
+        subtitle="Operational queue for field actions and stage evidence."
+        toolbar={
           <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search customer, BP/TR no..."
-            title="Work Progress Filters"
-            description="Filter field progress by project, site, supervisor and stage."
-            values={filters}
-            filters={[
-              { key: "project", placeholder: "All Projects", options: workProgressProjectOptions },
-              {
-                key: "site",
-                placeholder: "All Sites",
-                options: workProgressSiteOptions.map((site) => ({ label: site, value: site })),
-              },
-              {
-                key: "supervisor",
-                placeholder: "All Supervisors",
-                options: workProgressSupervisorOptions.map((supervisor) => ({
-                  label: supervisor,
-                  value: supervisor,
-                })),
-              },
-              {
-                key: "stage",
-                placeholder: "All Stages",
-                options: workStages.map((stage) => ({ label: stage, value: stage })),
-              },
-            ]}
-            onChange={(key, value) => {
-              setFilters((current) => ({ ...current, [key]: value }));
-              pagination.setPage(1);
-            }}
-            onReset={() => {
-              setFilters({
-                ...initialFilters,
-                customerId: initialCustomerId ?? "",
-                project: initialProjectId ?? "all",
-              });
-              pagination.setPage(1);
-            }}
+              searchKey="search"
+              searchPlaceholder="Search customer, BP/TR no..."
+              title="Work Progress Filters"
+              description="Filter field progress by project, site, supervisor and stage."
+              values={filters}
+              filters={[
+                { key: "project", placeholder: "All Projects", options: workProgressProjectOptions },
+                {
+                  key: "site",
+                  placeholder: "All Sites",
+                  options: workProgressSiteOptions.map((site) => ({ label: site, value: site })),
+                },
+                {
+                  key: "supervisor",
+                  placeholder: "All Supervisors",
+                  options: workProgressSupervisorOptions.map((supervisor) => ({
+                    label: supervisor,
+                    value: supervisor,
+                  })),
+                },
+                {
+                  key: "stage",
+                  placeholder: "All Stages",
+                  options: workStages.map((stage) => ({ label: stage, value: stage })),
+                },
+              ]}
+              onChange={(key, value) => {
+                setFilters((current) => ({ ...current, [key]: value }));
+                pagination.setPage(1);
+              }}
+              onReset={() => {
+                setFilters({
+                  ...initialFilters,
+                  customerId: initialCustomerId ?? "",
+                  project: initialProjectId ?? "all",
+                });
+                pagination.setPage(1);
+              }}
+            />
+        }
+        pagination={
+          <Pagination
+            compact
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            onPageChange={pagination.setPage}
           />
+        }
+      >
 
           <DataTable
             data={pagination.paginatedItems}
@@ -276,19 +289,12 @@ export function WorkProgressList({
             emptyDescription="Try another queue view or adjust the filters."
             serialNumberStart={pagination.startItem}
             tableClassName="table-fixed"
+            stickyHeader
+            stickyLastColumn
+            containerClassName="rounded-none border-0"
           />
-
-          <Pagination
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            totalItems={pagination.totalItems}
-            startItem={pagination.startItem}
-            endItem={pagination.endItem}
-            onPageChange={pagination.setPage}
-          />
-        </div>
-      </section>
-    </div>
+      </TablePanel>
+    </PageShell>
   );
 }
 

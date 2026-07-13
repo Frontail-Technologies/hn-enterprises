@@ -147,7 +147,7 @@ export function ReportsPage() {
       <Header title="Reports" subtitle="Operational reports and exports." />
       <div className="rounded-xl border border-border/70 bg-card p-8">
         <div className="mx-auto max-w-md text-center">
-          <p className="text-base font-bold text-foreground">Reports module coming soon</p>
+          <p className="text-base font-semibold text-foreground">Reports module coming soon</p>
           <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
             Generated reports, saved exports and scheduled operational summaries will be configured here.
           </p>
@@ -282,21 +282,20 @@ export function AuditLogsPage() {
 
 function PageShell({ title, subtitle, actions, children }: { title: string; subtitle: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Header title={title} subtitle={subtitle} actions={actions} />
-      <section className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+      <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
         {children}
       </section>
     </div>
   );
 }
 
-function Header({ title, subtitle, actions }: { title: string; subtitle: string; actions?: ReactNode }) {
+function Header({ title, actions }: { title: string; subtitle: string; actions?: ReactNode }) {
   return (
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-        <p className="mt-1 text-sm font-medium text-muted-foreground">{subtitle}</p>
+        <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </header>
@@ -322,18 +321,21 @@ function PaginatedDataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-3">
-      <DataTable
-        data={pagedData}
-        columns={columns}
-        serialNumberStart={startIndex + 1}
-      />
       <Pagination
+        compact
         page={currentPage}
         pageCount={pageCount}
         totalItems={data.length}
         startItem={startItem}
         endItem={endItem}
         onPageChange={setPage}
+      />
+      <DataTable
+        data={pagedData}
+        columns={columns}
+        serialNumberStart={startIndex + 1}
+        stickyHeader
+        stickyLastColumn
       />
     </div>
   );
@@ -458,7 +460,7 @@ function ManagementDrawer({
 function Field({ label, select, textarea, options = [] }: { label: string; select?: boolean; textarea?: boolean; options?: string[] }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-bold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       {select ? (
         <Select defaultValue={options[0]}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -476,7 +478,7 @@ function Field({ label, select, textarea, options = [] }: { label: string; selec
 function SettingsPanel({ title, items }: { title: string; items: string[] }) {
   return (
     <section className="rounded-xl border border-border/70 bg-card p-4">
-      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       <div className="mt-3 space-y-2">
         {items.map((item) => (
           <div key={item} className="rounded-lg bg-muted/30 px-3 py-2 text-sm font-medium text-foreground">{item}</div>

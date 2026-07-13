@@ -136,7 +136,7 @@ export function SurveyForm({ mode, survey }: { mode: "create" | "edit"; survey?:
 
         <form className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-4 py-3">
-            <p className="text-sm font-bold text-foreground">{steps[step]}</p>
+            <p className="text-sm font-semibold text-foreground">{steps[step]}</p>
             <p className="text-xs font-medium text-muted-foreground">
               Step {step + 1} of {steps.length}
             </p>
@@ -232,7 +232,7 @@ function CustomerLocationStep({
         <div className="rounded-lg border border-border bg-muted/15 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-foreground">Customer Summary</p>
+              <p className="text-sm font-semibold text-foreground">Customer Summary</p>
               <p className="text-xs font-medium text-muted-foreground">
                 Read-only customer master data. Survey saves will not update this record.
               </p>
@@ -250,7 +250,7 @@ function CustomerLocationStep({
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
-                <dd className="text-sm font-bold text-foreground">{value}</dd>
+                <dd className="text-sm font-semibold text-foreground">{value}</dd>
               </div>
             ))}
           </dl>
@@ -483,7 +483,7 @@ function ReviewStep({
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-bold text-foreground">Review Summary</p>
+        <p className="text-sm font-semibold text-foreground">Review Summary</p>
         <dl className="mt-3 grid gap-2 md:grid-cols-2">
           {[
             ["Customer", values.customerName],
@@ -495,7 +495,7 @@ function ReviewStep({
           ].map(([label, value]) => (
             <div key={label}>
               <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
-              <dd className="text-sm font-bold text-foreground">{value}</dd>
+              <dd className="text-sm font-semibold text-foreground">{value}</dd>
             </div>
           ))}
         </dl>
@@ -557,7 +557,7 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <Label className="mb-1.5 block text-xs font-bold text-foreground">{label}</Label>
+      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
       {children}
     </div>
   );

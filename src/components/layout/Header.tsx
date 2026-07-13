@@ -20,13 +20,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     .slice(0, 2) ?? 'U'
 
   return (
-    <header className="h-14 bg-card border-b border-border flex items-center px-4 gap-4 sticky top-0 z-30">
+    <header className="h-12 bg-card border-b border-border/70 flex items-center px-3 gap-3 sticky top-0 z-30">
       {/* Hamburger */}
       <Button
         variant="ghost"
         size="icon"
         onClick={onToggleSidebar}
-        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
         aria-label="Toggle sidebar"
       >
         <List size={18} weight="bold" />
@@ -43,7 +43,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted relative"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted relative"
           aria-label="Notifications"
         >
           <Bell size={18} />
@@ -52,9 +52,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </Button>
 
         {/* User display */}
-        <div className="hidden sm:flex items-center gap-1.5 pl-2 ml-1 border-l border-border">
+        <div className="hidden sm:flex items-center gap-1.5 pl-2 ml-1 border-l border-border/70">
           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">{initials}</span>
+            <span className="text-xs font-semibold text-primary">{initials}</span>
           </div>
           <div className="hidden md:flex flex-col leading-none">
             <span className="text-xs font-semibold text-foreground">{user?.fullName}</span>
