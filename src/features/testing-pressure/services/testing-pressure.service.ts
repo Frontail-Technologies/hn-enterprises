@@ -19,6 +19,8 @@ export const pressureTests: PressureTestRecord[] = [
   {
     id: "tp-001",
     testNo: "TP-2025-00144",
+    customerId: "cust-002",
+    pipeRecordId: "pipe-20-mm",
     customerName: "Meena Sharma",
     bpTrNumber: "TR-553901",
     projectName: "Shyam Nagar CGD Project",
@@ -37,6 +39,8 @@ export const pressureTests: PressureTestRecord[] = [
   {
     id: "tp-002",
     testNo: "TP-2025-00143",
+    customerId: "cust-001",
+    pipeRecordId: "pipe-20-mm",
     customerName: "Rajesh Kumar",
     bpTrNumber: "BP-100245",
     projectName: "Shyam Nagar CGD Project",
@@ -55,6 +59,8 @@ export const pressureTests: PressureTestRecord[] = [
   {
     id: "tp-003",
     testNo: "TP-2025-00142",
+    customerId: "cust-003",
+    pipeRecordId: "pipe-90-mm",
     customerName: "Green Mart Store",
     bpTrNumber: "BP-220118",
     projectName: "Green City Phase 1",

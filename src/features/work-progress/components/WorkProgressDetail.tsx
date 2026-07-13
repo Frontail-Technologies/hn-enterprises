@@ -51,7 +51,7 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
             </p>
           </div>
           <Link
-            href={`/work-progress/${record.id}/update`}
+            href={getCustomerWorkspaceHref(record)}
             className={buttonVariants({ variant: "default", size: "default" })}
           >
             <NotePencilIcon size={15} />
@@ -121,7 +121,7 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-bold text-foreground">Latest Evidence</p>
               <Link
-                href={`/documents?workProgressId=${record.id}`}
+                href={`/customers/${record.customerId}?tab=images`}
                 className="text-xs font-bold text-primary hover:underline"
               >
                 View all
@@ -131,7 +131,7 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
               {workProgressPhotos.slice(0, 2).map((photo) => (
                 <Link
                   key={photo.id}
-                  href={`/documents?workProgressId=${record.id}&photoId=${photo.id}`}
+                  href={`/customers/${record.customerId}?tab=images`}
                   className="overflow-hidden rounded-lg border border-border/60 bg-muted/40"
                 >
                   <div className="flex h-24 items-center justify-center bg-muted">
@@ -143,7 +143,7 @@ export function WorkProgressDetail({ record }: { record: WorkProgressRecord }) {
                 </Link>
               ))}
               <Link
-                href={`/work-progress/${record.id}/update`}
+                href={getCustomerWorkspaceHref(record)}
                 className="flex h-full min-h-32 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-primary"
               >
                 <PlusIcon size={18} />
@@ -275,4 +275,17 @@ function formatDateTime(value: string) {
   } catch {
     return value;
   }
+}
+
+function getCustomerWorkspaceHref(record: WorkProgressRecord) {
+  const tabByStage: Record<WorkProgressRecord["currentStage"], string> = {
+    Survey: "customer",
+    Workable: "customer",
+    "Plumbing / GI": "gi",
+    GC: "images",
+    Commissioning: "commissioning",
+    Conversion: "commissioning",
+  };
+
+  return `/customers/${record.customerId}?tab=${tabByStage[record.currentStage]}`;
 }

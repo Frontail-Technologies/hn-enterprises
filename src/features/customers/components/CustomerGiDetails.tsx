@@ -4,13 +4,13 @@ import { FileTextIcon, ImageSquareIcon, LinkIcon } from "@phosphor-icons/react/d
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { customerGiDetails } from "../services/customers.service";
+import { customerGiDetails, getCustomerDisplay } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
-import { CustomerBreadcrumb } from "./CustomerBreadcrumb";
 import { CustomerInfoLine } from "./CustomerInfoLine";
 
 export function CustomerGiDetails({ customer }: { customer: Customer }) {
   const giDetails = customerGiDetails;
+  const display = getCustomerDisplay(customer);
   const pipelineItems: [string, string][] = [
     ["Inlet", giDetails.inlet],
     ["Outlet", giDetails.outlet],
@@ -31,17 +31,9 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
 
   return (
     <div>
-      <CustomerBreadcrumb
-        items={[
-          { label: "Customers", href: "/customers" },
-          { label: customer.name, href: `/customers/${customer.id}` },
-          { label: "GI Details" },
-        ]}
-      />
-
       <PageHeader
         title="GI Details"
-        subtitle={`${customer.name} · ${customer.bpTrNumber}`}
+        subtitle={`${display.name} - ${display.trBpNo}`}
         actions={
           <Link
             href={`/customers/${customer.id}`}

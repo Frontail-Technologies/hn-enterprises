@@ -91,7 +91,7 @@ export function WorkProgressList({
       render: (record) => (
         <div>
           <Link
-            href={`/work-progress/${record.id}`}
+            href={getCustomerWorkspaceHref(record)}
             className="font-bold text-foreground hover:text-primary"
           >
             {record.customerName}
@@ -188,7 +188,7 @@ export function WorkProgressList({
         <div className="flex items-center gap-1">
           <ActionTooltip label="View">
             <Link
-              href={`/work-progress/${record.id}`}
+              href={getCustomerWorkspaceHref(record)}
               aria-label="View progress"
               className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
@@ -197,7 +197,7 @@ export function WorkProgressList({
           </ActionTooltip>
           <ActionTooltip label="Update Stage">
             <Link
-              href={`/work-progress/${record.id}/update`}
+              href={getCustomerWorkspaceHref(record)}
               aria-label="Update stage"
               className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
@@ -206,7 +206,7 @@ export function WorkProgressList({
           </ActionTooltip>
           <ActionTooltip label="View History">
             <Link
-              href={`/work-progress/${record.id}/history`}
+              href={`/customers/${record.customerId}`}
               aria-label="View history"
               className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             >
@@ -346,6 +346,19 @@ function shortStageLabel(stage: WorkStage) {
   if (stage === "Commissioning") return "CM";
   if (stage === "Conversion") return "CV";
   return "GC";
+}
+
+function getCustomerWorkspaceHref(record: WorkProgressRecord) {
+  const tabByStage: Record<WorkStage, string> = {
+    Survey: "customer",
+    Workable: "customer",
+    "Plumbing / GI": "gi",
+    GC: "images",
+    Commissioning: "commissioning",
+    Conversion: "commissioning",
+  };
+
+  return `/customers/${record.customerId}?tab=${tabByStage[record.currentStage]}`;
 }
 
 function getInitials(value: string) {

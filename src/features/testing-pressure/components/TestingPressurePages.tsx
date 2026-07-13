@@ -79,7 +79,7 @@ export function TestingPressureList() {
       header: "Test / Reference",
       render: (record) => (
         <div>
-          <Link href={`/pressure-observation/${record.id}`} className="font-semibold text-foreground hover:text-primary">
+          <Link href={getCustomerPipeHref(record)} className="font-semibold text-foreground hover:text-primary">
             {record.testNo}
           </Link>
           <p className="text-xs font-medium text-muted-foreground">{record.bpTrNumber}</p>
@@ -119,22 +119,22 @@ export function TestingPressureList() {
       render: (record) => (
         <div className="flex items-center gap-1">
           <ActionTooltip label="View test">
-            <Link href={`/pressure-observation/${record.id}`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+            <Link href={getCustomerPipeHref(record)} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
               <EyeIcon size={15} />
             </Link>
           </ActionTooltip>
           <ActionTooltip label="Add readings">
-            <Link href={`/pressure-observation/${record.id}/readings/new`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+            <Link href={getCustomerPipeHref(record)} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
               <PlusIcon size={15} />
             </Link>
           </ActionTooltip>
           <ActionTooltip label="Edit readings">
-            <Link href={`/pressure-observation/${record.id}/readings/edit`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+            <Link href={getCustomerPipeHref(record)} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
               <NotePencilIcon size={15} />
             </Link>
           </ActionTooltip>
           <ActionTooltip label="Result and evidence">
-            <Link href={`/pressure-observation/${record.id}/result`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+            <Link href={getCustomerPipeHref(record)} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
               <UploadSimpleIcon size={15} />
             </Link>
           </ActionTooltip>
@@ -521,6 +521,10 @@ function ModuleBreadcrumb({ items }: { items: ([string] | [string, string])[] })
 
 function countStatus(status: PressureTestRecord["status"]) {
   return pressureTests.filter((record) => record.status === status).length;
+}
+
+function getCustomerPipeHref(record: PressureTestRecord) {
+  return `/customers/${record.customerId}?tab=lmc&pipe=${record.pipeRecordId}`;
 }
 
 function formatDateTime(value: string) {

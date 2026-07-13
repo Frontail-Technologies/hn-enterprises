@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArchiveIcon,
-  ClockCounterClockwiseIcon,
   DotsThreeVerticalIcon,
   DownloadSimpleIcon,
   EyeIcon,
@@ -32,8 +31,12 @@ import {
   cityAreaOptions,
   connectionTypeOptions,
   customers,
-  customerStageOptions,
   customerStatusOptions,
+  getCustomerDisplay,
+  lmcPipeRecordFields,
+  lmcPipeSizeOptions,
+  lmcPipelineFields,
+  mdpeFittingFields,
   projectOptions,
 } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
@@ -43,7 +46,6 @@ const initialFilters = {
   project: "all",
   cityArea: "all",
   connectionType: "all",
-  currentStage: "all",
   status: "all",
 };
 
@@ -68,6 +70,14 @@ const customerImportFields: ImportField[] = [
   { key: "meterType", label: "Meter Type" },
   { key: "regulatorNumber", label: "Regulator Number" },
   { key: "regulatorPressure", label: "Regulator Pressure" },
+  ...lmcPipeSizeOptions.flatMap((pipeSize) =>
+    lmcPipeRecordFields.map((field) => ({
+      key: `lmc.${pipeSize}.${String(field.key)}`,
+      label: `${pipeSize} Pipe - ${field.label}`,
+    })),
+  ),
+  ...lmcPipelineFields.map((field) => ({ key: String(field.key), label: field.label })),
+  ...mdpeFittingFields.map((field) => ({ key: String(field.key), label: field.label })),
 ];
 
 export function CustomersList() {
@@ -77,23 +87,22 @@ export function CustomersList() {
     const search = filters.search.toLowerCase().trim();
 
     return customers.filter((customer) => {
+      const display = getCustomerDisplay(customer);
       const cityArea = `${customer.city} / ${customer.siteArea}`;
       const matchesSearch =
         !search ||
-        customer.name.toLowerCase().includes(search) ||
-        customer.mobileNumber.includes(search) ||
-        customer.bpTrNumber.toLowerCase().includes(search) ||
-        customer.meterNumber.toLowerCase().includes(search) ||
-        customer.fullAddress.toLowerCase().includes(search);
+        display.name.toLowerCase().includes(search) ||
+        display.mobile.includes(search) ||
+        display.trBpNo.toLowerCase().includes(search) ||
+        display.meterNo.toLowerCase().includes(search) ||
+        display.address.toLowerCase().includes(search);
       const matchesProject =
         filters.project === "all" || customer.projectId === filters.project;
       const matchesCityArea =
         filters.cityArea === "all" || cityArea === filters.cityArea;
       const matchesConnection =
         filters.connectionType === "all" ||
-        customer.connectionType === filters.connectionType;
-      const matchesStage =
-        filters.currentStage === "all" || customer.currentStage === filters.currentStage;
+        display.connectionType === filters.connectionType;
       const matchesStatus =
         filters.status === "all" || customer.status === filters.status;
 
@@ -102,7 +111,6 @@ export function CustomersList() {
         matchesProject &&
         matchesCityArea &&
         matchesConnection &&
-        matchesStage &&
         matchesStatus
       );
     });
@@ -122,12 +130,20 @@ export function CustomersList() {
           href={`/customers/${customer.id}`}
           className="font-semibold text-foreground hover:text-primary"
         >
-          {customer.name}
+          {getCustomerDisplay(customer).name}
         </Link>
       ),
     },
-    { key: "bpTrNumber", header: "BP / TR Number" },
-    { key: "mobileNumber", header: "Mobile Number" },
+    {
+      key: "bpTrNumber",
+      header: "BP / TR Number",
+      render: (customer) => getCustomerDisplay(customer).trBpNo,
+    },
+    {
+      key: "mobileNumber",
+      header: "Mobile Number",
+      render: (customer) => getCustomerDisplay(customer).mobile,
+    },
     {
       key: "projectArea",
       header: "Project / Area",
@@ -138,12 +154,15 @@ export function CustomersList() {
         </div>
       ),
     },
-    { key: "connectionType", header: "Connection Type" },
-    { key: "meterNumber", header: "Meter Number" },
     {
-      key: "currentStage",
-      header: "Current Stage",
-      render: (customer) => <StatusBadge status={customer.currentStage} />,
+      key: "connectionType",
+      header: "Connection Type",
+      render: (customer) => getCustomerDisplay(customer).connectionType,
+    },
+    {
+      key: "meterNumber",
+      header: "Meter Number",
+      render: (customer) => getCustomerDisplay(customer).meterNo || "-",
     },
     {
       key: "status",
@@ -189,14 +208,7 @@ export function CustomersList() {
               />
             </ActionTooltip>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                render={
-                  <Link href={`/customers/${customer.id}?tab=activity`}>
-                    <ClockCounterClockwiseIcon size={14} />
-                    Open Timeline
-                  </Link>
-                }
-              />
+              <DropdownMenuItem render={<Link href={`/customers/${customer.id}?tab=images`}>Images / Documents</Link>} />
               <DropdownMenuItem variant="destructive">
                 <ArchiveIcon size={14} />
                 Archive
@@ -272,14 +284,6 @@ export function CustomersList() {
                 options: connectionTypeOptions.map((type) => ({
                   label: type,
                   value: type,
-                })),
-              },
-              {
-                key: "currentStage",
-                placeholder: "All Stages",
-                options: customerStageOptions.map((stage) => ({
-                  label: stage,
-                  value: stage,
                 })),
               },
               {

@@ -9,6 +9,8 @@ export type PressureTestStatus =
 export type PressureTestRecord = {
   id: string;
   testNo: string;
+  customerId: string;
+  pipeRecordId: string;
   customerName: string;
   bpTrNumber: string;
   projectName: string;

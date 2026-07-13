@@ -15,7 +15,6 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { importPreviewRows } from "../services/customers.service";
 import type { ImportPreviewRow } from "../types/customer.types";
-import { CustomerBreadcrumb } from "./CustomerBreadcrumb";
 
 export function CustomerImport() {
   const validRows = importPreviewRows.filter((row) => row.status === "Valid").length;
@@ -48,13 +47,6 @@ export function CustomerImport() {
 
   return (
     <div>
-      <CustomerBreadcrumb
-        items={[
-          { label: "Customers", href: "/customers" },
-          { label: "Import Excel" },
-        ]}
-      />
-
       <PageHeader
         title="Import Customers"
         subtitle="Upload the fixed customer master template, preview rows, and import valid data."

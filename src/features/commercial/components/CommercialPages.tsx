@@ -104,9 +104,9 @@ const materialTransactions = [
 
 const bills = [
   { id: "bill-001", billNumber: "BILL-2025-001", projectCustomer: "Shyam Nagar CGD Project", stage: "GC", billDate: "2025-02-10", totalAmount: 850000, paidAmount: 450000, pendingAmount: 400000, dueDate: "2025-02-28", tax: 153000, status: "Submitted" },
-  { id: "bill-002", billNumber: "BILL-2025-002", projectCustomer: "Meena Sharma", stage: "GI", billDate: "2025-02-12", totalAmount: 18500, paidAmount: 18500, pendingAmount: 0, dueDate: "2025-02-20", tax: 3330, status: "Completed" },
+  { id: "bill-002", customerId: "cust-002", billNumber: "BILL-2025-002", projectCustomer: "Meena Sharma", stage: "GI", billDate: "2025-02-12", totalAmount: 18500, paidAmount: 18500, pendingAmount: 0, dueDate: "2025-02-20", tax: 3330, status: "Completed" },
   { id: "bill-003", billNumber: "BILL-2025-003", projectCustomer: "Green City Phase 1", stage: "Commissioning", billDate: "2025-01-25", totalAmount: 320000, paidAmount: 100000, pendingAmount: 220000, dueDate: "2025-02-05", tax: 57600, status: "Overdue" },
-  { id: "bill-004", billNumber: "BILL-2025-004", projectCustomer: "Rafiq Khan", stage: "Conversion", billDate: "2025-02-16", totalAmount: 12000, paidAmount: 0, pendingAmount: 12000, dueDate: "2025-03-01", tax: 2160, status: "Draft" },
+  { id: "bill-004", customerId: "cust-004", billNumber: "BILL-2025-004", projectCustomer: "Rafiq Khan", stage: "Conversion", billDate: "2025-02-16", totalAmount: 12000, paidAmount: 0, pendingAmount: 12000, dueDate: "2025-03-01", tax: 2160, status: "Draft" },
 ];
 
 const paymentHistory = [
@@ -249,7 +249,7 @@ export function BillingPage() {
     );
   }, [filters]);
   const columns: ColumnDef<(typeof bills)[number]>[] = [
-    { key: "billNumber", header: "Bill Number", render: (row) => <Link href={`/billing/${row.id}`} className="font-semibold text-foreground hover:text-primary">{row.billNumber}</Link> },
+    { key: "billNumber", header: "Bill Number", render: (row) => <Link href={getBillHref(row)} className="font-semibold text-foreground hover:text-primary">{row.billNumber}</Link> },
     { key: "projectCustomer", header: "Project / Customer" },
     { key: "stage", header: "Billing Stage" },
     { key: "billDate", header: "Bill Date", render: (row) => formatDate(row.billDate) },
@@ -468,7 +468,7 @@ function InventoryActions({ material, labels = false }: { material: string; labe
 function BillingActions({ bill, labels = false }: { bill: string; labels?: boolean }) {
   return (
     <div className="flex items-center gap-1">
-      <ActionLink href={`/billing/${getBillByNumber(bill).id}`} label="View" icon={<EyeIcon size={15} />} labels={labels} />
+      <ActionLink href={getBillHref(getBillByNumber(bill))} label="View" icon={<EyeIcon size={15} />} labels={labels} />
       <BillDrawer action="Edit Draft" icon={<NotePencilIcon size={15} />} iconOnly={!labels} />
       <ActionButton label="Download Invoice" icon={<DownloadSimpleIcon size={15} />} labels={labels} />
       <BillDrawer action="Record Payment" icon={<ReceiptIcon size={15} />} iconOnly={!labels} />
@@ -776,6 +776,12 @@ function getBill(id: string) {
 
 function getBillByNumber(billNumber: string) {
   return bills.find((item) => item.billNumber === billNumber) ?? bills[0];
+}
+
+function getBillHref(bill: (typeof bills)[number]) {
+  return "customerId" in bill && bill.customerId
+    ? `/customers/${bill.customerId}?tab=billing`
+    : `/billing/${bill.id}`;
 }
 
 function uniqOptions(values: string[]) {

@@ -1,86 +1,92 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ImageSquareIcon, NotePencilIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  ClockCounterClockwiseIcon,
-  DownloadSimpleIcon,
-  EyeIcon,
-  FileTextIcon,
-  LinkIcon,
-  NotePencilIcon,
-} from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
-import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { DatePicker } from "@/components/shared/DatePicker";
 import { DetailHeader } from "@/components/shared/DetailHeader";
+import {
+  ImageUploadPreview,
+  type ImagePreviewItem,
+} from "@/components/shared/ImageUploadPreview";
+import { KeyValueGrid, type KeyValueItem } from "@/components/shared/KeyValueGrid";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  customerActivity,
-  customerDocuments,
-  customerWorkStages,
+  billingCompletionFields,
+  commissioningConversionFields,
+  deriveLmcPipeCurrentStage,
+  customerConnectionFields,
+  deriveLmcOverallStatus,
+  fittingAccessoryFields,
+  giMeasurementFields,
+  isolationValveFields,
+  lmcPipeRecordFields,
+  lmcPipelineFields,
+  mdpeFittingFields,
+  type FieldDefinition,
+  type LmcPipeEditableFields,
+  type LmcCivilWork,
 } from "../services/customers.service";
 import type {
   Customer,
-  CustomerActivity,
-  CustomerDocument,
-  CustomerWorkStageRecord,
+  LmcPipeSizeRecord,
+  LmcPipelineWork,
+  UploadedImage,
 } from "../types/customer.types";
-import { CustomerBreadcrumb } from "./CustomerBreadcrumb";
 import { CustomerInfoLine } from "./CustomerInfoLine";
 
-const relatedModuleLinks = [
-  { label: "Surveys", href: "/surveys", count: 1 },
-  { label: "Work Progress", href: "/work-progress", count: 6 },
-  { label: "GC Uploads", href: "/gc-uploads", count: 1 },
-  { label: "Pre-Commissioning", href: "/pre-commissioning", count: 1 },
-  { label: "Testing / Pressure", href: "/pressure-observation", count: 1 },
-  { label: "JMR", href: "/jmr", count: 1 },
-  { label: "Billing", href: "/billing", count: 3 },
-];
-
 export function CustomerDetail({ customer }: { customer: Customer }) {
-  const [activeTab, setActiveTab] = useState("overview");
-
-  useEffect(() => {
-    const applyLinkedTab = () => {
-      const params = new URLSearchParams(window.location.search);
-      const requestedTab = params.get("tab") ?? window.location.hash.replace("#", "");
-      if (customerTabValues.includes(requestedTab)) {
-        setActiveTab(requestedTab);
-      }
-    };
-
-    applyLinkedTab();
-    window.addEventListener("hashchange", applyLinkedTab);
-    return () => window.removeEventListener("hashchange", applyLinkedTab);
-  }, []);
+  const searchParams = useSearchParams();
+  const connection = customer.customerConnection;
+  const activeTab = searchParams.get("tab") ?? "customer";
+  const initialPipeId = searchParams.get("pipe");
 
   return (
     <div className="space-y-4">
-      <CustomerBreadcrumb
-        items={[
-          { label: "Customers", href: "/customers" },
-          { label: customer.name },
-        ]}
-      />
-
       <DetailHeader
-        title={customer.name}
+        title={connection.customerName}
         badges={
           <>
-            <StatusBadge status={customer.currentStage} />
+            <StatusBadge status={connection.connectionType} />
             <StatusBadge status={customer.status} />
           </>
         }
         meta={
           <>
-            <CustomerInfoLine label="BP/TR Number" value={customer.bpTrNumber} />
-            <CustomerInfoLine label="Mobile" value={customer.mobileNumber} />
-            <CustomerInfoLine label="Site" value={customer.siteArea} />
+            <CustomerInfoLine label="TR/BP No." value={connection.trBpNo} />
+            <CustomerInfoLine label="Mobile" value={connection.mobileNo} />
+            <CustomerInfoLine label="Connection" value={connection.connectionType} />
           </>
         }
         actions={
@@ -94,545 +100,443 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         }
       />
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value ?? "overview")}
-        className="flex flex-col gap-3"
-      >
+      <Tabs defaultValue={activeTab} className="flex flex-col gap-3">
         <div className="border-b border-border/70">
-          <TabsList
-            variant="line"
-            className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0"
-          >
-            <CustomerTab index={1} value="overview">Overview</CustomerTab>
-            <CustomerTab index={2} value="connection">Connection</CustomerTab>
-            <CustomerTab index={3} value="work-progress">Work Progress</CustomerTab>
-            <CustomerTab index={4} value="documents">Reports & Documents</CustomerTab>
-            <CustomerTab index={5} value="activity">Activity</CustomerTab>
+          <TabsList variant="line" className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0">
+            <CustomerTab value="customer">Customer Details</CustomerTab>
+            <CustomerTab value="gi">GI Measurements</CustomerTab>
+            <CustomerTab value="isolation">Isolation & Fittings</CustomerTab>
+            <CustomerTab value="lmc">LMC Pipeline</CustomerTab>
+            <CustomerTab value="mdpe">MDPE Fittings</CustomerTab>
+            <CustomerTab value="commissioning">Meter & Commissioning</CustomerTab>
+            <CustomerTab value="billing">Billing & Remarks</CustomerTab>
+            <CustomerTab value="images">Images / Documents</CustomerTab>
           </TabsList>
         </div>
 
-        <div className="min-w-0">
-          <TabsContent value="overview">
-            <CustomerOverview customer={customer} />
-          </TabsContent>
-          <TabsContent value="connection">
-            <CustomerConnection customer={customer} />
-          </TabsContent>
-          <TabsContent value="work-progress">
-            <CustomerWorkProgress customer={customer} />
-          </TabsContent>
-          <TabsContent value="documents">
-            <CustomerReports customer={customer} />
-          </TabsContent>
-          <TabsContent value="activity" id="activity">
-            <CustomerActivityTimeline customerId={customer.id} items={customerActivity} />
-          </TabsContent>
-        </div>
+        <TabsContent value="customer">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <SectionCard title="Customer & Connection Details">
+              <KeyValueGrid items={itemsFromFields(customerConnectionFields, connection)} columns={2} />
+            </SectionCard>
+            <SectionCard title="Project Context">
+              <KeyValueGrid
+                columns={1}
+                items={[
+                  { label: "Project", value: customer.projectName },
+                  { label: "Site / Area", value: customer.siteArea },
+                  { label: "City", value: customer.city },
+                  { label: "Created", value: formatDate(customer.createdDate) },
+                ]}
+              />
+            </SectionCard>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="gi">
+          <SectionCard title="GI Installation Measurements">
+            <KeyValueGrid items={itemsFromFields(giMeasurementFields, customer.giMeasurements)} columns={3} />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="isolation">
+          <div className="space-y-4">
+            <SectionCard title="Isolation Valves & Regulators">
+              <KeyValueGrid items={itemsFromFields(isolationValveFields, customer.valvesRegulators)} columns={3} />
+            </SectionCard>
+            <SectionCard title="Fittings & Accessories">
+              <KeyValueGrid items={itemsFromFields(fittingAccessoryFields, customer.fittingsAccessories)} columns={3} />
+            </SectionCard>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="lmc">
+          <LmcPipelineDetail values={customer.lmcPipelineWork} initialPipeId={initialPipeId} />
+        </TabsContent>
+
+        <TabsContent value="mdpe">
+          <SectionCard title="MDPE Fittings">
+            <KeyValueGrid items={itemsFromFields(mdpeFittingFields, customer.mdpeFittings)} columns={3} />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="commissioning">
+          <SectionCard title="Commissioning & Conversion">
+            <KeyValueGrid
+              items={itemsFromFields(commissioningConversionFields, customer.commissioningConversion)}
+              columns={2}
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <SectionCard title="Billing & Completion Status">
+            <KeyValueGrid
+              items={itemsFromFields(billingCompletionFields, customer.billingCompletion)}
+              columns={2}
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="images">
+          <SectionCard title="Images / Documents">
+            <ImageGallery images={customer.media} />
+          </SectionCard>
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-const customerTabValues = [
-  "overview",
-  "connection",
-  "work-progress",
-  "documents",
-  "activity",
-];
-
-function CustomerTab({
-  index,
-  value,
-  children,
+function LmcPipelineDetail({
+  values: initialValues,
+  initialPipeId,
 }: {
-  index: number;
-  value: string;
-  children: React.ReactNode;
+  values: LmcPipelineWork;
+  initialPipeId?: string | null;
 }) {
-  return (
-    <TabsTrigger
-      className="min-h-8 flex-none cursor-pointer justify-start gap-1.5 rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
-      value={value}
-    >
-      <span className="text-xs font-medium tabular-nums text-muted-foreground">{index}.</span>
-      <span className="min-w-0 whitespace-normal text-left leading-snug">{children}</span>
-    </TabsTrigger>
-  );
-}
+  const [values, setValues] = useState(initialValues);
+  const [editingPipeId, setEditingPipeId] = useState<string | null>(initialPipeId ?? null);
+  const editingPipe = values.pipeRecords.find((record) => record.id === editingPipeId) ?? null;
+  const overallStatus = deriveLmcOverallStatus(values.pipeRecords);
+  const pipeInputFields = lmcPipeRecordFields.filter(
+    (field) => field.key !== "evidence",
+  ) as FieldDefinition<LmcPipeEditableFields>[];
 
-function CustomerOverview({ customer }: { customer: Customer }) {
-  const contactDetails: [string, string][] = [
-    ["Mobile Number", customer.mobileNumber],
-    ["BP / TR Number", customer.bpTrNumber],
-    ["Connection Type", customer.connectionType],
-    ["Current Stage", customer.currentStage],
-  ];
-
-  const assignment: [string, string][] = [
-    ["Project", customer.projectName],
-    ["Site / Area", customer.siteArea],
-    ["Supervisor", customer.supervisor],
-    ["Plumber / Group", customer.plumberGroup],
-    ["Field Executive", customer.fieldExecutive],
-  ];
-
-  const dates: [string, string][] = [
-    ["Created", formatDate(customer.createdDate)],
-    ["Survey", formatDate(customer.surveyDate)],
-    ["GI / Plumbing Installation", formatDate(customer.installationDate)],
-    ["Commissioning", formatDate(customer.commissioningDate)],
-    ["Conversion", formatDate(customer.conversionDate)],
-  ];
-  const stageDates: Record<string, string> = {
-    Survey: customer.surveyDate,
-    "Plumbing/GI": customer.installationDate,
-    GC: customer.testingDate,
-    Commissioning: customer.commissioningDate,
-    Conversion: customer.conversionDate,
+  const updatePipeRecord = (nextRecord: LmcPipeSizeRecord) => {
+    setValues((current) => ({
+      ...current,
+      pipeRecords: current.pipeRecords.map((record) =>
+        record.id === nextRecord.id ? nextRecord : record,
+      ),
+    }));
   };
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 xl:grid-cols-2">
-        <OverviewPanel title="Contact & Address">
-          <InfoGrid items={contactDetails} compact />
-          <div className="mt-3 rounded-md bg-muted/25 px-3 py-2.5">
-            <CustomerInfoLine label="Address" value={customer.fullAddress} />
-            <CustomerInfoLine
-              label="GPS"
-              value={`${customer.latitude}, ${customer.longitude}`}
-              className="mt-0.5"
-            />
-          </div>
-        </OverviewPanel>
-
-        <OverviewPanel title="Project & Assignment">
-          <InfoGrid items={assignment} compact />
-        </OverviewPanel>
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-[0.9fr_1.3fr]">
-        <OverviewPanel title="Important Dates">
-          <InfoGrid items={dates} compact />
-        </OverviewPanel>
-
-        <OverviewPanel title="Stage Tracker">
-          <ConnectedStageTracker
-            currentStage={customer.currentStage}
-            stageDates={stageDates}
-          />
-        </OverviewPanel>
-      </div>
-
-      <OverviewPanel title="Related Global Modules">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {relatedModuleLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={`${link.href}?customerId=${customer.id}`}
-              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:border-primary/35 hover:bg-accent/40"
-            >
-              <LinkIcon size={14} />
-              {link.label}
-              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {link.count}
-              </span>
-            </Link>
-          ))}
-          <Link
-            href={`/customers/${customer.id}/gi-details`}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground transition-colors hover:border-primary/35 hover:bg-accent/40"
-          >
-            <LinkIcon size={14} />
-            GI Details
-          </Link>
-        </div>
-      </OverviewPanel>
-
-      <OverviewPanel title="Billing Status">
-        <div className="grid gap-2 sm:grid-cols-3">
-          <BillingStatus label="GI Bill Done" done={customer.giBillDone} />
-          <BillingStatus label="GC Bill Done" done={customer.gcBillDone} />
-          <BillingStatus
-            label="Conversion Bill Done"
-            done={customer.conversionBillDone}
-          />
-        </div>
-      </OverviewPanel>
-    </div>
-  );
-}
-
-function OverviewPanel({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border/70 bg-card">
-      <div className="flex items-center justify-between border-b border-border/55 px-3 py-2">
-        <h2 className="text-sm font-semibold text-foreground">
-          {title}
-        </h2>
-      </div>
-      <div className="p-3">{children}</div>
-    </section>
-  );
-}
-
-function CustomerConnection({ customer }: { customer: Customer }) {
-  const customerConnection: [string, string][] = [
-    ["Connection Type", customer.connectionType],
-    ["House Type", customer.houseType],
-    ["Scheme", customer.scheme],
-    ["Connection Payment Status", customer.paymentStatus],
-    ["Payment Mode", customer.paymentMode],
-    ["Initial Amount", customer.initialAmount ? `Rs. ${customer.initialAmount}` : "-"],
-  ];
-
-  const meterRegulator: [string, string][] = [
-    ["Meter Number", customer.meterNumber || "-"],
-    ["Meter Type", customer.meterType || "-"],
-    ["Regulator Number", customer.regulatorNumber || "-"],
-    ["Regulator Pressure", customer.regulatorPressure || "-"],
-    ["Meter Reading", customer.meterReading || "-"],
-  ];
-
-  const importantDates: [string, string][] = [
-    ["GI / Plumbing Installation", formatDate(customer.installationDate)],
-    ["Testing / Purging Date", formatDate(customer.testingDate)],
-    ["Commissioning Date", formatDate(customer.commissioningDate)],
-    ["Conversion Date", formatDate(customer.conversionDate)],
-  ];
-
-  return (
     <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-2">
-        <SectionCard title="Customer Connection">
-          <InfoGrid items={customerConnection} />
-        </SectionCard>
-        <SectionCard title="Meter & Regulator">
-          <InfoGrid items={meterRegulator} />
-        </SectionCard>
-      </div>
-      <SectionCard title="Important Dates">
-        <InfoGrid items={importantDates} columns="xl:grid-cols-4" />
-      </SectionCard>
-      <SectionCard title="Non-conversion Remarks">
-        <p className="text-sm text-muted-foreground">
-          {customer.nonConversionRemarks || "No remarks added."}
-        </p>
-      </SectionCard>
-    </div>
-  );
-}
-
-function CustomerWorkProgress({ customer }: { customer: Customer }) {
-  return (
-    <div className="space-y-4">
-      <SectionCard title="Work Progress">
-        <div className="divide-y divide-border/60 rounded-lg border border-border">
-          {customerWorkStages.map((stage) => (
-            <StageRow key={stage.id} stage={stage} />
-          ))}
-        </div>
-        <div className="mt-4 border-t border-border/60 pt-3">
-          <p className="text-xs font-medium text-foreground">Latest Update</p>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
-            <CustomerInfoLine label="Stage" value={customer.currentStage} />
-            <CustomerInfoLine label="Updated By" value="Ramesh Kumar" />
-            <CustomerInfoLine
-              label="Date"
-              value={formatDate(customer.commissioningDate || customer.installationDate)}
-            />
-            <CustomerInfoLine label="Record" value={customer.bpTrNumber} />
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Related Photos">
-        <div className="grid gap-2 sm:grid-cols-3">
-          {["Survey front elevation", "Meter location", "GC completion"].map((photo) => (
-            <Link
-              key={photo}
-              href={`/documents?customerId=${customer.id}&type=photo`}
-              className="rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-accent/40"
-            >
-              <FileTextIcon size={18} className="mb-2 text-primary" />
-              <p className="text-xs font-semibold text-foreground">{photo}</p>
-              <p className="text-xs text-muted-foreground">Linked media record</p>
-            </Link>
-          ))}
+      <SectionCard
+        title="Pipe Size Records"
+        action={<StatusBadge status={overallStatus} />}
+      >
+        <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 bg-muted/35 hover:bg-muted/35">
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Pipe Size</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Length</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Laying Date</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Testing Date</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Purging Date</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Current Stage</TableHead>
+                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Evidence</TableHead>
+                <TableHead className="h-8 px-3 text-right text-xs font-semibold text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {values.pipeRecords.map((record) => (
+                <TableRow
+                  key={record.id}
+                  className="cursor-pointer border-border/45 bg-card hover:bg-muted/30"
+                  onClick={() => setEditingPipeId(record.id)}
+                >
+                  <TableCell className="px-3 py-2 font-semibold text-foreground">{record.pipeSize}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">{record.lengthMetres || "-"}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">{formatDate(record.layingDate)}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">{formatDate(record.testingDate)}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">{formatDate(record.purgingDate)}</TableCell>
+                  <TableCell className="px-3 py-2"><StatusBadge status={deriveLmcPipeCurrentStage(record)} /></TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">
+                    <EvidencePreview files={record.evidence} />
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-right">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditingPipeId(record.id)}>
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </SectionCard>
-    </div>
-  );
-}
 
-function StageRow({ stage }: { stage: CustomerWorkStageRecord }) {
-  return (
-    <div className="grid gap-2 px-3 py-2.5 transition-colors hover:bg-accent/30 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
-      <div>
-        <p className="text-sm font-semibold text-foreground">{stage.stage}</p>
-        <Link
-          href={stage.href}
-          className="text-xs font-medium text-muted-foreground hover:text-primary"
-        >
-          {stage.relatedRecord}
-        </Link>
-      </div>
-      <StatusBadge status={stage.status} />
-      <CustomerInfoLine label="Date" value={formatDate(stage.date)} />
-      <CustomerInfoLine label="Updated By" value={stage.updatedBy} />
-    </div>
-  );
-}
-
-function ConnectedStageTracker({
-  currentStage,
-  stageDates,
-}: {
-  currentStage: string;
-  stageDates: Record<string, string>;
-}) {
-  const stages = ["Survey", "Plumbing/GI", "GC", "Commissioning", "Conversion"];
-  const activeIndex = Math.max(
-    0,
-    stages.findIndex((stage) =>
-      currentStage === "Plumbing / GI" ? stage === "Plumbing/GI" : stage === currentStage,
-    ),
-  );
-
-  return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2">
-      {stages.map((stage, index) => {
-        const completed = index < activeIndex;
-        const current = index === activeIndex;
-        const status = completed ? "Completed" : current ? "Current" : "Pending";
-        return (
-          <div
-            key={stage}
-            className={`relative rounded-lg border px-2.5 py-2 ${
-              current
-                  ? "border-primary/35 bg-primary/10"
-                : completed
-                  ? "border-primary/15 bg-muted/20"
-                  : "border-border bg-background/70"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold ${
-                  completed || current
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-muted text-muted-foreground"
-                }`}
-              >
-                {index + 1}
-              </span>
-              <p
-                className={`min-w-0 text-xs font-semibold leading-snug ${
-                  completed || current ? "text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {stage}
-              </p>
-            </div>
-            <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
-              {status} - {formatDate(stageDates[stage])}
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function BillingStatus({ label, done }: { label: string; done: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2">
-      <p className="text-xs font-medium text-foreground">{label}</p>
-      <StatusBadge status={done ? "Completed" : "Pending"} />
-    </div>
-  );
-}
-
-function CustomerReports({ customer }: { customer: Customer }) {
-  const columns: ColumnDef<CustomerDocument>[] = [
-    { key: "title", header: "Document" },
-    { key: "category", header: "Category" },
-    { key: "fileName", header: "File Name" },
-    { key: "uploadedOn", header: "Uploaded On", render: (row) => formatDate(row.uploadedOn) },
-    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-36",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <ActionTooltip label="Preview">
-            <Link
-              href={`/documents?customerId=${customer.id}&documentId=${row.id}`}
-              aria-label="Preview document"
-              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            >
-              <EyeIcon size={15} />
-            </Link>
-          </ActionTooltip>
-          {row.status === "Approved" ? (
-            <ActionTooltip label="Download">
-              <Link
-                href={`/documents?customerId=${customer.id}&documentId=${row.id}&action=download`}
-                aria-label="Download document"
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-              >
-                <DownloadSimpleIcon size={15} />
-              </Link>
-            </ActionTooltip>
-          ) : null}
-          {row.status === "In Review" || row.status === "Pending" ? (
-            <ActionTooltip label="Approval History">
-              <Link
-                href={`/approvals?customerId=${customer.id}&documentId=${row.id}`}
-                aria-label="View approval history"
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-              >
-                <ClockCounterClockwiseIcon size={15} />
-              </Link>
-            </ActionTooltip>
-          ) : null}
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <SectionCard title="Reports & Documents">
-        <DataTable data={customerDocuments} columns={columns} variant="striped" />
-      </SectionCard>
-
-      <SectionCard title="Open Related Modules">
-        <div className="flex flex-wrap gap-2">
-          {[
-            ["Survey photos", "/surveys"],
-            ["GC image / PDF", "/gc-uploads"],
-            ["Pre-commissioning report", "/pre-commissioning"],
-            ["Pressure observation report", "/pressure-observation"],
-            ["JMR upload", "/jmr"],
-            ["FIM / Conjunction / LMC uploads", "/documents"],
-            ["Other documents", "/documents"],
-          ].map(([label, href]) => (
-            <Link
-              key={label}
-              href={`${href}?customerId=${customer.id}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              <LinkIcon size={14} />
-              {label}
-            </Link>
-          ))}
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-function CustomerActivityTimeline({
-  customerId,
-  items,
-}: {
-  customerId: string;
-  items: CustomerActivity[];
-}) {
-  return (
-    <SectionCard title="Activity">
-      <div className="relative space-y-3 pl-6 before:absolute before:bottom-4 before:left-2 before:top-4 before:w-px before:bg-border">
-        {items.map((item) => (
-          <div key={item.id} className="relative rounded-lg bg-muted/30 p-3">
-            <span className="absolute -left-[1.35rem] top-3 h-3 w-3 rounded-full border-2 border-card bg-primary" />
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold text-foreground">{item.title}</p>
-                <CustomerInfoLine
-                  label="Details"
-                  value={item.description}
-                  className="mt-0.5"
-                  valueClassName="font-medium"
+      <Sheet open={Boolean(editingPipe)} onOpenChange={(open) => !open && setEditingPipeId(null)}>
+        <SheetContent className="!w-[min(56rem,calc(100vw-1rem))] !max-w-none gap-0 overflow-x-hidden border-l-0 shadow-none">
+          {editingPipe ? (
+            <>
+              <SheetHeader className="bg-muted/20 px-5 py-4">
+                <SheetTitle>Edit {editingPipe.pipeSize} Pipe</SheetTitle>
+                <SheetDescription>
+                  Update this pipe sub-record inside the same customer LMC record.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
+                <SectionFields
+                  fields={pipeInputFields}
+                  values={pickPipeEditableFields(editingPipe)}
+                  onChange={(next) => updatePipeRecord({ ...editingPipe, ...next })}
                 />
+                <div className="mt-4">
+                  <Field label="Evidence Images">
+                    <ImageUploadPreview
+                      key={editingPipe.id}
+                      className="min-w-0"
+                      images={evidenceFilesToImages(editingPipe.evidence, editingPipe.pipeSize)}
+                      onChange={(images) =>
+                        updatePipeRecord({
+                          ...editingPipe,
+                          evidence: imagesToEvidenceFiles(images),
+                        })
+                      }
+                    />
+                  </Field>
+                </div>
               </div>
-              <CustomerInfoLine label="Date" value={formatDateTime(item.dateTime)} />
-            </div>
-            <div className="mt-1">
-              <CustomerInfoLine
-                label="Actor"
-                value={item.actor}
-                className="inline"
-              />
-              <span className="mx-2 text-muted-foreground">-</span>
-              <Link
-                href={getRelatedRecordHref(item, customerId)}
-                className="text-xs font-semibold text-foreground hover:text-primary"
-              >
-                {item.relatedRecord}
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-    </SectionCard>
+              <SheetFooter className="bg-card/95 px-5 py-4">
+                <Button type="button" onClick={() => setEditingPipeId(null)}>
+                  Done
+                </Button>
+              </SheetFooter>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      <SectionCard title="Civil / Surface Work">
+        <KeyValueGrid items={itemsFromFields(lmcPipelineFields, pickCivilFields(values))} columns={3} />
+      </SectionCard>
+    </div>
   );
 }
 
-function InfoGrid({
-  items,
-  columns = "xl:grid-cols-2",
-  compact = false,
+function pickCivilFields(values: LmcPipelineWork): LmcCivilWork {
+  return {
+    fourMetresUnderGc: values.fourMetresUnderGc,
+    fourMetresAboveGc: values.fourMetresAboveGc,
+    tfHalfInch: values.tfHalfInch,
+    tfOneInch: values.tfOneInch,
+    pcc: values.pcc,
+    rccNalaCrossing: values.rccNalaCrossing,
+    paverBlocks: values.paverBlocks,
+    malua: values.malua,
+    hardRock: values.hardRock,
+  };
+}
+
+function pickPipeEditableFields(record: LmcPipeSizeRecord): LmcPipeEditableFields {
+  return {
+    lengthMetres: record.lengthMetres,
+    layingDate: record.layingDate,
+    testingDate: record.testingDate,
+    purgingDate: record.purgingDate,
+    layingStatus: record.layingStatus,
+    testingStatus: record.testingStatus,
+    purgingStatus: record.purgingStatus,
+    jointFittingDetails: record.jointFittingDetails,
+    remarks: record.remarks,
+    evidence: record.evidence,
+  };
+}
+
+function SectionFields<T extends Record<string, string | boolean>>({
+  fields,
+  values,
+  onChange,
 }: {
-  items: [string, string][];
-  columns?: string;
-  compact?: boolean;
+  fields: FieldDefinition<T>[];
+  values: T;
+  onChange: (values: T) => void;
 }) {
   return (
-    <div
-      className={`grid ${compact ? "gap-x-5 gap-y-1" : "gap-x-8 gap-y-1"} md:grid-cols-2 ${columns}`}
-    >
-      {items.map(([label, value]) => (
-        <CustomerInfoLine key={label} label={label} value={value} />
+    <div className="grid gap-4">
+      {fields.map((field) => (
+        <MasterField
+          key={String(field.key)}
+          field={field}
+          value={values[field.key]}
+          onChange={(value) => onChange({ ...values, [field.key]: value })}
+        />
       ))}
     </div>
   );
 }
 
+function MasterField<T extends Record<string, string | boolean>>({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition<T>;
+  value: string | boolean;
+  onChange: (value: string | boolean) => void;
+}) {
+  if (field.input === "textarea") {
+    return (
+      <Field label={field.label}>
+        <Textarea value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} rows={3} />
+      </Field>
+    );
+  }
+
+  if (field.input === "date") {
+    return (
+      <Field label={field.label}>
+        <DatePicker value={String(value ?? "")} onChange={onChange} className="w-full min-w-0" />
+      </Field>
+    );
+  }
+
+  if (field.input === "select") {
+    return (
+      <Field label={field.label}>
+        <Select value={String(value || "") || undefined} onValueChange={(next) => onChange(next ?? "")}>
+          <SelectTrigger className="w-full min-w-0">
+            <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.options ?? []).map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+    );
+  }
+
+  return (
+    <Field label={field.label}>
+      <Input
+        type={field.input === "number" ? "number" : "text"}
+        value={String(value ?? "")}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </Field>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function CustomerTab({ value, children }: { value: string; children: React.ReactNode }) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="min-h-8 flex-none cursor-pointer justify-start rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
+    >
+      {children}
+    </TabsTrigger>
+  );
+}
+
+function itemsFromFields<T extends Record<string, string | boolean>>(
+  fields: { key: keyof T; label: string; input?: string }[],
+  values: T,
+): KeyValueItem[] {
+  return fields.map((field) => ({
+    label: field.label,
+    value: formatValue(values[field.key], field.input),
+  }));
+}
+
+function formatValue(value: string | boolean, input?: string) {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (!value) return "-";
+  if (input === "date") return formatDate(value);
+  return value;
+}
+
+function ImageGallery({ images }: { images: UploadedImage[] }) {
+  if (!images.length) {
+    return <p className="text-sm text-muted-foreground">No images uploaded.</p>;
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {images.map((image) => (
+        <div key={image.id} className="rounded-lg border border-border/70 bg-background p-2.5">
+          <div className="flex h-32 items-center justify-center overflow-hidden rounded-md bg-muted/30">
+            {image.previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image.previewUrl} alt={image.label} className="h-full w-full object-cover" />
+            ) : (
+              <ImageSquareIcon size={30} className="text-primary" />
+            )}
+          </div>
+          <p className="mt-2 text-sm font-semibold text-foreground">{image.label}</p>
+          <p className="text-xs text-muted-foreground">{image.fileName}</p>
+          <p className="text-xs text-muted-foreground">{formatDate(image.uploadedOn)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EvidencePreview({ files }: { files: string }) {
+  const images = splitEvidenceFiles(files).filter(isImageFile);
+
+  if (!images.length) return <span>{files && files !== "-" ? files : "-"}</span>;
+
+  return (
+    <div className="flex max-w-56 flex-wrap gap-1.5">
+      {images.map((fileName) => (
+        <span
+          key={fileName}
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/25 px-1.5 py-1 text-xs text-foreground"
+          title={fileName}
+        >
+          <ImageSquareIcon size={14} className="text-primary" />
+          <span className="max-w-24 truncate">{fileName}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function evidenceFilesToImages(files: string, labelPrefix: string): ImagePreviewItem[] {
+  return splitEvidenceFiles(files)
+    .filter(isImageFile)
+    .map((fileName, index) => ({
+      id: `${labelPrefix.toLowerCase().replace(/\s+/g, "-")}-${index}-${fileName}`,
+      label: fileName.replace(/\.[^.]+$/, ""),
+      fileName,
+      uploadedOn: "",
+    }));
+}
+
+function imagesToEvidenceFiles(images: ImagePreviewItem[]) {
+  return images.map((image) => image.fileName).join(", ");
+}
+
+function splitEvidenceFiles(files: string) {
+  return files
+    .split(",")
+    .map((file) => file.trim())
+    .filter((file) => file && file !== "-");
+}
+
+function isImageFile(fileName: string) {
+  return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(fileName);
+}
+
 function formatDate(value: string) {
   if (!value) return "-";
-
   try {
     return format(parseISO(value), "dd MMM yyyy");
   } catch {
     return value;
   }
-}
-
-function formatDateTime(value: string) {
-  if (!value) return "-";
-
-  try {
-    return format(parseISO(value.replace(" ", "T")), "dd MMM yyyy, hh:mm a");
-  } catch {
-    return value;
-  }
-}
-
-function getRelatedRecordHref(item: CustomerActivity, customerId: string) {
-  const record = item.relatedRecord.toLowerCase();
-  if (record.includes("survey")) return `/surveys?customerId=${customerId}`;
-  if (record.includes("gc")) return `/gc-uploads?customerId=${customerId}`;
-  if (record.includes("pressure")) return `/pressure-observation?customerId=${customerId}`;
-  if (record.includes("mtr")) return `/customers/${customerId}?tab=connection`;
-  return `/customers/${customerId}`;
 }
