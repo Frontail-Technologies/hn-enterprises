@@ -1,3 +1,5 @@
+import type { MasterSheetColumnValueType } from "@/features/management/masters.config";
+import { getActiveMasterSheetColumns } from "@/features/management/masters.config";
 import type {
   BillingCompletionStatus,
   CommissioningConversionDetails,
@@ -7,6 +9,7 @@ import type {
   CustomerDocument,
   CustomerGiDetails,
   CustomerStatus,
+  CustomerSurvey,
   FittingsAccessories,
   GiMeasurements,
   ImportPreviewRow,
@@ -28,6 +31,23 @@ export type FieldDefinition<T> = {
   readOnly?: boolean;
 };
 
+export type CustomerMasterSheetColumn = {
+  key: string;
+  label: string;
+  group: string;
+  width?: number;
+  sticky?: boolean;
+  valueType?: MasterSheetColumnValueType;
+  required?: boolean;
+  dropdownOptions?: string[];
+};
+
+export type CustomerMasterSheetRow = {
+  id: string;
+  customerId: string;
+  values: Record<string, string>;
+};
+
 export type LmcCivilWork = Pick<
   LmcPipelineWork,
   | "fourMetresUnderGc"
@@ -44,6 +64,17 @@ export type LmcCivilWork = Pick<
 export const connectionTypeOptions = ["Domestic", "Commercial", "Industrial"] as const;
 export const customerStatusOptions = ["Draft", "Active", "On Hold", "Completed", "Archived"] as const;
 export const paymentStatusOptions = ["Pending", "In Review", "Approved", "Rejected", "Completed"] as const;
+export const customerDocumentCategories = [
+  "Customer Photo",
+  "ID / Address Proof",
+  "Meter Photo",
+  "GI Report",
+  "GC Report",
+  "Conversion Report",
+  "LMC / Site Evidence",
+  "Payment Receipt",
+  "Other",
+];
 export const yesNoOptions = ["Yes", "No"] as const;
 export const lmcPipeSizeOptions = ["20 mm", "32 mm", "63 mm", "90 mm", "125 mm", "Other"] as const;
 export const lmcPipeStatusOptions = [
@@ -182,6 +213,121 @@ export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[]
   { key: "gcBillDone", label: "GC Bill Done", input: "boolean" },
   { key: "conversionBillDone", label: "Conversion Bill Done", input: "boolean" },
   { key: "remark", label: "Remark", input: "textarea" },
+];
+
+const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
+  { key: "customerName", label: "Customer Name", group: "Customer", width: 190, sticky: true },
+  { key: "trBpNo", label: "BP / TR No.", group: "Customer", width: 150, sticky: true },
+  { key: "reportNoGi", label: "Report No. - GI", group: "Reports", width: 150 },
+  { key: "reportNoGc", label: "Report No. - GC", group: "Reports", width: 150 },
+  { key: "reportNoConversion", label: "Report No. - Conversion", group: "Reports", width: 180 },
+  { key: "mobileNo", label: "Mobile No.", group: "Customer", width: 130 },
+  { key: "fullAddress", label: "Full Address", group: "Customer", width: 260 },
+  { key: "projectName", label: "Project", group: "Project", width: 190 },
+  { key: "siteArea", label: "Site / Area", group: "Project", width: 170 },
+  { key: "city", label: "City", group: "Project", width: 120 },
+  { key: "paymentStatus", label: "Payment Status", group: "Payment", width: 140 },
+  { key: "paymentMode", label: "Payment Mode", group: "Payment", width: 130 },
+  { key: "initialAmount", label: "Initial Amount", group: "Payment", width: 140 },
+  { key: "scheme", label: "Scheme", group: "Customer", width: 130 },
+  { key: "surveyDate", label: "Survey Date", group: "Survey", width: 130 },
+  { key: "workableStatus", label: "Workable Status", group: "Survey", width: 150 },
+  { key: "surveyRemarks", label: "Survey Remarks", group: "Survey", width: 220 },
+  { key: "plumberName", label: "Plumber Name", group: "Assignment", width: 150 },
+  { key: "supervisorName", label: "Supervisor Name", group: "Assignment", width: 160 },
+  { key: "meterNo", label: "Meter No.", group: "Meter", width: 140 },
+  { key: "installationDate", label: "Installation Date", group: "Meter", width: 150 },
+  { key: "jobCardDone", label: "Job Card Done", group: "Customer", width: 140 },
+  { key: "connectionType", label: "Connection Type", group: "Customer", width: 150 },
+  { key: "houseType", label: "House Type", group: "Customer", width: 140 },
+  { key: "tfToRegulator", label: "TF to Regulator GI Measurement", group: "GI", width: 210 },
+  { key: "inlet", label: "Inlet GI Measurement", group: "GI", width: 180 },
+  { key: "outlet", label: "Outlet GI Measurement", group: "GI", width: 180 },
+  { key: "totalGiPipeHalfInch", label: "Total GI Pipe 1/2 inch", group: "GI", width: 180 },
+  { key: "giPipeThreeQuarterInch", label: "GI Pipe 3/4 inch", group: "GI", width: 160 },
+  { key: "giPipeOneInch", label: "GI Pipe 1 inch", group: "GI", width: 140 },
+  { key: "giPipeOneAndHalfInch", label: "GI Pipe 1.5 inch Welded", group: "GI", width: 190 },
+  { key: "giPipeTwoInch", label: "GI Pipe 2 inch Welded", group: "GI", width: 180 },
+  { key: "isolationValveHalfInch", label: "Isolation Valve 1/2 inch", group: "Valves", width: 190 },
+  { key: "isolationValveThreeQuarterInch", label: "Isolation Valve 3/4 inch", group: "Valves", width: 190 },
+  { key: "isolationValveOneInch", label: "Isolation Valve 1 inch", group: "Valves", width: 170 },
+  { key: "isolationValveOneAndHalfInch", label: "Isolation Valve 1.5 inch", group: "Valves", width: 180 },
+  { key: "isolationValveTwoInch", label: "Isolation Valve 2 inch", group: "Valves", width: 170 },
+  { key: "applianceValveHalfInch", label: "Appliance Valve 1/2 inch", group: "Valves", width: 190 },
+  { key: "regulator6BarTo100Mbar", label: "Regulator 6Bar-100mBar", group: "Regulators", width: 190 },
+  { key: "regulator6BarTo21Mbar", label: "Regulator 6Bar-21mBar", group: "Regulators", width: 180 },
+  { key: "regulator100MbarTo21Mbar", label: "Regulator 100mBar-21mBar", group: "Regulators", width: 200 },
+  { key: "warningPlate", label: "Warning Plate", group: "Regulators", width: 140 },
+  { key: "clampHalfInch", label: "Clamp 1/2 inch", group: "Fittings", width: 140 },
+  { key: "clamp3InchToHalfInch", label: "Clamp 3 inch-1/2 inch", group: "Fittings", width: 180 },
+  { key: "elbowHalfInch", label: "Elbow 1/2 inch", group: "Fittings", width: 140 },
+  { key: "mfElbowHalfInch", label: "M/F Elbow 1/2 inch", group: "Fittings", width: 160 },
+  { key: "socketHalfInch", label: "Socket 1/2 inch", group: "Fittings", width: 150 },
+  { key: "teeHalfInch", label: "Tee 1/2 inch", group: "Fittings", width: 130 },
+  { key: "nipple2Inch", label: "Nipple 2 inch", group: "Fittings", width: 130 },
+  { key: "nipple3Inch", label: "Nipple 3 inch", group: "Fittings", width: 130 },
+  { key: "nipple4Inch", label: "Nipple 4 inch", group: "Fittings", width: 130 },
+  { key: "reducerElbowThreeQuarterToHalfInch", label: "Reducer Elbow 3/4-1/2 inch", group: "Fittings", width: 210 },
+  { key: "threeQuarterInchTo3Inch", label: "3/4 inch-3 inch", group: "Fittings", width: 150 },
+  { key: "unionHalfInch", label: "Union 1/2 inch", group: "Fittings", width: 140 },
+  { key: "plugHalfInch", label: "Plug 1/2 inch", group: "Fittings", width: 130 },
+  { key: "extraGiAbove10Metres", label: "Extra GI Above 10 Metres", group: "Fittings", width: 200 },
+  { key: "pipe20Length", label: "20 mm Pipe Length", group: "LMC", width: 160 },
+  { key: "pipe20LayingDate", label: "20 mm Laying Date", group: "LMC", width: 160 },
+  { key: "pipe20TestingDate", label: "20 mm Testing Date", group: "LMC", width: 160 },
+  { key: "pipe20PurgingDate", label: "20 mm Purging Date", group: "LMC", width: 160 },
+  { key: "pipe32Length", label: "32 mm Pipe Length", group: "LMC", width: 160 },
+  { key: "pipe63Length", label: "63 mm Pipe Length", group: "LMC", width: 160 },
+  { key: "pipe90Length", label: "90 mm Pipe Length", group: "LMC", width: 160 },
+  { key: "pipe125Length", label: "125 mm Pipe Length", group: "LMC", width: 170 },
+  { key: "fourMetresUnderGc", label: "4 Metres Under GC", group: "LMC", width: 160 },
+  { key: "fourMetresAboveGc", label: "4 Metres Above GC", group: "LMC", width: 160 },
+  { key: "tfHalfInch", label: "TF 1/2 inch", group: "LMC", width: 130 },
+  { key: "tfOneInch", label: "TF 1 inch", group: "LMC", width: 120 },
+  { key: "pcc", label: "PCC", group: "Civil", width: 100 },
+  { key: "rccNalaCrossing", label: "RCC / Nala Crossing", group: "Civil", width: 170 },
+  { key: "paverBlocks", label: "Paver Blocks", group: "Civil", width: 140 },
+  { key: "malua", label: "Malua", group: "Civil", width: 110 },
+  { key: "hardRock", label: "Hard Rock", group: "Civil", width: 120 },
+  { key: "saddle90To32Mm", label: "Saddle 90-32 mm", group: "MDPE", width: 150 },
+  { key: "saddle63To32Mm", label: "Saddle 63-32 mm", group: "MDPE", width: 150 },
+  { key: "saddle32To20Mm", label: "Saddle 32-20 mm", group: "MDPE", width: 150 },
+  { key: "tee32Mm", label: "Tee 32 mm", group: "MDPE", width: 120 },
+  { key: "tee20Mm", label: "Tee 20 mm", group: "MDPE", width: 120 },
+  { key: "reducerCoupler63To32Mm", label: "Reducer Coupler 63-32 mm", group: "MDPE", width: 210 },
+  { key: "reducerCoupler32To20Mm", label: "Reducer Coupler 32-20 mm", group: "MDPE", width: 210 },
+  { key: "coupler32Mm", label: "Coupler 32 mm", group: "MDPE", width: 140 },
+  { key: "coupler20Mm", label: "Coupler 20 mm", group: "MDPE", width: 140 },
+  { key: "coupler90Mm", label: "90 mm Coupler", group: "MDPE", width: 140 },
+  { key: "reducerCoupler90To63Mm", label: "90-63 mm Reducer Coupler", group: "MDPE", width: 210 },
+  { key: "tee90Mm", label: "90 mm Tee", group: "MDPE", width: 120 },
+  { key: "endCap90Mm", label: "90 mm End Cap", group: "MDPE", width: 140 },
+  { key: "commissioningDate", label: "Commissioning Date", group: "Commissioning", width: 160 },
+  { key: "conversionDate", label: "Conversion Date", group: "Commissioning", width: 150 },
+  { key: "regulatorPressure", label: "Regulator Pressure", group: "Commissioning", width: 160 },
+  { key: "regulatorNo", label: "Regulator No.", group: "Commissioning", width: 140 },
+  { key: "meterType", label: "Meter Type", group: "Commissioning", width: 130 },
+  { key: "meterReading", label: "Meter Reading", group: "Commissioning", width: 140 },
+  { key: "nonConversionRemark", label: "Non Conversion Remark", group: "Commissioning", width: 220 },
+  { key: "jmrDone", label: "JMR Done", group: "Billing", width: 120 },
+  { key: "jmrSubmittedInPbg", label: "JMR Submitted in PBG", group: "Billing", width: 180 },
+  { key: "giBillDone", label: "GI Bill Done", group: "Billing", width: 130 },
+  { key: "gcBillDone", label: "GC Bill Done", group: "Billing", width: 130 },
+  { key: "conversionBillDone", label: "Conversion Bill Done", group: "Billing", width: 170 },
+  { key: "billingRemark", label: "Remark", group: "Billing", width: 220 },
+];
+
+export const customerMasterSheetColumns: CustomerMasterSheetColumn[] = [
+  ...baseCustomerMasterSheetColumns,
+  ...getActiveMasterSheetColumns().map((column) => ({
+    key: column.key,
+    label: column.label,
+    group: column.group,
+    width: column.width,
+    valueType: column.valueType,
+    required: column.required,
+    dropdownOptions: column.dropdownOptions,
+  })),
 ];
 
 const emptyGiMeasurements: GiMeasurements = {
@@ -324,6 +470,44 @@ function image(id: string, label: string): UploadedImage {
   };
 }
 
+function document(args: Partial<CustomerDocument> & Pick<CustomerDocument, "id" | "type" | "category" | "fileName">): CustomerDocument {
+  return {
+    referenceNumber: "",
+    issueDate: "",
+    expiryDate: "",
+    amount: "",
+    remarks: "",
+    uploadedOn: "2025-02-15",
+    uploadedBy: "Demo Admin",
+    status: "Pending",
+    ...args,
+  };
+}
+
+function survey(args: CustomerSurvey): CustomerSurvey {
+  return args;
+}
+
+function surveyPhoto(id: string, label: string, caption: string): CustomerSurvey["photos"][number] {
+  return {
+    id,
+    label,
+    caption,
+    fileName: `${id}.jpg`,
+  };
+}
+
+function surveyRevision(
+  id: string,
+  revisionNumber: string,
+  status: CustomerSurvey["approvalStatus"],
+  submittedBy: string,
+  date: string,
+  notes: string,
+): CustomerSurvey["revisions"][number] {
+  return { id, revisionNumber, status, submittedBy, date, notes };
+}
+
 function createCustomer(args: {
   id: string;
   status: CustomerStatus;
@@ -340,7 +524,9 @@ function createCustomer(args: {
   mdpe?: Partial<MdpeFittings>;
   commissioning?: Partial<CommissioningConversionDetails>;
   billing?: Partial<BillingCompletionStatus>;
+  survey?: CustomerSurvey;
   media?: UploadedImage[];
+  documents?: CustomerDocument[];
 }): Customer {
   const lmcPipelineWork = mergeLmcPipelineWork(args.lmc);
   return {
@@ -359,7 +545,9 @@ function createCustomer(args: {
     mdpeFittings: { ...emptyMdpeFittings, ...args.mdpe },
     commissioningConversion: { ...emptyCommissioningConversion, ...args.commissioning },
     billingCompletion: { ...emptyBillingCompletion, ...args.billing },
+    survey: args.survey,
     media: args.media ?? [],
+    documents: args.documents ?? [],
   };
 }
 
@@ -419,6 +607,328 @@ export function deriveLmcPipeCurrentStage(record: LmcPipeSizeRecord): LmcPipeSta
   }
 
   return "Not Started";
+}
+
+export function getCustomerMasterSheetRows(sourceCustomers: Customer[]): CustomerMasterSheetRow[] {
+  return sourceCustomers.map((customer) => {
+    const connection = customer.customerConnection;
+    const gi = customer.giMeasurements;
+    const valves = customer.valvesRegulators;
+    const fittings = customer.fittingsAccessories;
+    const lmc = customer.lmcPipelineWork;
+    const mdpe = customer.mdpeFittings;
+    const commissioning = customer.commissioningConversion;
+    const billing = customer.billingCompletion;
+    const pipe20 = getPipeRecord(lmc.pipeRecords, "20 mm");
+    const pipe32 = getPipeRecord(lmc.pipeRecords, "32 mm");
+    const pipe63 = getPipeRecord(lmc.pipeRecords, "63 mm");
+    const pipe90 = getPipeRecord(lmc.pipeRecords, "90 mm");
+    const pipe125 = getPipeRecord(lmc.pipeRecords, "125 mm");
+
+    return {
+      id: customer.id,
+      customerId: customer.id,
+      values: {
+        customerName: connection.customerName,
+        trBpNo: connection.trBpNo,
+        reportNoGi: connection.reportNoGi,
+        reportNoGc: connection.reportNoGc,
+        reportNoConversion: connection.reportNoConversion,
+        mobileNo: connection.mobileNo,
+        fullAddress: connection.fullAddress,
+        projectName: customer.projectName,
+        siteArea: customer.siteArea,
+        city: customer.city,
+        paymentStatus: String(billing.paymentStatus),
+        paymentMode: billing.paymentMode,
+        initialAmount: billing.initialAmount,
+        preferredPaymentType: billing.paymentMode,
+        kycVerified: customer.documents?.some((document) => document.category === "ID / Address Proof" && document.status === "Approved") ? "Yes" : "No",
+        lastPaymentDate: billing.paymentStatus === "Completed" ? commissioning.conversionDate : "",
+        scheme: connection.scheme,
+        surveyDate: customer.survey?.surveyDate ?? "",
+        workableStatus: customer.survey?.workableStatus ?? "",
+        surveyRemarks: customer.survey?.obstaclesRemarks ?? customer.survey?.notes ?? "",
+        plumberName: connection.plumberName,
+        supervisorName: connection.supervisorName,
+        meterNo: commissioning.meterNo,
+        installationDate: commissioning.installationDate,
+        jobCardDone: connection.jobCardDone,
+        connectionType: connection.connectionType,
+        houseType: connection.houseType,
+        tfToRegulator: gi.tfToRegulator,
+        inlet: gi.inlet,
+        outlet: gi.outlet,
+        totalGiPipeHalfInch: gi.totalGiPipeHalfInch,
+        giPipeThreeQuarterInch: gi.giPipeThreeQuarterInch,
+        giPipeOneInch: gi.giPipeOneInch,
+        giPipeOneAndHalfInch: gi.giPipeOneAndHalfInch,
+        giPipeTwoInch: gi.giPipeTwoInch,
+        isolationValveHalfInch: valves.isolationValveHalfInch,
+        isolationValveThreeQuarterInch: valves.isolationValveThreeQuarterInch,
+        isolationValveOneInch: valves.isolationValveOneInch,
+        isolationValveOneAndHalfInch: valves.isolationValveOneAndHalfInch,
+        isolationValveTwoInch: valves.isolationValveTwoInch,
+        applianceValveHalfInch: valves.applianceValveHalfInch,
+        regulator6BarTo100Mbar: valves.regulator6BarTo100Mbar,
+        regulator6BarTo21Mbar: valves.regulator6BarTo21Mbar,
+        regulator100MbarTo21Mbar: valves.regulator100MbarTo21Mbar,
+        warningPlate: valves.warningPlate,
+        clampHalfInch: fittings.clampHalfInch,
+        clamp3InchToHalfInch: fittings.clamp3InchToHalfInch,
+        elbowHalfInch: fittings.elbowHalfInch,
+        mfElbowHalfInch: fittings.mfElbowHalfInch,
+        socketHalfInch: fittings.socketHalfInch,
+        teeHalfInch: fittings.teeHalfInch,
+        nipple2Inch: fittings.nipple2Inch,
+        nipple3Inch: fittings.nipple3Inch,
+        nipple4Inch: fittings.nipple4Inch,
+        reducerElbowThreeQuarterToHalfInch: fittings.reducerElbowThreeQuarterToHalfInch,
+        threeQuarterInchTo3Inch: fittings.threeQuarterInchTo3Inch,
+        unionHalfInch: fittings.unionHalfInch,
+        plugHalfInch: fittings.plugHalfInch,
+        extraGiAbove10Metres: fittings.extraGiAbove10Metres,
+        pipe20Length: pipe20?.lengthMetres ?? "",
+        pipe20LayingDate: pipe20?.layingDate ?? "",
+        pipe20TestingDate: pipe20?.testingDate ?? "",
+        pipe20PurgingDate: pipe20?.purgingDate ?? "",
+        pipe32Length: pipe32?.lengthMetres ?? "",
+        pipe63Length: pipe63?.lengthMetres ?? "",
+        pipe90Length: pipe90?.lengthMetres ?? "",
+        pipe125Length: pipe125?.lengthMetres ?? "",
+        fourMetresUnderGc: lmc.fourMetresUnderGc,
+        fourMetresAboveGc: lmc.fourMetresAboveGc,
+        tfHalfInch: lmc.tfHalfInch,
+        tfOneInch: lmc.tfOneInch,
+        pcc: lmc.pcc,
+        rccNalaCrossing: lmc.rccNalaCrossing,
+        paverBlocks: lmc.paverBlocks,
+        malua: lmc.malua,
+        hardRock: lmc.hardRock,
+        saddle90To32Mm: mdpe.saddle90To32Mm,
+        saddle63To32Mm: mdpe.saddle63To32Mm,
+        saddle32To20Mm: mdpe.saddle32To20Mm,
+        tee32Mm: mdpe.tee32Mm,
+        tee20Mm: mdpe.tee20Mm,
+        reducerCoupler63To32Mm: mdpe.reducerCoupler63To32Mm,
+        reducerCoupler32To20Mm: mdpe.reducerCoupler32To20Mm,
+        coupler32Mm: mdpe.coupler32Mm,
+        coupler20Mm: mdpe.coupler20Mm,
+        coupler90Mm: mdpe.coupler90Mm,
+        reducerCoupler90To63Mm: mdpe.reducerCoupler90To63Mm,
+        tee90Mm: mdpe.tee90Mm,
+        endCap90Mm: mdpe.endCap90Mm,
+        commissioningDate: commissioning.commissioningDate,
+        conversionDate: commissioning.conversionDate,
+        regulatorPressure: commissioning.regulatorPressure,
+        regulatorNo: commissioning.regulatorNo,
+        meterType: commissioning.meterType,
+        meterReading: commissioning.meterReading,
+        nonConversionRemark: commissioning.nonConversionRemark,
+        jmrDone: formatBoolean(billing.jmrDone),
+        jmrSubmittedInPbg: formatBoolean(billing.jmrSubmittedInPbg),
+        giBillDone: formatBoolean(billing.giBillDone),
+        gcBillDone: formatBoolean(billing.gcBillDone),
+        conversionBillDone: formatBoolean(billing.conversionBillDone),
+        billingRemark: billing.remark,
+      },
+    };
+  });
+}
+
+export const customerMasterSheetDemoRows: CustomerMasterSheetRow[] = [
+  masterSheetDemoRow("demo-797", {
+    reportNoGi: "IND-PKG-HN-797",
+    trBpNo: "T23D007585",
+    mobileNo: "9864054318",
+    customerName: "HIMANGSHU DUTTA",
+    fullAddress: "GANESH MANDIR PATH NOONMATI",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "24020796",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "GC",
+    houseType: "INDIVIDUAL",
+    tfToRegulator: "1.50",
+    inlet: "1.90",
+    outlet: "14.44",
+    totalGiPipeHalfInch: "17.84",
+    giPipeThreeQuarterInch: "0.10",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "3.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "1.00",
+  }),
+  masterSheetDemoRow("demo-798", {
+    reportNoGi: "IND-PKG-HN-798",
+    trBpNo: "T23D007588",
+    mobileNo: "9508450514",
+    customerName: "HIMANGSHU DUTTA",
+    fullAddress: "GANESH MANDIR PATH NOONMATI",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "24020794",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "TP",
+    houseType: "FLAT",
+    tfToRegulator: "0.00",
+    inlet: "1.20",
+    outlet: "8.86",
+    totalGiPipeHalfInch: "10.06",
+    giPipeThreeQuarterInch: "0.00",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "1.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "0.00",
+  }),
+  masterSheetDemoRow("demo-799", {
+    reportNoGi: "IND-PKG-HN-799",
+    trBpNo: "T23D005962",
+    mobileNo: "6001987369",
+    customerName: "MAHADEB PASOWAN",
+    fullAddress: "05 NEW GUWAHATI RAILWAY COLONY BAMUNIMAIDAN RAILWAY COLONY ROAD",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "23072974",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "GC",
+    houseType: "INDIVIDUAL",
+    tfToRegulator: "1.50",
+    inlet: "1.90",
+    outlet: "10.50",
+    totalGiPipeHalfInch: "13.90",
+    giPipeThreeQuarterInch: "0.10",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "1.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "1.00",
+  }),
+  masterSheetDemoRow("demo-800", {
+    reportNoGi: "IND-PKG-HN-800",
+    trBpNo: "T23D005969",
+    mobileNo: "9101811360",
+    customerName: "BHABANI TALUKDAR",
+    fullAddress: "05 NEW GUWAHATI RAILWAY BAMUNIMAIDAN RAILWAY COLONY ROAD",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "23072526",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "GC",
+    houseType: "INDIVIDUAL",
+    tfToRegulator: "1.50",
+    inlet: "1.90",
+    outlet: "6.46",
+    totalGiPipeHalfInch: "9.86",
+    giPipeThreeQuarterInch: "0.10",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "1.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "1.00",
+  }),
+  masterSheetDemoRow("demo-801", {
+    reportNoGi: "IND-PKG-HN-801",
+    trBpNo: "T23D010267",
+    mobileNo: "8486231610",
+    customerName: "ABHESH KUMAR THAKUR",
+    fullAddress: "NEW GUWAHATI RAILWAY COLONY BAMUNIMAIDAN",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "23072241",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "GC",
+    houseType: "INDIVIDUAL",
+    tfToRegulator: "1.50",
+    inlet: "1.90",
+    outlet: "17.89",
+    totalGiPipeHalfInch: "21.29",
+    giPipeThreeQuarterInch: "0.10",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "1.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "1.00",
+  }),
+  masterSheetDemoRow("demo-802", {
+    reportNoGi: "IND-PKG-HN-802",
+    trBpNo: "3106000096",
+    mobileNo: "9101094721 / 9365675752",
+    customerName: "ASWINI SARMA",
+    fullAddress: "NEAR GATE HOSPITAL, ADARANI PATH, GEETA NAGAR",
+    plumberName: "HASIB",
+    supervisorName: "HASIB",
+    meterNo: "23072474",
+    installationDate: "01.05.2026",
+    jobCardDone: "HASIB",
+    connectionType: "GC",
+    houseType: "INDIVIDUAL",
+    tfToRegulator: "1.50",
+    inlet: "1.90",
+    outlet: "17.01",
+    totalGiPipeHalfInch: "20.41",
+    giPipeThreeQuarterInch: "0.10",
+    giPipeOneInch: "0.00",
+    isolationValveHalfInch: "1.00",
+    isolationValveThreeQuarterInch: "0.00",
+    isolationValveOneInch: "0.00",
+    applianceValveHalfInch: "1.00",
+    regulator6BarTo100Mbar: "0.00",
+    regulator6BarTo21Mbar: "0.00",
+    regulator100MbarTo21Mbar: "1.00",
+    warningPlate: "1.00",
+  }),
+];
+
+function masterSheetDemoRow(id: string, values: Record<string, string>): CustomerMasterSheetRow {
+  return {
+    id,
+    customerId: id,
+    values: {
+      projectName: "Demo Master Sheet",
+      siteArea: "Imported CSV Demo",
+      city: "Guwahati",
+      preferredPaymentType: "Cash",
+      kycVerified: "No",
+      lastPaymentDate: "",
+      ...values,
+    },
+  };
+}
+
+function getPipeRecord(records: LmcPipeSizeRecord[], pipeSize: LmcPipeSize) {
+  return records.find((record) => record.pipeSize === pipeSize);
+}
+
+function formatBoolean(value: boolean) {
+  return value ? "Yes" : "No";
 }
 
 export const customers: Customer[] = [
@@ -582,7 +1092,76 @@ export const customers: Customer[] = [
       conversionBillDone: false,
       remark: "Conversion bill pending.",
     },
+    survey: survey({
+      id: "survey-001",
+      surveyId: "SUR-100245",
+      surveyDate: "2025-01-28",
+      assignedSurveyor: "Vikas Saini",
+      submittedBy: "Vikas Saini",
+      submissionDate: "2025-01-28 16:40",
+      latitude: 26.8951,
+      longitude: 75.7684,
+      captureAccuracy: "8 m",
+      workableStatus: "Workable",
+      approvalStatus: "Submitted",
+      initialMeasurements: "Front wall meter point, 18.5 m estimated GI path, clear route to kitchen.",
+      siteAccessibility: "Approved",
+      meterPlacement: "Workable",
+      pipelineRoute: "Workable",
+      civilWorkRequired: "No",
+      obstaclesRemarks: "No obstruction found.",
+      notes: "Customer available after 10 AM. Meter can be placed on front wall.",
+      reason: "",
+      recommendedAction: "Proceed for GI planning.",
+      expectedResolutionDate: "",
+      approvalComments: "Pending supervisor approval.",
+      photos: [
+        surveyPhoto("site_front_bp_100245", "Site front photo", "Front elevation with meter approach."),
+        surveyPhoto("meter_location_bp_100245", "Meter location photo", "Marked meter point near front wall."),
+        surveyPhoto("pipeline_route_bp_100245", "Pipeline route photo", "Route is clear from riser to kitchen wall."),
+        surveyPhoto("obstruction_bp_100245", "Obstruction photo", "No obstruction captured."),
+      ],
+      revisions: [
+        surveyRevision("rev-1", "Revision 1", "Submitted", "Vikas Saini", "2025-01-28", "Initial survey submitted with workable route details."),
+      ],
+    }),
     media: [image("meter-location", "Meter Location"), image("lmc-trench", "LMC Trench")],
+    documents: [
+      document({
+        id: "cust-001-doc-1",
+        type: "Meter Photo",
+        referenceNumber: "MTR-77881",
+        category: "Meter Photo",
+        issueDate: "2025-02-08",
+        fileName: "meter_photo_bp_100245.jpg",
+        uploadedOn: "2025-02-08",
+        uploadedBy: "Vikas Saini",
+        status: "Approved",
+      }),
+      document({
+        id: "cust-001-doc-2",
+        type: "GI Report",
+        referenceNumber: "GI-100245",
+        category: "GI Report",
+        issueDate: "2025-02-08",
+        amount: "18.5 m",
+        fileName: "gi_report_bp_100245.pdf",
+        uploadedOn: "2025-02-08",
+        uploadedBy: "Ramesh Kumar",
+        status: "Approved",
+      }),
+      document({
+        id: "cust-001-doc-3",
+        type: "LMC / Site Evidence",
+        referenceNumber: "LMC-100245",
+        category: "LMC / Site Evidence",
+        issueDate: "2025-02-12",
+        fileName: "lmc_trench_bp_100245.jpg",
+        uploadedOn: "2025-02-12",
+        uploadedBy: "Ramesh Kumar",
+        status: "Submitted",
+      }),
+    ],
   }),
   createCustomer({
     id: "cust-002",
@@ -670,7 +1249,63 @@ export const customers: Customer[] = [
     mdpe: { saddle32To20Mm: "1", tee20Mm: "1", coupler20Mm: "2", coupler90Mm: "0", endCap90Mm: "0" },
     commissioning: { meterNo: "MTR-77892", installationDate: "2025-02-15", regulatorPressure: "21 mbar", regulatorNo: "REG-2231", meterType: "Mechanical", meterReading: "0 SCM" },
     billing: { paymentStatus: "Pending", paymentMode: "Cash", initialAmount: "1500", jmrDone: false, giBillDone: true, remark: "GC upload pending." },
+    survey: survey({
+      id: "survey-002",
+      surveyId: "SUR-553901",
+      surveyDate: "2025-02-04",
+      assignedSurveyor: "Amit Rathore",
+      submittedBy: "Amit Rathore",
+      submissionDate: "2025-02-04 12:15",
+      latitude: 26.8877,
+      longitude: 75.7592,
+      captureAccuracy: "12 m",
+      workableStatus: "Partially Workable",
+      approvalStatus: "Sent Back",
+      initialMeasurements: "Apartment wall route measured; meter point requires clearance before final GI.",
+      siteAccessibility: "Approved",
+      meterPlacement: "Partially Workable",
+      pipelineRoute: "Partially Workable",
+      civilWorkRequired: "Yes",
+      obstaclesRemarks: "Meter wall needs minor civil clearance.",
+      notes: "Society guard approval required for work entry.",
+      reason: "Meter placement needs confirmation.",
+      recommendedAction: "Revisit with supervisor.",
+      expectedResolutionDate: "2025-02-09",
+      approvalComments: "Upload obstruction photo and revised meter placement.",
+      photos: [
+        surveyPhoto("site_front_tr_553901", "Site front photo", "Apartment entry and approach captured."),
+        surveyPhoto("meter_location_tr_553901", "Meter location photo", "Meter wall needs civil clearance."),
+        surveyPhoto("obstruction_tr_553901", "Obstruction photo", "Obstruction around proposed meter point."),
+      ],
+      revisions: [
+        surveyRevision("rev-1", "Revision 1", "Submitted", "Amit Rathore", "2025-02-04", "Initial survey submitted with partial meter placement details."),
+        surveyRevision("rev-2", "Revision 2", "Sent Back", "Kavita Joshi", "2025-02-06", "Sent back for obstruction photo and revised meter placement."),
+      ],
+    }),
     media: [image("front-photo", "Front Photo")],
+    documents: [
+      document({
+        id: "cust-002-doc-1",
+        type: "Customer Photo",
+        category: "Customer Photo",
+        issueDate: "2025-02-04",
+        fileName: "site_front_tr_553901.jpg",
+        uploadedOn: "2025-02-04",
+        uploadedBy: "Amit Rathore",
+        status: "Submitted",
+      }),
+      document({
+        id: "cust-002-doc-2",
+        type: "GC Report",
+        referenceNumber: "GC-553901",
+        category: "GC Report",
+        issueDate: "2025-02-14",
+        fileName: "gc_report_tr_553901.pdf",
+        uploadedOn: "2025-02-14",
+        uploadedBy: "Kavita Joshi",
+        status: "In Review",
+      }),
+    ],
   }),
   createCustomer({
     id: "cust-003",
@@ -794,7 +1429,65 @@ export const customers: Customer[] = [
       meterReading: "546.2 SCM",
     },
     billing: { paymentStatus: "Approved", paymentMode: "Bank Transfer", initialAmount: "12000", jmrDone: true, jmrSubmittedInPbg: true, giBillDone: true, gcBillDone: true, conversionBillDone: true, remark: "Completed." },
+    survey: survey({
+      id: "survey-003",
+      surveyId: "SUR-220118",
+      surveyDate: "2025-02-13",
+      assignedSurveyor: "Pawan Jain",
+      submittedBy: "Pawan Jain",
+      submissionDate: "2025-02-13 17:30",
+      latitude: 22.7196,
+      longitude: 75.8577,
+      captureAccuracy: "6 m",
+      workableStatus: "Workable",
+      approvalStatus: "Approved",
+      initialMeasurements: "Commercial meter location marked; 26 m branch and 90 mm BOQ fitting noted.",
+      siteAccessibility: "Approved",
+      meterPlacement: "Workable",
+      pipelineRoute: "Workable",
+      civilWorkRequired: "No",
+      obstaclesRemarks: "No obstruction.",
+      notes: "Commercial meter location marked near back entry.",
+      reason: "",
+      recommendedAction: "Proceed to installation.",
+      expectedResolutionDate: "",
+      approvalComments: "Good to proceed.",
+      photos: [
+        surveyPhoto("commercial_site_front", "Site front photo", "Commercial block frontage captured."),
+        surveyPhoto("commercial_meter_point", "Meter location photo", "Commercial meter point marked."),
+        surveyPhoto("commercial_route", "Pipeline route photo", "Route approved for installation."),
+        surveyPhoto("commercial_access", "Access photo", "Back entry access available."),
+        surveyPhoto("commercial_obstruction", "Obstruction photo", "No obstruction around meter point."),
+      ],
+      revisions: [
+        surveyRevision("rev-1", "Revision 1", "Approved", "Neha Verma", "2025-02-13", "Survey approved for GI and GC stages."),
+      ],
+    }),
     media: [image("commercial-meter", "Commercial Meter"), image("gc-complete", "GC Complete")],
+    documents: [
+      document({
+        id: "cust-003-doc-1",
+        type: "ID / Address Proof",
+        referenceNumber: "ADDR-220118",
+        category: "ID / Address Proof",
+        issueDate: "2025-02-13",
+        fileName: "address_proof_bp_220118.pdf",
+        uploadedOn: "2025-02-13",
+        uploadedBy: "Pawan Jain",
+        status: "Approved",
+      }),
+      document({
+        id: "cust-003-doc-2",
+        type: "Conversion Report",
+        referenceNumber: "CONV-220118",
+        category: "Conversion Report",
+        issueDate: "2025-03-01",
+        fileName: "conversion_report_bp_220118.pdf",
+        uploadedOn: "2025-03-01",
+        uploadedBy: "Neha Verma",
+        status: "Completed",
+      }),
+    ],
   }),
   createCustomer({
     id: "cust-004",
@@ -828,15 +1521,39 @@ export const customers: Customer[] = [
     },
     commissioning: { nonConversionRemark: "Address verification pending." },
     billing: { paymentStatus: "In Review", paymentMode: "Cheque", initialAmount: "3500", remark: "Hold until verification is complete." },
+    survey: survey({
+      id: "survey-004",
+      surveyId: "SUR-783441",
+      surveyDate: "2025-03-04",
+      assignedSurveyor: "Sameer Ali",
+      submittedBy: "",
+      submissionDate: "",
+      latitude: 24.5854,
+      longitude: 73.7125,
+      captureAccuracy: "15 m",
+      workableStatus: "Not Workable",
+      approvalStatus: "Draft",
+      initialMeasurements: "Alternate route required; boundary wall blocks proposed service route.",
+      siteAccessibility: "Rejected",
+      meterPlacement: "Not Workable",
+      pipelineRoute: "Not Workable",
+      civilWorkRequired: "Yes",
+      obstaclesRemarks: "Boundary wall blocks proposed route.",
+      notes: "Need alternate route after customer confirmation.",
+      reason: "Pipeline route blocked.",
+      recommendedAction: "Plan alternate route.",
+      expectedResolutionDate: "2025-03-12",
+      approvalComments: "",
+      photos: [
+        surveyPhoto("sunrise_front", "Site front photo", "Villa front and boundary wall captured."),
+        surveyPhoto("sunrise_obstruction", "Obstruction photo", "Boundary wall blocking proposed route."),
+      ],
+      revisions: [],
+    }),
   }),
 ];
 
-export const customerDocuments: CustomerDocument[] = [
-  { id: "doc-1", title: "Survey photos", category: "Survey", fileName: "survey_rajesh_kumar.zip", uploadedOn: "2025-01-28", status: "Approved" },
-  { id: "doc-2", title: "GC image / PDF", category: "GC", fileName: "gc_bp_100245.pdf", uploadedOn: "2025-02-12", status: "Submitted" },
-  { id: "doc-3", title: "Pressure observation report", category: "Testing", fileName: "pressure_bp_100245.pdf", uploadedOn: "2025-02-14", status: "In Review" },
-  { id: "doc-4", title: "JMR upload", category: "JMR", fileName: "jmr_bp_100245.pdf", uploadedOn: "2025-02-16", status: "Pending" },
-];
+export const customerDocuments: CustomerDocument[] = customers[0]?.documents ?? [];
 
 export const customerWorkStages = [];
 
@@ -871,6 +1588,10 @@ export const importPreviewRows: ImportPreviewRow[] = [
 
 export function getCustomerById(id: string) {
   return customers.find((customer) => customer.id === id) ?? customers[0];
+}
+
+export function findCustomerById(id: string) {
+  return customers.find((customer) => customer.id === id);
 }
 
 export const projectOptions = Array.from(

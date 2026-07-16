@@ -9,10 +9,11 @@ import {
   CheckSquareIcon as CheckSquare, PackageIcon as Package, ReceiptIcon as Receipt,
   CurrencyInrIcon as CurrencyInr, UsersThreeIcon as UsersThree, FolderIcon as Folder,
   UserGearIcon as UserGear, DatabaseIcon as Database, GearIcon as Gear,
-  ClockCounterClockwiseIcon as ClockCounterClockwise, HouseIcon as House,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
   SignOutIcon as SignOut, UserIcon as User, LockIcon as Lock,
   CaretUpDownIcon as CaretUpDown, CaretDownIcon as CaretDown,
 } from '@phosphor-icons/react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { NAV_ITEMS, NAV_GROUPS } from '@/constants/navigation'
@@ -172,8 +173,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
         'flex items-center h-12 border-b border-border/70 shrink-0',
         collapsed ? 'px-3 justify-center' : 'px-4 gap-2.5'
       )}>
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-          <House size={18} weight="fill" className="text-primary-foreground" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+          <Image
+            src="/logo.png"
+            alt="HN Enterprises"
+            width={36}
+            height={36}
+            priority
+            className="h-8 w-8 object-contain"
+          />
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-tight">

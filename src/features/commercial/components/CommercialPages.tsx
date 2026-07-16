@@ -23,7 +23,9 @@ import {
 } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DatePicker } from "@/components/shared/DatePicker";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -102,6 +104,32 @@ const materialTransactions = [
   { id: "tr-4", materialId: "mat-003", type: "Return", projectSite: "Commercial Block", quantity: "5 sets", by: "Neha Verma", date: "2025-02-17", remarks: "Returned after reconciliation." },
 ];
 
+const plumberIssuedMaterials = [
+  { id: "pi-001", issueNo: "ISS-2025-001", plumber: "Group A", projectSite: "Shyam Nagar Block B", material: "GI Pipe 20MM", quantity: "80 m", issuedDate: "2025-02-14", issuedBy: "Amit Rathore", status: "Issued" },
+  { id: "pi-002", issueNo: "ISS-2025-002", plumber: "Ramesh Kumar", projectSite: "Green City Phase 1", material: "Brass Regulator", quantity: "20 pcs", issuedDate: "2025-02-15", issuedBy: "Priya Nair", status: "Issued" },
+  { id: "pi-003", issueNo: "ISS-2025-003", plumber: "Group C", projectSite: "Sunrise Enclave", material: "MDPE Coupler 32MM", quantity: "35 pcs", issuedDate: "2025-02-17", issuedBy: "Store Admin", status: "Partially Used" },
+];
+
+const plumberReturnedMaterials = [
+  { id: "pr-001", returnNo: "RET-2025-001", plumber: "Group A", projectSite: "Shyam Nagar Block B", material: "GI Pipe 20MM", quantity: "12 m", returnDate: "2025-02-18", condition: "Reusable", status: "Accepted" },
+  { id: "pr-002", returnNo: "RET-2025-002", plumber: "Ramesh Kumar", projectSite: "Green City Phase 1", material: "Meter Clamp Set", quantity: "5 sets", returnDate: "2025-02-17", condition: "Damaged", status: "Review" },
+];
+
+const materialConjunctionDetails = [
+  { id: "mc-001", referenceNo: "CONJ-2025-001", customer: "Rajesh Kumar", bpTrNo: "BP-100245", plumber: "Group A", materialUsed: "GI Pipe 20MM", usedQty: "18.5 m", balanceQty: "2.0 m", date: "2025-02-18", status: "Matched" },
+  { id: "mc-002", referenceNo: "CONJ-2025-002", customer: "Meena Sharma", bpTrNo: "TR-553901", plumber: "Group B", materialUsed: "Brass Regulator", usedQty: "1 pc", balanceQty: "0", date: "2025-02-17", status: "Pending" },
+  { id: "mc-003", referenceNo: "CONJ-2025-003", customer: "Green Mart Store", bpTrNo: "BP-220118", plumber: "Commercial Team", materialUsed: "MDPE Coupler 32MM", usedQty: "8 pcs", balanceQty: "3 pcs", date: "2025-02-16", status: "Mismatch" },
+];
+
+type InventoryTab = "stock" | "issued" | "return" | "conjunction";
+
+const inventoryTabs: Array<{ id: InventoryTab; label: string; count: number }> = [
+  { id: "stock", label: "Material Stock", count: materials.length },
+  { id: "issued", label: "Plumber Issued", count: plumberIssuedMaterials.length },
+  { id: "return", label: "Plumber Return", count: plumberReturnedMaterials.length },
+  { id: "conjunction", label: "Material Conjunction Details", count: materialConjunctionDetails.length },
+];
+
 const bills = [
   { id: "bill-001", billNumber: "BILL-2025-001", projectCustomer: "Shyam Nagar CGD Project", stage: "GC", billDate: "2025-02-10", totalAmount: 850000, paidAmount: 450000, pendingAmount: 400000, dueDate: "2025-02-28", tax: 153000, status: "Submitted" },
   { id: "bill-002", customerId: "cust-002", billNumber: "BILL-2025-002", projectCustomer: "Meena Sharma", stage: "GI", billDate: "2025-02-12", totalAmount: 18500, paidAmount: 18500, pendingAmount: 0, dueDate: "2025-02-20", tax: 3330, status: "Completed" },
@@ -135,6 +163,7 @@ const payments = [
 
 export function InventoryPage() {
   const [filters, setFilters] = useState({ search: "", category: "all", status: "all" });
+  const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return materials.filter((row) =>
@@ -154,6 +183,40 @@ export function InventoryPage() {
     { key: "status", header: "Status", render: (row) => <StockStatus row={row} /> },
     { key: "actions", header: "Actions", className: "w-36", render: (row) => <InventoryActions material={row.name} /> },
   ];
+  const issuedColumns: ColumnDef<(typeof plumberIssuedMaterials)[number]>[] = [
+    { key: "issueNo", header: "Issue No.", render: (row) => <span className="font-semibold text-foreground">{row.issueNo}</span> },
+    { key: "plumber", header: "Plumber / Team" },
+    { key: "projectSite", header: "Project / Site" },
+    { key: "material", header: "Material" },
+    { key: "quantity", header: "Issued Qty" },
+    { key: "issuedDate", header: "Issued Date", render: (row) => formatDate(row.issuedDate) },
+    { key: "issuedBy", header: "Issued By" },
+    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+    { key: "actions", header: "Actions", className: "w-20", render: () => <MaterialDrawer action="Issue Material" icon={<NotePencilIcon size={15} />} iconOnly /> },
+  ];
+  const returnColumns: ColumnDef<(typeof plumberReturnedMaterials)[number]>[] = [
+    { key: "returnNo", header: "Return No.", render: (row) => <span className="font-semibold text-foreground">{row.returnNo}</span> },
+    { key: "plumber", header: "Plumber / Team" },
+    { key: "projectSite", header: "Project / Site" },
+    { key: "material", header: "Material" },
+    { key: "quantity", header: "Return Qty" },
+    { key: "returnDate", header: "Return Date", render: (row) => formatDate(row.returnDate) },
+    { key: "condition", header: "Condition" },
+    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+    { key: "actions", header: "Actions", className: "w-20", render: () => <MaterialDrawer action="Return Material" icon={<NotePencilIcon size={15} />} iconOnly /> },
+  ];
+  const conjunctionColumns: ColumnDef<(typeof materialConjunctionDetails)[number]>[] = [
+    { key: "referenceNo", header: "Reference No.", render: (row) => <span className="font-semibold text-foreground">{row.referenceNo}</span> },
+    { key: "customer", header: "Customer" },
+    { key: "bpTrNo", header: "BP / TR No." },
+    { key: "plumber", header: "Plumber / Team" },
+    { key: "materialUsed", header: "Material Used" },
+    { key: "usedQty", header: "Used Qty" },
+    { key: "balanceQty", header: "Balance Qty" },
+    { key: "date", header: "Date", render: (row) => formatDate(row.date) },
+    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+    { key: "actions", header: "Actions", className: "w-20", render: () => <ActionButton label="View" icon={<EyeIcon size={15} />} /> },
+  ];
 
   return (
     <div className="space-y-5">
@@ -162,21 +225,28 @@ export function InventoryPage() {
         subtitle="Track stock, material issues, receipts and plumber reconciliation."
         actions={<MaterialDrawer action="Add Stock" />}
       />
-      <InventoryAlerts />
+      <InventoryTabNav activeTab={activeTab} onChange={setActiveTab} />
       <TableSection>
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search material or store..."
-          title="Inventory Filters"
-          values={filters}
-          filters={[
-            { key: "category", placeholder: "All Categories", options: uniqOptions(materials.map((row) => row.category)) },
-            { key: "status", placeholder: "All Statuses", options: uniqOptions(materials.map((row) => row.status)) },
-          ]}
-          onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-          onReset={() => setFilters({ search: "", category: "all", status: "all" })}
-        />
-        <PaginatedDataTable data={data} columns={columns} />
+        {activeTab === "stock" ? (
+          <>
+            <FilterSheetButton
+              searchKey="search"
+              searchPlaceholder="Search material or store..."
+              title="Inventory Filters"
+              values={filters}
+              filters={[
+                { key: "category", placeholder: "All Categories", options: uniqOptions(materials.map((row) => row.category)) },
+                { key: "status", placeholder: "All Statuses", options: uniqOptions(materials.map((row) => row.status)) },
+              ]}
+              onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+              onReset={() => setFilters({ search: "", category: "all", status: "all" })}
+            />
+            <PaginatedDataTable data={data} columns={columns} />
+          </>
+        ) : null}
+        {activeTab === "issued" ? <PaginatedDataTable data={plumberIssuedMaterials} columns={issuedColumns} /> : null}
+        {activeTab === "return" ? <PaginatedDataTable data={plumberReturnedMaterials} columns={returnColumns} /> : null}
+        {activeTab === "conjunction" ? <PaginatedDataTable data={materialConjunctionDetails} columns={conjunctionColumns} /> : null}
       </TableSection>
     </div>
   );
@@ -405,50 +475,10 @@ export function PaymentsExpensesPage() {
         <SummaryValue label="Submitted" value={String(payments.filter((row) => row.status === "Submitted").length)} icon={<FileTextIcon size={17} />} />
         <SummaryValue label="Draft / Rejected" value={String(payments.filter((row) => row.status === "Draft" || row.status === "Rejected").length)} icon={<WarningIcon size={17} />} warn />
       </StatCardRow>
+      <PaymentTabNav active={active} onChange={setActive} />
       <TableSection>
-        <div className="flex flex-wrap gap-2 border-b border-border/70 pb-2">
-          {paymentTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActive(tab)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
-                active === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
         <PaginatedDataTable data={data} columns={columns} />
       </TableSection>
-    </div>
-  );
-}
-
-function InventoryAlerts() {
-  const low = materials.filter((row) => row.status === "Low Stock").length;
-  const out = materials.filter((row) => row.status === "Out of Stock").length;
-  if (!low && !out) return null;
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {low ? <AlertLine tone="warning" label="Low stock" value={`${low} material requires reorder planning.`} /> : null}
-      {out ? <AlertLine tone="danger" label="Out of stock" value={`${out} material is unavailable for issue.`} /> : null}
-    </div>
-  );
-}
-
-function AlertLine({ label, value, tone }: { label: string; value: string; tone: "warning" | "danger" }) {
-  return (
-    <div className={cn(
-      "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
-      tone === "danger" ? "border-destructive/20 bg-destructive/5" : "border-primary/20 bg-primary/5",
-    )}>
-      <WarningIcon size={16} className={tone === "danger" ? "text-destructive" : "text-primary"} />
-      <span className="font-semibold text-foreground">{label}:</span>
-      <span className="font-medium text-muted-foreground">{value}</span>
     </div>
   );
 }
@@ -491,7 +521,11 @@ function MaterialDrawer({ action, icon, iconOnly = false }: { action: string; ic
       <Field label="Material" select options={materials.map((row) => row.name)} />
       <Field label="Project / Site" />
       <Field label="Quantity" />
-      <Field label="Bill / Receipt Photo" />
+      <Field label="Transaction Date" date />
+      <ImageProofField
+        label="Bill / Receipt Photo"
+        description="Upload material bill, store receipt or handover proof image."
+      />
       <Field label="Remarks" textarea />
     </CommercialDrawer>
   );
@@ -504,7 +538,7 @@ function BillDrawer({ action, icon, iconOnly = false }: { action: string; icon?:
       <Field label="Billing Stage" select options={["GI", "GC", "Commissioning", "Conversion", "Other"]} />
       <Field label="Total Amount" />
       <Field label="Tax" />
-      <Field label="Due Date" />
+      <Field label="Due Date" date />
       <Field label="Invoice / PDF" />
       <Field label="Remarks" textarea />
     </CommercialDrawer>
@@ -512,6 +546,17 @@ function BillDrawer({ action, icon, iconOnly = false }: { action: string; icon?:
 }
 
 function PaymentDrawer({ mode = "add", iconOnly = false }: { mode?: "add" | "edit"; iconOnly?: boolean }) {
+  const existingImages: ImagePreviewItem[] = mode === "edit"
+    ? [
+        {
+          id: "receipt-proof-1",
+          label: "Payment receipt",
+          fileName: "receipt-group-a.jpg",
+          uploadedOn: "2025-02-15",
+        },
+      ]
+    : [];
+
   return (
     <CommercialDrawer
       title={mode === "edit" ? "Edit Payment / Expense" : "Add Payment / Expense"}
@@ -524,12 +569,36 @@ function PaymentDrawer({ mode = "add", iconOnly = false }: { mode?: "add" | "edi
       <Field label="Payee" />
       <Field label="Project / Site" />
       <Field label="Amount" />
-      <Field label="Date" />
+      <Field label="Date" date />
       <Field label="Payment Mode" select options={["Cash", "UPI", "Bank Transfer", "NEFT", "Cheque"]} />
-      <Field label="Receipt / Photo" />
+      <ImageProofField
+        label="Receipt / Photo"
+        description="Upload payment proof, expense bill or receipt image."
+        images={existingImages}
+      />
       <Field label="Status" select options={["Draft", "Submitted", "Approved", "Rejected"]} />
       <Field label="Remarks" textarea />
     </CommercialDrawer>
+  );
+}
+
+function ImageProofField({
+  label,
+  description,
+  images = [],
+}: {
+  label: string;
+  description: string;
+  images?: ImagePreviewItem[];
+}) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <ImageUploadPreview images={images} />
+    </div>
   );
 }
 
@@ -584,6 +653,68 @@ function TableSection({ children }: { children: ReactNode }) {
     <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
       {children}
     </section>
+  );
+}
+
+function InventoryTabNav({
+  activeTab,
+  onChange,
+}: {
+  activeTab: InventoryTab;
+  onChange: (tab: InventoryTab) => void;
+}) {
+  return (
+    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
+      {inventoryTabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={cn(
+            "inline-flex h-10 w-fit shrink-0 items-center gap-2 border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+            activeTab === tab.id
+              ? "border-primary text-primary font-semibold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <span>{tab.label}</span>
+          <span className={cn(
+            "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+            activeTab === tab.id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+          )}>
+            {tab.count}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PaymentTabNav({
+  active,
+  onChange,
+}: {
+  active: string;
+  onChange: (tab: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
+      {paymentTabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          onClick={() => onChange(tab)}
+          className={cn(
+            "inline-flex h-10 shrink-0 items-center border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+            active === tab
+              ? "border-primary text-primary font-semibold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -722,7 +853,21 @@ function PaginatedDataTable<T extends { id: string }>({ data, columns, pageSize 
   );
 }
 
-function Field({ label, select, textarea, options = [] }: { label: string; select?: boolean; textarea?: boolean; options?: string[] }) {
+function Field({
+  label,
+  select,
+  textarea,
+  date,
+  options = [],
+}: {
+  label: string;
+  select?: boolean;
+  textarea?: boolean;
+  date?: boolean;
+  options?: string[];
+}) {
+  const [dateValue, setDateValue] = useState("");
+
   return (
     <label className="block space-y-1.5">
       <span className="text-xs font-medium text-foreground">{label}</span>
@@ -733,6 +878,8 @@ function Field({ label, select, textarea, options = [] }: { label: string; selec
         </Select>
       ) : textarea ? (
         <Textarea className="min-h-24" />
+      ) : date ? (
+        <DatePicker value={dateValue} onChange={setDateValue} placeholder="Select date" />
       ) : (
         <Input />
       )}

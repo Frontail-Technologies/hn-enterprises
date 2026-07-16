@@ -2,6 +2,14 @@ import type { StatusValue } from "@/components/shared/StatusBadge";
 
 export type ConnectionType = "Domestic" | "Commercial" | "Industrial";
 export type CustomerStatus = "Draft" | "Active" | "On Hold" | "Completed" | "Archived";
+export type CustomerSurveyWorkableStatus = "Workable" | "Partially Workable" | "Not Workable";
+export type CustomerSurveyApprovalStatus =
+  | "Draft"
+  | "Submitted"
+  | "In Review"
+  | "Approved"
+  | "Sent Back"
+  | "Rejected";
 
 export type UploadedImage = {
   id: string;
@@ -9,6 +17,49 @@ export type UploadedImage = {
   fileName: string;
   previewUrl: string;
   uploadedOn: string;
+};
+
+export type CustomerSurveyPhoto = {
+  id: string;
+  label: string;
+  caption: string;
+  fileName: string;
+};
+
+export type CustomerSurveyRevision = {
+  id: string;
+  revisionNumber: string;
+  status: CustomerSurveyApprovalStatus;
+  submittedBy: string;
+  date: string;
+  notes: string;
+};
+
+export type CustomerSurvey = {
+  id: string;
+  surveyId: string;
+  surveyDate: string;
+  assignedSurveyor: string;
+  submittedBy: string;
+  submissionDate: string;
+  latitude: number;
+  longitude: number;
+  captureAccuracy: string;
+  workableStatus: CustomerSurveyWorkableStatus;
+  approvalStatus: CustomerSurveyApprovalStatus;
+  initialMeasurements: string;
+  siteAccessibility: StatusValue;
+  meterPlacement: StatusValue;
+  pipelineRoute: StatusValue;
+  civilWorkRequired: string;
+  obstaclesRemarks: string;
+  notes: string;
+  reason: string;
+  recommendedAction: string;
+  expectedResolutionDate: string;
+  approvalComments: string;
+  photos: CustomerSurveyPhoto[];
+  revisions: CustomerSurveyRevision[];
 };
 
 export type CustomerConnectionDetails = {
@@ -169,17 +220,25 @@ export type Customer = {
   mdpeFittings: MdpeFittings;
   commissioningConversion: CommissioningConversionDetails;
   billingCompletion: BillingCompletionStatus;
+  survey?: CustomerSurvey;
   media: UploadedImage[];
+  documents: CustomerDocument[];
 };
 
 export type CustomerFormValues = Omit<Customer, "id" | "createdDate">;
 
 export type CustomerDocument = {
   id: string;
-  title: string;
+  type: string;
+  referenceNumber: string;
   category: string;
+  issueDate: string;
+  expiryDate: string;
+  amount: string;
   fileName: string;
+  remarks: string;
   uploadedOn: string;
+  uploadedBy: string;
   status: StatusValue;
 };
 

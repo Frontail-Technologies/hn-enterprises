@@ -8,7 +8,6 @@ import {
   EyeIcon,
   NotePencilIcon,
   PaperPlaneTiltIcon,
-  PlusIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -117,7 +116,7 @@ export function SurveysList() {
       header: "Survey ID",
       render: (survey) => (
         <Link
-          href={`/surveys/${survey.id}`}
+          href={getCustomerSurveyHref(survey)}
           className="font-semibold text-foreground hover:text-primary"
         >
           {survey.surveyId}
@@ -211,16 +210,6 @@ export function SurveysList() {
               <DownloadSimpleIcon size={15} />
               Export Excel
             </button>
-            <Link
-              href="/surveys/new"
-              className={buttonVariants({
-                variant: "default",
-                size: "default",
-              })}
-            >
-              <PlusIcon size={15} />
-              New Survey
-            </Link>
           </>
         }
       >
@@ -340,7 +329,7 @@ function SurveyRowActions({ survey }: { survey: Survey }) {
     <div className="flex items-center gap-1">
       <ActionTooltip label="View Survey">
         <Link
-          href={`/surveys/${survey.id}`}
+          href={getCustomerSurveyHref(survey)}
           aria-label="View survey"
           className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
         >
@@ -350,7 +339,7 @@ function SurveyRowActions({ survey }: { survey: Survey }) {
       {editable ? (
         <ActionTooltip label="Edit Survey">
           <Link
-            href={`/surveys/${survey.id}/edit`}
+            href={getCustomerSurveyHref(survey)}
             aria-label="Edit survey"
             className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
@@ -361,7 +350,7 @@ function SurveyRowActions({ survey }: { survey: Survey }) {
       {canResubmit ? (
         <ActionTooltip label="Resubmit Survey">
           <Link
-            href={`/surveys/${survey.id}/edit?mode=resubmit`}
+            href={getCustomerSurveyHref(survey)}
             aria-label="Resubmit survey"
             className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
           >
@@ -402,6 +391,10 @@ function DateRangeControl({
       </div>
     </div>
   );
+}
+
+function getCustomerSurveyHref(survey: Survey) {
+  return `/customers/${survey.customerId}?tab=survey`;
 }
 
 function formatDate(value: string) {

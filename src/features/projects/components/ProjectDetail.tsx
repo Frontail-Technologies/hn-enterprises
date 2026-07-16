@@ -7,7 +7,6 @@ import {
   DownloadSimpleIcon,
   EyeIcon,
   FileArrowUpIcon,
-  LinkIcon,
   MapPinIcon,
   NotePencilIcon,
   PlusIcon,
@@ -40,12 +39,11 @@ import { DatePicker } from "@/components/shared/DatePicker";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { LocationPicker } from "@/components/shared/LocationPicker";
 import { LocationPreview } from "@/components/shared/LocationPreview";
+import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   assignedUsers,
-  projectActivity,
   projectDocuments,
   projectSites,
 } from "@/features/projects/services/projects.service";
@@ -56,7 +54,6 @@ import type {
   ProjectDocument,
   ProjectSite,
 } from "../types/project.types";
-import { ProjectBreadcrumb } from "./ProjectBreadcrumb";
 
 type TargetValues = Record<string, string>;
 type ChangeHistoryItem = {
@@ -69,17 +66,27 @@ type ChangeHistoryItem = {
   reason: string;
 };
 
-const moduleQuickLinks = [
-  { label: "Customers", href: "/customers" },
-  { label: "Surveys", href: "/surveys" },
-  { label: "Work Progress", href: "/work-progress" },
-  { label: "GC Uploads", href: "/gc-uploads" },
-  { label: "Pre-Commissioning", href: "/pre-commissioning" },
-  { label: "Testing / Pressure", href: "/pressure-observation" },
-  { label: "JMR & Field Reports", href: "/jmr" },
-  { label: "Inventory", href: "/inventory" },
-  { label: "Billing", href: "/billing" },
-];
+type ProjectPlanningDprItem = {
+  id: string;
+  date: string;
+  activity: string;
+  site: string;
+  plannedQuantity: string;
+  completedQuantity: string;
+  delayReason: string;
+  supervisor: string;
+  status: StatusValue;
+};
+
+type ProjectApprovalItem = {
+  id: string;
+  reference: string;
+  module: string;
+  submittedBy: string;
+  submittedOn: string;
+  remarks: string;
+  status: StatusValue;
+};
 
 const documentCategories = [
   "Tender",
@@ -91,7 +98,13 @@ const documentCategories = [
   "Other",
 ];
 
-const statusOptions = ["Active", "In Progress", "Not Started", "On Hold", "Completed"];
+const statusOptions = [
+  "Active",
+  "In Progress",
+  "Not Started",
+  "On Hold",
+  "Completed",
+];
 const teamRoleOptions = [
   "Project Manager",
   "Site Supervisor",
@@ -101,20 +114,91 @@ const teamRoleOptions = [
   "Safety Officer",
 ];
 
+const projectPlanningDprItems: ProjectPlanningDprItem[] = [
+  {
+    id: "dpr-1",
+    date: "2025-02-12",
+    activity: "LMC trenching and pipe laying",
+    site: "Shyam Nagar Block A",
+    plannedQuantity: "220 m",
+    completedQuantity: "185 m",
+    delayReason: "-",
+    supervisor: "Ramesh Kumar",
+    status: "In Progress",
+  },
+  {
+    id: "dpr-2",
+    date: "2025-02-13",
+    activity: "GI installation follow-up",
+    site: "Shyam Nagar Block B",
+    plannedQuantity: "18 connections",
+    completedQuantity: "14 connections",
+    delayReason: "Customer availability",
+    supervisor: "Kavita Joshi",
+    status: "Pending",
+  },
+  {
+    id: "dpr-3",
+    date: "2025-02-14",
+    activity: "GC evidence correction",
+    site: "Shyam Nagar Block B",
+    plannedQuantity: "8 records",
+    completedQuantity: "8 records",
+    delayReason: "-",
+    supervisor: "Amit Rathore",
+    status: "Completed",
+  },
+];
+
+const projectApprovalItems: ProjectApprovalItem[] = [
+  {
+    id: "approval-1",
+    reference: "SUR-553901",
+    module: "Survey",
+    submittedBy: "Amit Rathore",
+    submittedOn: "2025-02-06",
+    remarks: "Meter placement revision submitted.",
+    status: "Sent Back",
+  },
+  {
+    id: "approval-2",
+    reference: "GC-553901",
+    module: "GC Upload",
+    submittedBy: "Kavita Joshi",
+    submittedOn: "2025-02-14",
+    remarks: "GC photos pending final review.",
+    status: "In Review",
+  },
+  {
+    id: "approval-3",
+    reference: "DPR-2025-0214",
+    module: "Planning & DPR",
+    submittedBy: "Ramesh Kumar",
+    submittedOn: "2025-02-14",
+    remarks: "Daily progress submitted for site work.",
+    status: "Approved",
+  },
+];
+
+const projectSectionLinks = [
+  { href: "#overview", label: "Overview" },
+  { href: "#contract", label: "Contract & Targets" },
+  { href: "#sites", label: "Sites" },
+  { href: "#documents", label: "Documents" },
+  { href: "#team", label: "Team" },
+  { href: "#planning", label: "Planning & DPR" },
+  { href: "#approvals", label: "Approvals" },
+];
+
 export function ProjectDetail({ project }: { project: Project }) {
   return (
     <div className="space-y-4">
-      <ProjectBreadcrumb
-        items={[
-          { label: "Projects", href: "/projects" },
-          { label: project.name },
-        ]}
-      />
-
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-foreground">{project.name}</h1>
+            <h1 className="text-lg font-bold text-foreground">
+              {project.name}
+            </h1>
             <StatusBadge status={project.status} />
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
@@ -132,66 +216,93 @@ export function ProjectDetail({ project }: { project: Project }) {
         </Link>
       </div>
 
-      <Tabs
-        defaultValue="overview"
-        className="flex flex-col gap-3"
-      >
-        <div className="border-b border-border/70">
-          <TabsList
-            variant="line"
-            className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0"
-          >
-            <ProjectTab index={1} value="overview">Overview</ProjectTab>
-            <ProjectTab index={2} value="sites">Sites</ProjectTab>
-            <ProjectTab index={3} value="contract">Contract & Targets</ProjectTab>
-            <ProjectTab index={4} value="documents">Documents</ProjectTab>
-            <ProjectTab index={5} value="team">Team</ProjectTab>
-            <ProjectTab index={6} value="activity">Activity</ProjectTab>
-          </TabsList>
-        </div>
+      <ProjectSectionNav />
 
-        <div className="min-w-0">
-          <TabsContent value="overview">
-            <ProjectOverview project={project} />
-          </TabsContent>
-          <TabsContent value="sites">
-            <ProjectSites />
-          </TabsContent>
-          <TabsContent value="contract">
-            <ContractTargets project={project} />
-          </TabsContent>
-          <TabsContent value="documents">
-            <ProjectDocuments />
-          </TabsContent>
-          <TabsContent value="team">
-            <ProjectTeam />
-          </TabsContent>
-          <TabsContent value="activity">
-            <ActivityTimeline items={projectActivity} />
-          </TabsContent>
-        </div>
-      </Tabs>
+      <div className="space-y-4">
+        <section id="overview" className="scroll-mt-16">
+          <ProjectOverview project={project} />
+        </section>
+        <section id="contract" className="scroll-mt-16">
+          <ContractTargets project={project} />
+        </section>
+        <section id="sites" className="scroll-mt-16">
+          <ProjectSites />
+        </section>
+        <section id="documents" className="scroll-mt-16">
+          <ProjectDocuments />
+        </section>
+        <section id="team" className="scroll-mt-16">
+          <ProjectTeam />
+        </section>
+        <section id="planning" className="scroll-mt-16">
+          <ProjectPlanningDpr />
+        </section>
+        <section id="approvals" className="scroll-mt-16">
+          <ProjectApprovals />
+        </section>
+        {false ? <ActivityTimeline items={[]} /> : null}
+      </div>
     </div>
   );
 }
 
-function ProjectTab({
-  index,
-  value,
-  children,
-}: {
-  index: number;
-  value: string;
-  children: React.ReactNode;
-}) {
+function ProjectSectionNav() {
+  return <SectionAnchorTabs items={projectSectionLinks} />;
+}
+
+function ProjectPlanningDpr() {
+  const columns: ColumnDef<ProjectPlanningDprItem>[] = [
+    { key: "date", header: "Date", render: (item) => formatDate(item.date) },
+    { key: "activity", header: "Activity", className: "min-w-56" },
+    { key: "site", header: "Site" },
+    { key: "plannedQuantity", header: "Planned Qty" },
+    { key: "completedQuantity", header: "Completed Qty" },
+    { key: "delayReason", header: "Delay Reason", className: "min-w-40" },
+    { key: "supervisor", header: "Supervisor" },
+    {
+      key: "status",
+      header: "Status",
+      render: (item) => <StatusBadge status={item.status} />,
+    },
+  ];
+
   return (
-    <TabsTrigger
-      className="min-h-8 flex-none cursor-pointer justify-start gap-1.5 rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
-      value={value}
-    >
-      <span className="text-xs font-medium tabular-nums text-muted-foreground">{index}.</span>
-      <span className="min-w-0 whitespace-normal text-left leading-snug">{children}</span>
-    </TabsTrigger>
+    <SectionCard title="Planning & DPR">
+      <DataTable
+        columns={columns}
+        data={projectPlanningDprItems}
+        variant="striped"
+      />
+    </SectionCard>
+  );
+}
+
+function ProjectApprovals() {
+  const columns: ColumnDef<ProjectApprovalItem>[] = [
+    { key: "reference", header: "Reference", className: "font-medium" },
+    { key: "module", header: "Module" },
+    { key: "submittedBy", header: "Submitted By" },
+    {
+      key: "submittedOn",
+      header: "Submitted On",
+      render: (item) => formatDate(item.submittedOn),
+    },
+    { key: "remarks", header: "Remarks", className: "min-w-64" },
+    {
+      key: "status",
+      header: "Status",
+      render: (item) => <StatusBadge status={item.status} />,
+    },
+  ];
+
+  return (
+    <SectionCard title="Project Approvals">
+      <DataTable
+        columns={columns}
+        data={projectApprovalItems}
+        variant="striped"
+      />
+    </SectionCard>
   );
 }
 
@@ -207,35 +318,13 @@ function ProjectOverview({ project }: { project: Project }) {
     ["End Date", formatDate(project.plannedEndDate)],
     ["Contract Value", project.contractValue],
     ["Project Manager", project.assignedManager],
+    ["Description", project.description],
   ];
 
   return (
-    <div className="space-y-4">
-      <SectionCard title="Project Information">
-        <InfoGrid items={summary} />
-      </SectionCard>
-
-      <SectionCard title="Description">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {project.description}
-        </p>
-      </SectionCard>
-
-      <SectionCard title="Global Module Links">
-        <div className="flex flex-wrap gap-2">
-          {moduleQuickLinks.map((module) => (
-            <Link
-              key={module.href}
-              href={`${module.href}?projectId=${project.id}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-            >
-              <LinkIcon size={13} />
-              {module.label}
-            </Link>
-          ))}
-        </div>
-      </SectionCard>
-    </div>
+    <SectionCard title="Project Information">
+      <InfoGrid items={summary} />
+    </SectionCard>
   );
 }
 
@@ -444,13 +533,18 @@ function ContractTargets({ project }: { project: Project }) {
       <SectionCard title="Pipe-Size Targets">
         <InfoGrid items={pipeKeys.map((key) => [key, targetValues[key]])} />
       </SectionCard>
-      <SectionCard title="Change History">
+      {false ? <SectionCard title="Change History">
         <div className="space-y-2">
           {history.map((item) => (
-            <div key={item.id} className="rounded-lg bg-muted/35 px-3 py-2 text-sm">
+            <div
+              key={item.id}
+              className="rounded-lg bg-muted/35 px-3 py-2 text-sm"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-foreground">{item.field}</p>
-                <span className="text-xs text-muted-foreground">{formatDate(item.date)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(item.date)}
+                </span>
               </div>
               <p className="mt-1 text-muted-foreground">
                 {item.oldValue} to {item.newValue}
@@ -461,7 +555,7 @@ function ContractTargets({ project }: { project: Project }) {
             </div>
           ))}
         </div>
-      </SectionCard>
+      </SectionCard> : null}
       <TargetsDialog
         open={editOpen}
         draftTargets={draftTargets}
@@ -478,7 +572,8 @@ function ContractTargets({ project }: { project: Project }) {
 }
 
 function ProjectDocuments() {
-  const [documents, setDocuments] = useState<ProjectDocument[]>(projectDocuments);
+  const [documents, setDocuments] =
+    useState<ProjectDocument[]>(projectDocuments);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProjectDocument>(emptyDocument);
@@ -487,8 +582,16 @@ function ProjectDocuments() {
     { key: "type", header: "Type" },
     { key: "number", header: "Number" },
     { key: "category", header: "Category" },
-    { key: "issueDate", header: "Issue Date", render: (doc) => formatDate(doc.issueDate) },
-    { key: "expiryDate", header: "Expiry Date", render: (doc) => formatDate(doc.expiryDate) },
+    {
+      key: "issueDate",
+      header: "Issue Date",
+      render: (doc) => formatDate(doc.issueDate),
+    },
+    {
+      key: "expiryDate",
+      header: "Expiry Date",
+      render: (doc) => formatDate(doc.expiryDate),
+    },
     { key: "amount", header: "Amount" },
     { key: "fileName", header: "File" },
     {
@@ -498,7 +601,10 @@ function ProjectDocuments() {
       render: (doc) => (
         <div className="flex flex-wrap items-center gap-1">
           <ActionButton label="Preview" icon={<EyeIcon size={13} />} />
-          <ActionButton label="Download" icon={<DownloadSimpleIcon size={13} />} />
+          <ActionButton
+            label="Download"
+            icon={<DownloadSimpleIcon size={13} />}
+          />
           <ActionTooltip label="Edit">
             <Button
               variant="ghost"
@@ -520,7 +626,9 @@ function ProjectDocuments() {
               size="icon-xs"
               aria-label="Delete document"
               onClick={() =>
-                setDocuments((current) => current.filter((item) => item.id !== doc.id))
+                setDocuments((current) =>
+                  current.filter((item) => item.id !== doc.id),
+                )
               }
             >
               <TrashIcon size={13} />
@@ -577,11 +685,19 @@ function ProjectDocuments() {
                 setDialogOpen(true);
               }}
             >
-              <FileArrowUpIcon size={20} className="mx-auto mb-2 text-primary" />
+              <FileArrowUpIcon
+                size={20}
+                className="mx-auto mb-2 text-primary"
+              />
               {category}
               <span className="mt-1 block text-xs font-medium text-muted-foreground">
-                {documents.filter((doc) => doc.category.includes(category) || doc.type === category).length}
-                {" "}uploaded
+                {
+                  documents.filter(
+                    (doc) =>
+                      doc.category.includes(category) || doc.type === category,
+                  ).length
+                }{" "}
+                uploaded
               </span>
             </button>
           ))}
@@ -614,8 +730,16 @@ function ProjectTeam() {
     { key: "name", header: "Assigned User" },
     { key: "role", header: "Role" },
     { key: "siteArea", header: "Site / Area" },
-    { key: "assignmentDate", header: "Assignment Date", render: (user) => formatDate(user.assignmentDate) },
-    { key: "status", header: "Status", render: (user) => <StatusBadge status={user.status} /> },
+    {
+      key: "assignmentDate",
+      header: "Assignment Date",
+      render: (user) => formatDate(user.assignmentDate),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (user) => <StatusBadge status={user.status} />,
+    },
     {
       key: "actions",
       header: "Actions",
@@ -641,7 +765,9 @@ function ProjectTeam() {
               size="icon-sm"
               aria-label="Remove assignment"
               onClick={() =>
-                setUsers((current) => current.filter((item) => item.id !== user.id))
+                setUsers((current) =>
+                  current.filter((item) => item.id !== user.id),
+                )
               }
             >
               <TrashIcon size={14} />
@@ -704,19 +830,29 @@ function ActivityTimeline({ items }: { items: ActivityItem[] }) {
     <SectionCard title="Activity">
       <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[5px] before:top-4 before:w-px before:bg-primary/25">
         {items.map((item) => (
-          <div key={item.id} className="relative grid grid-cols-[14px_1fr] gap-3">
+          <div
+            key={item.id}
+            className="relative grid grid-cols-[14px_1fr] gap-3"
+          >
             <span className="relative z-10 mt-1.5 h-3 w-3 rounded-full bg-primary ring-4 ring-primary/10" />
             <div className="rounded-lg bg-muted/35 px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
+                <h3 className="text-sm font-semibold text-foreground">
+                  {item.title}
+                </h3>
                 <span className="text-xs text-muted-foreground">
                   {formatDateTime(item.dateTime)}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {item.description}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {item.actor} ·{" "}
-                <Link href="#" className="font-semibold text-primary hover:underline">
+                <Link
+                  href="#"
+                  className="font-semibold text-primary hover:underline"
+                >
                   {item.relatedRecord}
                 </Link>
               </p>
@@ -811,21 +947,96 @@ function SiteDialog({
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Maintain compact project site details.</DialogDescription>
+          <DialogDescription>
+            Maintain compact project site details.
+          </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto pr-1">
           <div className="grid gap-3 md:grid-cols-2">
-            <CompactInput label="Site Name" value={draft.name} onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
-            <CompactInput label="Site Code" value={draft.code} onChange={(value) => setDraft((current) => ({ ...current, code: value }))} />
-            <CompactInput label="City" value={draft.city} onChange={(value) => setDraft((current) => ({ ...current, city: value }))} />
-            <CompactInput label="Latitude" type="number" value={String(draft.latitude)} onChange={(value) => setDraft((current) => ({ ...current, latitude: Number(value) }))} />
-            <CompactInput label="Longitude" type="number" value={String(draft.longitude)} onChange={(value) => setDraft((current) => ({ ...current, longitude: Number(value) }))} />
-            <CompactInput label="Supervisor" value={draft.supervisor} onChange={(value) => setDraft((current) => ({ ...current, supervisor: value }))} />
-            <CompactInput label="Planned Connections" type="number" value={String(draft.plannedConnections)} onChange={(value) => setDraft((current) => ({ ...current, plannedConnections: Number(value) }))} />
-            <CompactInput label="Start Date" type="date" value={draft.startDate} onChange={(value) => setDraft((current) => ({ ...current, startDate: value }))} />
-            <CompactInput label="End Date" type="date" value={draft.endDate} onChange={(value) => setDraft((current) => ({ ...current, endDate: value }))} />
+            <CompactInput
+              label="Site Name"
+              value={draft.name}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, name: value }))
+              }
+            />
+            <CompactInput
+              label="Site Code"
+              value={draft.code}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, code: value }))
+              }
+            />
+            <CompactInput
+              label="City"
+              value={draft.city}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, city: value }))
+              }
+            />
+            <CompactInput
+              label="Latitude"
+              type="number"
+              value={String(draft.latitude)}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, latitude: Number(value) }))
+              }
+            />
+            <CompactInput
+              label="Longitude"
+              type="number"
+              value={String(draft.longitude)}
+              onChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  longitude: Number(value),
+                }))
+              }
+            />
+            <CompactInput
+              label="Supervisor"
+              value={draft.supervisor}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, supervisor: value }))
+              }
+            />
+            <CompactInput
+              label="Planned Connections"
+              type="number"
+              value={String(draft.plannedConnections)}
+              onChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  plannedConnections: Number(value),
+                }))
+              }
+            />
+            <CompactInput
+              label="Start Date"
+              type="date"
+              value={draft.startDate}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, startDate: value }))
+              }
+            />
+            <CompactInput
+              label="End Date"
+              type="date"
+              value={draft.endDate}
+              onChange={(value) =>
+                setDraft((current) => ({ ...current, endDate: value }))
+              }
+            />
             <Field label="Status">
-              <Select value={draft.status} onValueChange={(value) => setDraft((current) => ({ ...current, status: (value ?? "Active") as StatusValue }))}>
+              <Select
+                value={draft.status}
+                onValueChange={(value) =>
+                  setDraft((current) => ({
+                    ...current,
+                    status: (value ?? "Active") as StatusValue,
+                  }))
+                }
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -839,10 +1050,26 @@ function SiteDialog({
               </Select>
             </Field>
             <Field label="Full Address">
-              <Textarea value={draft.fullAddress} onChange={(event) => setDraft((current) => ({ ...current, fullAddress: event.target.value }))} />
+              <Textarea
+                value={draft.fullAddress}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    fullAddress: event.target.value,
+                  }))
+                }
+              />
             </Field>
             <Field label="Remarks">
-              <Textarea value={draft.remarks} onChange={(event) => setDraft((current) => ({ ...current, remarks: event.target.value }))} />
+              <Textarea
+                value={draft.remarks}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    remarks: event.target.value,
+                  }))
+                }
+              />
             </Field>
             <div className="md:col-span-2">
               <Field label="Pick on Map">
@@ -863,7 +1090,9 @@ function SiteDialog({
           </div>
         </div>
         <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={onSave}>Save Site</Button>
         </DialogFooter>
       </DialogContent>
@@ -891,11 +1120,17 @@ function SiteMapDialog({
           <DialogDescription>{site.code}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <LocationPreview latitude={site.latitude} longitude={site.longitude} />
+          <LocationPreview
+            latitude={site.latitude}
+            longitude={site.longitude}
+          />
           <InfoGrid
             items={[
               ["Address", site.fullAddress],
-              ["Coordinates", `${site.latitude.toFixed(6)}, ${site.longitude.toFixed(6)}`],
+              [
+                "Coordinates",
+                `${site.latitude.toFixed(6)}, ${site.longitude.toFixed(6)}`,
+              ],
               ["City", site.city],
               ["Supervisor", site.supervisor],
             ]}
@@ -939,13 +1174,35 @@ function DocumentDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Add contract and statutory document details.</DialogDescription>
+          <DialogDescription>
+            Add contract and statutory document details.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
-          <CompactInput label="Type" value={draft.type} onChange={(value) => setDraft((current) => ({ ...current, type: value }))} />
-          <CompactInput label="Number" value={draft.number} onChange={(value) => setDraft((current) => ({ ...current, number: value }))} />
+          <CompactInput
+            label="Type"
+            value={draft.type}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, type: value }))
+            }
+          />
+          <CompactInput
+            label="Number"
+            value={draft.number}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, number: value }))
+            }
+          />
           <Field label="Category">
-            <Select value={draft.category} onValueChange={(value) => setDraft((current) => ({ ...current, category: value ?? "Other" }))}>
+            <Select
+              value={draft.category}
+              onValueChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  category: value ?? "Other",
+                }))
+              }
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -958,16 +1215,51 @@ function DocumentDialog({
               </SelectContent>
             </Select>
           </Field>
-          <CompactInput label="Amount" value={draft.amount} onChange={(value) => setDraft((current) => ({ ...current, amount: value }))} />
-          <CompactInput label="Issue Date" type="date" value={draft.issueDate} onChange={(value) => setDraft((current) => ({ ...current, issueDate: value }))} />
-          <CompactInput label="Expiry Date" type="date" value={draft.expiryDate} onChange={(value) => setDraft((current) => ({ ...current, expiryDate: value }))} />
-          <CompactInput label="File" type="file" value="" onChange={() => undefined} />
+          <CompactInput
+            label="Amount"
+            value={draft.amount}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, amount: value }))
+            }
+          />
+          <CompactInput
+            label="Issue Date"
+            type="date"
+            value={draft.issueDate}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, issueDate: value }))
+            }
+          />
+          <CompactInput
+            label="Expiry Date"
+            type="date"
+            value={draft.expiryDate}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, expiryDate: value }))
+            }
+          />
+          <CompactInput
+            label="File"
+            type="file"
+            value=""
+            onChange={() => undefined}
+          />
           <Field label="Remarks">
-            <Textarea value={draft.remarks} onChange={(event) => setDraft((current) => ({ ...current, remarks: event.target.value }))} />
+            <Textarea
+              value={draft.remarks}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  remarks: event.target.value,
+                }))
+              }
+            />
           </Field>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={onSave}>Save Document</Button>
         </DialogFooter>
       </DialogContent>
@@ -995,12 +1287,25 @@ function TeamDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Assign a user to a project role and site or area.</DialogDescription>
+          <DialogDescription>
+            Assign a user to a project role and site or area.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
-          <CompactInput label="Assigned User" value={draft.name} onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
+          <CompactInput
+            label="Assigned User"
+            value={draft.name}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, name: value }))
+            }
+          />
           <Field label="Role">
-            <Select value={draft.role || undefined} onValueChange={(value) => setDraft((current) => ({ ...current, role: value ?? "" }))}>
+            <Select
+              value={draft.role || undefined}
+              onValueChange={(value) =>
+                setDraft((current) => ({ ...current, role: value ?? "" }))
+              }
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
@@ -1013,10 +1318,31 @@ function TeamDialog({
               </SelectContent>
             </Select>
           </Field>
-          <CompactInput label="Site / Area" value={draft.siteArea} onChange={(value) => setDraft((current) => ({ ...current, siteArea: value }))} />
-          <CompactInput label="Assignment Date" type="date" value={draft.assignmentDate} onChange={(value) => setDraft((current) => ({ ...current, assignmentDate: value }))} />
+          <CompactInput
+            label="Site / Area"
+            value={draft.siteArea}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, siteArea: value }))
+            }
+          />
+          <CompactInput
+            label="Assignment Date"
+            type="date"
+            value={draft.assignmentDate}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, assignmentDate: value }))
+            }
+          />
           <Field label="Status">
-            <Select value={draft.status} onValueChange={(value) => setDraft((current) => ({ ...current, status: (value ?? "Active") as StatusValue }))}>
+            <Select
+              value={draft.status}
+              onValueChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  status: (value ?? "Active") as StatusValue,
+                }))
+              }
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -1031,7 +1357,9 @@ function TeamDialog({
           </Field>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={onSave}>Save Assignment</Button>
         </DialogFooter>
       </DialogContent>
@@ -1048,7 +1376,13 @@ function InfoGrid({ items }: { items: string[][] }) {
   );
 }
 
-function ActionButton({ label, icon }: { label: string; icon: React.ReactNode }) {
+function ActionButton({
+  label,
+  icon,
+}: {
+  label: string;
+  icon: React.ReactNode;
+}) {
   return (
     <ActionTooltip label={label}>
       <Button variant="ghost" size="icon-xs" aria-label={label}>
@@ -1094,7 +1428,11 @@ function CompactInput({
 
   return (
     <Field label={label}>
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      <Input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </Field>
   );
 }

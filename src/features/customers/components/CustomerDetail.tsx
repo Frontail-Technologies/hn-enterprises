@@ -23,7 +23,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -33,18 +32,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { DetailHeader } from "@/components/shared/DetailHeader";
+import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
 import { KeyValueGrid, type KeyValueItem } from "@/components/shared/KeyValueGrid";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   billingCompletionFields,
   commissioningConversionFields,
+  customerActivity,
+  customerDocumentCategories,
   deriveLmcPipeCurrentStage,
   customerConnectionFields,
   deriveLmcOverallStatus,
@@ -60,16 +64,40 @@ import {
 } from "../services/customers.service";
 import type {
   Customer,
+  CustomerDocument,
+  CustomerSurvey,
+  CustomerSurveyRevision,
   LmcPipeSizeRecord,
   LmcPipelineWork,
-  UploadedImage,
 } from "../types/customer.types";
 import { CustomerInfoLine } from "./CustomerInfoLine";
+
+type CustomerApprovalRow = {
+  id: string;
+  reference: string;
+  module: string;
+  submittedBy: string;
+  date: string;
+  remarks: string;
+  status: string;
+};
+
+const customerSectionLinks = [
+  { href: "#customer-details", label: "Customer Details" },
+  { href: "#survey", label: "Survey" },
+  { href: "#gi", label: "GI Measurements" },
+  { href: "#isolation", label: "Isolation & Fittings" },
+  { href: "#lmc", label: "LMC Pipeline" },
+  { href: "#mdpe", label: "MDPE Fittings" },
+  { href: "#commissioning", label: "Meter & Commissioning" },
+  { href: "#billing", label: "Billing & Remarks" },
+  { href: "#documents", label: "Images / Documents" },
+  { href: "#approvals", label: "Approvals / History" },
+];
 
 export function CustomerDetail({ customer }: { customer: Customer }) {
   const searchParams = useSearchParams();
   const connection = customer.customerConnection;
-  const activeTab = searchParams.get("tab") ?? "customer";
   const initialPipeId = searchParams.get("pipe");
 
   return (
@@ -91,7 +119,7 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         }
         actions={
           <Link
-            href={`/customers/${customer.id}/edit`}
+            href={`/customers/${customer.id}?mode=edit`}
             className={buttonVariants({ variant: "outline", size: "default" })}
           >
             <NotePencilIcon size={15} />
@@ -100,46 +128,35 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         }
       />
 
-      <Tabs defaultValue={activeTab} className="flex flex-col gap-3">
-        <div className="border-b border-border/70">
-          <TabsList variant="line" className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0">
-            <CustomerTab value="customer">Customer Details</CustomerTab>
-            <CustomerTab value="gi">GI Measurements</CustomerTab>
-            <CustomerTab value="isolation">Isolation & Fittings</CustomerTab>
-            <CustomerTab value="lmc">LMC Pipeline</CustomerTab>
-            <CustomerTab value="mdpe">MDPE Fittings</CustomerTab>
-            <CustomerTab value="commissioning">Meter & Commissioning</CustomerTab>
-            <CustomerTab value="billing">Billing & Remarks</CustomerTab>
-            <CustomerTab value="images">Images / Documents</CustomerTab>
-          </TabsList>
-        </div>
+      <CustomerSectionNav />
 
-        <TabsContent value="customer">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <SectionCard title="Customer & Connection Details">
-              <KeyValueGrid items={itemsFromFields(customerConnectionFields, connection)} columns={2} />
-            </SectionCard>
-            <SectionCard title="Project Context">
-              <KeyValueGrid
-                columns={1}
-                items={[
-                  { label: "Project", value: customer.projectName },
-                  { label: "Site / Area", value: customer.siteArea },
-                  { label: "City", value: customer.city },
-                  { label: "Created", value: formatDate(customer.createdDate) },
-                ]}
-              />
-            </SectionCard>
-          </div>
-        </TabsContent>
+      <div className="space-y-4">
+        <section id="customer-details" className="scroll-mt-16">
+          <SectionCard title="Customer & Connection Details">
+            <KeyValueGrid
+              items={[
+                { label: "Project", value: customer.projectName },
+                { label: "Site / Area", value: customer.siteArea },
+                { label: "City", value: customer.city },
+                { label: "Created", value: formatDate(customer.createdDate) },
+                ...itemsFromFields(customerConnectionFields, connection),
+              ]}
+              columns={3}
+            />
+          </SectionCard>
+        </section>
 
-        <TabsContent value="gi">
+        <section id="survey" className="scroll-mt-16">
+          <CustomerSurveyDetail survey={customer.survey} />
+        </section>
+
+        <section id="gi" className="scroll-mt-16">
           <SectionCard title="GI Installation Measurements">
             <KeyValueGrid items={itemsFromFields(giMeasurementFields, customer.giMeasurements)} columns={3} />
           </SectionCard>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="isolation">
+        <section id="isolation" className="scroll-mt-16">
           <div className="space-y-4">
             <SectionCard title="Isolation Valves & Regulators">
               <KeyValueGrid items={itemsFromFields(isolationValveFields, customer.valvesRegulators)} columns={3} />
@@ -148,42 +165,232 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
               <KeyValueGrid items={itemsFromFields(fittingAccessoryFields, customer.fittingsAccessories)} columns={3} />
             </SectionCard>
           </div>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="lmc">
+        <section id="lmc" className="scroll-mt-16">
           <LmcPipelineDetail values={customer.lmcPipelineWork} initialPipeId={initialPipeId} />
-        </TabsContent>
+        </section>
 
-        <TabsContent value="mdpe">
+        <section id="mdpe" className="scroll-mt-16">
           <SectionCard title="MDPE Fittings">
             <KeyValueGrid items={itemsFromFields(mdpeFittingFields, customer.mdpeFittings)} columns={3} />
           </SectionCard>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="commissioning">
+        <section id="commissioning" className="scroll-mt-16">
           <SectionCard title="Commissioning & Conversion">
             <KeyValueGrid
               items={itemsFromFields(commissioningConversionFields, customer.commissioningConversion)}
               columns={2}
             />
           </SectionCard>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="billing">
+        <section id="billing" className="scroll-mt-16">
           <SectionCard title="Billing & Completion Status">
             <KeyValueGrid
               items={itemsFromFields(billingCompletionFields, customer.billingCompletion)}
               columns={2}
             />
           </SectionCard>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="images">
-          <SectionCard title="Images / Documents">
-            <ImageGallery images={customer.media} />
-          </SectionCard>
-        </TabsContent>
-      </Tabs>
+        <section id="documents" className="scroll-mt-16">
+          <DocumentCategoryUploadPanel<CustomerDocument>
+            categories={customerDocumentCategories}
+            documents={customer.documents}
+            description="Customer-owned photos, reports, receipts and LMC evidence."
+            readOnly
+          />
+        </section>
+
+        <section id="approvals" className="scroll-mt-16">
+          <CustomerApprovalsHistory customer={customer} />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function CustomerSectionNav() {
+  return <SectionAnchorTabs items={customerSectionLinks} />;
+}
+
+function CustomerApprovalsHistory({ customer }: { customer: Customer }) {
+  const rows: CustomerApprovalRow[] = [
+    customer.survey
+      ? {
+          id: `${customer.survey.id}-approval`,
+          reference: customer.survey.surveyId,
+          module: "Survey",
+          submittedBy: customer.survey.submittedBy || customer.survey.assignedSurveyor,
+          date: customer.survey.submissionDate || customer.survey.surveyDate,
+          remarks: customer.survey.approvalComments || customer.survey.notes || "-",
+          status: customer.survey.approvalStatus,
+        }
+      : null,
+    ...customer.documents.map((document) => ({
+      id: `${document.id}-approval`,
+      reference: document.referenceNumber || document.fileName,
+      module: document.category,
+      submittedBy: document.uploadedBy,
+      date: document.uploadedOn,
+      remarks: document.remarks || "-",
+      status: document.status,
+    })),
+    {
+      id: "billing-approval",
+      reference: customer.customerConnection.trBpNo,
+      module: "Billing",
+      submittedBy: customer.customerConnection.supervisorName || "-",
+      date: customer.createdDate,
+      remarks: customer.billingCompletion.remark || "-",
+      status: customer.billingCompletion.paymentStatus,
+    },
+  ].filter(Boolean) as CustomerApprovalRow[];
+
+  const columns: ColumnDef<CustomerApprovalRow>[] = [
+    { key: "reference", header: "Reference", className: "font-medium" },
+    { key: "module", header: "Module" },
+    { key: "submittedBy", header: "Submitted By" },
+    { key: "date", header: "Date", render: (row) => formatDateTime(row.date) },
+    { key: "remarks", header: "Remarks", className: "min-w-64" },
+    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Approvals">
+        <DataTable columns={columns} data={rows} variant="striped" />
+      </SectionCard>
+
+      <SectionCard title="Activity History">
+        <div className="relative space-y-3 before:absolute before:left-2.5 before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
+          {customerActivity.map((activity) => (
+            <div key={activity.id} className="relative flex gap-3">
+              <span className="mt-1 h-5 w-5 rounded-full border-4 border-background bg-primary" />
+              <div className="rounded-lg bg-muted/20 px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">{activity.title}</p>
+                <p className="text-xs text-muted-foreground">{activity.description}</p>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">
+                  {activity.actor} - {formatDateTime(activity.dateTime)} - {activity.relatedRecord}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+function CustomerSurveyDetail({ survey }: { survey?: CustomerSurvey }) {
+  if (!survey) {
+    return (
+      <SectionCard
+        title="Survey"
+        action={
+          <Button type="button" variant="outline" size="sm">
+            Create Survey
+          </Button>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          No survey record is available for this customer yet.
+        </p>
+      </SectionCard>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+        <SectionCard
+          title="Survey Details"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm">
+                Edit
+              </Button>
+              <Button type="button" variant="outline" size="sm">
+                Submit
+              </Button>
+              <Button type="button" size="sm">
+                Resubmit
+              </Button>
+            </div>
+          }
+        >
+          <KeyValueGrid
+            columns={3}
+            items={[
+              { label: "Survey ID", value: survey.surveyId },
+              { label: "Survey Date", value: formatDate(survey.surveyDate) },
+              { label: "Assigned Surveyor", value: survey.assignedSurveyor },
+              { label: "GPS / Location", value: `${survey.latitude}, ${survey.longitude}` },
+              { label: "Capture Accuracy", value: survey.captureAccuracy },
+              { label: "Workable Status", value: <StatusBadge status={survey.workableStatus} /> },
+              { label: "Approval Status", value: <StatusBadge status={survey.approvalStatus} /> },
+              { label: "Submitted By", value: survey.submittedBy || "-" },
+              { label: "Submitted On", value: formatDateTime(survey.submissionDate) },
+            ]}
+          />
+        </SectionCard>
+
+        <SectionCard title="Initial Measurements">
+          <p className="text-sm font-medium text-foreground">{survey.initialMeasurements || "-"}</p>
+          <div className="mt-3">
+            <KeyValueGrid
+              columns={3}
+              items={[
+                { label: "Site Accessibility", value: <StatusBadge status={survey.siteAccessibility} /> },
+                { label: "Meter Placement", value: <StatusBadge status={survey.meterPlacement} /> },
+                { label: "Pipeline Route", value: <StatusBadge status={survey.pipelineRoute} /> },
+                { label: "Civil Work Required", value: survey.civilWorkRequired },
+                { label: "Reason", value: survey.reason || "-" },
+                { label: "Expected Resolution", value: formatDate(survey.expectedResolutionDate) },
+              ]}
+            />
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Obstacles / Remarks">
+          <KeyValueGrid
+            columns={2}
+            items={[
+              { label: "Obstacles", value: survey.obstaclesRemarks || "-" },
+              { label: "Recommended Action", value: survey.recommendedAction || "-" },
+              { label: "Survey Notes", value: survey.notes || "-" },
+              { label: "Approval Comments", value: survey.approvalComments || "-" },
+            ]}
+          />
+        </SectionCard>
+
+        <SectionCard title="Revision History">
+          <SurveyRevisionHistory revisions={survey.revisions} />
+        </SectionCard>
+    </div>
+  );
+}
+
+function SurveyRevisionHistory({ revisions }: { revisions: CustomerSurveyRevision[] }) {
+  if (!revisions.length) {
+    return <p className="text-sm text-muted-foreground">No revisions yet.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {revisions.map((revision) => (
+        <div key={revision.id} className="rounded-lg border border-border/70 bg-background px-3 py-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground">{revision.revisionNumber}</p>
+            <StatusBadge status={revision.status} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {revision.submittedBy} - {formatDate(revision.date)}
+          </p>
+          <p className="mt-1 text-xs font-medium text-foreground">{revision.notes}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -431,17 +638,6 @@ function Field({
   );
 }
 
-function CustomerTab({ value, children }: { value: string; children: React.ReactNode }) {
-  return (
-    <TabsTrigger
-      value={value}
-      className="min-h-8 flex-none cursor-pointer justify-start rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
-    >
-      {children}
-    </TabsTrigger>
-  );
-}
-
 function itemsFromFields<T extends Record<string, string | boolean>>(
   fields: { key: keyof T; label: string; input?: string }[],
   values: T,
@@ -457,32 +653,6 @@ function formatValue(value: string | boolean, input?: string) {
   if (!value) return "-";
   if (input === "date") return formatDate(value);
   return value;
-}
-
-function ImageGallery({ images }: { images: UploadedImage[] }) {
-  if (!images.length) {
-    return <p className="text-sm text-muted-foreground">No images uploaded.</p>;
-  }
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {images.map((image) => (
-        <div key={image.id} className="rounded-lg border border-border/70 bg-background p-2.5">
-          <div className="flex h-32 items-center justify-center overflow-hidden rounded-md bg-muted/30">
-            {image.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image.previewUrl} alt={image.label} className="h-full w-full object-cover" />
-            ) : (
-              <ImageSquareIcon size={30} className="text-primary" />
-            )}
-          </div>
-          <p className="mt-2 text-sm font-semibold text-foreground">{image.label}</p>
-          <p className="text-xs text-muted-foreground">{image.fileName}</p>
-          <p className="text-xs text-muted-foreground">{formatDate(image.uploadedOn)}</p>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function EvidencePreview({ files }: { files: string }) {
@@ -536,6 +706,15 @@ function formatDate(value: string) {
   if (!value) return "-";
   try {
     return format(parseISO(value), "dd MMM yyyy");
+  } catch {
+    return value;
+  }
+}
+
+function formatDateTime(value: string) {
+  if (!value) return "-";
+  try {
+    return format(parseISO(value.replace(" ", "T")), "dd MMM yyyy, hh:mm a");
   } catch {
     return value;
   }

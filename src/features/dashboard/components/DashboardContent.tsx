@@ -10,17 +10,36 @@ import { WorkProgressCard } from "@/features/dashboard/components/WorkProgressCa
 import {
   dashboardMetricsByPeriod,
   type DashboardPeriod,
+  type DashboardMetricPeriod,
 } from "@/features/dashboard/data/dashboard.data";
 
 export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
-  const dashboardMetrics = dashboardMetricsByPeriod[period];
+  const [month, setMonth] = useState("07");
+  const [year, setYear] = useState("2026");
+  const metricPeriod: DashboardMetricPeriod =
+    period === "custom-year"
+      ? "this-year"
+      : period === "custom-month"
+        ? "this-month"
+        : period;
+  const dashboardMetrics = dashboardMetricsByPeriod[metricPeriod];
 
   return (
     <PageShell
       title="Dashboard"
       subtitle="Project, site, survey, and billing overview"
-      actions={<DashboardPeriodFilter value={period} onChange={setPeriod} />}
+      actions={
+        <DashboardPeriodFilter
+          value={period}
+          onChange={setPeriod}
+          month={month}
+          year={year}
+          onMonthChange={setMonth}
+          onYearChange={setYear}
+        />
+      }
+      contentClassName="space-y-5"
     >
       <CompactStatGrid dashboard>
         {dashboardMetrics.map((metric) => (
@@ -32,7 +51,7 @@ export function DashboardContent() {
         ))}
       </CompactStatGrid>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid gap-5 xl:grid-cols-2">
         <WorkProgressCard />
         <RecentActivityCard />
       </section>

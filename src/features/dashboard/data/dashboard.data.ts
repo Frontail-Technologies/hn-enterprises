@@ -18,16 +18,22 @@ export type DashboardMetric = {
   icon: ElementType;
 };
 
-export type DashboardPeriod = "today" | "last-day" | "this-month" | "last-month";
+export type DashboardPeriod =
+  | "today"
+  | "this-month"
+  | "this-year"
+  | "custom-month"
+  | "custom-year";
+
+export type DashboardMetricPeriod = "today" | "this-month" | "this-year";
 
 export const dashboardPeriods: Array<{
   label: string;
   value: DashboardPeriod;
 }> = [
   { label: "Today", value: "today" },
-  { label: "Last Day", value: "last-day" },
   { label: "This Month", value: "this-month" },
-  { label: "Last Month", value: "last-month" },
+  { label: "This Year", value: "this-year" },
 ];
 
 export type ProgressSegment = {
@@ -42,7 +48,7 @@ export type ActivityItem = {
   icon: ElementType;
 };
 
-export const dashboardMetricsByPeriod: Record<DashboardPeriod, DashboardMetric[]> = {
+export const dashboardMetricsByPeriod: Record<DashboardMetricPeriod, DashboardMetric[]> = {
   today: [
     {
       label: "Total Projects",
@@ -93,152 +99,102 @@ export const dashboardMetricsByPeriod: Record<DashboardPeriod, DashboardMetric[]
       icon: NotePencilIcon,
     },
   ],
-  "last-day": [
+  "this-month": [
     {
       label: "Total Projects",
-      value: "5",
+      value: "48",
       helperText: "View all projects",
       icon: FolderOpenIcon,
     },
     {
       label: "Active Sites",
-      value: "9",
+      value: "18",
       helperText: "View active sites",
       icon: GaugeIcon,
     },
     {
       label: "Pending Surveys",
-      value: "3",
+      value: "12",
       helperText: "View surveys",
       icon: ClipboardTextIcon,
     },
     {
       label: "Pending GFC Drawings",
-      value: "2",
+      value: "8",
       helperText: "View drawings",
       icon: FileTextIcon,
     },
     {
       label: "Pending JMR",
-      value: "4",
+      value: "15",
       helperText: "View JMR",
       icon: ReceiptIcon,
     },
     {
       label: "Reports Pending Approval",
-      value: "3",
+      value: "9",
       helperText: "View reports",
       icon: ListChecksIcon,
     },
     {
       label: "Billing Done",
-      value: "\u20B9 14.2 L",
+      value: "\u20B9 3.24 Cr",
       helperText: "View billing",
       icon: InvoiceIcon,
     },
     {
       label: "Billing Pending",
-      value: "\u20B9 8.1 L",
+      value: "\u20B9 1.18 Cr",
       helperText: "View pending",
       icon: NotePencilIcon,
     },
   ],
-  "this-month": [
-  {
-    label: "Total Projects",
-    value: "48",
-    helperText: "View all projects",
-    icon: FolderOpenIcon,
-  },
-  {
-    label: "Active Sites",
-    value: "18",
-    helperText: "View active sites",
-    icon: GaugeIcon,
-  },
-  {
-    label: "Pending Surveys",
-    value: "12",
-    helperText: "View surveys",
-    icon: ClipboardTextIcon,
-  },
-  {
-    label: "Pending GFC Drawings",
-    value: "8",
-    helperText: "View drawings",
-    icon: FileTextIcon,
-  },
-  {
-    label: "Pending JMR",
-    value: "15",
-    helperText: "View JMR",
-    icon: ReceiptIcon,
-  },
-  {
-    label: "Reports Pending Approval",
-    value: "9",
-    helperText: "View reports",
-    icon: ListChecksIcon,
-  },
-  {
-    label: "Billing Done",
-    value: "\u20B9 3.24 Cr",
-    helperText: "View billing",
-    icon: InvoiceIcon,
-  },
-  {
-    label: "Billing Pending",
-    value: "\u20B9 1.18 Cr",
-    helperText: "View pending",
-    icon: NotePencilIcon,
-  },
-  ],
-  "last-month": [
+  "this-year": [
     {
       label: "Total Projects",
-      value: "42",
+      value: "126",
       helperText: "View all projects",
       icon: FolderOpenIcon,
     },
     {
       label: "Active Sites",
-      value: "16",
+      value: "74",
       helperText: "View active sites",
       icon: GaugeIcon,
     },
     {
       label: "Pending Surveys",
-      value: "10",
+      value: "38",
       helperText: "View surveys",
       icon: ClipboardTextIcon,
     },
     {
       label: "Pending GFC Drawings",
-      value: "7",
+      value: "21",
       helperText: "View drawings",
       icon: FileTextIcon,
     },
     {
       label: "Pending JMR",
-      value: "13",
+      value: "44",
       helperText: "View JMR",
       icon: ReceiptIcon,
     },
     {
       label: "Reports Pending Approval",
-      value: "8",
+      value: "27",
       helperText: "View reports",
       icon: ListChecksIcon,
     },
     {
       label: "Billing Done",
-      value: "\u20B9 2.86 Cr",
+      value: "\u20B9 18.6 Cr",
       helperText: "View billing",
       icon: InvoiceIcon,
     },
     {
       label: "Billing Pending",
-      value: "\u20B9 92.5 L",
+      value: "\u20B9 4.8 Cr",
       helperText: "View pending",
       icon: NotePencilIcon,
     },

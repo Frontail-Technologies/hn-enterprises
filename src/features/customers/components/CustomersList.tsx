@@ -14,6 +14,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
 import { PageShell } from "@/components/shared/PageShell";
@@ -30,8 +31,11 @@ import {
 import {
   cityAreaOptions,
   connectionTypeOptions,
+  customerMasterSheetColumns,
+  customerMasterSheetDemoRows,
   customers,
   customerStatusOptions,
+  getCustomerMasterSheetRows,
   getCustomerDisplay,
   lmcPipeRecordFields,
   lmcPipeSizeOptions,
@@ -40,6 +44,7 @@ import {
   projectOptions,
 } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
+import type { CustomerMasterSheetRow } from "../services/customers.service";
 
 const initialFilters = {
   search: "",
@@ -48,6 +53,8 @@ const initialFilters = {
   connectionType: "all",
   status: "all",
 };
+
+type CustomerViewMode = "list" | "master";
 
 const customerImportFields: ImportField[] = [
   { key: "customerName", label: "Customer Name", required: true },
@@ -82,6 +89,7 @@ const customerImportFields: ImportField[] = [
 
 export function CustomersList() {
   const [filters, setFilters] = useState(initialFilters);
+  const [viewMode, setViewMode] = useState<CustomerViewMode>("master");
 
   const filteredCustomers = useMemo(() => {
     const search = filters.search.toLowerCase().trim();
@@ -120,6 +128,20 @@ export function CustomersList() {
     items: filteredCustomers,
     pageSize: 8,
   });
+
+  const masterSheetRows = useMemo(
+    () => [...getCustomerMasterSheetRows(customers), ...customerMasterSheetDemoRows],
+    [],
+  );
+
+  const masterSheetColumns: ExcelColumn<CustomerMasterSheetRow>[] = useMemo(
+    () =>
+      customerMasterSheetColumns.map((column) => ({
+        ...column,
+        getValue: (row) => row.values[column.key],
+      })),
+    [],
+  );
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -184,12 +206,12 @@ export function CustomersList() {
               <EyeIcon size={15} />
             </Link>
           </ActionTooltip>
-          <ActionTooltip label="Edit">
-            <Link
-              href={`/customers/${customer.id}/edit`}
-              aria-label="Edit customer"
-              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            >
+            <ActionTooltip label="Edit">
+              <Link
+                href={`/customers/${customer.id}?mode=edit`}
+                aria-label="Edit customer"
+                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+              >
               <NotePencilIcon size={15} />
             </Link>
           </ActionTooltip>
@@ -257,79 +279,117 @@ export function CustomersList() {
           </>
         }
       >
-      <TablePanel
-        title="Customer Records"
-        subtitle="Search and review customer master workflow status."
-        toolbar={
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search name, mobile, BP/TR, meter or address..."
-            title="Customer Filters"
-            description="Filter customer records by project, area, connection type, stage and status."
-            values={filters}
-            filters={[
-              {
-                key: "project",
-                placeholder: "All Projects",
-                options: projectOptions,
-              },
-              {
-                key: "cityArea",
-                placeholder: "All City / Area",
-                options: cityAreaOptions.map((area) => ({ label: area, value: area })),
-              },
-              {
-                key: "connectionType",
-                placeholder: "All Types",
-                options: connectionTypeOptions.map((type) => ({
-                  label: type,
-                  value: type,
-                })),
-              },
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: customerStatusOptions.map((status) => ({
-                  label: status,
-                  value: status,
-                })),
-              },
-            ]}
-            onChange={(key, value) => {
-              setFilters((current) => ({ ...current, [key]: value }));
-              pagination.setPage(1);
-            }}
-            onReset={() => {
-              setFilters(initialFilters);
-              pagination.setPage(1);
-            }}
-          />
-        }
-        pagination={
-          <Pagination
-            compact
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            totalItems={pagination.totalItems}
-            startItem={pagination.startItem}
-            endItem={pagination.endItem}
-            onPageChange={pagination.setPage}
-          />
-        }
-      >
+      <div className="mb-3 flex w-fit gap-6 border-b border-border/70">
+        <button
+          type="button"
+          onClick={() => setViewMode("list")}
+          className={viewButtonClass(viewMode === "list")}
+        >
+          List View
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("master")}
+          className={viewButtonClass(viewMode === "master")}
+        >
+          Master Sheet
+        </button>
+      </div>
 
-        <DataTable
-          data={pagination.paginatedItems}
-          columns={columns}
-          variant="striped"
-          emptyTitle="No customers found"
-          emptyDescription="Try changing filters or add a customer."
-          serialNumberStart={pagination.startItem}
-          stickyHeader
-          stickyLastColumn
-          containerClassName="rounded-none border-0"
-        />
-      </TablePanel>
+      {viewMode === "list" ? (
+        <TablePanel
+          title="Customer Records"
+          subtitle="Search and review customer master workflow status."
+          toolbar={
+            <FilterSheetButton
+              searchKey="search"
+              searchPlaceholder="Search name, mobile, BP/TR, meter or address..."
+              title="Customer Filters"
+              description="Filter customer records by project, area, connection type, stage and status."
+              values={filters}
+              filters={[
+                {
+                  key: "project",
+                  placeholder: "All Projects",
+                  options: projectOptions,
+                },
+                {
+                  key: "cityArea",
+                  placeholder: "All City / Area",
+                  options: cityAreaOptions.map((area) => ({ label: area, value: area })),
+                },
+                {
+                  key: "connectionType",
+                  placeholder: "All Types",
+                  options: connectionTypeOptions.map((type) => ({
+                    label: type,
+                    value: type,
+                  })),
+                },
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: customerStatusOptions.map((status) => ({
+                    label: status,
+                    value: status,
+                  })),
+                },
+              ]}
+              onChange={(key, value) => {
+                setFilters((current) => ({ ...current, [key]: value }));
+                pagination.setPage(1);
+              }}
+              onReset={() => {
+                setFilters(initialFilters);
+                pagination.setPage(1);
+              }}
+            />
+          }
+          pagination={
+            <Pagination
+              compact
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              totalItems={pagination.totalItems}
+              startItem={pagination.startItem}
+              endItem={pagination.endItem}
+              onPageChange={pagination.setPage}
+            />
+          }
+        >
+          <DataTable
+            data={pagination.paginatedItems}
+            columns={columns}
+            variant="striped"
+            emptyTitle="No customers found"
+            emptyDescription="Try changing filters or add a customer."
+            serialNumberStart={pagination.startItem}
+            stickyHeader
+            stickyLastColumn
+            containerClassName="rounded-none border-0"
+          />
+        </TablePanel>
+      ) : (
+        <TablePanel
+          title="Customer Master Sheet"
+          subtitle="Excel-style customer master data with fixed customer columns and per-column filters."
+        >
+          <ExcelDataGrid
+            columns={masterSheetColumns}
+            rows={masterSheetRows}
+            emptyTitle="No customer master records found"
+          />
+        </TablePanel>
+      )}
     </PageShell>
   );
+}
+
+function viewButtonClass(active: boolean) {
+  return [
+    "h-10 border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+    active
+      ? "border-primary text-primary font-semibold"
+      : "text-muted-foreground hover:text-foreground",
+  ].join(" ");
 }

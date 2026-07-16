@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { CustomerForm } from "@/features/customers/components/CustomerForm";
-import { getCustomerById } from "@/features/customers/services/customers.service";
+import { findCustomerById } from "@/features/customers/services/customers.service";
 
 export const metadata: Metadata = { title: "Edit Customer" };
 
@@ -10,5 +11,9 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <CustomerForm mode="edit" customer={getCustomerById(id)} />;
+  const customer = findCustomerById(id);
+
+  if (!customer) notFound();
+
+  return <CustomerForm mode="edit" customer={customer} />;
 }

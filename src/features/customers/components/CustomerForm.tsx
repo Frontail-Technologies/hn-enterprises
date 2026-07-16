@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
@@ -41,6 +42,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   billingCompletionFields,
+  customerDocumentCategories,
   deriveLmcPipeCurrentStage,
   commissioningConversionFields,
   customerConnectionFields,
@@ -65,10 +67,10 @@ import {
 } from "../services/customers.service";
 import type {
   Customer,
+  CustomerDocument,
   CustomerFormValues,
   LmcPipeSizeRecord,
   LmcPipelineWork,
-  UploadedImage,
 } from "../types/customer.types";
 
 const defaultValues: CustomerFormValues = {
@@ -123,6 +125,7 @@ const defaultValues: CustomerFormValues = {
   commissioningConversion: emptyCommissioningConversion,
   billingCompletion: emptyBillingCompletion,
   media: [],
+  documents: [],
 };
 
 interface CustomerFormProps {
@@ -143,7 +146,7 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
       <form className="pb-28">
         <Tabs defaultValue="customer" className="flex flex-col gap-3">
           <div className="border-b border-border/70">
-            <TabsList variant="line" className="flex w-fit max-w-full flex-wrap justify-start gap-4 p-0">
+            <TabsList variant="line" className="flex w-full max-w-full justify-start gap-6 overflow-x-auto p-0">
               <FormTab value="customer">Customer Details</FormTab>
               <FormTab value="gi">GI Measurements</FormTab>
               <FormTab value="isolation">Isolation & Fittings</FormTab>
@@ -289,12 +292,14 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           </TabsContent>
 
           <TabsContent value="images">
-            <SectionCard title="Images / Documents">
-              <ImageUploadPreview
-                images={values.media}
-                onChange={(media) => setValues((current) => ({ ...current, media: media as UploadedImage[] }))}
-              />
-            </SectionCard>
+            <DocumentCategoryUploadPanel<CustomerDocument>
+              categories={customerDocumentCategories}
+              documents={values.documents}
+              description="Choose a document category to upload customer photos, reports, receipts or LMC evidence."
+              onChange={(documents) =>
+                setValues((current) => ({ ...current, documents }))
+              }
+            />
           </TabsContent>
         </Tabs>
 
@@ -510,7 +515,7 @@ function FormTab({ value, children }: { value: string; children: React.ReactNode
   return (
     <TabsTrigger
       value={value}
-      className="min-h-8 flex-none cursor-pointer justify-start rounded-none px-0 py-1.5 font-medium text-muted-foreground hover:text-foreground"
+      className="h-10 flex-none cursor-pointer justify-start rounded-none px-0.5 py-0 font-medium"
     >
       {children}
     </TabsTrigger>
