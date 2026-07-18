@@ -10,7 +10,7 @@ export function Breadcrumb() {
   const pathname = usePathname()
   const segments = pathname.split('/').filter(Boolean)
 
-  if (segments.length === 0) return null
+  if (segments.length <= 1) return null
 
   const crumbs = segments.map((seg, idx) => {
     const href = '/' + segments.slice(0, idx + 1).join('/')

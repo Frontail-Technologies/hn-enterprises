@@ -7,16 +7,17 @@ import {
   DotsThreeVerticalIcon,
   DownloadSimpleIcon,
   EyeIcon,
+  MagnifyingGlassIcon,
   NotePencilIcon,
   PlusIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
 import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -37,10 +38,6 @@ import {
   customerStatusOptions,
   getCustomerMasterSheetRows,
   getCustomerDisplay,
-  lmcPipeRecordFields,
-  lmcPipeSizeOptions,
-  lmcPipelineFields,
-  mdpeFittingFields,
   projectOptions,
 } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
@@ -56,40 +53,10 @@ const initialFilters = {
 
 type CustomerViewMode = "list" | "master";
 
-const customerImportFields: ImportField[] = [
-  { key: "customerName", label: "Customer Name", required: true },
-  { key: "mobileNumber", label: "Mobile Number", required: true },
-  { key: "fullAddress", label: "Full Address", required: true },
-  { key: "project", label: "Project", required: true },
-  { key: "siteArea", label: "Site / Area", required: true },
-  { key: "bpTrNumber", label: "BP / TR Number", required: true },
-  { key: "connectionType", label: "Connection Type", required: true },
-  { key: "gpsLocation", label: "GPS Location" },
-  { key: "houseType", label: "House Type" },
-  { key: "scheme", label: "Scheme" },
-  { key: "paymentStatus", label: "Connection Payment Status" },
-  { key: "paymentMode", label: "Payment Mode" },
-  { key: "initialAmount", label: "Initial Amount" },
-  { key: "supervisor", label: "Supervisor" },
-  { key: "plumberGroup", label: "Plumber / Group" },
-  { key: "fieldExecutive", label: "Field Executive" },
-  { key: "meterNumber", label: "Meter Number" },
-  { key: "meterType", label: "Meter Type" },
-  { key: "regulatorNumber", label: "Regulator Number" },
-  { key: "regulatorPressure", label: "Regulator Pressure" },
-  ...lmcPipeSizeOptions.flatMap((pipeSize) =>
-    lmcPipeRecordFields.map((field) => ({
-      key: `lmc.${pipeSize}.${String(field.key)}`,
-      label: `${pipeSize} Pipe - ${field.label}`,
-    })),
-  ),
-  ...lmcPipelineFields.map((field) => ({ key: String(field.key), label: field.label })),
-  ...mdpeFittingFields.map((field) => ({ key: String(field.key), label: field.label })),
-];
-
 export function CustomersList() {
   const [filters, setFilters] = useState(initialFilters);
   const [viewMode, setViewMode] = useState<CustomerViewMode>("master");
+  const [masterSheetSearch, setMasterSheetSearch] = useState("");
 
   const filteredCustomers = useMemo(() => {
     const search = filters.search.toLowerCase().trim();
@@ -142,6 +109,18 @@ export function CustomersList() {
       })),
     [],
   );
+
+  const filteredMasterSheetRows = useMemo(() => {
+    const search = masterSheetSearch.trim().toLowerCase();
+    if (!search) return masterSheetRows;
+
+    return masterSheetRows.filter((row) =>
+      masterSheetColumns.some((column) => {
+        const value = column.getValue(row);
+        return String(value ?? "").toLowerCase().includes(search);
+      }),
+    );
+  }, [masterSheetColumns, masterSheetRows, masterSheetSearch]);
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -248,20 +227,13 @@ export function CustomersList() {
         subtitle="Manage customer connections, field assignment, meters, and stages."
         actions={
           <>
-            <ImportDataDialog
-              moduleName="Customers"
-              fields={customerImportFields}
-              description="Upload customer master data using the fixed customer template."
-              trigger={
-                <button
-                  type="button"
-                  className={buttonVariants({ variant: "outline", size: "default" })}
-                >
-                  <UploadSimpleIcon size={15} />
-                  Import Excel
-                </button>
-              }
-            />
+            <Link
+              href="/customers/import"
+              className={buttonVariants({ variant: "outline", size: "default" })}
+            >
+              <UploadSimpleIcon size={15} />
+              Import Excel
+            </Link>
             <button
               type="button"
               className={buttonVariants({ variant: "outline", size: "default" })}
@@ -373,10 +345,24 @@ export function CustomersList() {
         <TablePanel
           title="Customer Master Sheet"
           subtitle="Excel-style customer master data with fixed customer columns and per-column filters."
+          toolbar={
+            <div className="relative max-w-md">
+              <MagnifyingGlassIcon
+                size={15}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                value={masterSheetSearch}
+                onChange={(event) => setMasterSheetSearch(event.target.value)}
+                placeholder="Search master sheet..."
+                className="h-9 pl-9"
+              />
+            </div>
+          }
         >
           <ExcelDataGrid
             columns={masterSheetColumns}
-            rows={masterSheetRows}
+            rows={filteredMasterSheetRows}
             emptyTitle="No customer master records found"
           />
         </TablePanel>
@@ -387,9 +373,9 @@ export function CustomersList() {
 
 function viewButtonClass(active: boolean) {
   return [
-    "h-10 border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+    "h-10 border-b-2 px-0.5 text-sm font-medium transition-colors",
     active
-      ? "border-primary text-primary font-semibold"
-      : "text-muted-foreground hover:text-foreground",
+      ? "border-b-primary text-primary font-semibold"
+      : "border-b-transparent text-muted-foreground hover:text-foreground",
   ].join(" ");
 }

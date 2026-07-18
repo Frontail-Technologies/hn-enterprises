@@ -15,6 +15,7 @@ interface PageShellProps {
 
 export function PageShell({
   title,
+  subtitle,
   eyebrow,
   actions,
   toolbar,
@@ -32,6 +33,9 @@ export function PageShell({
             <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">
               {title}
             </h1>
+            {subtitle ? (
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            ) : null}
           </div>
           {actions ? (
             <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

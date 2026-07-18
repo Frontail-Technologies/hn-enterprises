@@ -15,6 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import {
   cityOptions,
   projectStatusOptions,
@@ -38,6 +39,12 @@ const defaultValues: ProjectFormValues = {
   contractValue: "",
   assignedManager: "",
 };
+
+const projectFormSectionLinks = [
+  { href: "#project-details", label: "Project Details" },
+  { href: "#contract-dates", label: "Contract & Dates" },
+  { href: "#description", label: "Description" },
+];
 
 interface ProjectFormProps {
   mode: "create" | "edit";
@@ -73,78 +80,89 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         }
       />
 
-      <form className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Field label="Project Name">
-            <Input defaultValue={values.name} placeholder="Shyam Nagar CGD Project" />
-          </Field>
-          <Field label="Project Code / Contract ID">
-            <Input defaultValue={values.code} placeholder="CGD-SN-2025" />
-          </Field>
-          <Field label="Client">
-            <Input defaultValue={values.client} placeholder="Client name" />
-          </Field>
-          <Field label="Consultant">
-            <Input defaultValue={values.consultant} placeholder="Consultant name" />
-          </Field>
-          <Field label="Contractor">
-            <Input defaultValue={values.contractor} placeholder="Contractor name" />
-          </Field>
-          <Field label="Project Type">
-            <Input defaultValue={values.projectType} placeholder="CGD Network" />
-          </Field>
-          <Field label="City">
-            <Select defaultValue={values.city || undefined}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select city" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...cityOptions, "Kota", "Jodhpur"].map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Area / Location">
-            <Input defaultValue={values.area} placeholder="Area or site location" />
-          </Field>
-          <Field label="Status">
-            <Select defaultValue={values.status}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {projectStatusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Start Date">
-            <DatePicker value={startDate} onChange={setStartDate} />
-          </Field>
-          <Field label="Planned End Date">
-            <DatePicker value={plannedEndDate} onChange={setPlannedEndDate} />
-          </Field>
-          <Field label="Contract Value">
-            <Input defaultValue={values.contractValue} placeholder="Rs 12.50 Cr" />
-          </Field>
-          <Field label="Assigned Supervisor / Project Manager">
-            <Input defaultValue={values.assignedManager} placeholder="Manager name" />
-          </Field>
-        </div>
+      <SectionAnchorTabs items={projectFormSectionLinks} className="mb-3" />
 
-        <Field label="Description">
-          <Textarea
-            defaultValue={values.description}
-            placeholder="Brief project scope and notes"
-            className="min-h-24"
-          />
-        </Field>
+      <form className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-5">
+        <section id="project-details" className="scroll-mt-12">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Field label="Project Name">
+              <Input defaultValue={values.name} placeholder="Shyam Nagar CGD Project" />
+            </Field>
+            <Field label="Project Code / Contract ID">
+              <Input defaultValue={values.code} placeholder="CGD-SN-2025" />
+            </Field>
+            <Field label="Client">
+              <Input defaultValue={values.client} placeholder="Client name" />
+            </Field>
+            <Field label="Consultant">
+              <Input defaultValue={values.consultant} placeholder="Consultant name" />
+            </Field>
+            <Field label="Contractor">
+              <Input defaultValue={values.contractor} placeholder="Contractor name" />
+            </Field>
+            <Field label="Project Type">
+              <Input defaultValue={values.projectType} placeholder="CGD Network" />
+            </Field>
+          </div>
+        </section>
+
+        <section id="contract-dates" className="scroll-mt-12">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Field label="City">
+              <Select defaultValue={values.city || undefined}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...cityOptions, "Kota", "Jodhpur"].map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Area / Location">
+              <Input defaultValue={values.area} placeholder="Area or site location" />
+            </Field>
+            <Field label="Status">
+              <Select defaultValue={values.status}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectStatusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Start Date">
+              <DatePicker value={startDate} onChange={setStartDate} />
+            </Field>
+            <Field label="Planned End Date">
+              <DatePicker value={plannedEndDate} onChange={setPlannedEndDate} />
+            </Field>
+            <Field label="Contract Value">
+              <Input defaultValue={values.contractValue} placeholder="Rs 12.50 Cr" />
+            </Field>
+            <Field label="Assigned Supervisor / Project Manager">
+              <Input defaultValue={values.assignedManager} placeholder="Manager name" />
+            </Field>
+          </div>
+        </section>
+
+        <section id="description" className="scroll-mt-12">
+          <Field label="Description">
+            <Textarea
+              defaultValue={values.description}
+              placeholder="Brief project scope and notes"
+              className="min-h-24"
+            />
+          </Field>
+        </section>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
           <Link

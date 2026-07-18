@@ -22,6 +22,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
   --color-status-success: var(--status-success);
   --color-status-success-fg: var(--status-success-foreground);
   --color-status-success-bg: var(--status-success-bg);
@@ -75,6 +82,13 @@
   --status-purple: oklch(62% 0.18 34);
   --status-purple-foreground: oklch(42% 0.145 34);
   --status-purple-bg: oklch(97% 0.025 62);
+  --sidebar: var(--sidebar-bg);
+  --sidebar-bg: oklch(31% 0.105 253);
+  --sidebar-foreground: oklch(97% 0.012 255);
+  --sidebar-border: color-mix(in oklch, var(--sidebar-foreground) 14%, transparent);
+  --sidebar-accent: color-mix(in oklch, var(--sidebar-foreground) 12%, transparent);
+  --sidebar-accent-foreground: var(--sidebar-foreground);
+  --sidebar-ring: var(--primary);
 }
 
 *,
@@ -105,12 +119,15 @@ a {
   text-decoration: none;
 }
 
-.app-primary-action {
+.app-primary-action,
+.app-primary-action:hover,
+.app-primary-action:focus {
   color: #fff !important;
 }
 
+.app-primary-action *,
 .app-primary-action svg {
-  color: #fff !important;
+  color: currentColor !important;
 }
 
 ::-webkit-scrollbar {

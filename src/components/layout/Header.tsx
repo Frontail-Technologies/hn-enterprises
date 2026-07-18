@@ -2,15 +2,13 @@
 
 import { BellIcon as Bell, ListIcon as List } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { useSidebar } from '@/components/ui/sidebar'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Breadcrumb } from './Breadcrumb'
 
-interface HeaderProps {
-  onToggleSidebar: () => void
-}
-
-export function Header({ onToggleSidebar }: HeaderProps) {
+export function Header() {
   const { user } = useAuth()
+  const { toggleSidebar } = useSidebar()
 
   const initials = user?.fullName
     .split(' ')
@@ -25,7 +23,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={onToggleSidebar}
+        onClick={toggleSidebar}
           className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
         aria-label="Toggle sidebar"
       >

@@ -137,6 +137,53 @@ const bills = [
   { id: "bill-004", customerId: "cust-004", billNumber: "BILL-2025-004", projectCustomer: "Rafiq Khan", stage: "Conversion", billDate: "2025-02-16", totalAmount: 12000, paidAmount: 0, pendingAmount: 12000, dueDate: "2025-03-01", tax: 2160, status: "Draft" },
 ];
 
+type BillingView = "bills" | "wages";
+
+const billingTabs: Array<{ id: BillingView; label: string }> = [
+  { id: "bills", label: "Bill Register" },
+  { id: "wages", label: "Wage Register" },
+];
+
+const wageRegisterRows = [
+  wageRow("wg-1", "ASHIS GAUR", "High Skilled", 2307.69, 26, 1800, 0, "Approved"),
+  wageRow("wg-2", "BIPLAB SARKAR", "Skilled", 1153.85, 26, 1800, 0, "Approved"),
+  wageRow("wg-3", "HARICHARAN BORO", "Skilled", 1153.85, 26, 1800, 0, "Pending"),
+  wageRow("wg-4", "MANIK CARKAR SARKAR", "Unskilled", 692.31, 26, 1800, 135, "Approved"),
+  wageRow("wg-5", "SK HASIBUR", "High Skilled", 2307.69, 26, 1800, 0, "Approved"),
+  wageRow("wg-6", "SAHNAWYAZ R MALLICK", "High Skilled", 1923.08, 26, 1800, 0, "Pending"),
+];
+
+function wageRow(
+  id: string,
+  name: string,
+  category: string,
+  wageRate: number,
+  daysWorked: number,
+  pf: number,
+  esic: number,
+  status: string,
+) {
+  const basic = Math.round(wageRate * daysWorked);
+  const total = basic;
+  const totalDeduction = pf + esic;
+  const netPayment = total - totalDeduction;
+
+  return {
+    id,
+    name,
+    category,
+    wageRate,
+    daysWorked,
+    basic,
+    total,
+    pf,
+    esic,
+    totalDeduction,
+    netPayment,
+    status,
+  };
+}
+
 const paymentHistory = [
   { id: "pay-h-1", billId: "bill-001", date: "2025-02-12", amount: 250000, mode: "NEFT", receivedBy: "Accounts", remarks: "First part payment." },
   { id: "pay-h-2", billId: "bill-001", date: "2025-02-16", amount: 200000, mode: "Cheque", receivedBy: "Accounts", remarks: "Cheque cleared." },
@@ -303,11 +350,18 @@ export function InventoryDetailPage({ id }: { id: string }) {
 }
 
 export function BillingPage() {
+  const [activeView, setActiveView] = useState<BillingView>("bills");
   const totals = {
     billed: sum(bills.map((bill) => bill.totalAmount)),
     received: sum(bills.map((bill) => bill.paidAmount)),
     pending: sum(bills.map((bill) => bill.pendingAmount)),
     overdue: sum(bills.filter((bill) => bill.status === "Overdue").map((bill) => bill.pendingAmount)),
+  };
+  const wageTotals = {
+    gross: sum(wageRegisterRows.map((row) => row.total)),
+    deductions: sum(wageRegisterRows.map((row) => row.totalDeduction)),
+    net: sum(wageRegisterRows.map((row) => row.netPayment)),
+    pending: wageRegisterRows.filter((row) => row.status === "Pending").length,
   };
   const [filters, setFilters] = useState({ search: "", stage: "all", status: "all" });
   const data = useMemo(() => {
@@ -333,27 +387,42 @@ export function BillingPage() {
   return (
     <div className="space-y-5">
       <Header title="Billing" subtitle="Track bills, invoices and received payments." actions={<BillDrawer action="Create Bill" />} />
-      <StatCardRow>
-        <SummaryValue label="Total Billed" value={money(totals.billed)} />
-        <SummaryValue label="Received" value={money(totals.received)} icon={<ReceiptIcon size={17} />} />
-        <SummaryValue label="Pending" value={money(totals.pending)} icon={<FileTextIcon size={17} />} />
-        <SummaryValue label="Overdue" value={money(totals.overdue)} icon={<WarningIcon size={17} />} warn />
-      </StatCardRow>
-      <TableSection>
-        <FilterSheetButton
-          searchKey="search"
-          searchPlaceholder="Search bill or customer..."
-          title="Billing Filters"
-          values={filters}
-          filters={[
-            { key: "stage", placeholder: "All Stages", options: uniqOptions(bills.map((row) => row.stage)) },
-            { key: "status", placeholder: "All Statuses", options: uniqOptions(bills.map((row) => row.status)) },
-          ]}
-          onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-          onReset={() => setFilters({ search: "", stage: "all", status: "all" })}
-        />
-        <PaginatedDataTable data={data} columns={columns} />
-      </TableSection>
+      <UnderlineTabs items={billingTabs} active={activeView} onChange={(id) => setActiveView(id as BillingView)} />
+      {activeView === "bills" ? (
+        <>
+          <StatCardRow>
+            <SummaryValue label="Total Billed" value={money(totals.billed)} />
+            <SummaryValue label="Received" value={money(totals.received)} icon={<ReceiptIcon size={17} />} />
+            <SummaryValue label="Pending" value={money(totals.pending)} icon={<FileTextIcon size={17} />} />
+            <SummaryValue label="Overdue" value={money(totals.overdue)} icon={<WarningIcon size={17} />} warn />
+          </StatCardRow>
+          <TableSection>
+            <FilterSheetButton
+              searchKey="search"
+              searchPlaceholder="Search bill or customer..."
+              title="Billing Filters"
+              values={filters}
+              filters={[
+                { key: "stage", placeholder: "All Stages", options: uniqOptions(bills.map((row) => row.stage)) },
+                { key: "status", placeholder: "All Statuses", options: uniqOptions(bills.map((row) => row.status)) },
+              ]}
+              onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+              onReset={() => setFilters({ search: "", stage: "all", status: "all" })}
+            />
+            <PaginatedDataTable data={data} columns={columns} />
+          </TableSection>
+        </>
+      ) : (
+        <>
+          <StatCardRow>
+            <SummaryValue label="Gross Wages" value={money(wageTotals.gross)} />
+            <SummaryValue label="Deductions" value={money(wageTotals.deductions)} icon={<FileTextIcon size={17} />} />
+            <SummaryValue label="Net Payable" value={money(wageTotals.net)} icon={<ReceiptIcon size={17} />} />
+            <SummaryValue label="Pending Payments" value={String(wageTotals.pending)} icon={<WarningIcon size={17} />} warn />
+          </StatCardRow>
+          <WageRegister />
+        </>
+      )}
     </div>
   );
 }
@@ -656,6 +725,159 @@ function TableSection({ children }: { children: ReactNode }) {
   );
 }
 
+function WageRegister() {
+  return (
+    <section className="rounded-lg border border-border/70 bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Wage Register</p>
+          <p className="text-xs text-muted-foreground">
+            Payroll-style register with attendance days, deductions and net payment.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select defaultValue="may-2026">
+            <SelectTrigger className="h-8 w-[150px] bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="may-2026">May 2026</SelectItem>
+              <SelectItem value="apr-2026">April 2026</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button type="button" variant="outline" size="sm">
+            <DownloadSimpleIcon size={14} />
+            Export Wage Sheet
+          </Button>
+        </div>
+      </div>
+      <div className="overflow-y-auto">
+        <div className="flex min-w-0">
+          <div className="shrink-0 border-r border-border/70">
+            <table className="w-max border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr>
+                  <RegisterHeaderCell className="w-16 min-w-16">Sl No.</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-52 min-w-52">Name</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36">Category</RegisterHeaderCell>
+                </tr>
+              </thead>
+              <tbody>
+                {wageRegisterRows.map((row, index) => (
+                  <tr key={row.id} className="hover:bg-muted/25">
+                    <RegisterBodyCell className="text-center font-medium">{index + 1}</RegisterBodyCell>
+                    <RegisterBodyCell className="font-medium text-foreground">{row.name}</RegisterBodyCell>
+                    <RegisterBodyCell>{row.category}</RegisterBodyCell>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <table className="min-w-max border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Rate of Wage</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Days Worked</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Basic</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Total</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-28 min-w-28 text-right">PF</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-28 min-w-28 text-right">ESIC</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Total Deduction</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Net Payment</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Status</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-28 min-w-28 text-center">Signature</RegisterHeaderCell>
+                </tr>
+              </thead>
+              <tbody>
+                {wageRegisterRows.map((row) => (
+                  <tr key={row.id} className="hover:bg-muted/25">
+                    <RegisterBodyCell className="text-right">{money(row.wageRate)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-center font-medium">{row.daysWorked}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.basic)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.total)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.pf)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.esic)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.totalDeduction)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right font-semibold">{money(row.netPayment)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-center">
+                      <StatusBadge status={row.status} />
+                    </RegisterBodyCell>
+                    <RegisterBodyCell className="text-center text-muted-foreground">-</RegisterBodyCell>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RegisterHeaderCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={cn(
+        "sticky top-0 z-10 h-11 border-b border-r border-border/70 bg-secondary/90 px-2 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+
+function RegisterBodyCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <td className={cn("h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground", className)}>
+      {children}
+    </td>
+  );
+}
+
+function UnderlineTabs({
+  items,
+  active,
+  onChange,
+}: {
+  items: Array<{ id: string; label: string }>;
+  active: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className={cn(
+            "h-10 w-fit shrink-0 border-b-2 px-0.5 text-sm font-medium transition-colors",
+            active === item.id
+              ? "border-b-primary text-primary font-semibold"
+              : "border-b-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function InventoryTabNav({
   activeTab,
   onChange,
@@ -671,10 +893,10 @@ function InventoryTabNav({
           type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            "inline-flex h-10 w-fit shrink-0 items-center gap-2 border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+            "inline-flex h-10 w-fit shrink-0 items-center gap-2 border-b-2 px-0.5 text-sm font-medium transition-colors",
             activeTab === tab.id
-              ? "border-primary text-primary font-semibold"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border-b-primary text-primary font-semibold"
+              : "border-b-transparent text-muted-foreground hover:text-foreground",
           )}
         >
           <span>{tab.label}</span>
@@ -705,10 +927,10 @@ function PaymentTabNav({
           type="button"
           onClick={() => onChange(tab)}
           className={cn(
-            "inline-flex h-10 shrink-0 items-center border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+            "inline-flex h-10 shrink-0 items-center border-b-2 px-0.5 text-sm font-medium transition-colors",
             active === tab
-              ? "border-primary text-primary font-semibold"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border-b-primary text-primary font-semibold"
+              : "border-b-transparent text-muted-foreground hover:text-foreground",
           )}
         >
           {tab}

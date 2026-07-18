@@ -31,7 +31,7 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
   return (
     <nav
       className={cn(
-        "sticky top-12 z-20 -mx-1 overflow-x-auto border-b border-border/70 bg-background/95 px-1 backdrop-blur",
+        "sticky top-[0px] z-40 -mx-1 overflow-x-auto border-b border-border/70 bg-background px-1 backdrop-blur",
         className,
       )}
       aria-label="Section navigation"
@@ -46,7 +46,7 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
               href={item.href}
               data-active={active}
               onClick={() => setActiveHref(item.href)}
-              className="inline-flex h-10 shrink-0 items-center border-b-2 border-transparent px-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:border-primary data-[active=true]:font-semibold data-[active=true]:text-primary"
+              className="inline-flex h-10 shrink-0 items-center border-b-2 border-b-transparent px-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:border-b-primary data-[active=true]:font-semibold data-[active=true]:text-primary"
             >
               {item.label}
             </Link>

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -34,24 +34,15 @@ export function DashboardPeriodFilter({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-muted/70 p-1 ring-1 ring-border/70">
-        {dashboardPeriods.map((period) => {
-          const isActive = value === period.value;
-
-          return (
-            <Button
-              key={period.value}
-              type="button"
-              size="sm"
-              variant={isActive ? "default" : "ghost"}
-              className="h-7 px-3 text-xs"
-              onClick={() => onChange(period.value)}
-            >
+      <Tabs value={value} onValueChange={(v) => v && onChange(v as DashboardPeriod)}>
+        <TabsList>
+          {dashboardPeriods.map((period) => (
+            <TabsTrigger key={period.value} value={period.value} className="px-3 text-xs">
               {period.label}
-            </Button>
-          );
-        })}
-      </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <Select
         value={month}

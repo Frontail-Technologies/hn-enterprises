@@ -16,7 +16,6 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { ImportDataDialog, type ImportField } from "@/components/shared/ImportDataDialog";
 import { PageShell } from "@/components/shared/PageShell";
 import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -42,25 +41,6 @@ const initialFilters = {
   dateFrom: "",
   dateTo: "",
 };
-
-const surveyImportFields: ImportField[] = [
-  { key: "customerIdentifier", label: "Customer / BP TR Number", required: true },
-  { key: "project", label: "Project", required: true },
-  { key: "siteArea", label: "Site / Area", required: true },
-  { key: "surveyDate", label: "Survey Date", required: true },
-  { key: "supervisor", label: "Supervisor", required: true },
-  { key: "gpsLocation", label: "GPS Location" },
-  { key: "houseType", label: "House Type" },
-  { key: "connectionType", label: "Connection Type" },
-  { key: "siteAccessibility", label: "Site Accessibility" },
-  { key: "meterPlacement", label: "Meter Placement Possibility" },
-  { key: "pipelineRoute", label: "Pipeline Route Availability" },
-  { key: "civilWorkRequired", label: "Civil Work Required" },
-  { key: "workableStatus", label: "Workable Status" },
-  { key: "reason", label: "Reason" },
-  { key: "recommendedAction", label: "Recommended Action" },
-  { key: "remarks", label: "Survey Remarks" },
-];
 
 export function SurveysList() {
   const [filters, setFilters] = useState(initialFilters);
@@ -183,23 +163,16 @@ export function SurveysList() {
         subtitle="Capture field conditions, workable status, and survey approvals."
         actions={
           <>
-            <ImportDataDialog
-              moduleName="Surveys"
-              fields={surveyImportFields}
-              description="Upload survey records using the fixed survey import template."
-              trigger={
-                <button
-                  type="button"
-                  className={buttonVariants({
-                    variant: "outline",
-                    size: "default",
-                  })}
-                >
-                  <UploadSimpleIcon size={15} />
-                  Import Excel
-                </button>
-              }
-            />
+            <Link
+              href="/surveys/import"
+              className={buttonVariants({
+                variant: "outline",
+                size: "default",
+              })}
+            >
+              <UploadSimpleIcon size={15} />
+              Import Excel
+            </Link>
             <button
               type="button"
               className={buttonVariants({

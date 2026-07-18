@@ -1,39 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
-import { cn } from "@/lib/utils";
+import { Breadcrumb } from "./Breadcrumb";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar collapsed={collapsed} />
-
-      {/* Mobile Sidebar Overlay */}
-      {!collapsed && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
-          onClick={() => setCollapsed(true)}
-          aria-hidden="true"
-        />
-      )}
-
-      <div
-        className={cn(
-          "flex flex-col min-h-screen transition-all duration-300 ease-in-out",
-          collapsed ? "md:ml-16" : "md:ml-60",
-        )}
-      >
-        <Header onToggleSidebar={() => setCollapsed((c) => !c)} />
-        <main className="flex-1 w-full px-3 py-4 sm:px-4 lg:px-5">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider className="overflow-x-clip">
+      <Sidebar />
+      <SidebarInset className="min-w-0 overflow-x-clip">
+        <main className="min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 lg:px-5">
+          <div className="mb-3 min-w-0">
+            <Breadcrumb />
+          </div>
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

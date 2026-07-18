@@ -5,6 +5,17 @@ import type { DragEvent } from "react";
 import { ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from "@/components/ui/attachment";
 import { cn } from "@/lib/utils";
 
 export type ImagePreviewItem = {
@@ -58,20 +69,19 @@ export function ImageUploadPreview({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => inputRef.current?.click()}
+      <Attachment
+        state="idle"
+        orientation="horizontal"
+        className={cn(
+          "w-full cursor-pointer items-center gap-3 rounded-sm border-dashed bg-muted/20 p-4",
+          isDragging && "border-primary bg-primary/5",
+        )}
         onDragOver={(event) => {
           event.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={cn(
-          "flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-4 py-5 text-center transition-colors",
-          isDragging && "border-primary bg-primary/5",
-        )}
       >
         <input
           ref={inputRef}
@@ -81,53 +91,74 @@ export function ImageUploadPreview({
           className="hidden"
           onChange={(event) => addFiles(event.target.files)}
         />
-        <UploadSimpleIcon size={22} className="text-primary" />
-        <p className="mt-2 text-sm font-semibold text-foreground">Upload images</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Drag and drop images here, or choose files.
-        </p>
-        <Button type="button" variant="outline" size="sm" className="mt-3">
+        <AttachmentTrigger onClick={() => inputRef.current?.click()} />
+        <AttachmentMedia className="bg-primary/10 text-primary">
+          <UploadSimpleIcon size={22} />
+        </AttachmentMedia>
+        <AttachmentContent>
+          <AttachmentTitle>Upload images</AttachmentTitle>
+          <AttachmentDescription>
+            Drag and drop images here, or choose files.
+          </AttachmentDescription>
+        </AttachmentContent>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="relative z-20 shrink-0"
+          onClick={(event) => {
+            event.stopPropagation();
+            inputRef.current?.click();
+          }}
+        >
           Choose Images
         </Button>
-      </div>
+      </Attachment>
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <AttachmentGroup className="flex flex-col gap-2 overflow-visible py-0">
         {items.map((item) => (
-          <div key={item.id} className="min-w-0 rounded-lg border border-border/70 bg-card p-2.5">
-            <div className="flex h-28 items-center justify-center overflow-hidden rounded-md bg-muted/30">
+          <Attachment
+            key={item.id}
+            orientation="horizontal"
+            className="w-full rounded-sm border-border/70"
+          >
+            <AttachmentMedia
+              variant={item.previewUrl ? "image" : "icon"}
+              className="h-14 w-14 rounded-sm"
+            >
               {item.previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.previewUrl} alt={item.label} className="h-full w-full object-cover" />
               ) : (
                 <ImageSquareIcon size={30} className="text-primary" />
               )}
-            </div>
-            <div className="mt-2 space-y-2">
+            </AttachmentMedia>
+            <AttachmentContent className="min-w-0 space-y-1">
               <Input
                 value={item.label}
                 onChange={(event) =>
                   update(items.map((image) => image.id === item.id ? { ...image, label: event.target.value } : image))
                 }
-                className="h-8"
+                className="h-8 max-w-sm"
                 aria-label="Image label"
               />
-              <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-xs font-medium text-muted-foreground">
-                  {item.fileName}
-                </p>
-                <button
-                  type="button"
-                  aria-label="Remove image"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => update(items.filter((image) => image.id !== item.id))}
-                >
-                  <TrashIcon size={15} />
-                </button>
-              </div>
-            </div>
-          </div>
+              <AttachmentDescription className="mt-0">
+                {item.fileName}
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentActions className="ml-auto">
+              <AttachmentAction
+                type="button"
+                aria-label="Remove image"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => update(items.filter((image) => image.id !== item.id))}
+              >
+                <TrashIcon size={15} />
+              </AttachmentAction>
+            </AttachmentActions>
+          </Attachment>
         ))}
-      </div>
+      </AttachmentGroup>
     </div>
   );
 }

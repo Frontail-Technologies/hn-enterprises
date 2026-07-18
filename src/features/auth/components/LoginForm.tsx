@@ -97,7 +97,7 @@ export function LoginForm() {
         type="submit"
         disabled={isSubmitting}
         id="btn-login"
-        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 transition-colors"
+        className="app-primary-action w-full bg-primary hover:bg-primary/90 text-white font-semibold h-10 transition-colors"
       >
         {isSubmitting ? (
           <span className="flex items-center gap-2">

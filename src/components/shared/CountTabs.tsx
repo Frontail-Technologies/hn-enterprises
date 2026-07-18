@@ -34,7 +34,7 @@ export function CountTabs({ items, className }: CountTabsProps) {
         );
 
         const className =
-          "group inline-flex h-8 max-w-full items-center gap-1.5 border-b-2 border-transparent px-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:border-primary data-[active=true]:text-primary";
+          "group inline-flex h-8 max-w-full items-center gap-1.5 border-b-2 border-b-transparent px-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:border-b-primary data-[active=true]:text-primary";
 
         if (item.href) {
           return (

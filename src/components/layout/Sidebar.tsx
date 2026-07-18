@@ -1,237 +1,340 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 import {
-  SquaresFourIcon as SquaresFour, BuildingsIcon as Buildings, UsersIcon as Users,
-  ClipboardTextIcon as ClipboardText, CalendarBlankIcon as CalendarBlank,
-  ChartBarIcon as ChartBar, FolderOpenIcon as FolderOpen, WrenchIcon as Wrench,
-  GaugeIcon as Gauge, FileTextIcon as FileText, ChartPieSliceIcon as ChartPieSlice,
-  CheckSquareIcon as CheckSquare, PackageIcon as Package, ReceiptIcon as Receipt,
-  CurrencyInrIcon as CurrencyInr, UsersThreeIcon as UsersThree, FolderIcon as Folder,
-  UserGearIcon as UserGear, DatabaseIcon as Database, GearIcon as Gear,
+  SquaresFourIcon as SquaresFour,
+  BuildingsIcon as Buildings,
+  UsersIcon as Users,
+  ClipboardTextIcon as ClipboardText,
+  CalendarBlankIcon as CalendarBlank,
+  ChartBarIcon as ChartBar,
+  FolderOpenIcon as FolderOpen,
+  WrenchIcon as Wrench,
+  GaugeIcon as Gauge,
+  FileTextIcon as FileText,
+  ChartPieSliceIcon as ChartPieSlice,
+  CheckSquareIcon as CheckSquare,
+  PackageIcon as Package,
+  ReceiptIcon as Receipt,
+  CurrencyInrIcon as CurrencyInr,
+  UsersThreeIcon as UsersThree,
+  FolderIcon as Folder,
+  UserGearIcon as UserGear,
+  DatabaseIcon as Database,
+  GearIcon as Gear,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
-  SignOutIcon as SignOut, UserIcon as User, LockIcon as Lock,
-  CaretUpDownIcon as CaretUpDown, CaretDownIcon as CaretDown,
-} from '@phosphor-icons/react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { NAV_ITEMS, NAV_GROUPS } from '@/constants/navigation'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { NavItem, NavGroup } from '@/types/navigation'
-import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+  SignOutIcon as SignOut,
+  UserIcon as User,
+  LockIcon as Lock,
+  CaretUpDownIcon as CaretUpDown,
+  CaretDownIcon as CaretDown,
+} from "@phosphor-icons/react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { NAV_ITEMS, NAV_GROUPS } from "@/constants/navigation";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { NavItem, NavGroup } from "@/types/navigation";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  SquaresFour, Buildings, Users, ClipboardText, CalendarBlank, ChartBar,
-  FolderOpen, Wrench, Gauge, FileText, ChartPieSlice, CheckSquare, Package,
-  Receipt, CurrencyInr, UsersThree, Folder, UserGear, Database, Gear,
+  SquaresFour,
+  Buildings,
+  Users,
+  ClipboardText,
+  CalendarBlank,
+  ChartBar,
+  FolderOpen,
+  Wrench,
+  Gauge,
+  FileText,
+  ChartPieSlice,
+  CheckSquare,
+  Package,
+  Receipt,
+  CurrencyInr,
+  UsersThree,
+  Folder,
+  UserGear,
+  Database,
+  Gear,
   ClockCounterClockwise,
-}
+};
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
   operations: true,
   commercial: true,
   management: true,
-}
+};
 
-interface SidebarProps {
-  collapsed: boolean
-}
-
-function NavLink({ item, collapsed, active }: { item: NavItem; collapsed: boolean; active: boolean }) {
-  const IconComponent = ICON_MAP[item.icon]
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const IconComponent = ICON_MAP[item.icon];
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
 
   return (
-    <Link
-      href={item.href}
-      title={collapsed ? item.label : undefined}
-      style={active ? { color: '#fff' } : undefined}
-      className={cn(
-        'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all duration-150 group',
-        collapsed && 'justify-center px-0',
-        active
-          ? 'bg-primary text-white'
-          : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground'
-      )}
-    >
-      {IconComponent && (
-        <IconComponent
-          size={20}
-          weight={active ? 'fill' : 'regular'}
-          style={active ? { color: '#fff' } : undefined}
-          className={cn(
-            'shrink-0',
-            active ? 'text-white' : 'text-muted-foreground group-hover:text-accent-foreground'
-          )}
-        />
-      )}
-      {!collapsed && (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        render={<Link href={item.href} />}
+        isActive={active}
+        tooltip={collapsed ? item.label : undefined}
+        className={cn(
+          "h-9 gap-2.5 rounded-sm px-2.5 text-sm font-medium text-sidebar-foreground/82 hover:bg-white/10 hover:text-sidebar-foreground",
+          active &&
+            "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground",
+        )}
+      >
+        {IconComponent && (
+          <IconComponent
+            size={19}
+            weight={active ? "fill" : "regular"}
+            className={cn(
+              "shrink-0",
+              active ? "text-primary-foreground" : "text-sidebar-foreground/75",
+            )}
+          />
+        )}
         <span className="truncate leading-none">{item.label}</span>
-      )}
-      {!collapsed && item.badge != null && item.badge > 0 && (
-        <span className="ml-auto text-xs bg-primary/10 text-primary rounded-full px-1.5 py-0.5 font-semibold leading-none">
+      </SidebarMenuButton>
+      {item.badge != null && item.badge > 0 && (
+        <SidebarMenuBadge
+          className={cn(
+            "text-sidebar-foreground/75",
+            active && "text-primary-foreground",
+          )}
+        >
           {item.badge}
-        </span>
+        </SidebarMenuBadge>
       )}
-    </Link>
-  )
+    </SidebarMenuItem>
+  );
 }
 
 function NavGroupSection({
   group,
-  collapsed,
   isOpen,
   onToggle,
   isItemActive,
 }: {
-  group: NavGroup
-  collapsed: boolean
-  isOpen: boolean
-  onToggle: () => void
-  isItemActive: (item: NavItem) => boolean
+  group: NavGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  isItemActive: (item: NavItem) => boolean;
 }) {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+
   if (collapsed) {
     return (
-      <div className="pt-2 mt-2 border-t border-border first:mt-0 first:border-0 first:pt-0 space-y-0.5">
-        {group.items.map((item) => (
-          <NavLink key={item.id} item={item} collapsed active={isItemActive(item)} />
-        ))}
-      </div>
-    )
+      <SidebarGroup className="border-t border-sidebar-border/50 pt-2 first:border-t-0 first:pt-1">
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {group.items.map((item) => (
+              <NavLink key={item.id} item={item} active={isItemActive(item)} />
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={onToggle} className="pt-1">
-      <CollapsibleTrigger className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none">
-        <span>{group.label}</span>
-        <CaretDown
-          size={12}
-          className={cn('shrink-0 transition-transform duration-200', !isOpen && '-rotate-90')}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="space-y-0.5 pt-0.5 pb-1">
-          {group.items.map((item) => (
-            <NavLink key={item.id} item={item} collapsed={false} active={isItemActive(item)} />
-          ))}
-        </div>
-      </CollapsibleContent>
+    <Collapsible open={isOpen} onOpenChange={onToggle}>
+      <SidebarGroup className="py-1">
+        <SidebarGroupLabel
+          render={
+            <CollapsibleTrigger className="group/label flex w-full items-center justify-between" />
+          }
+          className="h-7 rounded-sm px-2.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/62 hover:bg-white/10 hover:text-sidebar-foreground"
+        >
+          <span>{group.label}</span>
+          <CaretDown
+            size={12}
+            className={cn(
+              "shrink-0 transition-transform duration-200",
+              !isOpen && "-rotate-90",
+            )}
+          />
+        </SidebarGroupLabel>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.id}
+                  item={item}
+                  active={isItemActive(item)}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
     </Collapsible>
-  )
+  );
 }
 
-export function Sidebar({ collapsed }: SidebarProps) {
-  const pathname = usePathname()
-  const { user, logout } = useAuth()
-  const router = useRouter()
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(DEFAULT_OPEN_GROUPS)
+export function Sidebar() {
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { state } = useSidebar();
+  const [openGroups, setOpenGroups] =
+    useState<Record<string, boolean>>(DEFAULT_OPEN_GROUPS);
 
   const handleLogout = () => {
-    logout()
-    router.push('/login')
-  }
+    logout();
+    router.push("/login");
+  };
 
   const isAllowed = (item: NavItem) => {
-    if (!item.allowedRoles) return true
-    return user ? item.allowedRoles.includes(user.role) : false
-  }
+    if (!item.allowedRoles) return true;
+    return user ? item.allowedRoles.includes(user.role) : false;
+  };
 
   const isItemActive = (item: NavItem) =>
-    pathname === item.href || pathname.startsWith(item.href + '/')
+    pathname === item.href || pathname.startsWith(item.href + "/");
 
-  const visibleTopItems = NAV_ITEMS.filter(isAllowed)
-  const visibleGroups = NAV_GROUPS
-    .map((group) => ({ ...group, items: group.items.filter(isAllowed) }))
-    .filter((group) => group.items.length > 0)
+  const visibleTopItems = NAV_ITEMS.filter(isAllowed);
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(isAllowed),
+  })).filter((group) => group.items.length > 0);
 
   const toggleGroup = (id: string) => {
-    setOpenGroups((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }))
-  }
+    setOpenGroups((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  };
 
-  const initials = user?.fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) ?? 'U'
+  const initials =
+    user?.fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ?? "U";
+  const collapsed = state === "collapsed";
 
   return (
-    <aside
-      className={cn(
-        'fixed top-0 left-0 h-screen bg-card border-r border-border/70 flex flex-col z-40 transition-all duration-300 ease-in-out',
-        collapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0 w-60'
-      )}
+    <ShadcnSidebar
+      collapsible="icon"
+      className="border-white/10 bg-sidebar text-sidebar-foreground"
     >
-      {/* Logo */}
-      <div className={cn(
-        'flex items-center h-12 border-b border-border/70 shrink-0',
-        collapsed ? 'px-3 justify-center' : 'px-4 gap-2.5'
-      )}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
-          <Image
-            src="/logo.png"
-            alt="HN Enterprises"
-            width={36}
-            height={36}
-            priority
-            className="h-8 w-8 object-contain"
-          />
-        </div>
-        {!collapsed && (
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold text-foreground tracking-tight">HN Enterprises</span>
-            <span className="text-[10px] text-muted-foreground font-medium">CGD Management</span>
-          </div>
+      <SidebarHeader
+        className={cn(
+          "h-12 flex-row items-center justify-center border-b border-sidebar-border/50",
+          collapsed ? "px-2 justify-center" : "px-3 gap-2.5",
         )}
-      </div>
+      >
+        {!collapsed && (
+          <>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+              <Image
+                src="/logo.png"
+                alt="HN Enterprises"
+                width={36}
+                height={36}
+                priority
+                className="h-8 w-8 object-contain"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="truncate text-sm font-semibold text-current tracking-tight">
+                HN Enterprises
+              </span>
+              <span className="truncate text-[10px] text-current opacity-60 font-medium">
+                CGD Management
+              </span>
+            </div>
+          </>
+        )}
+        <SidebarTrigger className="h-8 w-8 shrink-0 text-sidebar-foreground/75 hover:bg-white/10 hover:text-sidebar-foreground" />
+      </SidebarHeader>
 
-      {/* Nav Items */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2.5 space-y-0.5">
-        {visibleTopItems.map((item) => (
-          <NavLink key={item.id} item={item} collapsed={collapsed} active={isItemActive(item)} />
-        ))}
+      <SidebarContent className="px-0 py-1.5">
+        <SidebarGroup className="py-1">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {visibleTopItems.map((item) => (
+                <NavLink
+                  key={item.id}
+                  item={item}
+                  active={isItemActive(item)}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {visibleGroups.map((group) => (
           <NavGroupSection
             key={group.id}
             group={group}
-            collapsed={collapsed}
             isOpen={openGroups[group.id] ?? true}
             onToggle={() => toggleGroup(group.id)}
             isItemActive={isItemActive}
           />
         ))}
-      </nav>
+      </SidebarContent>
 
-      {/* User Profile */}
-      <div className="border-t border-border p-2 shrink-0">
+      <SidebarSeparator className="bg-sidebar-border/50" />
+      <SidebarFooter className="p-2">
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(
-              'w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left outline-none',
-              collapsed && 'justify-center'
+              "w-full flex items-center gap-2.5 px-2 py-2 rounded-sm hover:bg-white/10 transition-colors text-left outline-none text-sidebar-foreground",
+              collapsed && "justify-center",
             )}
           >
             <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              <AvatarFallback className="bg-white/10 text-sidebar-foreground text-xs font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">{user?.fullName}</p>
-                  <p className="text-[10px] text-muted-foreground truncate capitalize">
-                    {user?.role.replace(/_/g, ' ')}
+                  <p className="text-xs font-semibold text-current truncate">
+                    {user?.fullName}
+                  </p>
+                  <p className="text-[10px] text-current opacity-60 truncate capitalize">
+                    {user?.role.replace(/_/g, " ")}
                   </p>
                 </div>
-                <CaretUpDown size={14} className="text-muted-foreground shrink-0" />
+                <CaretUpDown
+                  size={14}
+                  className="text-current opacity-60 shrink-0"
+                />
               </>
             )}
           </DropdownMenuTrigger>
@@ -241,7 +344,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 <div className="flex flex-col gap-0.5">
                   <p className="text-sm font-semibold">{user?.fullName}</p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {user?.role.replace(/_/g, ' ')}
+                    {user?.role.replace(/_/g, " ")}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -253,7 +356,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/change-password" className="flex items-center gap-2 w-full">
+              <Link
+                href="/change-password"
+                className="flex items-center gap-2 w-full"
+              >
                 <Lock size={14} /> Change Password
               </Link>
             </DropdownMenuItem>
@@ -266,7 +372,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </aside>
-  )
+      </SidebarFooter>
+    </ShadcnSidebar>
+  );
 }

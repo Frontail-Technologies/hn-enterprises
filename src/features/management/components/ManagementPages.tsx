@@ -162,10 +162,21 @@ type AttendanceRecord = {
   remarks?: string;
 };
 
+type AttendanceViewMode = "calendar" | "register";
+
 const supervisorOptions = [
   { id: "st-1", name: "Amit Rathore" },
   { id: "st-4", name: "Priya Nair" },
   { id: "st-5", name: "Ramesh Kumar" },
+];
+
+const attendanceRegisterPeople = [
+  { id: "st-1", name: "Amit Rathore", placeOfWork: "Shyam Nagar Block B" },
+  { id: "st-4", name: "Priya Nair", placeOfWork: "Sunrise Enclave" },
+  { id: "st-5", name: "Ramesh Kumar", placeOfWork: "Green City Phase 1" },
+  { id: "st-6", name: "Vikas Saini", placeOfWork: "Commercial Block" },
+  { id: "st-7", name: "Neha Verma", placeOfWork: "Main Store" },
+  { id: "st-8", name: "Group A", placeOfWork: "Shyam Nagar Block A" },
 ];
 
 function buildAttendanceRecords(month: Date): AttendanceRecord[] {
@@ -497,9 +508,8 @@ export function AttendancePage() {
   const [calendarMonth, setCalendarMonth] = useState(() =>
     startOfMonth(new Date()),
   );
-  const [selectedSupervisor, setSelectedSupervisor] = useState(
-    supervisorOptions[0]?.id ?? "",
-  );
+  const [viewMode, setViewMode] = useState<AttendanceViewMode>("register");
+  const [selectedSupervisor, setSelectedSupervisor] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const attendanceRecords = useMemo(
@@ -508,14 +518,19 @@ export function AttendancePage() {
   );
   const visibleRecords = useMemo(
     () =>
-      attendanceRecords.filter(
-        (record) => record.staffId === selectedSupervisor,
-      ),
+      selectedSupervisor === "all"
+        ? attendanceRecords
+        : attendanceRecords.filter(
+            (record) => record.staffId === selectedSupervisor,
+          ),
     [attendanceRecords, selectedSupervisor],
   );
   const selectedSupervisorName =
-    supervisorOptions.find((supervisor) => supervisor.id === selectedSupervisor)
-      ?.name ?? "Supervisor";
+    selectedSupervisor === "all"
+      ? "All Supervisors"
+      : (supervisorOptions.find(
+          (supervisor) => supervisor.id === selectedSupervisor,
+        )?.name ?? "Supervisor");
   const monthDays = useMemo(() => {
     const days = eachDayOfInterval({
       start: startOfMonth(calendarMonth),
@@ -551,6 +566,7 @@ export function AttendancePage() {
           <SelectValue>{selectedSupervisorName}</SelectValue>
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all">All Supervisors</SelectItem>
           {supervisorOptions.map((supervisor) => (
             <SelectItem key={supervisor.id} value={supervisor.id}>
               {supervisor.name}
@@ -589,91 +605,118 @@ export function AttendancePage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">{attendanceControls}</div>
-
-      <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <AttendanceLegend />
-          <p className="text-xs font-medium text-muted-foreground">
-            Showing attendance for{" "}
-            <span className="text-foreground">{selectedSupervisorName}</span>
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+            Attendance
+          </h1>
         </div>
-        <div className="grid grid-cols-7 overflow-hidden rounded-md border border-border/70 bg-secondary text-xs font-semibold text-muted-foreground">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div
-              key={day}
-              className="border-r border-border/70 px-2.5 py-2 last:border-r-0"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-border/70 bg-card">
-          {monthDays.map((day, index) => {
-            if (!day) {
-              return (
-                <div
-                  key={`blank-${index}`}
-                  className="min-h-28 border-b border-r border-border/70 bg-muted/20"
-                />
-              );
-            }
-            const dayRecord = visibleRecords.find((record) =>
-              isSameDay(parseISO(record.date), day),
-            );
-            const status = dayRecord?.status ?? "Not Marked";
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <UnderlineTabs
+          items={[
+            { id: "register", label: "Register View" },
+            { id: "calendar", label: "Calendar View" },
+          ]}
+          active={viewMode}
+          onChange={(value) => setViewMode(value as AttendanceViewMode)}
+        />
+        {attendanceControls}
+      </div>
 
-            return (
-              <button
-                key={day.toISOString()}
-                type="button"
-                onClick={() => {
-                  setSelectedDate(day);
-                  setDrawerOpen(true);
-                }}
-                className={cn(
-                  "min-h-28 border-b border-r border-border/70 p-2.5 text-left transition-colors hover:bg-accent/45",
-                  attendanceCellClass(status),
-                )}
+      {viewMode === "register" ? (
+        <AttendanceRegister
+          month={calendarMonth}
+          records={attendanceRecords}
+          selectedSupervisor={selectedSupervisor}
+        />
+      ) : null}
+
+      {viewMode === "calendar" ? (
+        <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <AttendanceLegend />
+            <p className="text-xs font-medium text-muted-foreground">
+              Showing attendance for{" "}
+              <span className="text-foreground">{selectedSupervisorName}</span>
+            </p>
+          </div>
+          <div className="grid grid-cols-7 overflow-hidden rounded-md border border-border/70 bg-secondary text-xs font-semibold text-muted-foreground">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div
+                key={day}
+                className="border-r border-border/70 px-2.5 py-2 last:border-r-0"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    {format(day, "d")}
-                  </span>
-                  <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
-                    {status}
-                  </span>
-                </div>
-                {dayRecord ? (
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    {dayRecord.checkInTime ? (
-                      <p className="flex items-center gap-1">
-                        <ClockIcon size={13} />
-                        {dayRecord.checkInTime}
-                        {dayRecord.checkOutTime
-                          ? ` - ${dayRecord.checkOutTime}`
-                          : ""}
-                      </p>
-                    ) : null}
-                    {dayRecord.latitude && dayRecord.longitude ? (
-                      <p className="flex items-center gap-1 text-foreground">
-                        <MapPinIcon size={13} className="text-primary" />
-                        Location captured
-                      </p>
-                    ) : null}
-                    <p className="line-clamp-2">{dayRecord.staffName}</p>
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-border/70 bg-card">
+            {monthDays.map((day, index) => {
+              if (!day) {
+                return (
+                  <div
+                    key={`blank-${index}`}
+                    className="min-h-28 border-b border-r border-border/70 bg-muted/20"
+                  />
+                );
+              }
+              const dayRecord = visibleRecords.find((record) =>
+                isSameDay(parseISO(record.date), day),
+              );
+              const status = dayRecord?.status ?? "Not Marked";
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(day);
+                    setDrawerOpen(true);
+                  }}
+                  className={cn(
+                    "min-h-28 border-b border-r border-border/70 p-2.5 text-left transition-colors hover:bg-accent/45",
+                    attendanceCellClass(status),
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {format(day, "d")}
+                    </span>
+                    <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                      {status}
+                    </span>
                   </div>
-                ) : (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Click to mark
-                  </p>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                  {dayRecord ? (
+                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      {dayRecord.checkInTime ? (
+                        <p className="flex items-center gap-1">
+                          <ClockIcon size={13} />
+                          {dayRecord.checkInTime}
+                          {dayRecord.checkOutTime
+                            ? ` - ${dayRecord.checkOutTime}`
+                            : ""}
+                        </p>
+                      ) : null}
+                      {dayRecord.latitude && dayRecord.longitude ? (
+                        <p className="flex items-center gap-1 text-foreground">
+                          <MapPinIcon size={13} className="text-primary" />
+                          Location captured
+                        </p>
+                      ) : null}
+                      <p className="line-clamp-2">{dayRecord.staffName}</p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Click to mark
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <AttendanceDrawer
         key={`${selectedDate ? format(selectedDate, "yyyy-MM-dd") : "none"}-${selectedSupervisor}`}
@@ -899,6 +942,12 @@ export function ReportsPage() {
             Generated reports, saved exports and scheduled operational summaries
             will be configured here.
           </p>
+          <Link
+            href="/reports/templates"
+            className={buttonVariants({ className: "mt-5" })}
+          >
+            Open Templates
+          </Link>
         </div>
       </div>
     </div>
@@ -1074,7 +1123,6 @@ export function MastersPage() {
     <PageShell
       title="Masters"
       subtitle="Manage system configuration values."
-      hideTitle
       tabs={
         <MasterTabs
           activeTab={activeTab}
@@ -1225,6 +1273,288 @@ function AttendanceLegend() {
       ))}
     </div>
   );
+}
+
+function AttendanceRegister({
+  month,
+  records,
+  selectedSupervisor,
+}: {
+  month: Date;
+  records: AttendanceRecord[];
+  selectedSupervisor: string;
+}) {
+  const days = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: startOfMonth(month),
+        end: endOfMonth(month),
+      }),
+    [month],
+  );
+  const people = useMemo(
+    () =>
+      attendanceRegisterPeople.filter(
+        (person) =>
+          selectedSupervisor === "all" || person.id === selectedSupervisor,
+      ),
+    [selectedSupervisor],
+  );
+  const rows = useMemo(
+    () =>
+      people.map((person, index) => {
+        const cells = days.map((day) =>
+          getAttendanceRegisterCell(person.id, day, records),
+        );
+        const presentDays = cells.filter((cell) => cell.payable).length;
+        const absentDays = cells.filter(
+          (cell) => cell.status === "Absent",
+        ).length;
+        const holidays = cells.filter(
+          (cell) => cell.status === "Holiday",
+        ).length;
+
+        return {
+          person,
+          serial: index + 1,
+          cells,
+          presentDays,
+          absentDays,
+          holidays,
+          payableDays: presentDays + holidays,
+        };
+      }),
+    [days, people, records],
+  );
+
+  return (
+    <section className="rounded-lg border border-border/70 bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            Attendance Register
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Muster roll style view for {format(month, "MMMM yyyy")}
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm">
+          <DownloadSimpleIcon size={14} />
+          Export Register
+        </Button>
+      </div>
+      <div className="overflow-y-auto">
+        <div className="flex min-w-0">
+          <div className="shrink-0 border-r border-border/70">
+            <table className="w-max border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr>
+                  <AttendanceHeaderCell className="w-16 min-w-16">
+                    Sl No.
+                  </AttendanceHeaderCell>
+                  <AttendanceHeaderCell className="w-48 min-w-48">
+                    Name
+                  </AttendanceHeaderCell>
+                  <AttendanceHeaderCell className="w-44 min-w-44">
+                    Place of Work
+                  </AttendanceHeaderCell>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.person.id} className="hover:bg-muted/25">
+                    <AttendanceBodyCell className="text-center font-medium">
+                      {row.serial}
+                    </AttendanceBodyCell>
+                    <AttendanceBodyCell className="font-medium text-foreground">
+                      {row.person.name}
+                    </AttendanceBodyCell>
+                    <AttendanceBodyCell>
+                      {row.person.placeOfWork}
+                    </AttendanceBodyCell>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <table className="min-w-max border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr>
+                  {days.map((day) => (
+                    <AttendanceHeaderCell
+                      key={day.toISOString()}
+                      className="w-16 min-w-16 text-center"
+                    >
+                      <span className="block text-[11px]">
+                        {format(day, "EEE")}
+                      </span>
+                      <span className="block text-sm text-foreground">
+                        {format(day, "d")}
+                      </span>
+                    </AttendanceHeaderCell>
+                  ))}
+                  <AttendanceHeaderCell className="w-24 min-w-24 text-center">
+                    Present
+                  </AttendanceHeaderCell>
+                  <AttendanceHeaderCell className="w-24 min-w-24 text-center">
+                    Absent
+                  </AttendanceHeaderCell>
+                  <AttendanceHeaderCell className="w-24 min-w-24 text-center">
+                    Holiday
+                  </AttendanceHeaderCell>
+                  <AttendanceHeaderCell className="w-28 min-w-28 text-center">
+                    Payable
+                  </AttendanceHeaderCell>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.person.id} className="hover:bg-muted/25">
+                    {row.cells.map((cell) => (
+                      <AttendanceBodyCell
+                        key={cell.date}
+                        className={cn(
+                          "text-center font-semibold",
+                          attendanceRegisterCellClass(cell.status),
+                        )}
+                        title={cell.status}
+                      >
+                        {cell.label}
+                      </AttendanceBodyCell>
+                    ))}
+                    <AttendanceBodyCell className="text-center font-semibold text-emerald-700">
+                      {row.presentDays}
+                    </AttendanceBodyCell>
+                    <AttendanceBodyCell className="text-center font-semibold text-red-700">
+                      {row.absentDays}
+                    </AttendanceBodyCell>
+                    <AttendanceBodyCell className="text-center font-semibold text-muted-foreground">
+                      {row.holidays}
+                    </AttendanceBodyCell>
+                    <AttendanceBodyCell className="text-center font-semibold text-foreground">
+                      {row.payableDays}
+                    </AttendanceBodyCell>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AttendanceHeaderCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={cn(
+        "sticky top-0 z-10 h-12 border-b border-r border-border/70 bg-secondary/90 px-2 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+
+function AttendanceBodyCell({
+  children,
+  className,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <td
+      title={title}
+      className={cn(
+        "h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground",
+        className,
+      )}
+    >
+      {children}
+    </td>
+  );
+}
+
+function getAttendanceRegisterCell(
+  staffId: string,
+  day: Date,
+  records: AttendanceRecord[],
+) {
+  const date = format(day, "yyyy-MM-dd");
+  const record = records.find(
+    (item) => item.staffId === staffId && item.date === date,
+  );
+  const status = record?.status ?? getGeneratedAttendanceStatus(staffId, day);
+
+  return {
+    date,
+    status,
+    label: attendanceRegisterLabel(status),
+    payable: status === "Present" || status === "Late" || status === "Half Day",
+  };
+}
+
+function getGeneratedAttendanceStatus(
+  staffId: string,
+  day: Date,
+): AttendanceStatus | "Holiday" {
+  const dayNumber = Number(format(day, "d"));
+  if (getDay(day) === 0) return "Holiday";
+  if (staffId === "st-5" && dayNumber % 11 === 0) return "Absent";
+  if (staffId === "st-4" && dayNumber % 13 === 0) return "Leave";
+  if (staffId === "st-6" && dayNumber % 9 === 0) return "Late";
+  if (staffId === "st-8" && dayNumber % 12 === 0) return "Half Day";
+  return "Present";
+}
+
+function attendanceRegisterLabel(status: AttendanceStatus | "Holiday") {
+  switch (status) {
+    case "Present":
+      return "P";
+    case "Absent":
+      return "A";
+    case "Late":
+      return "L";
+    case "Half Day":
+      return "HD";
+    case "Leave":
+      return "LV";
+    case "Holiday":
+      return "H";
+    default:
+      return "-";
+  }
+}
+
+function attendanceRegisterCellClass(status: AttendanceStatus | "Holiday") {
+  switch (status) {
+    case "Present":
+      return "bg-emerald-50 text-emerald-700";
+    case "Absent":
+      return "bg-red-50 text-red-700";
+    case "Late":
+      return "bg-orange-50 text-orange-700";
+    case "Half Day":
+      return "bg-amber-50 text-amber-700";
+    case "Leave":
+      return "bg-sky-50 text-sky-700";
+    case "Holiday":
+      return "bg-muted/40 text-muted-foreground";
+    default:
+      return "text-muted-foreground";
+  }
 }
 
 function AttendanceDrawer({
@@ -1465,6 +1795,36 @@ function PageShell({
   );
 }
 
+function UnderlineTabs({
+  items,
+  active,
+  onChange,
+}: {
+  items: Array<{ id: string; label: string }>;
+  active: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className={cn(
+            "h-9 w-fit shrink-0 border-b-2 px-0.5 text-sm font-medium transition-colors",
+            active === item.id
+              ? "border-b-primary text-primary font-semibold"
+              : "border-b-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function MasterTabs({
   activeTab,
   onChange,
@@ -1473,17 +1833,17 @@ function MasterTabs({
   onChange: (tab: MasterTabId) => void;
 }) {
   return (
-    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
+    <div className="flex min-w-0 gap-6 overflow-x-auto">
       {masterTabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
           className={[
-            "h-10 w-fit shrink-0 border-b-2 border-transparent px-0.5 text-sm font-medium transition-colors",
+            "h-10 w-fit shrink-0 border-b-2 px-0.5 text-sm font-medium transition-colors",
             activeTab === tab.id
-              ? "border-primary text-primary font-semibold"
-              : "text-muted-foreground hover:text-foreground",
+              ? "border-b-primary text-primary font-semibold"
+              : "border-b-transparent text-muted-foreground hover:text-foreground",
           ].join(" ")}
         >
           {tab.label}
