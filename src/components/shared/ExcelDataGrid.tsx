@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,8 @@ export function ExcelDataGrid<T extends { id: string }>({
   maxHeightClassName = "max-h-[68vh]",
 }: ExcelDataGridProps<T>) {
   const [filters, setFilters] = useState<ActiveFilters>({});
-  const stickyOffsets = useMemo(() => getStickyOffsets(columns), [columns]);
+  const fixedColumns = useMemo(() => columns.filter((column) => column.sticky), [columns]);
+  const scrollColumns = useMemo(() => columns.filter((column) => !column.sticky), [columns]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) =>
@@ -52,87 +53,131 @@ export function ExcelDataGrid<T extends { id: string }>({
       <div className="border-b border-border/70 px-3 py-2 text-xs text-muted-foreground">
         Showing {filteredRows.length} of {rows.length} records
       </div>
-      <div className={cn("overflow-auto", maxHeightClassName)}>
-        <table className="min-w-max border-separate border-spacing-0 text-sm">
-          <thead>
-            <tr>
+      <div className={cn("overflow-y-auto", maxHeightClassName)}>
+        <div className="flex min-w-0">
+          {fixedColumns.length ? (
+            <div className="shrink-0 border-r border-border/70">
+              <ExcelTable
+                columns={fixedColumns}
+                rows={filteredRows}
+                allRows={rows}
+                filters={filters}
+                setFilters={setFilters}
+                emptyTitle={emptyTitle}
+                emptyColSpan={columns.length}
+                fixed
+                hideEmptyState
+              />
+            </div>
+          ) : null}
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <ExcelTable
+              columns={scrollColumns}
+              rows={filteredRows}
+              allRows={rows}
+              filters={filters}
+              setFilters={setFilters}
+              emptyTitle={emptyTitle}
+              emptyColSpan={Math.max(scrollColumns.length, 1)}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExcelTable<T extends { id: string }>({
+  columns,
+  rows,
+  allRows,
+  filters,
+  setFilters,
+  emptyTitle,
+  emptyColSpan,
+  fixed,
+  hideEmptyState,
+}: {
+  columns: ExcelColumn<T>[];
+  rows: T[];
+  allRows: T[];
+  filters: ActiveFilters;
+  setFilters: Dispatch<SetStateAction<ActiveFilters>>;
+  emptyTitle: string;
+  emptyColSpan: number;
+  fixed?: boolean;
+  hideEmptyState?: boolean;
+}) {
+  return (
+    <table className={cn("border-separate border-spacing-0 text-sm", fixed ? "w-max" : "min-w-max")}>
+      <thead>
+        <tr>
+          {columns.map((column) => {
+            const width = column.width ?? 140;
+            const isFiltered = Boolean(filters[column.key]?.length);
+
+            return (
+              <th
+                key={column.key}
+                style={{ width, minWidth: width }}
+                className="sticky top-0 z-20 h-12 border-b border-r border-border/70 bg-secondary/90 px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="leading-snug">{column.label}</span>
+                  <ColumnFilter
+                    column={column}
+                    rows={allRows}
+                    selected={filters[column.key] ?? []}
+                    active={isFiltered}
+                    onApply={(values) =>
+                      setFilters((current) => ({
+                        ...current,
+                        [column.key]: values,
+                      }))
+                    }
+                  />
+                </div>
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length ? (
+          rows.map((row) => (
+            <tr key={row.id} className="bg-card hover:bg-muted/30">
               {columns.map((column) => {
                 const width = column.width ?? 140;
-                const isFiltered = Boolean(filters[column.key]?.length);
+                const value = formatCellValue(column.getValue(row));
+
                 return (
-                  <th
+                  <td
                     key={column.key}
-                    style={{
-                      width,
-                      minWidth: width,
-                      left: column.sticky ? stickyOffsets[column.key] : undefined,
-                    }}
+                    style={{ width, minWidth: width }}
                     className={cn(
-                      "sticky top-0 z-20 border-b border-r border-border/70 bg-secondary/90 px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground",
-                      column.sticky && "z-30 bg-secondary",
+                      "h-10 border-b border-r border-border/55 px-2 py-2 text-sm font-normal text-foreground",
+                      fixed && "font-medium",
                     )}
+                    title={value}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="leading-snug">{column.label}</span>
-                      <ColumnFilter
-                        column={column}
-                        rows={rows}
-                        selected={filters[column.key] ?? []}
-                        active={isFiltered}
-                        onApply={(values) =>
-                          setFilters((current) => ({
-                            ...current,
-                            [column.key]: values,
-                          }))
-                        }
-                      />
-                    </div>
-                  </th>
+                    <span className="block max-w-full truncate">{value}</span>
+                  </td>
                 );
               })}
             </tr>
-          </thead>
-          <tbody>
-            {filteredRows.length ? (
-              filteredRows.map((row) => (
-                <tr key={row.id} className="bg-card hover:bg-muted/30">
-                  {columns.map((column) => {
-                    const width = column.width ?? 140;
-                    const value = formatCellValue(column.getValue(row));
-                    return (
-                      <td
-                        key={column.key}
-                        style={{
-                          width,
-                          minWidth: width,
-                          left: column.sticky ? stickyOffsets[column.key] : undefined,
-                        }}
-                        className={cn(
-                          "border-b border-r border-border/55 px-2 py-2 text-sm font-normal text-foreground",
-                          column.sticky && "sticky z-10 bg-card font-medium",
-                        )}
-                        title={value}
-                      >
-                        <span className="block max-w-full truncate">{value}</span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-10 text-center text-sm text-muted-foreground"
-                >
-                  {emptyTitle}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          ))
+        ) : hideEmptyState ? null : (
+          <tr>
+            <td
+              colSpan={emptyColSpan}
+              className="px-3 py-10 text-center text-sm text-muted-foreground"
+            >
+              {emptyTitle}
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
   );
 }
 
@@ -233,19 +278,6 @@ function ColumnFilter<T extends { id: string }>({
       </PopoverContent>
     </Popover>
   );
-}
-
-function getStickyOffsets<T extends { id: string }>(columns: ExcelColumn<T>[]) {
-  let left = 0;
-  const offsets: Record<string, number> = {};
-
-  columns.forEach((column) => {
-    if (!column.sticky) return;
-    offsets[column.key] = left;
-    left += column.width ?? 140;
-  });
-
-  return offsets;
 }
 
 function formatCellValue(value: string | number | boolean | null | undefined) {

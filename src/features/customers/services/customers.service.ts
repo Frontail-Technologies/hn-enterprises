@@ -216,11 +216,11 @@ export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[]
 ];
 
 const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
-  { key: "customerName", label: "Customer Name", group: "Customer", width: 190, sticky: true },
-  { key: "trBpNo", label: "BP / TR No.", group: "Customer", width: 150, sticky: true },
-  { key: "reportNoGi", label: "Report No. - GI", group: "Reports", width: 150 },
-  { key: "reportNoGc", label: "Report No. - GC", group: "Reports", width: 150 },
-  { key: "reportNoConversion", label: "Report No. - Conversion", group: "Reports", width: 180 },
+  { key: "reportNoGi", label: "Report No-GI", group: "Reports", width: 150, sticky: true },
+  { key: "reportNoGc", label: "Report No-GC", group: "Reports", width: 150, sticky: true },
+  { key: "reportNoConversion", label: "Report No-Conversion", group: "Reports", width: 180, sticky: true },
+  { key: "trBpNo", label: "TR No.", group: "Customer", width: 150, sticky: true },
+  { key: "customerName", label: "Customer Name", group: "Customer", width: 190 },
   { key: "mobileNo", label: "Mobile No.", group: "Customer", width: 130 },
   { key: "fullAddress", label: "Full Address", group: "Customer", width: 260 },
   { key: "projectName", label: "Project", group: "Project", width: 190 },
