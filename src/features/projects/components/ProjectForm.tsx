@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { FormField } from "@/components/shared/FormField";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import {
@@ -85,30 +85,30 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       <form className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-5">
         <section id="project-details" className="scroll-mt-12">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Field label="Project Name">
+            <FormField label="Project Name">
               <Input defaultValue={values.name} placeholder="Shyam Nagar CGD Project" />
-            </Field>
-            <Field label="Project Code / Contract ID">
+            </FormField>
+            <FormField label="Project Code / Contract ID">
               <Input defaultValue={values.code} placeholder="CGD-SN-2025" />
-            </Field>
-            <Field label="Client">
+            </FormField>
+            <FormField label="Client">
               <Input defaultValue={values.client} placeholder="Client name" />
-            </Field>
-            <Field label="Consultant">
+            </FormField>
+            <FormField label="Consultant">
               <Input defaultValue={values.consultant} placeholder="Consultant name" />
-            </Field>
-            <Field label="Contractor">
+            </FormField>
+            <FormField label="Contractor">
               <Input defaultValue={values.contractor} placeholder="Contractor name" />
-            </Field>
-            <Field label="Project Type">
+            </FormField>
+            <FormField label="Project Type">
               <Input defaultValue={values.projectType} placeholder="CGD Network" />
-            </Field>
+            </FormField>
           </div>
         </section>
 
         <section id="contract-dates" className="scroll-mt-12">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Field label="City">
+            <FormField label="City">
               <Select defaultValue={values.city || undefined}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select city" />
@@ -121,11 +121,11 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Area / Location">
+            </FormField>
+            <FormField label="Area / Location">
               <Input defaultValue={values.area} placeholder="Area or site location" />
-            </Field>
-            <Field label="Status">
+            </FormField>
+            <FormField label="Status">
               <Select defaultValue={values.status}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -138,30 +138,30 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Start Date">
+            </FormField>
+            <FormField label="Start Date">
               <DatePicker value={startDate} onChange={setStartDate} />
-            </Field>
-            <Field label="Planned End Date">
+            </FormField>
+            <FormField label="Planned End Date">
               <DatePicker value={plannedEndDate} onChange={setPlannedEndDate} />
-            </Field>
-            <Field label="Contract Value">
+            </FormField>
+            <FormField label="Contract Value">
               <Input defaultValue={values.contractValue} placeholder="Rs 12.50 Cr" />
-            </Field>
-            <Field label="Assigned Supervisor / Project Manager">
+            </FormField>
+            <FormField label="Assigned Supervisor / Project Manager">
               <Input defaultValue={values.assignedManager} placeholder="Manager name" />
-            </Field>
+            </FormField>
           </div>
         </section>
 
         <section id="description" className="scroll-mt-12">
-          <Field label="Description">
+          <FormField label="Description">
             <Textarea
               defaultValue={values.description}
               placeholder="Brief project scope and notes"
               className="min-h-24"
             />
-          </Field>
+          </FormField>
         </section>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
@@ -183,17 +183,3 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold text-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}

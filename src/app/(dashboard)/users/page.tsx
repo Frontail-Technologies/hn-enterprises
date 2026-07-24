@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { UsersRolesPage } from "@/features/management/components/ManagementPages";
+import { UsersRolesPage } from "@/features/management/components/UsersRolesPage";
 
 export const metadata: Metadata = { title: "Users & Roles" };
 

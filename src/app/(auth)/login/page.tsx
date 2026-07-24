@@ -1,16 +1,23 @@
-import type { Metadata } from 'next'
-import Image from 'next/image'
-import { LoginForm } from '@/features/auth/components/LoginForm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { Metadata } from "next";
+import Image from "next/image";
+import { LoginForm } from "@/features/auth/components/LoginForm";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: 'Sign In',
-  description: 'Sign in to your HN Enterprises account to manage CGD and construction projects.',
-}
+  title: "Sign In",
+  description:
+    "Sign in to your HN Enterprises account to manage CGD and construction projects.",
+};
 
 export default function LoginPage() {
   return (
-    <Card className="w-full max-w-sm shadow-xl mx-auto border-border">
+    <Card className="w-full max-w-sm  mx-auto border-border">
       <CardHeader className="space-y-4 flex flex-col items-center">
         <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-xl bg-background">
           <Image
@@ -31,5 +38,5 @@ export default function LoginPage() {
         <LoginForm />
       </CardContent>
     </Card>
-  )
+  );
 }

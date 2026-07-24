@@ -2,31 +2,31 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { FileTextIcon, ImageSquareIcon, LinkIcon } from "@phosphor-icons/react/dist/ssr";
 import { buttonVariants } from "@/components/ui/button";
+import { KeyValueGrid, type KeyValueItem } from "@/components/shared/KeyValueGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { customerGiDetails, getCustomerDisplay } from "../services/customers.service";
 import type { Customer } from "../types/customer.types";
-import { CustomerInfoLine } from "./CustomerInfoLine";
 
 export function CustomerGiDetails({ customer }: { customer: Customer }) {
   const giDetails = customerGiDetails;
   const display = getCustomerDisplay(customer);
-  const pipelineItems: [string, string][] = [
-    ["Inlet", giDetails.inlet],
-    ["Outlet", giDetails.outlet],
-    ["Total GI", giDetails.totalGi],
-    ["Extra GI", giDetails.extraGi],
-    ["Pipe Sizes", giDetails.pipeSizes],
-    ["Installation Date", formatDate(giDetails.installationDate)],
+  const pipelineItems: KeyValueItem[] = [
+    { label: "Inlet", value: giDetails.inlet },
+    { label: "Outlet", value: giDetails.outlet },
+    { label: "Total GI", value: giDetails.totalGi },
+    { label: "Extra GI", value: giDetails.extraGi },
+    { label: "Pipe Sizes", value: giDetails.pipeSizes },
+    { label: "Installation Date", value: formatDate(giDetails.installationDate) },
   ];
 
-  const materialItems: [string, string][] = [
-    ["Valves", giDetails.valves],
-    ["Regulators", giDetails.regulators],
-    ["Clamps", giDetails.clamps],
-    ["Elbows", giDetails.elbows],
-    ["Tees", giDetails.tees],
-    ["Nipples", giDetails.nipples],
+  const materialItems: KeyValueItem[] = [
+    { label: "Valves", value: giDetails.valves },
+    { label: "Regulators", value: giDetails.regulators },
+    { label: "Clamps", value: giDetails.clamps },
+    { label: "Elbows", value: giDetails.elbows },
+    { label: "Tees", value: giDetails.tees },
+    { label: "Nipples", value: giDetails.nipples },
   ];
 
   return (
@@ -47,10 +47,10 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
       <div className="space-y-4">
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="GI Pipeline">
-            <InfoGrid items={pipelineItems} />
+            <KeyValueGrid items={pipelineItems} />
           </SectionCard>
           <SectionCard title="Materials">
-            <InfoGrid items={materialItems} />
+            <KeyValueGrid items={materialItems} />
           </SectionCard>
         </div>
 
@@ -77,16 +77,6 @@ export function CustomerGiDetails({ customer }: { customer: Customer }) {
           </Link>
         </SectionCard>
       </div>
-    </div>
-  );
-}
-
-function InfoGrid({ items }: { items: [string, string][] }) {
-  return (
-    <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
-      {items.map(([label, value]) => (
-        <CustomerInfoLine key={label} label={label} value={value} />
-      ))}
     </div>
   );
 }

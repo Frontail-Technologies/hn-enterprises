@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MastersPage } from "@/features/management/components/ManagementPages";
+import { MastersPage } from "@/features/management/components/MastersPage";
 
 export const metadata: Metadata = { title: "Masters" };
 

@@ -23,6 +23,7 @@ import {
   DatabaseIcon as Database,
   GearIcon as Gear,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
+  MegaphoneIcon as Megaphone,
   SignOutIcon as SignOut,
   UserIcon as User,
   LockIcon as Lock,
@@ -90,6 +91,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Database,
   Gear,
   ClockCounterClockwise,
+  Megaphone,
 };
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {

@@ -1,10 +1,12 @@
 import { customers, getCustomerById } from "@/features/customers/services/customers.service";
-import { gcChecklistItems, gcEvidenceItems, getGcUploadById } from "@/features/gc-uploads/services/gc-uploads.service";
-import { getJmrById } from "@/features/jmr/services/jmr.service";
 import {
+  gcChecklistItems,
+  gcEvidenceItems,
+  getGcUploadById,
+  getJmrById,
   getPressureTestById,
   pressureReadings,
-} from "@/features/testing-pressure/services/testing-pressure.service";
+} from "../data/mock-report-sources";
 import type {
   PdfTableRow,
   ReportTemplateData,

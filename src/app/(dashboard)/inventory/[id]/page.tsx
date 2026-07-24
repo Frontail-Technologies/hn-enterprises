@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { InventoryDetailPage } from "@/features/commercial/components/CommercialPages";
+import { InventoryDetailPage } from "@/features/commercial/components/InventoryDetailPage";
 
 export const metadata: Metadata = { title: "Material Detail" };
 

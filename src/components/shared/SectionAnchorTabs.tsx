@@ -14,7 +14,10 @@ interface SectionAnchorTabsProps {
   className?: string;
 }
 
-export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) {
+export function SectionAnchorTabs({
+  items,
+  className,
+}: SectionAnchorTabsProps) {
   const [activeHref, setActiveHref] = useState(items[0]?.href ?? "");
 
   useEffect(() => {
@@ -31,7 +34,7 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
   return (
     <nav
       className={cn(
-        "sticky top-[0px] z-40 -mx-1 overflow-x-auto border-b border-border/70 bg-background px-1 backdrop-blur",
+        "sticky top-[0px] z-40 -mx-1 overflow-x-auto  bg-background px-1 backdrop-blur",
         className,
       )}
       aria-label="Section navigation"

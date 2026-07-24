@@ -7,7 +7,6 @@ import { useSearchParams } from "next/navigation";
 import { ImageSquareIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,10 +35,12 @@ import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { DetailHeader } from "@/components/shared/DetailHeader";
 import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
+import { FormField } from "@/components/shared/FormField";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
+import { InfoRow } from "@/components/shared/InfoRow";
 import { KeyValueGrid, type KeyValueItem } from "@/components/shared/KeyValueGrid";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
@@ -70,7 +71,6 @@ import type {
   LmcPipeSizeRecord,
   LmcPipelineWork,
 } from "../types/customer.types";
-import { CustomerInfoLine } from "./CustomerInfoLine";
 
 type CustomerApprovalRow = {
   id: string;
@@ -112,9 +112,9 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         }
         meta={
           <>
-            <CustomerInfoLine label="TR/BP No." value={connection.trBpNo} />
-            <CustomerInfoLine label="Mobile" value={connection.mobileNo} />
-            <CustomerInfoLine label="Connection" value={connection.connectionType} />
+            <InfoRow label="TR/BP No." value={connection.trBpNo} />
+            <InfoRow label="Mobile" value={connection.mobileNo} />
+            <InfoRow label="Connection" value={connection.connectionType} />
           </>
         }
         actions={
@@ -484,7 +484,7 @@ function LmcPipelineDetail({
                   onChange={(next) => updatePipeRecord({ ...editingPipe, ...next })}
                 />
                 <div className="mt-4">
-                  <Field label="Evidence Images">
+                  <FormField label="Evidence Images">
                     <ImageUploadPreview
                       key={editingPipe.id}
                       className="min-w-0"
@@ -496,7 +496,7 @@ function LmcPipelineDetail({
                         })
                       }
                     />
-                  </Field>
+                  </FormField>
                 </div>
               </div>
               <SheetFooter className="bg-card/95 px-5 py-4">
@@ -579,23 +579,23 @@ function MasterField<T extends Record<string, string | boolean>>({
 }) {
   if (field.input === "textarea") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <Textarea value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} rows={3} />
-      </Field>
+      </FormField>
     );
   }
 
   if (field.input === "date") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <DatePicker value={String(value ?? "")} onChange={onChange} className="w-full min-w-0" />
-      </Field>
+      </FormField>
     );
   }
 
   if (field.input === "select") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <Select value={String(value || "") || undefined} onValueChange={(next) => onChange(next ?? "")}>
           <SelectTrigger className="w-full min-w-0">
             <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
@@ -608,35 +608,21 @@ function MasterField<T extends Record<string, string | boolean>>({
             ))}
           </SelectContent>
         </Select>
-      </Field>
+      </FormField>
     );
   }
 
   return (
-    <Field label={field.label}>
+    <FormField label={field.label}>
       <Input
         type={field.input === "number" ? "number" : "text"}
         value={String(value ?? "")}
         onChange={(event) => onChange(event.target.value)}
       />
-    </Field>
+    </FormField>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 function itemsFromFields<T extends Record<string, string | boolean>>(
   fields: { key: keyof T; label: string; input?: string }[],

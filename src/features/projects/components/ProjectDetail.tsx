@@ -15,6 +15,7 @@ import {
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import {
   Dialog,
@@ -25,7 +26,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { FormField } from "@/components/shared/FormField";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { LocationPicker } from "@/components/shared/LocationPicker";
 import { LocationPreview } from "@/components/shared/LocationPreview";
@@ -905,14 +906,14 @@ function TargetsDialog({
               }
             />
           ))}
-          <Field label="Change Reason">
+          <FormField label="Change Reason">
             <Textarea
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
               placeholder="Required before saving"
               className="min-h-20"
             />
-          </Field>
+          </FormField>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1027,7 +1028,7 @@ function SiteDialog({
                 setDraft((current) => ({ ...current, endDate: value }))
               }
             />
-            <Field label="Status">
+            <FormField label="Status">
               <Select
                 value={draft.status}
                 onValueChange={(value) =>
@@ -1048,8 +1049,8 @@ function SiteDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Full Address">
+            </FormField>
+            <FormField label="Full Address">
               <Textarea
                 value={draft.fullAddress}
                 onChange={(event) =>
@@ -1059,8 +1060,8 @@ function SiteDialog({
                   }))
                 }
               />
-            </Field>
-            <Field label="Remarks">
+            </FormField>
+            <FormField label="Remarks">
               <Textarea
                 value={draft.remarks}
                 onChange={(event) =>
@@ -1070,9 +1071,9 @@ function SiteDialog({
                   }))
                 }
               />
-            </Field>
+            </FormField>
             <div className="md:col-span-2">
-              <Field label="Pick on Map">
+              <FormField label="Pick on Map">
                 <LocationPicker
                   latitude={draft.latitude}
                   longitude={draft.longitude}
@@ -1085,7 +1086,7 @@ function SiteDialog({
                     }))
                   }
                 />
-              </Field>
+              </FormField>
             </div>
           </div>
         </div>
@@ -1193,7 +1194,7 @@ function DocumentDialog({
               setDraft((current) => ({ ...current, number: value }))
             }
           />
-          <Field label="Category">
+          <FormField label="Category">
             <Select
               value={draft.category}
               onValueChange={(value) =>
@@ -1214,7 +1215,7 @@ function DocumentDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
+          </FormField>
           <CompactInput
             label="Amount"
             value={draft.amount}
@@ -1244,7 +1245,7 @@ function DocumentDialog({
             value=""
             onChange={() => undefined}
           />
-          <Field label="Remarks">
+          <FormField label="Remarks">
             <Textarea
               value={draft.remarks}
               onChange={(event) =>
@@ -1254,7 +1255,7 @@ function DocumentDialog({
                 }))
               }
             />
-          </Field>
+          </FormField>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1299,7 +1300,7 @@ function TeamDialog({
               setDraft((current) => ({ ...current, name: value }))
             }
           />
-          <Field label="Role">
+          <FormField label="Role">
             <Select
               value={draft.role || undefined}
               onValueChange={(value) =>
@@ -1317,7 +1318,7 @@ function TeamDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
+          </FormField>
           <CompactInput
             label="Site / Area"
             value={draft.siteArea}
@@ -1333,7 +1334,7 @@ function TeamDialog({
               setDraft((current) => ({ ...current, assignmentDate: value }))
             }
           />
-          <Field label="Status">
+          <FormField label="Status">
             <Select
               value={draft.status}
               onValueChange={(value) =>
@@ -1354,7 +1355,7 @@ function TeamDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
+          </FormField>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1376,36 +1377,7 @@ function InfoGrid({ items }: { items: string[][] }) {
   );
 }
 
-function ActionButton({
-  label,
-  icon,
-}: {
-  label: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <ActionTooltip label={label}>
-      <Button variant="ghost" size="icon-xs" aria-label={label}>
-        {icon}
-      </Button>
-    </ActionTooltip>
-  );
-}
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs font-semibold text-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 function CompactInput({
   label,
@@ -1420,20 +1392,20 @@ function CompactInput({
 }) {
   if (type === "date") {
     return (
-      <Field label={label}>
+      <FormField label={label}>
         <DatePicker value={value} onChange={onChange} />
-      </Field>
+      </FormField>
     );
   }
 
   return (
-    <Field label={label}>
+    <FormField label={label}>
       <Input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </Field>
+    </FormField>
   );
 }
 

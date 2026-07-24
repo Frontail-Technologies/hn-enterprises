@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { StaffEditPage } from "@/features/management/components/ManagementPages";
+import { StaffEditPage } from "@/features/management/components/StaffEditPage";
 
 type PageProps = {
   params: Promise<{ id: string }>;

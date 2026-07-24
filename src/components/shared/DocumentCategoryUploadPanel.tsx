@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/shared/FormField";
 import {
   Select,
   SelectContent,
@@ -281,19 +281,19 @@ function DocumentUploadDialog({
         </DialogHeader>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label="Type">
+          <FormField label="Type">
             <Input
               value={draft.type}
               onChange={(event) => onDraftChange((current) => ({ ...current, type: event.target.value }))}
             />
-          </Field>
-          <Field label="Reference Number">
+          </FormField>
+          <FormField label="Reference Number">
             <Input
               value={draft.referenceNumber}
               onChange={(event) => onDraftChange((current) => ({ ...current, referenceNumber: event.target.value }))}
             />
-          </Field>
-          <Field label="Category">
+          </FormField>
+          <FormField label="Category">
             <Select
               value={draft.category || undefined}
               onValueChange={(category) =>
@@ -315,8 +315,8 @@ function DocumentUploadDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
-          <Field label="Status">
+          </FormField>
+          <FormField label="Status">
             <Select
               value={String(draft.status || defaultStatus)}
               onValueChange={(status) =>
@@ -337,28 +337,28 @@ function DocumentUploadDialog({
                 ))}
               </SelectContent>
             </Select>
-          </Field>
-          <Field label="Issue Date">
+          </FormField>
+          <FormField label="Issue Date">
             <DatePicker
               value={draft.issueDate}
               onChange={(issueDate) => onDraftChange((current) => ({ ...current, issueDate: String(issueDate) }))}
               className="w-full"
             />
-          </Field>
-          <Field label="Expiry Date">
+          </FormField>
+          <FormField label="Expiry Date">
             <DatePicker
               value={draft.expiryDate}
               onChange={(expiryDate) => onDraftChange((current) => ({ ...current, expiryDate: String(expiryDate) }))}
               className="w-full"
             />
-          </Field>
-          <Field label="Amount">
+          </FormField>
+          <FormField label="Amount">
             <Input
               value={draft.amount}
               onChange={(event) => onDraftChange((current) => ({ ...current, amount: event.target.value }))}
             />
-          </Field>
-          <Field label="File">
+          </FormField>
+          <FormField label="File">
             <Input
               type="file"
               onChange={(event) => {
@@ -370,14 +370,14 @@ function DocumentUploadDialog({
             {draft.fileName ? (
               <p className="mt-1 text-xs text-muted-foreground">{draft.fileName}</p>
             ) : null}
-          </Field>
-          <Field label="Remarks" className="md:col-span-2">
+          </FormField>
+          <FormField label="Remarks" className="md:col-span-2">
             <Textarea
               value={draft.remarks}
               onChange={(event) => onDraftChange((current) => ({ ...current, remarks: event.target.value }))}
               rows={3}
             />
-          </Field>
+          </FormField>
         </div>
 
         <DialogFooter>
@@ -393,22 +393,6 @@ function DocumentUploadDialog({
   );
 }
 
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 function createEmptyDocument(category: string): DocumentUploadRecord {
   return {

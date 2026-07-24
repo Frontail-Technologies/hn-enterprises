@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ImageSquareIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -33,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
+import { FormField } from "@/components/shared/FormField";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
@@ -161,7 +161,7 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           <TabsContent value="customer">
             <SectionCard title="Customer & Connection Details">
               <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Field label="Project">
+                <FormField label="Project">
                   <Select
                     value={values.projectId || undefined}
                     onValueChange={(projectId) => {
@@ -185,8 +185,8 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label="Site / Area">
+                </FormField>
+                <FormField label="Site / Area">
                   <Select
                     value={values.siteArea || undefined}
                     onValueChange={(siteArea) => setValues((current) => ({ ...current, siteArea: siteArea ?? "" }))}
@@ -202,9 +202,9 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                </Field>
+                </FormField>
                 <TextField label="City" value={values.city} onChange={(city) => setValues((current) => ({ ...current, city }))} />
-                <Field label="Customer Status">
+                <FormField label="Customer Status">
                   <Select value={values.status} onValueChange={(status) => setValues((current) => ({ ...current, status: (status ?? "Draft") as CustomerFormValues["status"] }))}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -215,7 +215,7 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                </Field>
+                </FormField>
               </div>
               <SectionFields
                 fields={customerConnectionFields}
@@ -407,7 +407,7 @@ function LmcPipelineEditor({
                   gridClassName="grid gap-4"
                 />
                 <div className="mt-4">
-                  <Field label="Evidence Images">
+                  <FormField label="Evidence Images">
                     <ImageUploadPreview
                       key={editingPipe.id}
                       className="min-w-0"
@@ -419,7 +419,7 @@ function LmcPipelineEditor({
                         })
                       }
                     />
-                  </Field>
+                  </FormField>
                 </div>
               </div>
               <SheetFooter className="bg-card/95 px-5 py-4">
@@ -558,28 +558,28 @@ function MasterField<T extends Record<string, string | boolean>>({
 }) {
   if (field.input === "textarea") {
     return (
-      <Field label={field.label} className="md:col-span-2 xl:col-span-3">
+      <FormField label={field.label} className="md:col-span-2 xl:col-span-3">
         <Textarea
           value={String(value ?? "")}
           onChange={(event) => onChange(event.target.value)}
           rows={3}
           disabled={field.readOnly}
         />
-      </Field>
+      </FormField>
     );
   }
 
   if (field.input === "date") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <DatePicker value={String(value ?? "")} onChange={onChange} className="w-full min-w-0" />
-      </Field>
+      </FormField>
     );
   }
 
   if (field.input === "select") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <Select value={String(value || "") || undefined} onValueChange={(next) => onChange(next ?? "")}>
           <SelectTrigger className="w-full min-w-0">
             <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
@@ -592,13 +592,13 @@ function MasterField<T extends Record<string, string | boolean>>({
             ))}
           </SelectContent>
         </Select>
-      </Field>
+      </FormField>
     );
   }
 
   if (field.input === "boolean") {
     return (
-      <Field label={field.label}>
+      <FormField label={field.label}>
         <Select value={value ? "Yes" : "No"} onValueChange={(next) => onChange(next === "Yes")}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -608,7 +608,7 @@ function MasterField<T extends Record<string, string | boolean>>({
             <SelectItem value="No">No</SelectItem>
           </SelectContent>
         </Select>
-      </Field>
+      </FormField>
     );
   }
 
@@ -637,28 +637,12 @@ function TextField({
   disabled?: boolean;
 }) {
   return (
-    <Field label={label}>
+    <FormField label={label}>
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
-    </Field>
+    </FormField>
   );
 }
 
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <Label className="mb-1.5 block text-xs font-medium text-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 function toFormValues(customer: Customer): CustomerFormValues {
   const values = { ...customer } as Partial<Customer>;

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BillingDetailPage } from "@/features/commercial/components/CommercialPages";
+import { BillingDetailPage } from "@/features/commercial/components/BillingDetailPage";
 
 export const metadata: Metadata = { title: "Billing Detail" };
 

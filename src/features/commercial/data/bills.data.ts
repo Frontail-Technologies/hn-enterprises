@@ -1,0 +1,93 @@
+import type { BillingView } from "../types/commercial.types";
+
+export const bills = [
+  {
+    id: "bill-001",
+    billNumber: "BILL-2025-001",
+    projectCustomer: "Shyam Nagar CGD Project",
+    stage: "GC",
+    billDate: "2025-02-10",
+    totalAmount: 850000,
+    paidAmount: 450000,
+    pendingAmount: 400000,
+    dueDate: "2025-02-28",
+    tax: 153000,
+    status: "Submitted",
+  },
+  {
+    id: "bill-002",
+    customerId: "cust-002",
+    billNumber: "BILL-2025-002",
+    projectCustomer: "Meena Sharma",
+    stage: "GI",
+    billDate: "2025-02-12",
+    totalAmount: 18500,
+    paidAmount: 18500,
+    pendingAmount: 0,
+    dueDate: "2025-02-20",
+    tax: 3330,
+    status: "Completed",
+  },
+  {
+    id: "bill-003",
+    billNumber: "BILL-2025-003",
+    projectCustomer: "Green City Phase 1",
+    stage: "Commissioning",
+    billDate: "2025-01-25",
+    totalAmount: 320000,
+    paidAmount: 100000,
+    pendingAmount: 220000,
+    dueDate: "2025-02-05",
+    tax: 57600,
+    status: "Overdue",
+  },
+  {
+    id: "bill-004",
+    customerId: "cust-004",
+    billNumber: "BILL-2025-004",
+    projectCustomer: "Rafiq Khan",
+    stage: "Conversion",
+    billDate: "2025-02-16",
+    totalAmount: 12000,
+    paidAmount: 0,
+    pendingAmount: 12000,
+    dueDate: "2025-03-01",
+    tax: 2160,
+    status: "Draft",
+  },
+];
+
+export const billingTabs: Array<{ id: BillingView; label: string }> = [
+  { id: "bills", label: "Bill Register" },
+  { id: "wages", label: "Wage Register" },
+];
+
+export const paymentHistory = [
+  {
+    id: "pay-h-1",
+    billId: "bill-001",
+    date: "2025-02-12",
+    amount: 250000,
+    mode: "NEFT",
+    receivedBy: "Accounts",
+    remarks: "First part payment.",
+  },
+  {
+    id: "pay-h-2",
+    billId: "bill-001",
+    date: "2025-02-16",
+    amount: 200000,
+    mode: "Cheque",
+    receivedBy: "Accounts",
+    remarks: "Cheque cleared.",
+  },
+  {
+    id: "pay-h-3",
+    billId: "bill-002",
+    date: "2025-02-13",
+    amount: 18500,
+    mode: "Cash",
+    receivedBy: "Demo Admin",
+    remarks: "Customer paid at office.",
+  },
+];

@@ -19,6 +19,16 @@ export type MasterSheetColumnValueType =
   | "Yes / No"
   | "Dropdown";
 
+export type HolidayType = "National" | "Restricted" | "Company";
+
+export type HolidayRecord = {
+  id: string;
+  name: string;
+  date: string;
+  type: HolidayType;
+  status: MasterValueStatus;
+};
+
 export type MasterValueRecord = {
   id: string;
   category: MasterValueCategory;
@@ -39,7 +49,7 @@ export type MasterSheetColumnConfig = {
   dropdownOptions?: string[];
 };
 
-export type MasterTabId = MasterValueCategory | "Master Sheet Columns";
+export type MasterTabId = MasterValueCategory | "Holidays" | "Master Sheet Columns";
 
 export const masterValueCategories: MasterValueCategory[] = [
   "Payment Types",
@@ -55,6 +65,7 @@ export const masterValueCategories: MasterValueCategory[] = [
 
 export const masterTabs: Array<{ id: MasterTabId; label: string }> = [
   ...masterValueCategories.map((category) => ({ id: category, label: category })),
+  { id: "Holidays", label: "Holidays" },
   { id: "Master Sheet Columns", label: "Master Sheet Columns" },
 ];
 
@@ -90,6 +101,16 @@ export const masterValues: MasterValueRecord[] = [
   { id: "mat-1", category: "Material Categories", value: "Pipe", description: "Pipe stock category.", status: "Active" },
   { id: "mat-2", category: "Material Categories", value: "Fitting", description: "Fittings and accessories.", status: "Active" },
   { id: "mat-3", category: "Material Categories", value: "Regulator", description: "Regulator stock category.", status: "Active" },
+];
+
+export const holidayRecords: HolidayRecord[] = [
+  { id: "hol-1", name: "Republic Day", date: "2026-01-26", type: "National", status: "Active" },
+  { id: "hol-2", name: "Holi", date: "2026-03-04", type: "National", status: "Active" },
+  { id: "hol-3", name: "Independence Day", date: "2026-08-15", type: "National", status: "Active" },
+  { id: "hol-4", name: "Raksha Bandhan", date: "2026-08-28", type: "Restricted", status: "Active" },
+  { id: "hol-5", name: "Gandhi Jayanti", date: "2026-10-02", type: "National", status: "Active" },
+  { id: "hol-6", name: "Diwali", date: "2026-11-08", type: "National", status: "Active" },
+  { id: "hol-7", name: "Company Foundation Day", date: "2026-12-05", type: "Company", status: "Active" },
 ];
 
 export const configurableMasterSheetColumns: MasterSheetColumnConfig[] = [

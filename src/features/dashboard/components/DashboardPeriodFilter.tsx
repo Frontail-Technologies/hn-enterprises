@@ -37,7 +37,11 @@ export function DashboardPeriodFilter({
       <Tabs value={value} onValueChange={(v) => v && onChange(v as DashboardPeriod)}>
         <TabsList>
           {dashboardPeriods.map((period) => (
-            <TabsTrigger key={period.value} value={period.value} className="px-3 text-xs">
+            <TabsTrigger
+              key={period.value}
+              value={period.value}
+              className="px-3 text-xs data-active:bg-primary data-active:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+            >
               {period.label}
             </TabsTrigger>
           ))}

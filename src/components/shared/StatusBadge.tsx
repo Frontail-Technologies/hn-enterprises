@@ -20,6 +20,7 @@ export type StatusValue =
   | 'Workable'
   | 'Not Workable'
   | 'Partially Workable'
+  | 'Sent'
 
 
 type StatusGroup = 'success' | 'warning' | 'primary' | 'info' | 'purple' | 'destructive' | 'neutral'
@@ -29,6 +30,7 @@ const STATUS_GROUP: Record<StatusValue, StatusGroup> = {
   Completed:           'success',
   Active:              'success',
   Workable:            'success',
+  Sent:                'success',
   Pending:             'warning',
   'In Review':         'warning',
   'Partially Workable':'warning',
