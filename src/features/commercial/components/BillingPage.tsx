@@ -8,6 +8,7 @@ import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
+import { customers } from "@/features/customers/services/customers.service";
 import { billingTabs, bills } from "../data/bills.data";
 import { wageRegisterRows } from "../data/wages.data";
 import type { BillingView } from "../types/commercial.types";
@@ -21,7 +22,7 @@ import { StatCardRow, SummaryValue } from "./shared/StatCards";
 import { TableSection } from "./shared/TableSection";
 
 export function BillingPage() {
-  const [activeView, setActiveView] = useState<BillingView>("bills");
+  const [activeView, setActiveView] = useState<BillingView>("wages");
   const totals = {
     billed: sum(bills.map((bill) => bill.totalAmount)),
     received: sum(bills.map((bill) => bill.paidAmount)),
@@ -42,16 +43,31 @@ export function BillingPage() {
     search: "",
     stage: "all",
     status: "all",
+    supervisor: "all",
   });
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return bills.filter(
-      (row) =>
-        (!search ||
-          row.billNumber.toLowerCase().includes(search) ||
-          row.projectCustomer.toLowerCase().includes(search)) &&
-        (filters.stage === "all" || row.stage === filters.stage) &&
-        (filters.status === "all" || row.status === filters.status),
+      (row) => {
+        const customer = getBillCustomer(row);
+        return (
+          (!search ||
+            [
+              row.billNumber,
+              row.projectCustomer,
+              customer?.customerConnection.customerName,
+              customer?.siteArea,
+              customer?.customerConnection.supervisorName,
+            ]
+              .join(" ")
+              .toLowerCase()
+              .includes(search)) &&
+          (filters.stage === "all" || row.stage === filters.stage) &&
+          (filters.status === "all" || row.status === filters.status) &&
+          (filters.supervisor === "all" ||
+            customer?.customerConnection.supervisorName === filters.supervisor)
+        );
+      },
     );
   }, [filters]);
   const columns: ColumnDef<(typeof bills)[number]>[] = [
@@ -67,7 +83,28 @@ export function BillingPage() {
         </Link>
       ),
     },
-    { key: "projectCustomer", header: "Project / Customer" },
+    {
+      key: "projectCustomer",
+      header: "Customer / Project",
+      render: (row) => {
+        const customer = getBillCustomer(row);
+        return (
+          <div>
+            <p className="font-medium text-foreground">
+              {customer?.customerConnection.customerName ?? row.projectCustomer}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {customer?.siteArea ?? "Project billing"}
+            </p>
+          </div>
+        );
+      },
+    },
+    {
+      key: "supervisor",
+      header: "Supervisor",
+      render: (row) => getBillCustomer(row)?.customerConnection.supervisorName ?? "-",
+    },
     { key: "stage", header: "Billing Stage" },
     {
       key: "billDate",
@@ -152,12 +189,19 @@ export function BillingPage() {
                   placeholder: "All Statuses",
                   options: uniqOptions(bills.map((row) => row.status)),
                 },
+                {
+                  key: "supervisor",
+                  placeholder: "All Supervisors",
+                  options: uniqOptions(
+                    customers.map((customer) => customer.customerConnection.supervisorName),
+                  ),
+                },
               ]}
               onChange={(key, value) =>
                 setFilters((current) => ({ ...current, [key]: value }))
               }
               onReset={() =>
-                setFilters({ search: "", stage: "all", status: "all" })
+                setFilters({ search: "", stage: "all", status: "all", supervisor: "all" })
               }
             />
             <PaginatedDataTable data={data} columns={columns} />
@@ -189,4 +233,12 @@ export function BillingPage() {
       )}
     </div>
   );
+}
+
+function getBillCustomer(bill: (typeof bills)[number]) {
+  return bill.customerId
+    ? customers.find((customer) => customer.id === bill.customerId)
+    : customers.find(
+        (customer) => customer.customerConnection.customerName === bill.projectCustomer,
+      );
 }

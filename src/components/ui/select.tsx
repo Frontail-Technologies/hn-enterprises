@@ -6,7 +6,79 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+type SelectOption = {
+  label: React.ReactNode
+  value: unknown
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  items,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const inferredItems = React.useMemo(
+    () => items ?? collectSelectItems(children),
+    [children, items],
+  )
+
+  return (
+    <SelectPrimitive.Root items={inferredItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
+
+function collectSelectItems(children: React.ReactNode): SelectOption[] {
+  const options: SelectOption[] = []
+
+  function visit(node: React.ReactNode) {
+    React.Children.forEach(node, (child) => {
+      if (!React.isValidElement(child)) return
+
+      if (child.type === SelectItem) {
+        const props = child.props as {
+          value?: unknown
+          label?: string
+          children?: React.ReactNode
+        }
+
+        if (props.value !== undefined) {
+          options.push({
+            value: props.value,
+            label: props.label ?? getSelectItemText(props.children),
+          })
+        }
+      }
+
+      const childProps = child.props as { children?: React.ReactNode }
+      if (childProps.children) visit(childProps.children)
+    })
+  }
+
+  visit(children)
+  return options
+}
+
+function getSelectItemText(children: React.ReactNode): React.ReactNode {
+  const parts: string[] = []
+
+  function visit(node: React.ReactNode) {
+    React.Children.forEach(node, (child) => {
+      if (typeof child === "string" || typeof child === "number") {
+        parts.push(String(child))
+        return
+      }
+
+      if (React.isValidElement(child)) {
+        const childProps = child.props as { children?: React.ReactNode }
+        if (childProps.children) visit(childProps.children)
+      }
+    })
+  }
+
+  visit(children)
+  return parts.join(" ").trim() || children
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

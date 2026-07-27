@@ -34,7 +34,6 @@ import {
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { DetailHeader } from "@/components/shared/DetailHeader";
-import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
 import { FormField } from "@/components/shared/FormField";
 import {
   ImageUploadPreview,
@@ -49,7 +48,6 @@ import {
   billingCompletionFields,
   commissioningConversionFields,
   customerActivity,
-  customerDocumentCategories,
   deriveLmcPipeCurrentStage,
   customerConnectionFields,
   deriveLmcOverallStatus,
@@ -63,9 +61,9 @@ import {
   type LmcPipeEditableFields,
   type LmcCivilWork,
 } from "../services/customers.service";
+import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import type {
   Customer,
-  CustomerDocument,
   CustomerSurvey,
   CustomerSurveyRevision,
   LmcPipeSizeRecord,
@@ -91,7 +89,8 @@ const customerSectionLinks = [
   { href: "#mdpe", label: "MDPE Fittings" },
   { href: "#commissioning", label: "Meter & Commissioning" },
   { href: "#billing", label: "Billing & Remarks" },
-  { href: "#documents", label: "Images / Documents" },
+  { href: "#documents", label: "Images / Evidence" },
+  { href: "#reports", label: "Reports" },
   { href: "#approvals", label: "Approvals / History" },
 ];
 
@@ -196,12 +195,15 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         </section>
 
         <section id="documents" className="scroll-mt-16">
-          <DocumentCategoryUploadPanel<CustomerDocument>
-            categories={customerDocumentCategories}
+          <CustomerEvidencePanel
+            survey={customer.survey}
+            lmcPipelineWork={customer.lmcPipelineWork}
             documents={customer.documents}
-            description="Customer-owned photos, reports, receipts and LMC evidence."
-            readOnly
           />
+        </section>
+
+        <section id="reports" className="scroll-mt-16">
+          <CustomerReportsPanel customerId={customer.id} customer={customer} />
         </section>
 
         <section id="approvals" className="scroll-mt-16">

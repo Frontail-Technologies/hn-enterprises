@@ -11,6 +11,10 @@ import {
   dashboardPeriods,
   type DashboardPeriod,
 } from "@/features/dashboard/data/dashboard.data";
+import {
+  dashboardCityOptions,
+  dashboardProjectOptions,
+} from "@/features/dashboard/services/dashboard.selectors";
 
 interface DashboardPeriodFilterProps {
   value: DashboardPeriod;
@@ -19,6 +23,10 @@ interface DashboardPeriodFilterProps {
   year: string;
   onMonthChange: (value: string) => void;
   onYearChange: (value: string) => void;
+  projectId: string;
+  city: string;
+  onProjectChange: (value: string) => void;
+  onCityChange: (value: string) => void;
 }
 
 export function DashboardPeriodFilter({
@@ -28,12 +36,44 @@ export function DashboardPeriodFilter({
   year,
   onMonthChange,
   onYearChange,
+  projectId,
+  city,
+  onProjectChange,
+  onCityChange,
 }: DashboardPeriodFilterProps) {
   const selectedMonthLabel =
     monthOptions.find((option) => option.value === month)?.label ?? "Select month";
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <Select value={projectId} onValueChange={(nextValue) => onProjectChange(nextValue ?? "all")}>
+        <SelectTrigger className="h-8 w-[240px] bg-card text-xs">
+          <SelectValue placeholder="All Projects" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Projects</SelectItem>
+          {dashboardProjectOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={city} onValueChange={(nextValue) => onCityChange(nextValue ?? "all")}>
+        <SelectTrigger className="h-8 w-[132px] bg-card text-xs">
+          <SelectValue placeholder="All Cities" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Cities</SelectItem>
+          {dashboardCityOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Tabs value={value} onValueChange={(v) => v && onChange(v as DashboardPeriod)}>
         <TabsList>
           {dashboardPeriods.map((period) => (

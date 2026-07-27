@@ -37,17 +37,20 @@ export function ImageUploadPreview({
   onChange,
   className,
 }: ImageUploadPreviewProps) {
-  const [items, setItems] = useState<ImagePreviewItem[]>(images);
+  const [localItems, setLocalItems] = useState<ImagePreviewItem[]>(images);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isControlled = Boolean(onChange);
+  const items = isControlled ? images : localItems;
 
   function update(nextItems: ImagePreviewItem[]) {
-    setItems(nextItems);
+    if (!isControlled) setLocalItems(nextItems);
     onChange?.(nextItems);
   }
 
   function addFiles(files: FileList | null) {
     const nextFiles = Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (inputRef.current) inputRef.current.value = "";
     if (!nextFiles.length) return;
     update([
       ...items,

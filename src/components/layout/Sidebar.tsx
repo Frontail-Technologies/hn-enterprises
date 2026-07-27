@@ -68,6 +68,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   SquaresFour,
@@ -214,6 +224,7 @@ export function Sidebar() {
   const { state } = useSidebar();
   const [openGroups, setOpenGroups] =
     useState<Record<string, boolean>>(DEFAULT_OPEN_GROUPS);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -357,13 +368,8 @@ export function Sidebar() {
                 <User size={14} /> Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link
-                href="/change-password"
-                className="flex items-center gap-2 w-full"
-              >
-                <Lock size={14} /> Change Password
-              </Link>
+            <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)}>
+              <Lock size={14} /> Change Password
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -375,6 +381,128 @@ export function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
+      <ChangePasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
+      />
     </ShadcnSidebar>
+  );
+}
+
+function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage(null);
+    setError(null);
+  };
+
+  const handleSubmit = () => {
+    setMessage(null);
+    setError(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError("All password fields are required.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirm password do not match.");
+      return;
+    }
+
+    setMessage("Password updated successfully.");
+    window.setTimeout(() => {
+      resetForm();
+      onOpenChange(false);
+    }, 700);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) resetForm();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogDescription>
+            Update your account password. This is a frontend-only mock action for now.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <PasswordField
+            label="Current Password"
+            value={currentPassword}
+            onChange={setCurrentPassword}
+          />
+          <PasswordField
+            label="New Password"
+            value={newPassword}
+            onChange={setNewPassword}
+          />
+          <PasswordField
+            label="Confirm Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+          />
+          {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
+          {message ? <p className="text-xs font-medium text-status-success-fg">{message}</p> : null}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSubmit}>
+            Update Password
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <Input
+        type="password"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete="new-password"
+      />
+    </label>
   );
 }

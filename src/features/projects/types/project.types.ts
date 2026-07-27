@@ -45,6 +45,9 @@ export type ProjectDocument = {
   id: string;
   type: string;
   number: string;
+  documentName: string;
+  documentDate: string;
+  contractDate: string;
   issueDate: string;
   expiryDate: string;
   amount: string;

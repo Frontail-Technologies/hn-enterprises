@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
@@ -15,36 +14,22 @@ import {
   plumberReturnedMaterials,
 } from "../data/materials.data";
 import type { InventoryTab } from "../types/commercial.types";
-import { formatDate, uniqOptions } from "../utils/format";
+import { formatDate } from "../utils/format";
 import { InventoryActions } from "./inventory/InventoryActions";
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
 import { StockStatus } from "./inventory/StockStatus";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
-import { TableSection } from "./shared/TableSection";
 
 export function InventoryPage() {
-  const [filters, setFilters] = useState({
-    search: "",
-    category: "all",
-    status: "all",
-  });
   const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
-  const data = useMemo(() => {
-    const search = filters.search.toLowerCase();
-    return materials.filter(
-      (row) =>
-        (!search ||
-          row.name.toLowerCase().includes(search) ||
-          row.store.toLowerCase().includes(search)) &&
-        (filters.category === "all" || row.category === filters.category) &&
-        (filters.status === "all" || row.status === filters.status),
-    );
-  }, [filters]);
-  const columns: ColumnDef<(typeof materials)[number]>[] = [
+
+  const stockColumns: ExcelColumn<(typeof materials)[number]>[] = [
     {
       key: "name",
-      header: "Material Name",
+      label: "Material Name",
+      width: 220,
+      sticky: true,
+      getValue: (row) => row.name,
       render: (row) => (
         <Link
           className="font-semibold text-foreground hover:text-primary"
@@ -54,55 +39,70 @@ export function InventoryPage() {
         </Link>
       ),
     },
-    { key: "category", header: "Category" },
-    { key: "unit", header: "Unit" },
+    { key: "category", label: "Category", width: 140, getValue: (row) => row.category },
+    { key: "unit", label: "Unit", width: 110, getValue: (row) => row.unit },
     {
       key: "availableStock",
-      header: "Available Stock",
-      render: (row) => <b>{row.availableStock}</b>,
+      label: "Available Stock",
+      width: 150,
+      getValue: (row) => row.availableStock,
+      render: (row) => <span className="font-semibold text-foreground">{row.availableStock}</span>,
     },
-    { key: "issuedStock", header: "Issued Stock" },
-    { key: "reorderLevel", header: "Reorder Level" },
-    { key: "store", header: "Store / Site" },
+    { key: "issuedStock", label: "Issued Stock", width: 140, getValue: (row) => row.issuedStock },
+    { key: "reorderLevel", label: "Reorder Level", width: 140, getValue: (row) => row.reorderLevel },
+    { key: "store", label: "Store / Site", width: 190, getValue: (row) => row.store },
     {
       key: "status",
-      header: "Status",
+      label: "Status",
+      width: 140,
+      getValue: (row) => row.status,
       render: (row) => <StockStatus row={row} />,
     },
     {
       key: "actions",
-      header: "Actions",
-      className: "w-36",
+      label: "Actions",
+      width: 150,
+      getValue: () => "Actions",
       render: (row) => <InventoryActions material={row.name} />,
     },
   ];
-  const issuedColumns: ColumnDef<(typeof plumberIssuedMaterials)[number]>[] = [
+  const issuedColumns: ExcelColumn<(typeof plumberIssuedMaterials)[number]>[] = [
     {
       key: "issueNo",
-      header: "Issue No.",
+      label: "Issue No.",
+      width: 150,
+      sticky: true,
+      getValue: (row) => row.issueNo,
       render: (row) => (
         <span className="font-semibold text-foreground">{row.issueNo}</span>
       ),
     },
-    { key: "plumber", header: "Plumber / Team" },
-    { key: "projectSite", header: "Project / Site" },
-    { key: "material", header: "Material" },
-    { key: "quantity", header: "Issued Qty" },
+    { key: "site", label: "Site", width: 190, getValue: (row) => row.site },
+    { key: "customer", label: "Customer", width: 170, getValue: (row) => row.customer },
+    { key: "bpTrNo", label: "BP / TR No.", width: 140, getValue: (row) => row.bpTrNo },
+    { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
+    { key: "plumber", label: "Plumber / Team", width: 160, getValue: (row) => row.plumber },
+    { key: "material", label: "Material", width: 180, getValue: (row) => row.material },
+    { key: "quantity", label: "Issued Qty", width: 130, getValue: (row) => row.quantity },
     {
       key: "issuedDate",
-      header: "Issued Date",
-      render: (row) => formatDate(row.issuedDate),
+      label: "Issued Date",
+      width: 130,
+      getValue: (row) => formatDate(row.issuedDate),
     },
-    { key: "issuedBy", header: "Issued By" },
+    { key: "issuedBy", label: "Issued By", width: 150, getValue: (row) => row.issuedBy },
     {
       key: "status",
-      header: "Status",
+      label: "Status",
+      width: 140,
+      getValue: (row) => row.status,
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: "actions",
-      header: "Actions",
-      className: "w-20",
+      label: "Actions",
+      width: 90,
+      getValue: () => "Actions",
       render: () => (
         <MaterialDrawer
           action="Issue Material"
@@ -112,34 +112,43 @@ export function InventoryPage() {
       ),
     },
   ];
-  const returnColumns: ColumnDef<(typeof plumberReturnedMaterials)[number]>[] =
+  const returnColumns: ExcelColumn<(typeof plumberReturnedMaterials)[number]>[] =
     [
       {
         key: "returnNo",
-        header: "Return No.",
+        label: "Return No.",
+        width: 150,
+        sticky: true,
+        getValue: (row) => row.returnNo,
         render: (row) => (
           <span className="font-semibold text-foreground">{row.returnNo}</span>
         ),
       },
-      { key: "plumber", header: "Plumber / Team" },
-      { key: "projectSite", header: "Project / Site" },
-      { key: "material", header: "Material" },
-      { key: "quantity", header: "Return Qty" },
+      { key: "plumber", label: "Plumber / Team", width: 160, getValue: (row) => row.plumber },
+      { key: "site", label: "Site", width: 190, getValue: (row) => row.site },
+      { key: "customer", label: "Customer", width: 170, getValue: (row) => row.customer },
+      { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
+      { key: "material", label: "Material", width: 180, getValue: (row) => row.material },
+      { key: "quantity", label: "Return Qty", width: 130, getValue: (row) => row.quantity },
       {
         key: "returnDate",
-        header: "Return Date",
-        render: (row) => formatDate(row.returnDate),
+        label: "Return Date",
+        width: 130,
+        getValue: (row) => formatDate(row.returnDate),
       },
-      { key: "condition", header: "Condition" },
+      { key: "condition", label: "Condition", width: 140, getValue: (row) => row.condition },
       {
         key: "status",
-        header: "Status",
+        label: "Status",
+        width: 140,
+        getValue: (row) => row.status,
         render: (row) => <StatusBadge status={row.status} />,
       },
       {
         key: "actions",
-        header: "Actions",
-        className: "w-20",
+        label: "Actions",
+        width: 90,
+        getValue: () => "Actions",
         render: () => (
           <MaterialDrawer
             action="Return Material"
@@ -149,32 +158,40 @@ export function InventoryPage() {
         ),
       },
     ];
-  const conjunctionColumns: ColumnDef<
+  const conjunctionColumns: ExcelColumn<
     (typeof materialConjunctionDetails)[number]
   >[] = [
     {
       key: "referenceNo",
-      header: "Reference No.",
+      label: "Reference No.",
+      width: 170,
+      sticky: true,
+      getValue: (row) => row.referenceNo,
       render: (row) => (
         <span className="font-semibold text-foreground">{row.referenceNo}</span>
       ),
     },
-    { key: "customer", header: "Customer" },
-    { key: "bpTrNo", header: "BP / TR No." },
-    { key: "plumber", header: "Plumber / Team" },
-    { key: "materialUsed", header: "Material Used" },
-    { key: "usedQty", header: "Used Qty" },
-    { key: "balanceQty", header: "Balance Qty" },
-    { key: "date", header: "Date", render: (row) => formatDate(row.date) },
+    { key: "customer", label: "Customer", width: 170, getValue: (row) => row.customer },
+    { key: "bpTrNo", label: "BP / TR No.", width: 140, getValue: (row) => row.bpTrNo },
+    { key: "site", label: "Site", width: 190, getValue: (row) => row.site },
+    { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
+    { key: "plumber", label: "Plumber / Team", width: 160, getValue: (row) => row.plumber },
+    { key: "materialUsed", label: "Material Used", width: 180, getValue: (row) => row.materialUsed },
+    { key: "usedQty", label: "Used Qty", width: 120, getValue: (row) => row.usedQty },
+    { key: "balanceQty", label: "Balance Qty", width: 130, getValue: (row) => row.balanceQty },
+    { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.date) },
     {
       key: "status",
-      header: "Status",
+      label: "Status",
+      width: 140,
+      getValue: (row) => row.status,
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: "actions",
-      header: "Actions",
-      className: "w-20",
+      label: "Actions",
+      width: 90,
+      getValue: () => "Actions",
       render: () => <ActionButton label="View" icon={<EyeIcon size={15} />} />,
     },
   ];
@@ -187,55 +204,18 @@ export function InventoryPage() {
         actions={<MaterialDrawer action="Add Stock" />}
       />
       <InventoryTabNav activeTab={activeTab} onChange={setActiveTab} />
-      <TableSection>
-        {activeTab === "stock" ? (
-          <>
-            <FilterSheetButton
-              searchKey="search"
-              searchPlaceholder="Search material or store..."
-              title="Inventory Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "category",
-                  placeholder: "All Categories",
-                  options: uniqOptions(materials.map((row) => row.category)),
-                },
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: uniqOptions(materials.map((row) => row.status)),
-                },
-              ]}
-              onChange={(key, value) =>
-                setFilters((current) => ({ ...current, [key]: value }))
-              }
-              onReset={() =>
-                setFilters({ search: "", category: "all", status: "all" })
-              }
-            />
-            <PaginatedDataTable data={data} columns={columns} />
-          </>
-        ) : null}
-        {activeTab === "issued" ? (
-          <PaginatedDataTable
-            data={plumberIssuedMaterials}
-            columns={issuedColumns}
-          />
-        ) : null}
-        {activeTab === "return" ? (
-          <PaginatedDataTable
-            data={plumberReturnedMaterials}
-            columns={returnColumns}
-          />
-        ) : null}
-        {activeTab === "conjunction" ? (
-          <PaginatedDataTable
-            data={materialConjunctionDetails}
-            columns={conjunctionColumns}
-          />
-        ) : null}
-      </TableSection>
+      {activeTab === "stock" ? (
+        <ExcelDataGrid columns={stockColumns} rows={materials} emptyTitle="No materials found" />
+      ) : null}
+      {activeTab === "issued" ? (
+        <ExcelDataGrid columns={issuedColumns} rows={plumberIssuedMaterials} emptyTitle="No issued materials found" />
+      ) : null}
+      {activeTab === "return" ? (
+        <ExcelDataGrid columns={returnColumns} rows={plumberReturnedMaterials} emptyTitle="No return records found" />
+      ) : null}
+      {activeTab === "conjunction" ? (
+        <ExcelDataGrid columns={conjunctionColumns} rows={materialConjunctionDetails} emptyTitle="No conjunction records found" />
+      ) : null}
     </div>
   );
 }

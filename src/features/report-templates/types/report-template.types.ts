@@ -5,9 +5,11 @@ export type ReportTemplateId =
   | "png-connection-job-card"
   | "testing-report-mdpe-line"
   | "pressure-observation-chart"
-  | "gc-report";
+  | "gc-report"
+  | "pre-commissioning-report"
+  | "conversion-report";
 
-export type ReportTemplateCategory = "JMR" | "Job Card" | "Testing" | "GC";
+export type ReportTemplateCategory = "JMR" | "Job Card" | "Testing" | "GC" | "Pre-Commissioning" | "Conversion";
 
 export type ReportTemplateDefinition = {
   id: ReportTemplateId;

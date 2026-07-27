@@ -103,9 +103,6 @@ export function WageRegister() {
                   <RegisterHeaderCell className="w-32 min-w-32 text-center">
                     Status
                   </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-28 min-w-28 text-center">
-                    Signature
-                  </RegisterHeaderCell>
                 </tr>
               </thead>
               <tbody>
@@ -137,9 +134,6 @@ export function WageRegister() {
                     </RegisterBodyCell>
                     <RegisterBodyCell className="text-center">
                       <StatusBadge status={row.status} />
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-center text-muted-foreground">
-                      -
                     </RegisterBodyCell>
                   </tr>
                 ))}

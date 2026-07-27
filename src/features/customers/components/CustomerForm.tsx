@@ -31,7 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DatePicker } from "@/components/shared/DatePicker";
-import { DocumentCategoryUploadPanel } from "@/components/shared/DocumentCategoryUploadPanel";
 import { FormField } from "@/components/shared/FormField";
 import {
   ImageUploadPreview,
@@ -42,7 +41,6 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   billingCompletionFields,
-  customerDocumentCategories,
   deriveLmcPipeCurrentStage,
   commissioningConversionFields,
   customerConnectionFields,
@@ -51,6 +49,7 @@ import {
   emptyBillingCompletion,
   emptyCommissioningConversion,
   emptyCustomerConnection,
+  emptyCustomerSurvey,
   emptyLmcPipelineWork,
   emptyMdpeFittings,
   fittingAccessoryFields,
@@ -61,14 +60,19 @@ import {
   mdpeFittingFields,
   projectOptions,
   siteOptionsByProject,
+  surveyApprovalStatusOptions,
+  surveyConditionStatusOptions,
+  surveyWorkableStatusOptions,
   type FieldDefinition,
   type LmcCivilWork,
   type LmcPipeEditableFields,
 } from "../services/customers.service";
+import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import type {
   Customer,
-  CustomerDocument,
   CustomerFormValues,
+  CustomerSurvey,
+  CustomerSurveyPhoto,
   LmcPipeSizeRecord,
   LmcPipelineWork,
 } from "../types/customer.types";
@@ -124,6 +128,7 @@ const defaultValues: CustomerFormValues = {
   mdpeFittings: emptyMdpeFittings,
   commissioningConversion: emptyCommissioningConversion,
   billingCompletion: emptyBillingCompletion,
+  survey: emptyCustomerSurvey,
   media: [],
   documents: [],
 };
@@ -148,13 +153,17 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           <div className="border-b border-border/70">
             <TabsList variant="line" className="flex w-full max-w-full justify-start gap-6 overflow-x-auto p-0">
               <FormTab value="customer">Customer Details</FormTab>
+              <FormTab value="survey">Survey</FormTab>
               <FormTab value="gi">GI Measurements</FormTab>
-              <FormTab value="isolation">Isolation & Fittings</FormTab>
+              <FormTab value="isolation">Isolation & Regulators</FormTab>
+              <FormTab value="fittings">Fittings & Accessories</FormTab>
               <FormTab value="lmc">LMC Pipeline</FormTab>
+              <FormTab value="civil">Civil Work</FormTab>
               <FormTab value="mdpe">MDPE Fittings</FormTab>
               <FormTab value="commissioning">Meter & Commissioning</FormTab>
               <FormTab value="billing">Billing & Remarks</FormTab>
-              <FormTab value="images">Images / Documents</FormTab>
+              <FormTab value="images">Images / Evidence</FormTab>
+              <FormTab value="reports">Reports</FormTab>
             </TabsList>
           </div>
 
@@ -224,6 +233,12 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
               />
             </SectionCard>
           </TabsContent>
+          <TabsContent value="survey">
+            <CustomerSurveyEditor
+              survey={values.survey ?? emptyCustomerSurvey}
+              onChange={(survey) => setValues((current) => ({ ...current, survey }))}
+            />
+          </TabsContent>
 
           <TabsContent value="gi">
             <SectionCard title="GI Installation Measurements">
@@ -236,22 +251,23 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           </TabsContent>
 
           <TabsContent value="isolation">
-            <div className="space-y-4">
-              <SectionCard title="Isolation Valves & Regulators">
-                <SectionFields
-                  fields={isolationValveFields}
-                  values={values.valvesRegulators}
-                  onChange={(next) => setValues((current) => ({ ...current, valvesRegulators: next }))}
-                />
-              </SectionCard>
-              <SectionCard title="Fittings & Accessories">
-                <SectionFields
-                  fields={fittingAccessoryFields}
-                  values={values.fittingsAccessories}
-                  onChange={(next) => setValues((current) => ({ ...current, fittingsAccessories: next }))}
-                />
-              </SectionCard>
-            </div>
+            <SectionCard title="Isolation Valves & Regulators">
+              <SectionFields
+                fields={isolationValveFields}
+                values={values.valvesRegulators}
+                onChange={(next) => setValues((current) => ({ ...current, valvesRegulators: next }))}
+              />
+            </SectionCard>
+          </TabsContent>
+
+          <TabsContent value="fittings">
+            <SectionCard title="Fittings & Accessories">
+              <SectionFields
+                fields={fittingAccessoryFields}
+                values={values.fittingsAccessories}
+                onChange={(next) => setValues((current) => ({ ...current, fittingsAccessories: next }))}
+              />
+            </SectionCard>
           </TabsContent>
 
           <TabsContent value="lmc">
@@ -259,6 +275,20 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
               values={values.lmcPipelineWork}
               onChange={(next) => setValues((current) => ({ ...current, lmcPipelineWork: next }))}
             />
+          </TabsContent>
+          <TabsContent value="civil">
+            <SectionCard title="Civil / Surface Work">
+              <SectionFields
+                fields={lmcPipelineFields}
+                values={pickCivilFields(values.lmcPipelineWork)}
+                onChange={(next) =>
+                  setValues((current) => ({
+                    ...current,
+                    lmcPipelineWork: { ...current.lmcPipelineWork, ...next },
+                  }))
+                }
+              />
+            </SectionCard>
           </TabsContent>
 
           <TabsContent value="mdpe">
@@ -292,14 +322,19 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           </TabsContent>
 
           <TabsContent value="images">
-            <DocumentCategoryUploadPanel<CustomerDocument>
-              categories={customerDocumentCategories}
+            <CustomerEvidencePanel
+              survey={values.survey}
+              lmcPipelineWork={values.lmcPipelineWork}
               documents={values.documents}
-              description="Choose a document category to upload customer photos, reports, receipts or LMC evidence."
-              onChange={(documents) =>
+              editable
+              onDocumentsChange={(documents) =>
                 setValues((current) => ({ ...current, documents }))
               }
             />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <CustomerReportsPanel customerId={customer?.id} customer={customer} />
           </TabsContent>
         </Tabs>
 
@@ -318,6 +353,183 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
   );
 }
 
+function CustomerSurveyEditor({
+  survey,
+  onChange,
+}: {
+  survey: CustomerSurvey;
+  onChange: (survey: CustomerSurvey) => void;
+}) {
+  const update = <K extends keyof CustomerSurvey>(key: K, value: CustomerSurvey[K]) => {
+    onChange({ ...survey, [key]: value });
+  };
+
+  return (
+    <div className="space-y-4">
+      <SectionCard
+        title="Survey"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={survey.workableStatus} />
+            <StatusBadge status={survey.approvalStatus} />
+          </div>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <TextField label="Survey ID" value={survey.surveyId} onChange={(value) => update("surveyId", value)} />
+          <FormField label="Survey Date">
+            <DatePicker value={survey.surveyDate} onChange={(value) => update("surveyDate", value)} className="w-full" />
+          </FormField>
+          <TextField label="Assigned Surveyor" value={survey.assignedSurveyor} onChange={(value) => update("assignedSurveyor", value)} />
+          <FormField label="Approval Status">
+            <CustomerSelect
+              value={survey.approvalStatus}
+              options={surveyApprovalStatusOptions}
+              placeholder="Select approval status"
+              onChange={(value) => update("approvalStatus", value as CustomerSurvey["approvalStatus"])}
+            />
+          </FormField>
+          <TextField label="Submitted By" value={survey.submittedBy} onChange={(value) => update("submittedBy", value)} />
+          <TextField label="Submission Date / Time" value={survey.submissionDate} onChange={(value) => update("submissionDate", value)} />
+          <TextField label="Latitude" type="number" value={String(survey.latitude || "")} onChange={(value) => update("latitude", Number(value) || 0)} />
+          <TextField label="Longitude" type="number" value={String(survey.longitude || "")} onChange={(value) => update("longitude", Number(value) || 0)} />
+          <TextField label="Capture Accuracy" value={survey.captureAccuracy} onChange={(value) => update("captureAccuracy", value)} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Workable Status">
+        <div className="grid gap-3 md:grid-cols-3">
+          {surveyWorkableStatusOptions.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={`rounded-sm border px-3 py-3 text-left transition ${
+                survey.workableStatus === status
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              }`}
+              onClick={() => update("workableStatus", status)}
+            >
+              <span className="block text-sm font-semibold">{status}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">Survey assessment</span>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Site Conditions">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <FormField label="Site Accessibility">
+            <CustomerSelect
+              value={survey.siteAccessibility}
+              options={surveyConditionStatusOptions}
+              placeholder="Select site accessibility"
+              onChange={(value) => update("siteAccessibility", value as CustomerSurvey["siteAccessibility"])}
+            />
+          </FormField>
+          <FormField label="Meter Placement">
+            <CustomerSelect
+              value={survey.meterPlacement}
+              options={surveyConditionStatusOptions}
+              placeholder="Select meter placement"
+              onChange={(value) => update("meterPlacement", value as CustomerSurvey["meterPlacement"])}
+            />
+          </FormField>
+          <FormField label="Pipeline Route">
+            <CustomerSelect
+              value={survey.pipelineRoute}
+              options={surveyConditionStatusOptions}
+              placeholder="Select pipeline route"
+              onChange={(value) => update("pipelineRoute", value as CustomerSurvey["pipelineRoute"])}
+            />
+          </FormField>
+          <FormField label="Civil Work Required">
+            <CustomerSelect
+              value={survey.civilWorkRequired || "No"}
+              options={["Yes", "No"]}
+              placeholder="Select civil work"
+              onChange={(value) => update("civilWorkRequired", value)}
+            />
+          </FormField>
+          <FormField label="Expected Resolution Date">
+            <DatePicker value={survey.expectedResolutionDate} onChange={(value) => update("expectedResolutionDate", value)} className="w-full" />
+          </FormField>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FormField label="Initial Measurements">
+            <Textarea value={survey.initialMeasurements} onChange={(event) => update("initialMeasurements", event.target.value)} rows={3} />
+          </FormField>
+          <FormField label="Obstacles / Remarks">
+            <Textarea value={survey.obstaclesRemarks} onChange={(event) => update("obstaclesRemarks", event.target.value)} rows={3} />
+          </FormField>
+          <FormField label="Reason">
+            <Textarea value={survey.reason} onChange={(event) => update("reason", event.target.value)} rows={3} />
+          </FormField>
+          <FormField label="Recommended Action">
+            <Textarea value={survey.recommendedAction} onChange={(event) => update("recommendedAction", event.target.value)} rows={3} />
+          </FormField>
+          <FormField label="Survey Notes">
+            <Textarea value={survey.notes} onChange={(event) => update("notes", event.target.value)} rows={3} />
+          </FormField>
+          <FormField label="Approval Comments">
+            <Textarea value={survey.approvalComments} onChange={(event) => update("approvalComments", event.target.value)} rows={3} />
+          </FormField>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Survey Photos">
+        <ImageUploadPreview
+          images={surveyPhotosToImages(survey.photos)}
+          onChange={(images) => update("photos", imagesToSurveyPhotos(images))}
+        />
+      </SectionCard>
+    </div>
+  );
+}
+
+function CustomerSelect({
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  options: readonly string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Select value={value || undefined} onValueChange={(next) => onChange(next ?? "")}>
+      <SelectTrigger className="w-full min-w-0">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function surveyPhotosToImages(photos: CustomerSurveyPhoto[]): ImagePreviewItem[] {
+  return photos.map((photo) => ({
+    id: photo.id,
+    label: photo.label,
+    fileName: photo.fileName,
+  }));
+}
+
+function imagesToSurveyPhotos(images: ImagePreviewItem[]): CustomerSurveyPhoto[] {
+  return images.map((image) => ({
+    id: image.id,
+    label: image.label,
+    caption: image.label,
+    fileName: image.fileName,
+  }));
+}
 function LmcPipelineEditor({
   values,
   onChange,
@@ -432,13 +644,6 @@ function LmcPipelineEditor({
         </SheetContent>
       </Sheet>
 
-      <SectionCard title="Civil / Surface Work">
-        <SectionFields
-          fields={lmcPipelineFields}
-          values={pickCivilFields(values)}
-          onChange={(next) => onChange({ ...values, ...next })}
-        />
-      </SectionCard>
     </div>
   );
 }

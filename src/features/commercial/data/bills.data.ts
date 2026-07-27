@@ -58,8 +58,8 @@ export const bills = [
 ];
 
 export const billingTabs: Array<{ id: BillingView; label: string }> = [
-  { id: "bills", label: "Bill Register" },
   { id: "wages", label: "Wage Register" },
+  { id: "bills", label: "Bill Register" },
 ];
 
 export const paymentHistory = [

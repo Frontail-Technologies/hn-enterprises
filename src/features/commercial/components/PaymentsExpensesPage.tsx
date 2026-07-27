@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon, WarningIcon, EyeIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
-import { type ColumnDef } from "@/components/shared/DataTable";
 import { DrawerShell } from "@/components/shared/DrawerShell";
+import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { QuickField } from "@/components/shared/QuickField";
@@ -13,9 +13,7 @@ import { cn } from "@/lib/utils";
 import { paymentTabs, payments } from "../data/payments.data";
 import { formatDate, money, sum } from "../utils/format";
 import { ImageProofField } from "./shared/ImageProofField";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 import { StatCardRow, SummaryValue } from "./shared/StatCards";
-import { TableSection } from "./shared/TableSection";
 
 export function PaymentsExpensesPage() {
   const [active, setActive] = useState(paymentTabs[0]);
@@ -25,26 +23,37 @@ export function PaymentsExpensesPage() {
       .map((row) => row.amount),
   );
   const data = payments.filter((row) => row.category === active);
-  const columns: ColumnDef<(typeof payments)[number]>[] = [
+  const columns: ExcelColumn<(typeof payments)[number]>[] = [
     {
       key: "id",
-      header: "Entry ID",
-      render: (row) => <b>{row.id.toUpperCase()}</b>,
+      label: "Entry ID",
+      width: 130,
+      sticky: true,
+      getValue: (row) => row.id.toUpperCase(),
+      render: (row) => (
+        <span className="font-semibold text-foreground">{row.id.toUpperCase()}</span>
+      ),
     },
-    { key: "category", header: "Category" },
-    { key: "paidTo", header: "Paid To" },
-    { key: "projectSite", header: "Project / Site" },
-    { key: "amount", header: "Amount", render: (row) => money(row.amount) },
-    { key: "date", header: "Date", render: (row) => formatDate(row.date) },
-    { key: "mode", header: "Payment Mode" },
+    { key: "category", label: "Category", width: 190, getValue: (row) => row.category },
+    { key: "paidTo", label: "Paid To", width: 180, getValue: (row) => row.paidTo },
+    { key: "site", label: "Site", width: 190, getValue: (row) => row.site },
+    { key: "supervisor", label: "Supervisor", width: 170, getValue: (row) => row.supervisor },
+    { key: "customer", label: "Customer", width: 170, getValue: (row) => row.customer },
+    { key: "amount", label: "Amount", width: 130, getValue: (row) => money(row.amount) },
+    { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.date) },
+    { key: "mode", label: "Payment Mode", width: 150, getValue: (row) => row.mode },
     {
       key: "status",
-      header: "Status",
+      label: "Status",
+      width: 140,
+      getValue: (row) => row.status,
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: "attachment",
-      header: "Attachment",
+      label: "Attachment",
+      width: 180,
+      getValue: (row) => row.attachment,
       render: (row) =>
         row.attachment === "-" ? (
           "-"
@@ -54,8 +63,9 @@ export function PaymentsExpensesPage() {
     },
     {
       key: "actions",
-      header: "Actions",
-      className: "w-24",
+      label: "Actions",
+      width: 100,
+      getValue: () => "Actions",
       render: () => <PaymentActions />,
     },
   ];
@@ -92,9 +102,7 @@ export function PaymentsExpensesPage() {
         />
       </StatCardRow>
       <PaymentTabNav active={active} onChange={setActive} />
-      <TableSection>
-        <PaginatedDataTable data={data} columns={columns} />
-      </TableSection>
+      <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" />
     </div>
   );
 }

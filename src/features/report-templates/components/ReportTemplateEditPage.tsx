@@ -89,6 +89,20 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
         </div>
       ) : null}
 
+      <div className="grid gap-3 border-y border-border bg-muted/20 px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["Template", title],
+          ["Category", category],
+          ["Default Customer", template.defaultCustomerId],
+          ["Mapped Fields", `${rows.length}`],
+        ].map(([label, value]) => (
+          <div key={label} className="min-w-0">
+            <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+            <p className="mt-1 truncate text-sm font-semibold text-foreground">{value || "-"}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
         <section className="space-y-4 rounded-sm border border-border bg-card p-4">
           <div>

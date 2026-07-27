@@ -1,6 +1,7 @@
 "use client";
 
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
+import { useSearchParams } from "next/navigation";
 import { DownloadIcon, PrinterIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,10 @@ import type { ReportTemplateDefinition } from "../types/report-template.types";
 import { ReportPdfDocument } from "./pdf/ReportPdfDocument";
 
 export function ReportTemplatePdfViewer({ template }: { template: ReportTemplateDefinition }) {
-  const data = resolveReportTemplateData(template.id, template.defaultCustomerId, template.defaultRecordId);
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customerId") ?? template.defaultCustomerId;
+  const recordId = searchParams.get("recordId") ?? template.defaultRecordId;
+  const data = resolveReportTemplateData(template.id, customerId, recordId);
   const document = <ReportPdfDocument templateId={template.id} data={data} />;
 
   return (
@@ -25,7 +29,7 @@ export function ReportTemplatePdfViewer({ template }: { template: ReportTemplate
         <div className="flex flex-wrap items-center gap-2">
           <PDFDownloadLink
             document={document}
-            fileName={`${template.id}.pdf`}
+            fileName={`${template.id}-${customerId ?? "customer"}.pdf`}
             className="app-primary-action inline-flex h-9 items-center gap-2 rounded-sm bg-primary px-3 text-sm font-medium text-white"
           >
             {({ loading }) => (
@@ -50,3 +54,4 @@ export function ReportTemplatePdfViewer({ template }: { template: ReportTemplate
     </div>
   );
 }
+

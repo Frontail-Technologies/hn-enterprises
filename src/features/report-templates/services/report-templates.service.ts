@@ -1,4 +1,5 @@
 import { customers, getCustomerById } from "@/features/customers/services/customers.service";
+import type { Customer } from "@/features/customers/types/customer.types";
 import {
   gcChecklistItems,
   gcEvidenceItems,
@@ -54,6 +55,21 @@ export const reportTemplates: ReportTemplateDefinition[] = [
     defaultCustomerId: "cust-001",
     defaultRecordId: "gcu-002",
   },
+  {
+    id: "pre-commissioning-report",
+    title: "Pre-Commissioning Report",
+    category: "Pre-Commissioning",
+    description: "N2 purging, PE pipe length, valve chamber and readiness checklist report.",
+    defaultCustomerId: "cust-001",
+    defaultRecordId: "pc-001",
+  },
+  {
+    id: "conversion-report",
+    title: "Conversion Report",
+    category: "Conversion",
+    description: "NG conversion report with meter, regulator, conversion date and signatures.",
+    defaultCustomerId: "cust-001",
+  },
 ];
 
 export function getReportTemplateById(id: string) {
@@ -67,6 +83,15 @@ export function resolveReportTemplateData(
 ): ReportTemplateData {
   const template = getReportTemplateById(templateId);
   const customer = getCustomerById(customerId ?? template?.defaultCustomerId ?? customers[0].id);
+  return resolveReportTemplateDataFromCustomer(templateId, customer, recordId);
+}
+
+export function resolveReportTemplateDataFromCustomer(
+  templateId: ReportTemplateId,
+  customer: Customer,
+  recordId?: string,
+): ReportTemplateData {
+  const template = getReportTemplateById(templateId);
   const connection = customer.customerConnection;
   const commissioning = customer.commissioningConversion;
   const pressure = getPressureTestById(recordId ?? template?.defaultRecordId ?? "tp-002");
@@ -126,19 +151,20 @@ export function resolveReportTemplateData(
 
 function selectReportNo(templateId: ReportTemplateId, gi: string, gc: string, conversion: string) {
   if (templateId === "gc-report") return gc;
-  if (templateId === "pressure-observation-chart" || templateId === "testing-report-mdpe-line") return gi;
-  if (templateId === "png-connection-job-card") return conversion || gi;
+  if (templateId === "pressure-observation-chart" || templateId === "testing-report-mdpe-line" || templateId === "pre-commissioning-report") return gi;
+  if (templateId === "png-connection-job-card" || templateId === "conversion-report") return conversion || gi;
   return gi;
 }
 
 function resolveRemarks(templateId: ReportTemplateId, billing: string, pressure: string, jmr: string, gc: string) {
   if (templateId === "gc-report") return gc;
-  if (templateId === "testing-report-mdpe-line" || templateId === "pressure-observation-chart") return pressure;
+  if (templateId === "testing-report-mdpe-line" || templateId === "pressure-observation-chart" || templateId === "pre-commissioning-report") return pressure;
   if (templateId === "jmr-customer-consent") return jmr;
+  if (templateId === "conversion-report") return billing;
   return billing;
 }
 
-function buildGiRows(customer: ReturnType<typeof getCustomerById>): PdfTableRow[] {
+function buildGiRows(customer: Customer): PdfTableRow[] {
   const gi = customer.giMeasurements;
   return [
     ["TF to Regulators", '1"', gi.tfToRegulator, "mtr"],
@@ -154,7 +180,7 @@ function buildGiRows(customer: ReturnType<typeof getCustomerById>): PdfTableRow[
   ];
 }
 
-function buildMaterialRows(customer: ReturnType<typeof getCustomerById>): PdfTableRow[] {
+function buildMaterialRows(customer: Customer): PdfTableRow[] {
   const gi = customer.giMeasurements;
   const valves = customer.valvesRegulators;
   const fittings = customer.fittingsAccessories;
@@ -186,7 +212,7 @@ function buildTestingChecklistRows(result: string): PdfTableRow[] {
   ];
 }
 
-function buildPipeSummaryRows(customer: ReturnType<typeof getCustomerById>): PdfTableRow[] {
+function buildPipeSummaryRows(customer: Customer): PdfTableRow[] {
   return customer.lmcPipelineWork.pipeRecords
     .filter((pipe) => pipe.pipeSize !== "Other")
     .map((pipe, index) => [

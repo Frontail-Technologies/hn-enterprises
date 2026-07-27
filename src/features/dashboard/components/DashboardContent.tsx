@@ -1,34 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { WarningIcon } from "@phosphor-icons/react";
 import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { PageShell } from "@/components/shared/PageShell";
+import { SectionCard } from "@/components/shared/SectionCard";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
-import { WorkProgressCard } from "@/features/dashboard/components/WorkProgressCard";
 import {
-  dashboardMetricsByPeriod,
-  type DashboardPeriod,
   type DashboardMetricPeriod,
+  type DashboardPeriod,
 } from "@/features/dashboard/data/dashboard.data";
+import {
+  getAdminDashboardData,
+  type AttendanceSummaryRow,
+  type DashboardAlert,
+} from "@/features/dashboard/services/dashboard.selectors";
 
 export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
   const [month, setMonth] = useState("07");
   const [year, setYear] = useState("2026");
+  const [projectId, setProjectId] = useState("all");
+  const [city, setCity] = useState("all");
+
   const metricPeriod: DashboardMetricPeriod =
     period === "custom-year"
       ? "this-year"
       : period === "custom-month"
         ? "this-month"
         : period;
-  const dashboardMetrics = dashboardMetricsByPeriod[metricPeriod];
+
+  const dashboard = useMemo(
+    () =>
+      getAdminDashboardData({
+        projectId,
+        city,
+        period: metricPeriod,
+      }),
+    [city, metricPeriod, projectId],
+  );
 
   return (
     <PageShell
       title="Dashboard"
-      subtitle="Project, site, survey, and billing overview"
+      subtitle="Admin control overview for projects, customers, finance and field operations."
       actions={
         <DashboardPeriodFilter
           value={period}
@@ -37,12 +55,16 @@ export function DashboardContent() {
           year={year}
           onMonthChange={setMonth}
           onYearChange={setYear}
+          projectId={projectId}
+          city={city}
+          onProjectChange={setProjectId}
+          onCityChange={setCity}
         />
       }
       contentClassName="space-y-5"
     >
       <CompactStatGrid dashboard>
-        {dashboardMetrics.map((metric) => (
+        {dashboard.metrics.map((metric) => (
           <MetricCard
             key={metric.label}
             {...metric}
@@ -51,10 +73,100 @@ export function DashboardContent() {
         ))}
       </CompactStatGrid>
 
-      <section className="grid gap-5 xl:grid-cols-2">
-        <WorkProgressCard />
-        <RecentActivityCard />
+      <section className="space-y-2">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Customer Workflow</h2>
+          <p className="text-xs text-muted-foreground">
+            Master-sheet progress counts. Click any stat to open the filtered records.
+          </p>
+        </div>
+        <CompactStatGrid dashboard>
+          {dashboard.workflowMetrics.map((metric) => (
+            <Link
+              key={metric.label}
+              href={metric.href ?? "/dashboard"}
+              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <MetricCard
+                {...metric}
+                className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
+              />
+            </Link>
+          ))}
+        </CompactStatGrid>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
+        <AttendanceSummary rows={dashboard.attendanceRows} />
+        <AlertsAndActivity alerts={dashboard.alerts} />
       </section>
     </PageShell>
   );
+}
+
+function AttendanceSummary({ rows }: { rows: AttendanceSummaryRow[] }) {
+  return (
+    <SectionCard title="Attendance Summary" className="flex h-full flex-col">
+      <div className="grid flex-1 grid-cols-2 gap-2">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="flex min-h-24 flex-col justify-between rounded-md border border-border/70 bg-muted/25 p-3"
+          >
+            <p className="text-xs font-medium text-muted-foreground">{row.label}</p>
+            <p className="mt-1 text-xl font-semibold leading-none text-foreground">
+              {row.value}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{row.helper}</p>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
+function AlertsAndActivity({ alerts }: { alerts: DashboardAlert[] }) {
+  return (
+    <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-[0.8fr_1.2fr]">
+      <SectionCard title="Alerts">
+        <div className="space-y-2">
+          {alerts.length ? (
+            alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className="flex gap-2 rounded-md border border-border/70 bg-muted/20 p-2.5"
+              >
+                <span className={getAlertIconClass(alert.tone)}>
+                  <WarningIcon size={15} weight="bold" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {alert.title}
+                  </p>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {alert.description}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No active alerts.</p>
+          )}
+        </div>
+      </SectionCard>
+      <RecentActivityCard />
+    </div>
+  );
+}
+
+function getAlertIconClass(tone: DashboardAlert["tone"]) {
+  if (tone === "danger") {
+    return "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive";
+  }
+
+  if (tone === "info") {
+    return "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-status-info-bg text-status-info-fg";
+  }
+
+  return "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-status-warning-bg text-status-warning-fg";
 }

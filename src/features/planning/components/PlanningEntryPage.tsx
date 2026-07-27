@@ -1,0 +1,259 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowSquareOutIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { DatePicker } from "@/components/shared/DatePicker";
+import { PageShell } from "@/components/shared/PageShell";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { cn } from "@/lib/utils";
+import { planningSupervisorProjects } from "../services/planning.service";
+import type { PlanningSupervisorProject } from "../types/planning.types";
+
+type FilterKey =
+  | "supervisorName"
+  | "siteArea"
+  | "planningPercent"
+  | "dprPercent"
+  | "clientPercent"
+  | "status";
+
+type ActiveFilters = Partial<Record<FilterKey, string[]>>;
+
+const columns: Array<{ key: FilterKey; label: string; width: string }> = [
+  { key: "supervisorName", label: "Supervisor", width: "w-56" },
+  { key: "siteArea", label: "Area / Site", width: "w-56" },
+  { key: "planningPercent", label: "Planning Supervisor Wise", width: "w-48" },
+  { key: "dprPercent", label: "DPR Supervisor Wise", width: "w-44" },
+  { key: "clientPercent", label: "Client Planning & DPR", width: "w-48" },
+  { key: "status", label: "Status", width: "w-36" },
+];
+
+export function PlanningEntryPage() {
+  const [date, setDate] = useState("2026-07-22");
+  const [filters, setFilters] = useState<ActiveFilters>({});
+
+  const filteredRows = useMemo(() => {
+    return planningSupervisorProjects.filter((row) =>
+      columns.every((column) => {
+        const selected = filters[column.key] ?? [];
+        if (!selected.length) return true;
+        return selected.includes(String(row[column.key]));
+      }),
+    );
+  }, [filters]);
+
+  const groupedRows = useMemo(() => {
+    const groups = new Map<string, PlanningSupervisorProject[]>();
+    filteredRows.forEach((row) => {
+      const current = groups.get(row.supervisorId) ?? [];
+      current.push(row);
+      groups.set(row.supervisorId, current);
+    });
+    return Array.from(groups.values());
+  }, [filteredRows]);
+
+  return (
+    <PageShell title="DPR / Planning">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-card p-3 lg:flex-row lg:items-end">
+          <div className="w-full lg:w-56">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Date</p>
+            <DatePicker value={date} onChange={setDate} />
+          </div>
+        </div>
+
+        <section className="overflow-hidden rounded-lg border border-border/70 bg-card">
+          <div className="border-b border-border/70 px-3 py-2">
+            <h2 className="text-sm font-semibold text-foreground">Supervisor Wise Work</h2>
+            <p className="text-xs text-muted-foreground">
+              Supervisors can manage multiple sites. Use column filters to narrow the sheet.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1040px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-secondary/85 text-xs font-semibold text-muted-foreground">
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      className={cn(
+                        "border border-border/60 px-3 py-2 text-left",
+                        column.width,
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{column.label}</span>
+                        <ColumnFilter
+                          columnKey={column.key}
+                          label={column.label}
+                          rows={planningSupervisorProjects}
+                          selected={filters[column.key] ?? []}
+                          onApply={(values) =>
+                            setFilters((current) => ({
+                              ...current,
+                              [column.key]: values,
+                            }))
+                          }
+                        />
+                      </div>
+                    </th>
+                  ))}
+                  <th className="w-40 border border-border/60 px-3 py-2 text-left">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedRows.map((group) =>
+                  group.map((row, index) => (
+                    <tr key={row.id} className="bg-card hover:bg-muted/25">
+                      {index === 0 ? (
+                        <td
+                          className="border border-border/55 px-3 py-2 align-top font-semibold text-foreground"
+                          rowSpan={group.length}
+                        >
+                          {row.supervisorName}
+                          <div className="mt-1 text-xs font-normal text-muted-foreground">
+                            {group.length} site{group.length > 1 ? "s" : ""}
+                          </div>
+                        </td>
+                      ) : null}
+                      <td className="border border-border/55 px-3 py-2">{row.siteArea}</td>
+                      <td className="border border-border/55 px-3 py-2">{row.planningPercent}</td>
+                      <td className="border border-border/55 px-3 py-2">{row.dprPercent}</td>
+                      <td className="border border-border/55 px-3 py-2">{row.clientPercent}</td>
+                      <td className="border border-border/55 px-3 py-2">
+                        <StatusBadge status={row.status} />
+                      </td>
+                      <td className="border border-border/55 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/planning/plan?supervisor=${row.supervisorId}&site=${encodeURIComponent(row.siteArea)}&date=${date}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                          >
+                            Planning <ArrowSquareOutIcon size={13} />
+                          </Link>
+                          <Link
+                            href={`/planning/dpr?supervisor=${row.supervisorId}&site=${encodeURIComponent(row.siteArea)}&date=${date}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                          >
+                            DPR <ArrowSquareOutIcon size={13} />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </PageShell>
+  );
+}
+
+function ColumnFilter({
+  columnKey,
+  label,
+  rows,
+  selected,
+  onApply,
+}: {
+  columnKey: FilterKey;
+  label: string;
+  rows: PlanningSupervisorProject[];
+  selected: string[];
+  onApply: (values: string[]) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [draft, setDraft] = useState<string[]>(selected);
+  const active = selected.length > 0;
+
+  const values = useMemo(() => {
+    return Array.from(new Set(rows.map((row) => String(row[columnKey]))))
+      .filter((value) => value.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b));
+  }, [columnKey, rows, search]);
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`Filter ${label}`}
+            className={cn(
+              "inline-flex h-5 w-5 items-center justify-center rounded border border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
+              active && "border-primary/30 bg-primary/10 text-primary",
+            )}
+          >
+            <FunnelSimpleIcon size={13} />
+          </button>
+        }
+      />
+      <PopoverContent align="end" className="w-72">
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-semibold text-foreground">{label}</p>
+            <p className="text-[11px] text-muted-foreground">Select values to show</p>
+          </div>
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search values..."
+            className="h-8"
+          />
+          <div className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-border p-1">
+            {values.map((value) => (
+              <label
+                key={value}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-muted"
+              >
+                <input
+                  type="checkbox"
+                  checked={draft.includes(value)}
+                  onChange={() =>
+                    setDraft((current) =>
+                      current.includes(value)
+                        ? current.filter((item) => item !== value)
+                        : [...current, value],
+                    )
+                  }
+                  className="h-3.5 w-3.5 accent-primary"
+                />
+                <span className="truncate" title={value}>
+                  {value}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-between gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDraft([]);
+                onApply([]);
+              }}
+            >
+              Clear
+            </Button>
+            <Button type="button" size="sm" onClick={() => onApply(draft)}>
+              Apply
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

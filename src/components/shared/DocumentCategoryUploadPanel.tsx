@@ -165,7 +165,13 @@ export function DocumentCategoryUploadPanel<T extends DocumentUploadRecord>({
                 </Button>
               </ActionTooltip>
               <ActionTooltip label="Replace">
-                <Button type="button" variant="ghost" size="icon-xs" aria-label="Replace document">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Replace document"
+                  onClick={() => openEdit(document)}
+                >
                   <UploadSimpleIcon size={13} />
                 </Button>
               </ActionTooltip>
@@ -360,6 +366,7 @@ function DocumentUploadDialog({
           </FormField>
           <FormField label="File">
             <Input
+              key={draft.id || draft.fileName || title}
               type="file"
               onChange={(event) => {
                 const file = event.target.files?.[0];

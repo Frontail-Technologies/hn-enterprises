@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { NotePencilIcon } from "@phosphor-icons/react";
+import { EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
@@ -52,15 +52,26 @@ export function StaffResourcesPage() {
       header: "Actions",
       className: "w-20",
       render: (row) => (
-        <ActionTooltip label="Edit staff">
-          <Link
-            href={`/staff/${row.id}/edit`}
-            aria-label={`Edit ${row.name}`}
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          >
-            <NotePencilIcon size={15} />
-          </Link>
-        </ActionTooltip>
+        <div className="flex items-center gap-1">
+          <ActionTooltip label="View staff">
+            <Link
+              href={`/staff/${row.id}`}
+              aria-label={`View ${row.name}`}
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <EyeIcon size={15} />
+            </Link>
+          </ActionTooltip>
+          <ActionTooltip label="Edit staff">
+            <Link
+              href={`/staff/${row.id}/edit`}
+              aria-label={`Edit ${row.name}`}
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <NotePencilIcon size={15} />
+            </Link>
+          </ActionTooltip>
+        </div>
       ),
     },
   ];

@@ -10,6 +10,8 @@ import type {
   CustomerGiDetails,
   CustomerStatus,
   CustomerSurvey,
+  CustomerSurveyApprovalStatus,
+  CustomerSurveyWorkableStatus,
   FittingsAccessories,
   GiMeasurements,
   ImportPreviewRow,
@@ -64,6 +66,9 @@ export type LmcCivilWork = Pick<
 export const connectionTypeOptions = ["Domestic", "Commercial", "Industrial"] as const;
 export const customerStatusOptions = ["Draft", "Active", "On Hold", "Completed", "Archived"] as const;
 export const paymentStatusOptions = ["Pending", "In Review", "Approved", "Rejected", "Completed"] as const;
+export const surveyWorkableStatusOptions = ["Workable", "Partially Workable", "Not Workable"] as const satisfies readonly CustomerSurveyWorkableStatus[];
+export const surveyApprovalStatusOptions = ["Draft", "Submitted", "In Review", "Approved", "Sent Back", "Rejected"] as const satisfies readonly CustomerSurveyApprovalStatus[];
+export const surveyConditionStatusOptions = ["Workable", "Partially Workable", "Not Workable", "Approved", "Rejected", "Pending"] as const;
 export const customerDocumentCategories = [
   "Customer Photo",
   "ID / Address Proof",
@@ -389,6 +394,32 @@ export const emptyCustomerConnection: CustomerConnectionDetails = {
   houseType: "",
 };
 
+export const emptyCustomerSurvey: CustomerSurvey = {
+  id: "survey-draft",
+  surveyId: "",
+  surveyDate: "",
+  assignedSurveyor: "",
+  submittedBy: "",
+  submissionDate: "",
+  latitude: 0,
+  longitude: 0,
+  captureAccuracy: "",
+  workableStatus: "Workable",
+  approvalStatus: "Draft",
+  initialMeasurements: "",
+  siteAccessibility: "Pending",
+  meterPlacement: "Pending",
+  pipelineRoute: "Pending",
+  civilWorkRequired: "No",
+  obstaclesRemarks: "",
+  notes: "",
+  reason: "",
+  recommendedAction: "",
+  expectedResolutionDate: "",
+  approvalComments: "",
+  photos: [],
+  revisions: [],
+};
 export const emptyLmcPipelineWork: LmcPipelineWork = {
   pipeRecords: lmcPipeSizeOptions.map((size) => emptyPipeSizeRecord(size)),
   fourMetresUnderGc: "",
@@ -1636,3 +1667,4 @@ export function getCustomerDisplay(customer: Customer) {
     paymentStatus: customer.billingCompletion.paymentStatus,
   };
 }
+

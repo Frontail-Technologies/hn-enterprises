@@ -33,6 +33,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { DatePicker } from "@/components/shared/DatePicker";
@@ -40,7 +49,6 @@ import { FormField } from "@/components/shared/FormField";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { LocationPicker } from "@/components/shared/LocationPicker";
 import { LocationPreview } from "@/components/shared/LocationPreview";
-import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
 import {
@@ -90,13 +98,14 @@ type ProjectApprovalItem = {
 };
 
 const documentCategories = [
-  "Tender",
-  "LOA",
-  "FOA",
-  "BG",
-  "RO",
-  "Statutory",
-  "Other",
+  { type: "Tender", label: "Tender", numberLabel: "Tender No.", amountLabel: "Contract Amount" },
+  { type: "LOA", label: "LOA", numberLabel: "LOA No.", amountLabel: "LOA Amount" },
+  { type: "FOA", label: "FOA", numberLabel: "FOA No.", amountLabel: "FOA Amount" },
+  { type: "EOI", label: "EOI", numberLabel: "EOI No.", amountLabel: "EOI Amount" },
+  { type: "BG", label: "BG", numberLabel: "BG No.", amountLabel: "BG Amount" },
+  { type: "RO", label: "RO", numberLabel: "RO No.", amountLabel: "RO Amount" },
+  { type: "Statutory", label: "Statutory", numberLabel: "Document No.", amountLabel: "Amount" },
+  { type: "Other", label: "Other", numberLabel: "Reference No.", amountLabel: "Amount" },
 ];
 
 const statusOptions = [
@@ -182,13 +191,13 @@ const projectApprovalItems: ProjectApprovalItem[] = [
 ];
 
 const projectSectionLinks = [
-  { href: "#overview", label: "Overview" },
-  { href: "#contract", label: "Contract & Targets" },
-  { href: "#sites", label: "Sites" },
-  { href: "#documents", label: "Documents" },
-  { href: "#team", label: "Team" },
-  { href: "#planning", label: "Planning & DPR" },
-  { href: "#approvals", label: "Approvals" },
+  { value: "overview", label: "Overview" },
+  { value: "contract", label: "Contract & Targets" },
+  { value: "sites", label: "Sites" },
+  { value: "documents", label: "Documents" },
+  { value: "team", label: "Team" },
+  { value: "planning", label: "Planning & DPR" },
+  { value: "approvals", label: "Approvals" },
 ];
 
 export function ProjectDetail({ project }: { project: Project }) {
@@ -217,38 +226,50 @@ export function ProjectDetail({ project }: { project: Project }) {
         </Link>
       </div>
 
-      <ProjectSectionNav />
-
-      <div className="space-y-4">
-        <section id="overview" className="scroll-mt-16">
+      <Tabs defaultValue="overview" className="gap-4">
+        <ProjectSectionNav />
+        <TabsContent value="overview">
           <ProjectOverview project={project} />
-        </section>
-        <section id="contract" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="contract">
           <ContractTargets project={project} />
-        </section>
-        <section id="sites" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="sites">
           <ProjectSites />
-        </section>
-        <section id="documents" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="documents">
           <ProjectDocuments />
-        </section>
-        <section id="team" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="team">
           <ProjectTeam />
-        </section>
-        <section id="planning" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="planning">
           <ProjectPlanningDpr />
-        </section>
-        <section id="approvals" className="scroll-mt-16">
+        </TabsContent>
+        <TabsContent value="approvals">
           <ProjectApprovals />
-        </section>
-        {false ? <ActivityTimeline items={[]} /> : null}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
 function ProjectSectionNav() {
-  return <SectionAnchorTabs items={projectSectionLinks} />;
+  return (
+    <div className="sticky top-0 z-40 -mx-1 border-b border-border bg-background px-1 backdrop-blur">
+      <TabsList variant="line" className="flex w-max min-w-full justify-start gap-6 overflow-x-auto">
+        {projectSectionLinks.map((item) => (
+          <TabsTrigger
+            key={item.value}
+            value={item.value}
+            className="h-10 flex-none rounded-none px-0.5 py-0 font-medium"
+          >
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
+  );
 }
 
 function ProjectPlanningDpr() {
@@ -581,20 +602,20 @@ function ProjectDocuments() {
 
   const columns: ColumnDef<ProjectDocument>[] = [
     { key: "type", header: "Type" },
-    { key: "number", header: "Number" },
-    { key: "category", header: "Category" },
+    { key: "documentName", header: "Document Name", className: "min-w-48" },
+    { key: "number", header: "No. / Reference", className: "min-w-40" },
     {
-      key: "issueDate",
-      header: "Issue Date",
-      render: (doc) => formatDate(doc.issueDate),
+      key: "contractDate",
+      header: "Contract Date",
+      render: (doc) => formatDate(doc.contractDate),
     },
     {
-      key: "expiryDate",
-      header: "Expiry Date",
-      render: (doc) => formatDate(doc.expiryDate),
+      key: "documentDate",
+      header: "Document Date",
+      render: (doc) => formatDate(doc.documentDate),
     },
     { key: "amount", header: "Amount" },
-    { key: "fileName", header: "File" },
+    { key: "fileName", header: "File", className: "min-w-52" },
     {
       key: "actions",
       header: "Actions",
@@ -678,11 +699,16 @@ function ProjectDocuments() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {documentCategories.map((category) => (
             <button
-              key={category}
+              key={category.type}
               className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-4 text-center text-sm font-semibold text-foreground hover:border-primary hover:bg-primary/5"
               onClick={() => {
                 setEditingId(null);
-                setDraft({ ...emptyDocument, category, type: category });
+                setDraft({
+                  ...emptyDocument,
+                  category: category.type,
+                  type: category.type,
+                  documentName: `${category.label} Document`,
+                });
                 setDialogOpen(true);
               }}
             >
@@ -690,12 +716,12 @@ function ProjectDocuments() {
                 size={20}
                 className="mx-auto mb-2 text-primary"
               />
-              {category}
+              {category.label}
               <span className="mt-1 block text-xs font-medium text-muted-foreground">
                 {
                   documents.filter(
                     (doc) =>
-                      doc.category.includes(category) || doc.type === category,
+                      doc.category === category.type || doc.type === category.type,
                   ).length
                 }{" "}
                 uploaded
@@ -826,7 +852,7 @@ function ProjectTeam() {
   );
 }
 
-function ActivityTimeline({ items }: { items: ActivityItem[] }) {
+export function ActivityTimeline({ items }: { items: ActivityItem[] }) {
   return (
     <SectionCard title="Activity">
       <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[5px] before:top-4 before:w-px before:bg-primary/25">
@@ -887,15 +913,16 @@ function TargetsDialog({
   onSave: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Edit Targets</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="!w-[min(42rem,calc(100vw-1rem))] !max-w-none gap-0 border-l-0 shadow-none">
+        <SheetHeader className="border-b border-border/70 px-5 py-4">
+          <SheetTitle>Edit Targets</SheetTitle>
+          <SheetDescription>
             Changes require a reason and will be recorded in history.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-3 md:grid-cols-2">
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="grid gap-3 md:grid-cols-2">
           {[...targetKeys, ...pipeKeys].map((key) => (
             <CompactInput
               key={key}
@@ -914,17 +941,18 @@ function TargetsDialog({
               className="min-h-20"
             />
           </FormField>
+          </div>
         </div>
-        <DialogFooter>
+        <SheetFooter className="flex-row justify-end border-t border-border/70 px-5 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button disabled={!reason.trim()} onClick={onSave}>
             Save Targets
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -1180,42 +1208,48 @@ function DocumentDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
-          <CompactInput
-            label="Type"
-            value={draft.type}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, type: value }))
-            }
-          />
-          <CompactInput
-            label="Number"
-            value={draft.number}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, number: value }))
-            }
-          />
-          <FormField label="Category">
+          <FormField label="Document Type">
             <Select
               value={draft.category}
-              onValueChange={(value) =>
+              onValueChange={(value) => {
+                const category = documentCategories.find(
+                  (item) => item.type === value,
+                );
                 setDraft((current) => ({
                   ...current,
-                  category: value ?? "Other",
-                }))
-              }
+                  category: category?.type ?? "Other",
+                  type: category?.type ?? "Other",
+                  documentName:
+                    current.documentName || `${category?.label ?? "Other"} Document`,
+                }));
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {documentCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                  <SelectItem key={category.type} value={category.type}>
+                    {category.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FormField>
+          <CompactInput
+            label="Document Name"
+            value={draft.documentName}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, documentName: value }))
+            }
+          />
+          <CompactInput
+            label="No. / Reference"
+            value={draft.number}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, number: value }))
+            }
+          />
           <CompactInput
             label="Amount"
             value={draft.amount}
@@ -1224,11 +1258,23 @@ function DocumentDialog({
             }
           />
           <CompactInput
-            label="Issue Date"
+            label="Contract Date"
             type="date"
-            value={draft.issueDate}
+            value={draft.contractDate}
             onChange={(value) =>
-              setDraft((current) => ({ ...current, issueDate: value }))
+              setDraft((current) => ({ ...current, contractDate: value }))
+            }
+          />
+          <CompactInput
+            label="Document Date"
+            type="date"
+            value={draft.documentDate}
+            onChange={(value) =>
+              setDraft((current) => ({
+                ...current,
+                documentDate: value,
+                issueDate: value,
+              }))
             }
           />
           <CompactInput
@@ -1437,8 +1483,11 @@ const emptySite: ProjectSite = {
 
 const emptyDocument: ProjectDocument = {
   id: "new",
-  type: "",
+  type: "Other",
   number: "",
+  documentName: "",
+  documentDate: "",
+  contractDate: "",
   issueDate: "",
   expiryDate: "",
   amount: "",
