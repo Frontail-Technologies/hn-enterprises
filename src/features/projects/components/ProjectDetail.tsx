@@ -11,7 +11,6 @@ import {
   NotePencilIcon,
   PlusIcon,
   TrashIcon,
-  UploadSimpleIcon,
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -52,10 +51,12 @@ import { LocationPreview } from "@/components/shared/LocationPreview";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
 import {
-  assignedUsers,
-  projectDocuments,
-  projectSites,
-} from "@/features/projects/services/projects.service";
+  useProjectDocumentsQuery,
+  useProjectQuery,
+  useProjectSitesQuery,
+  useSaveProjectSite,
+  useCreateProjectDocument,
+} from "@/features/projects/hooks/useProjects";
 import type {
   ActivityItem,
   AssignedUser,
@@ -63,6 +64,8 @@ import type {
   ProjectDocument,
   ProjectSite,
 } from "../types/project.types";
+
+const assignedUsers: AssignedUser[] = [];
 
 type TargetValues = Record<string, string>;
 type ChangeHistoryItem = {
@@ -200,7 +203,17 @@ const projectSectionLinks = [
   { value: "approvals", label: "Approvals" },
 ];
 
-export function ProjectDetail({ project }: { project: Project }) {
+export function ProjectDetail({ projectId }: { projectId: string }) {
+  const { data: project, isLoading, isError } = useProjectQuery(projectId);
+
+  if (isLoading) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading project...</p>;
+  }
+
+  if (isError || !project) {
+    return <p className="p-4 text-sm text-destructive">Unable to load this project.</p>;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
@@ -235,10 +248,10 @@ export function ProjectDetail({ project }: { project: Project }) {
           <ContractTargets project={project} />
         </TabsContent>
         <TabsContent value="sites">
-          <ProjectSites />
+          <ProjectSites projectId={project.id} />
         </TabsContent>
         <TabsContent value="documents">
-          <ProjectDocuments />
+          <ProjectDocuments projectId={project.id} />
         </TabsContent>
         <TabsContent value="team">
           <ProjectTeam />
@@ -350,8 +363,9 @@ function ProjectOverview({ project }: { project: Project }) {
   );
 }
 
-function ProjectSites() {
-  const [sites, setSites] = useState<ProjectSite[]>(projectSites);
+function ProjectSites({ projectId }: { projectId: string }) {
+  const { data: sites = [], isLoading } = useProjectSitesQuery(projectId);
+  const saveSiteMutation = useSaveProjectSite(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -407,18 +421,9 @@ function ProjectSites() {
     },
   ];
 
-  const saveSite = () => {
+  const saveSite = async () => {
     if (!draft.name || !draft.code) return;
-    if (editingId) {
-      setSites((current) =>
-        current.map((site) => (site.id === editingId ? draft : site)),
-      );
-    } else {
-      setSites((current) => [
-        ...current,
-        { ...draft, id: `site-${current.length + 1}` },
-      ]);
-    }
+    await saveSiteMutation.mutateAsync(editingId ? draft : { ...draft, id: "new" });
     setDialogOpen(false);
     setEditingId(null);
     setDraft(emptySite);
@@ -441,7 +446,13 @@ function ProjectSites() {
         </Button>
       }
     >
-      <DataTable columns={columns} data={sites} variant="striped" />
+      <DataTable
+        columns={columns}
+        data={sites}
+        variant="striped"
+        isLoading={isLoading}
+        emptyTitle="No sites added yet"
+      />
       <SiteDialog
         open={dialogOpen}
         title={editingId ? "Edit Site" : "Add Site"}
@@ -593,9 +604,9 @@ function ContractTargets({ project }: { project: Project }) {
   );
 }
 
-function ProjectDocuments() {
-  const [documents, setDocuments] =
-    useState<ProjectDocument[]>(projectDocuments);
+function ProjectDocuments({ projectId }: { projectId: string }) {
+  const { data: documents = [], isLoading } = useProjectDocumentsQuery(projectId);
+  const createDocumentMutation = useCreateProjectDocument(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProjectDocument>(emptyDocument);
@@ -620,59 +631,21 @@ function ProjectDocuments() {
       key: "actions",
       header: "Actions",
       className: "w-64",
-      render: (doc) => (
+      render: () => (
         <div className="flex flex-wrap items-center gap-1">
           <ActionButton label="Preview" icon={<EyeIcon size={13} />} />
           <ActionButton
             label="Download"
             icon={<DownloadSimpleIcon size={13} />}
           />
-          <ActionTooltip label="Edit">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Edit document"
-              onClick={() => {
-                setEditingId(doc.id);
-                setDraft(doc);
-                setDialogOpen(true);
-              }}
-            >
-              <NotePencilIcon size={13} />
-            </Button>
-          </ActionTooltip>
-          <ActionButton label="Replace" icon={<UploadSimpleIcon size={13} />} />
-          <ActionTooltip label="Delete">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Delete document"
-              onClick={() =>
-                setDocuments((current) =>
-                  current.filter((item) => item.id !== doc.id),
-                )
-              }
-            >
-              <TrashIcon size={13} />
-            </Button>
-          </ActionTooltip>
         </div>
       ),
     },
   ];
 
-  const saveDocument = () => {
+  const saveDocument = async () => {
     if (!draft.type || !draft.number) return;
-    if (editingId) {
-      setDocuments((current) =>
-        current.map((doc) => (doc.id === editingId ? draft : doc)),
-      );
-    } else {
-      setDocuments((current) => [
-        ...current,
-        { ...draft, id: `doc-${current.length + 1}` },
-      ]);
-    }
+    await createDocumentMutation.mutateAsync(draft);
     setDialogOpen(false);
     setEditingId(null);
     setDraft(emptyDocument);
@@ -732,7 +705,13 @@ function ProjectDocuments() {
       </SectionCard>
 
       <SectionCard title="Uploaded Documents">
-        <DataTable columns={columns} data={documents} variant="striped" />
+        <DataTable
+          columns={columns}
+          data={documents}
+          variant="striped"
+          isLoading={isLoading}
+          emptyTitle="No documents uploaded yet"
+        />
       </SectionCard>
 
       <DocumentDialog

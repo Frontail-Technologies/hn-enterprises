@@ -12,7 +12,7 @@ import type { ElementType } from "react";
 import { payments } from "@/features/commercial/data/payments.data";
 import { customerActivity, customers } from "@/features/customers/services/customers.service";
 import { planningDprRecords } from "@/features/planning/services/planning.service";
-import { projectActivity } from "@/features/projects/services/projects.service";
+import { projectActivity } from "@/features/projects/services/projects.mock";
 
 export type ActivityType =
   | "Customer"

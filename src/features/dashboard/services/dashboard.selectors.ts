@@ -14,7 +14,7 @@ import { payments } from "@/features/commercial/data/payments.data";
 import { customers } from "@/features/customers/services/customers.service";
 import { buildAttendanceRecords } from "@/features/management/data/attendance.data";
 import { planningDprRecords } from "@/features/planning/services/planning.service";
-import { projects, projectSites } from "@/features/projects/services/projects.service";
+import { projects, projectSites } from "@/features/projects/services/projects.mock";
 import type {
   DashboardMetric,
   DashboardMetricPeriod,

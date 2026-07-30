@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
-import { projects } from "@/features/projects/services/projects.service";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import type { Project } from "../types/project.types";
 
 type ProjectMasterSheetRow = {
@@ -49,8 +49,9 @@ const projectMasterSheetColumns: ExcelColumn<ProjectMasterSheetRow>[] = [
 export function ProjectsList() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const { data: projects = [], isLoading } = useProjectsQuery();
 
-  const rows = useMemo(() => projects.map(projectToMasterSheetRow), []);
+  const rows = useMemo(() => projects.map(projectToMasterSheetRow), [projects]);
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -98,7 +99,7 @@ export function ProjectsList() {
         <ExcelDataGrid
           columns={projectMasterSheetColumns}
           rows={filteredRows}
-          emptyTitle="No project master records found"
+          emptyTitle={isLoading ? "Loading projects..." : "No project master records found"}
           onRowClick={(row) => router.push(`/projects/${row.id}`)}
         />
       </TablePanel>

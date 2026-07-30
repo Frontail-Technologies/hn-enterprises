@@ -2,10 +2,11 @@ import type { StatusValue } from "@/components/shared/StatusBadge";
 
 export type ProjectStatus =
   | "Draft"
+  | "Active"
   | "In Progress"
-  | "Completed"
   | "On Hold"
-  | "Cancelled";
+  | "Completed"
+  | "Archived";
 
 export type Project = {
   id: string;

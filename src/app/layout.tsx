@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
+import { QueryProvider } from '@/components/providers/QueryProvider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 const inter = Inter({
@@ -28,11 +29,13 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" className={inter.variable}>
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   )

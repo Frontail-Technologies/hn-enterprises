@@ -1,361 +1,284 @@
-import type {
-  ActivityItem,
-  AssignedUser,
-  Project,
-  ProjectDocument,
-  ProjectSite,
-} from "../types/project.types";
+import { apiRequest } from "@/lib/api-client";
+import type { Project, ProjectDocument, ProjectFormValues, ProjectSite } from "../types/project.types";
+import type { StatusValue } from "@/components/shared/StatusBadge";
 
 export const projectStatusOptions = [
   "Draft",
+  "Active",
   "In Progress",
-  "Completed",
   "On Hold",
-  "Cancelled",
+  "Completed",
+  "Archived",
 ] as const;
 
-export const projects: Project[] = [
-  {
-    id: "shyam-nagar-cgd",
-    name: "Shyam Nagar CGD Project",
-    code: "CGD-SN-2025",
-    client: "Rajasthan City Gas Distribution Ltd.",
-    consultant: "Techno Consult Pvt. Ltd.",
-    contractor: "ABC Infra Ltd.",
-    projectType: "CGD Network",
-    city: "Jaipur",
-    area: "Shyam Nagar",
-    description:
-      "City Gas Distribution project for Shyam Nagar area covering domestic, commercial and industrial connections with MDPE pipeline network.",
-    startDate: "2025-01-15",
-    plannedEndDate: "2026-01-14",
-    status: "In Progress",
-    contractValue: "\u20B9 12.50 Cr",
-    assignedManager: "Amit Sharma",
-  },
-  {
-    id: "green-city-phase-1",
-    name: "Green City Phase 1",
-    code: "GCP-01-2024",
-    client: "Green City Developers",
-    consultant: "Urban Utility Consultants",
-    contractor: "Gasline Engineers",
-    projectType: "Pipeline Extension",
-    city: "Indore",
-    area: "Green City Township",
-    description: "Pipeline and connection rollout for Green City Phase 1.",
-    startDate: "2024-12-10",
-    plannedEndDate: "2025-11-30",
-    status: "In Progress",
-    contractValue: "\u20B9 8.40 Cr",
-    assignedManager: "Neha Verma",
-  },
-  {
-    id: "city-gas-network-jaipur",
-    name: "City Gas Network - Jaipur",
-    code: "CGN-JPR-2024",
-    client: "Jaipur Gas Utility",
-    consultant: "Infra Design Studio",
-    contractor: "MG Construction",
-    projectType: "Network Upgrade",
-    city: "Jaipur",
-    area: "Central Jaipur",
-    description: "Network upgrade and customer conversion work across Jaipur.",
-    startDate: "2024-11-05",
-    plannedEndDate: "2025-12-20",
-    status: "In Progress",
-    contractValue: "\u20B9 10.20 Cr",
-    assignedManager: "Rahul Mehta",
-  },
-  {
-    id: "sunrise-enclave-cgd",
-    name: "Sunrise Enclave CGD",
-    code: "SEC-2025",
-    client: "Sunrise Enclave Welfare Society",
-    consultant: "Pipeline Advisory Services",
-    contractor: "ABC Infra Ltd.",
-    projectType: "Residential CGD",
-    city: "Udaipur",
-    area: "Sunrise Enclave",
-    description: "Residential CGD network and customer onboarding.",
-    startDate: "2025-02-20",
-    plannedEndDate: "2025-10-30",
-    status: "In Progress",
-    contractValue: "\u20B9 4.75 Cr",
-    assignedManager: "Priya Nair",
-  },
-  {
-    id: "ajmer-city-gas-project",
-    name: "Ajmer City Gas Project",
-    code: "ACG-2024",
-    client: "Ajmer Municipal Gas Board",
-    consultant: "Northwest Infra Consultants",
-    contractor: "Gasline Engineers",
-    projectType: "CGD Network",
-    city: "Ajmer",
-    area: "Ajmer Urban",
-    description: "Completed city gas distribution package for Ajmer.",
-    startDate: "2024-08-01",
-    plannedEndDate: "2025-06-30",
-    status: "Completed",
-    contractValue: "\u20B9 9.10 Cr",
-    assignedManager: "Devendra Singh",
-  },
-];
+type BackendProjectStatus = "draft" | "active" | "in_progress" | "on_hold" | "completed" | "archived";
+type BackendSiteStatus = "active" | "in_progress" | "not_started" | "on_hold" | "completed" | "archived";
 
-export const projectSites: ProjectSite[] = [
-  {
-    id: "site-1",
-    name: "Shyam Nagar Block A",
-    code: "SN-A",
-    city: "Jaipur",
-    fullAddress: "Shyam Nagar Block A, Jaipur, Rajasthan",
-    latitude: 26.8951,
-    longitude: 75.7684,
-    supervisor: "Ramesh Kumar",
-    plannedConnections: 1800,
-    startDate: "2025-01-20",
-    endDate: "2025-07-30",
-    status: "Active",
-    remarks: "Main residential block.",
-  },
-  {
-    id: "site-2",
-    name: "Shyam Nagar Block B",
-    code: "SN-B",
-    city: "Jaipur",
-    fullAddress: "New Sanganer Road, Shyam Nagar, Jaipur",
-    latitude: 26.8877,
-    longitude: 75.7592,
-    supervisor: "Kavita Joshi",
-    plannedConnections: 1450,
-    startDate: "2025-02-01",
-    endDate: "2025-08-15",
-    status: "In Progress",
-    remarks: "Survey work in progress.",
-  },
-  {
-    id: "site-3",
-    name: "Metro Station Stretch",
-    code: "SN-MTR",
-    city: "Jaipur",
-    fullAddress: "Metro Corridor, Shyam Nagar, Jaipur",
-    latitude: 26.902,
-    longitude: 75.78,
-    supervisor: "Farhan Khan",
-    plannedConnections: 620,
-    startDate: "2025-03-10",
-    endDate: "2025-09-20",
-    status: "Not Started",
-    remarks: "Awaiting traffic clearance.",
-  },
-];
+const STATUS_TO_FRONTEND: Record<BackendProjectStatus, Project["status"]> = {
+  draft: "Draft",
+  active: "Active",
+  in_progress: "In Progress",
+  on_hold: "On Hold",
+  completed: "Completed",
+  archived: "Archived",
+};
 
-export const projectDocuments: ProjectDocument[] = [
-  {
-    id: "doc-1",
-    type: "Tender",
-    number: "SN/CGD/2024/17",
-    documentName: "Tender Contract Document",
-    documentDate: "2024-12-20",
-    contractDate: "2024-12-20",
-    issueDate: "2024-12-20",
-    expiryDate: "2026-12-20",
-    amount: "₹ 12.50 Cr",
-    category: "Tender",
-    fileName: "Tender_SN_CGD_2024_17.pdf",
-    remarks: "Tender no. and contract date verified.",
-    uploadedOn: "2025-01-10",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-2",
-    type: "LOA",
-    number: "LOA/2025/101",
-    documentName: "Letter of Award",
-    documentDate: "2025-01-18",
-    contractDate: "2025-01-18",
-    issueDate: "2025-01-18",
-    expiryDate: "2026-01-14",
-    amount: "₹ 12.50 Cr",
-    category: "LOA",
-    fileName: "LOA_2025_101.pdf",
-    remarks: "LOA no. and amount captured.",
-    uploadedOn: "2025-01-20",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-3",
-    type: "FOA",
-    number: "FOA/2025/167",
-    documentName: "Final Order Acceptance",
-    documentDate: "2025-01-24",
-    contractDate: "2025-01-24",
-    issueDate: "2025-01-24",
-    expiryDate: "2026-01-14",
-    amount: "₹ 12.50 Cr",
-    category: "FOA",
-    fileName: "FOA_2025_167.pdf",
-    remarks: "FOA no. and amount captured.",
-    uploadedOn: "2025-01-25",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-4",
-    type: "EOI",
-    number: "EOI/2024/044",
-    documentName: "Expression of Interest",
-    documentDate: "2024-11-28",
-    contractDate: "2024-11-28",
-    issueDate: "2024-11-28",
-    expiryDate: "2025-11-27",
-    amount: "₹ 25.00 L",
-    category: "EOI",
-    fileName: "EOI_SN_CGD_2024_044.pdf",
-    remarks: "EOI no. and amount captured.",
-    uploadedOn: "2025-01-12",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-5",
-    type: "BG",
-    number: "BG/2025/331",
-    documentName: "Bank Guarantee",
-    documentDate: "2025-01-30",
-    contractDate: "2025-01-30",
-    issueDate: "2025-01-30",
-    expiryDate: "2026-01-30",
-    amount: "₹ 1.25 Cr",
-    category: "BG",
-    fileName: "BG_2025_331.pdf",
-    remarks: "Performance bank guarantee.",
-    uploadedOn: "2025-02-01",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-6",
-    type: "RO",
-    number: "RO/2025/044-1",
-    documentName: "Release Order 1",
-    documentDate: "2025-02-02",
-    contractDate: "2025-02-02",
-    issueDate: "2025-02-02",
-    expiryDate: "",
-    amount: "₹ 48.00 L",
-    category: "RO",
-    fileName: "RO_2025_044_1.pdf",
-    remarks: "RO 1 amount captured.",
-    uploadedOn: "2025-02-03",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-7",
-    type: "RO",
-    number: "RO/2025/044-2",
-    documentName: "Release Order 2",
-    documentDate: "2025-02-15",
-    contractDate: "2025-02-15",
-    issueDate: "2025-02-15",
-    expiryDate: "",
-    amount: "₹ 52.00 L",
-    category: "RO",
-    fileName: "RO_2025_044_2.pdf",
-    remarks: "RO 2 amount captured.",
-    uploadedOn: "2025-02-16",
-    uploadedBy: "Demo Admin",
-  },
-  {
-    id: "doc-8",
-    type: "Statutory",
-    number: "STAT/SN/2025/01",
-    documentName: "GST Registration Certificate",
-    documentDate: "2025-01-05",
-    contractDate: "2025-01-05",
-    issueDate: "2025-01-05",
-    expiryDate: "",
-    amount: "-",
-    category: "Statutory",
-    fileName: "GST_Reg_Certificate.pdf",
-    remarks: "Statutory document 1.",
-    uploadedOn: "2025-02-05",
-    uploadedBy: "Demo Admin",
-  },
-];
-export const assignedUsers: AssignedUser[] = [
-  {
-    id: "user-1",
-    name: "Amit Sharma",
-    role: "Project Manager",
-    siteArea: "All Sites",
-    assignmentDate: "2025-01-15",
-    status: "Active",
-  },
-  {
-    id: "user-2",
-    name: "Ramesh Kumar",
-    role: "Site Supervisor",
-    siteArea: "Shyam Nagar Block A",
-    assignmentDate: "2025-01-18",
-    status: "Active",
-  },
-  {
-    id: "user-3",
-    name: "Kavita Joshi",
-    role: "Survey Lead",
-    siteArea: "Shyam Nagar Block B",
-    assignmentDate: "2025-02-01",
-    status: "In Progress",
-  },
-  {
-    id: "user-4",
-    name: "Neha Verma",
-    role: "Billing Executive",
-    siteArea: "Commercial",
-    assignmentDate: "2025-02-05",
-    status: "Active",
-  },
-];
+const STATUS_TO_BACKEND: Record<Project["status"], BackendProjectStatus> = {
+  Draft: "draft",
+  Active: "active",
+  "In Progress": "in_progress",
+  "On Hold": "on_hold",
+  Completed: "completed",
+  Archived: "archived",
+};
 
-export const projectActivity: ActivityItem[] = [
-  {
-    id: "act-1",
-    title: "Project created",
-    description: "Contract and baseline project information were added.",
-    actor: "Demo Admin",
-    dateTime: "2025-01-15 10:20",
-    relatedRecord: "CGD-SN-2025",
-  },
-  {
-    id: "act-2",
-    title: "Site added",
-    description: "Shyam Nagar Block A was assigned to field operations.",
-    actor: "Amit Sharma",
-    dateTime: "2025-01-18 14:05",
-    relatedRecord: "SN-A",
-  },
-  {
-    id: "act-3",
-    title: "Document uploaded",
-    description: "LOA document uploaded by Demo Admin.",
-    actor: "Demo Admin",
-    dateTime: "2025-01-20 12:30",
-    relatedRecord: "LOA/2025/101",
-  },
-  {
-    id: "act-4",
-    title: "Status updated",
-    description: "Project moved from Draft to In Progress.",
-    actor: "Amit Sharma",
-    dateTime: "2025-01-22 09:45",
-    relatedRecord: "Project Status",
-  },
-];
+const SITE_STATUS_TO_BACKEND: Record<string, BackendSiteStatus> = {
+  Active: "active",
+  "In Progress": "in_progress",
+  "Not Started": "not_started",
+  "On Hold": "on_hold",
+  Completed: "completed",
+  Archived: "archived",
+};
 
-export function getProjectById(id: string) {
-  return projects.find((project) => project.id === id) ?? projects[0];
+function toDateOnly(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : "";
 }
 
-export const cityOptions = Array.from(new Set(projects.map((project) => project.city)));
-export const contractorOptions = Array.from(
-  new Set(projects.map((project) => project.contractor)),
-);
+function formatCurrency(value: string | number | null | undefined) {
+  if (value == null || value === "") return "";
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return String(value);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function parseCurrency(value: string) {
+  const digits = value.replace(/[^0-9.]/g, "");
+  return digits ? Number(digits) : undefined;
+}
+
+type BackendProject = {
+  id: string;
+  name: string;
+  code: string | null;
+  city: string | null;
+  client: string | null;
+  consultant: string | null;
+  contractor: string | null;
+  projectType: string | null;
+  areaLocation: string | null;
+  description: string | null;
+  startDate: string | null;
+  plannedEndDate: string | null;
+  status: BackendProjectStatus;
+  contractValue: string | null;
+  projectManager: string | null;
+};
+
+type BackendProjectSite = {
+  id: string;
+  name: string;
+  code: string | null;
+  city: string | null;
+  address: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  plannedConnections: number | null;
+  supervisorName: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  remarks: string | null;
+  status: BackendSiteStatus;
+};
+
+type BackendProjectDocument = {
+  id: string;
+  siteId: string | null;
+  documentType: string;
+  referenceNumber: string | null;
+  documentDate: string | null;
+  expiryDate: string | null;
+  amount: string | null;
+  fileUrl: string;
+  fileName: string;
+  status: string;
+  remarks: string | null;
+  uploadedAt: string;
+};
+
+function mapProject(raw: BackendProject): Project {
+  return {
+    id: raw.id,
+    name: raw.name,
+    code: raw.code ?? "",
+    client: raw.client ?? "",
+    consultant: raw.consultant ?? "",
+    contractor: raw.contractor ?? "",
+    projectType: raw.projectType ?? "",
+    city: raw.city ?? "",
+    area: raw.areaLocation ?? "",
+    description: raw.description ?? "",
+    startDate: toDateOnly(raw.startDate),
+    plannedEndDate: toDateOnly(raw.plannedEndDate),
+    status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
+    contractValue: formatCurrency(raw.contractValue),
+    assignedManager: raw.projectManager ?? "",
+  };
+}
+
+function mapProjectFormToBody(values: ProjectFormValues) {
+  return {
+    name: values.name,
+    code: values.code || undefined,
+    city: values.city || undefined,
+    client: values.client || undefined,
+    consultant: values.consultant || undefined,
+    contractor: values.contractor || undefined,
+    projectType: values.projectType || undefined,
+    areaLocation: values.area || undefined,
+    description: values.description || undefined,
+    startDate: values.startDate || undefined,
+    plannedEndDate: values.plannedEndDate || undefined,
+    status: STATUS_TO_BACKEND[values.status],
+    contractValue: parseCurrency(values.contractValue),
+    projectManager: values.assignedManager || undefined,
+  };
+}
+
+function mapProjectSite(raw: BackendProjectSite): ProjectSite {
+  const statusLabel = (Object.entries(SITE_STATUS_TO_BACKEND).find(([, v]) => v === raw.status)?.[0] ??
+    "Active") as StatusValue;
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    code: raw.code ?? "",
+    city: raw.city ?? "",
+    fullAddress: raw.address ?? "",
+    latitude: raw.latitude ? Number(raw.latitude) : 0,
+    longitude: raw.longitude ? Number(raw.longitude) : 0,
+    supervisor: raw.supervisorName ?? "",
+    plannedConnections: raw.plannedConnections ?? 0,
+    startDate: toDateOnly(raw.startDate),
+    endDate: toDateOnly(raw.endDate),
+    status: statusLabel,
+    remarks: raw.remarks ?? "",
+  };
+}
+
+function mapProjectSiteToBody(site: ProjectSite) {
+  return {
+    name: site.name,
+    code: site.code || undefined,
+    city: site.city || undefined,
+    address: site.fullAddress || undefined,
+    latitude: site.latitude || undefined,
+    longitude: site.longitude || undefined,
+    plannedConnections: site.plannedConnections || undefined,
+    supervisorName: site.supervisor || undefined,
+    startDate: site.startDate || undefined,
+    endDate: site.endDate || undefined,
+    remarks: site.remarks || undefined,
+    status: SITE_STATUS_TO_BACKEND[site.status] ?? "active",
+  };
+}
+
+function mapProjectDocument(raw: BackendProjectDocument): ProjectDocument {
+  return {
+    id: raw.id,
+    type: raw.documentType,
+    number: raw.referenceNumber ?? "",
+    documentName: raw.documentType,
+    documentDate: toDateOnly(raw.documentDate),
+    contractDate: toDateOnly(raw.documentDate),
+    issueDate: toDateOnly(raw.documentDate),
+    expiryDate: toDateOnly(raw.expiryDate),
+    amount: formatCurrency(raw.amount),
+    category: raw.documentType,
+    fileName: raw.fileName,
+    remarks: raw.remarks ?? "",
+    uploadedOn: toDateOnly(raw.uploadedAt),
+    uploadedBy: "",
+  };
+}
+
+function mapProjectDocumentToBody(doc: ProjectDocument) {
+  return {
+    documentType: doc.type || doc.category,
+    referenceNumber: doc.number || undefined,
+    documentDate: doc.documentDate || undefined,
+    expiryDate: doc.expiryDate || undefined,
+    amount: parseCurrency(doc.amount),
+    fileUrl: doc.fileName ? `uploads/${doc.fileName}` : "uploads/document.pdf",
+    fileName: doc.fileName || "document.pdf",
+    remarks: doc.remarks || undefined,
+  };
+}
+
+export const projectsApi = {
+  async list(search?: string): Promise<Project[]> {
+    const query = new URLSearchParams({ limit: "200" });
+    if (search) query.set("search", search);
+    const rows = await apiRequest<BackendProject[]>(`/projects?${query.toString()}`);
+    return rows.map(mapProject);
+  },
+
+  async get(id: string): Promise<Project> {
+    const raw = await apiRequest<BackendProject>(`/projects/${id}`);
+    return mapProject(raw);
+  },
+
+  async create(values: ProjectFormValues): Promise<Project> {
+    const raw = await apiRequest<BackendProject>("/projects", {
+      method: "POST",
+      body: JSON.stringify(mapProjectFormToBody(values)),
+    });
+    return mapProject(raw);
+  },
+
+  async update(id: string, values: ProjectFormValues): Promise<Project> {
+    const raw = await apiRequest<BackendProject>(`/projects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(mapProjectFormToBody(values)),
+    });
+    return mapProject(raw);
+  },
+
+  async listSites(projectId: string): Promise<ProjectSite[]> {
+    const rows = await apiRequest<BackendProjectSite[]>(`/projects/${projectId}/sites`);
+    return rows.map(mapProjectSite);
+  },
+
+  async createSite(projectId: string, site: ProjectSite): Promise<ProjectSite> {
+    const raw = await apiRequest<BackendProjectSite>(`/projects/${projectId}/sites`, {
+      method: "POST",
+      body: JSON.stringify(mapProjectSiteToBody(site)),
+    });
+    return mapProjectSite(raw);
+  },
+
+  async updateSite(projectId: string, site: ProjectSite): Promise<ProjectSite> {
+    const raw = await apiRequest<BackendProjectSite>(`/projects/${projectId}/sites/${site.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(mapProjectSiteToBody(site)),
+    });
+    return mapProjectSite(raw);
+  },
+
+  async listDocuments(projectId: string): Promise<ProjectDocument[]> {
+    const rows = await apiRequest<BackendProjectDocument[]>(`/projects/${projectId}/documents`);
+    return rows.map(mapProjectDocument);
+  },
+
+  async createDocument(projectId: string, doc: ProjectDocument): Promise<ProjectDocument> {
+    const raw = await apiRequest<BackendProjectDocument>(`/projects/${projectId}/documents`, {
+      method: "POST",
+      body: JSON.stringify(mapProjectDocumentToBody(doc)),
+    });
+    return mapProjectDocument(raw);
+  },
+};
