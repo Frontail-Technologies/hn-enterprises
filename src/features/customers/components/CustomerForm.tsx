@@ -405,7 +405,9 @@ function CustomerSurveyEditor({
             />
           </FormField>
           <TextField label="Submitted By" value={survey.submittedBy} onChange={(value) => update("submittedBy", value)} />
-          <TextField label="Submission Date / Time" value={survey.submissionDate} onChange={(value) => update("submissionDate", value)} />
+          <FormField label="Submission Date / Time">
+            <DatePicker value={survey.submissionDate} onChange={(value) => update("submissionDate", value)} className="w-full" />
+          </FormField>
           <TextField label="Latitude" type="number" value={String(survey.latitude || "")} onChange={(value) => update("latitude", Number(value) || 0)} />
           <TextField label="Longitude" type="number" value={String(survey.longitude || "")} onChange={(value) => update("longitude", Number(value) || 0)} />
           <TextField label="Capture Accuracy" value={survey.captureAccuracy} onChange={(value) => update("captureAccuracy", value)} />

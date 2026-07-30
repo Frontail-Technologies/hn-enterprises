@@ -111,7 +111,7 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
   { key: "plumberName", label: "Assigned Plumber" },
   { key: "supervisorName", label: "Assigned Supervisor" },
   { key: "jobCardDone", label: "Job Card Done", input: "select", options: yesNoOptions },
-  { key: "reportNoGi", label: "GI Report Number", readOnly: true },
+  { key: "reportNoGi", label: "GI Report Number" },
   { key: "reportNoGc", label: "GC Report Number", readOnly: true },
   { key: "reportNoConversion", label: "Conversion Report Number", readOnly: true },
 ];

@@ -157,7 +157,7 @@ function ProjectFormFields({
                 />
               </FormField>
               <FormField label="Status">
-                <Select value={values.status} onValueChange={(value) => setField("status", value as ProjectFormValues["status"])}>
+                <Select value={values.status} onValueChange={(value) => setField("status", (value ?? "Draft") as ProjectFormValues["status"])}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
