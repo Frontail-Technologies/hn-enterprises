@@ -10,7 +10,8 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -20,19 +21,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const existing = authService.getCurrentSession()
-    setSession(existing)
-    setIsLoading(false)
+    let mounted = true
+
+    authService.getCurrentUser().then((user) => {
+      if (!mounted) return
+      setSession(user ? { user, token: '', expiresAt: '' } : null)
+      setIsLoading(false)
+    })
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const login = useCallback(async (credentials: LoginCredentials) => {
-    const newSession = await authService.login(credentials)
-    setSession(newSession)
+    const user = await authService.login(credentials)
+    setSession({ user, token: '', expiresAt: '' })
   }, [])
 
-  const logout = useCallback(() => {
-    authService.logout()
+  const logout = useCallback(async () => {
+    await authService.logout()
     setSession(null)
+  }, [])
+
+  const refreshUser = useCallback(async () => {
+    const user = await authService.getCurrentUser()
+    setSession(user ? { user, token: '', expiresAt: '' } : null)
   }, [])
 
   const value: AuthContextValue = {
@@ -42,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     login,
     logout,
+    refreshUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

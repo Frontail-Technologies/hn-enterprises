@@ -61,11 +61,34 @@ export function ExcelDataGrid<T extends { id: string }>({
     scrollWidth: 0,
     clientWidth: 0,
   });
-  const fixedColumns = useMemo(() => columns.filter((column) => column.sticky), [columns]);
-  const scrollColumns = useMemo(() => columns.filter((column) => !column.sticky), [columns]);
+  const stickyOffsets = useMemo(() => {
+    return columns.reduce<{
+      offsets: Array<number | undefined>;
+      offset: number;
+    }>(
+      (state, column) => {
+        if (!column.sticky) {
+          return {
+            ...state,
+            offsets: [...state.offsets, undefined],
+          };
+        }
+
+        return {
+          offsets: [...state.offsets, state.offset],
+          offset: state.offset + (column.width ?? 140),
+        };
+      },
+      { offsets: [], offset: 0 },
+    ).offsets;
+  }, [columns]);
   const fixedWidth = useMemo(
-    () => fixedColumns.reduce((sum, column) => sum + (column.width ?? 140), 0),
-    [fixedColumns],
+    () =>
+      columns.reduce(
+        (sum, column) => (column.sticky ? sum + (column.width ?? 140) : sum),
+        0,
+      ),
+    [columns],
   );
   const canScrollHorizontally = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 4;
 
@@ -97,7 +120,7 @@ export function ExcelDataGrid<T extends { id: string }>({
     const observer = new ResizeObserver(updateScrollMetrics);
     observer.observe(scrollArea);
     return () => observer.disconnect();
-  }, [filteredRows.length, scrollColumns.length, updateScrollMetrics]);
+  }, [columns.length, filteredRows.length, updateScrollMetrics]);
 
   function syncBottomScrollbar(scrollLeft: number) {
     const bottom = bottomScrollRef.current;
@@ -151,41 +174,23 @@ export function ExcelDataGrid<T extends { id: string }>({
         Showing {filteredRows.length} of {rows.length} records
       </div>
       <div className={cn("group/excel-grid relative overflow-y-auto", maxHeightClassName)}>
-        <div className="flex min-w-0">
-          {fixedColumns.length ? (
-            <div className="shrink-0 border-r border-border/70">
-              <ExcelTable
-                columns={fixedColumns}
-                rows={filteredRows}
-                allRows={rows}
-                filters={filters}
-                setFilters={setFilters}
-                emptyTitle={emptyTitle}
-                emptyColSpan={columns.length}
-                fixed
-                hideEmptyState
-                onRowClick={onRowClick}
-                getRowClassName={getRowClassName}
-              />
-            </div>
-          ) : null}
-          <div
-            ref={scrollAreaRef}
-            className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            onScroll={(event) => syncBottomScrollbar(event.currentTarget.scrollLeft)}
-          >
-            <ExcelTable
-              columns={scrollColumns}
-              rows={filteredRows}
-              allRows={rows}
-              filters={filters}
-              setFilters={setFilters}
-              emptyTitle={emptyTitle}
-              emptyColSpan={Math.max(scrollColumns.length, 1)}
-              onRowClick={onRowClick}
-              getRowClassName={getRowClassName}
-            />
-          </div>
+        <div
+          ref={scrollAreaRef}
+          className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onScroll={(event) => syncBottomScrollbar(event.currentTarget.scrollLeft)}
+        >
+          <ExcelTable
+            columns={columns}
+            stickyOffsets={stickyOffsets}
+            rows={filteredRows}
+            allRows={rows}
+            filters={filters}
+            setFilters={setFilters}
+            emptyTitle={emptyTitle}
+            emptyColSpan={columns.length}
+            onRowClick={onRowClick}
+            getRowClassName={getRowClassName}
+          />
         </div>
 
         {canScrollHorizontally ? (
@@ -257,42 +262,45 @@ function HoldScrollButton({
 
 function ExcelTable<T extends { id: string }>({
   columns,
+  stickyOffsets,
   rows,
   allRows,
   filters,
   setFilters,
   emptyTitle,
   emptyColSpan,
-  fixed,
-  hideEmptyState,
   onRowClick,
   getRowClassName,
 }: {
   columns: ExcelColumn<T>[];
+  stickyOffsets: Array<number | undefined>;
   rows: T[];
   allRows: T[];
   filters: ActiveFilters;
   setFilters: Dispatch<SetStateAction<ActiveFilters>>;
   emptyTitle: string;
   emptyColSpan: number;
-  fixed?: boolean;
-  hideEmptyState?: boolean;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
 }) {
   return (
-    <table className={cn("border-separate border-spacing-0 text-sm", fixed ? "w-max" : "min-w-max")}>
+    <table className="min-w-max border-separate border-spacing-0 text-sm">
       <thead>
         <tr>
-          {columns.map((column) => {
+          {columns.map((column, columnIndex) => {
             const width = column.width ?? 140;
             const isFiltered = Boolean(filters[column.key]?.length);
+            const stickyOffset = stickyOffsets[columnIndex];
+            const isSticky = stickyOffset !== undefined;
 
             return (
               <th
                 key={column.key}
-                style={{ width, minWidth: width }}
-                className="sticky top-0 z-20 h-12 border-b border-r border-border/70 bg-secondary/90 px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground"
+                style={{ width, minWidth: width, left: stickyOffset }}
+                className={cn(
+                  "sticky top-0 z-20 h-12 border-b border-r border-border/70 bg-secondary px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground",
+                  isSticky && "z-30 shadow-[1px_0_0_hsl(var(--border))]",
+                )}
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="leading-snug">{column.label}</span>
@@ -317,19 +325,21 @@ function ExcelTable<T extends { id: string }>({
       <tbody>
         {rows.length ? (
           rows.map((row) => (
-            <tr key={row.id} className={cn("bg-card hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
-              {columns.map((column) => {
+            <tr key={row.id} className={cn("group/excel-row bg-card hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
+              {columns.map((column, columnIndex) => {
                 const width = column.width ?? 140;
                 const value = formatCellValue(column.getValue(row));
                 const rendered = column.render?.(row);
+                const stickyOffset = stickyOffsets[columnIndex];
+                const isSticky = stickyOffset !== undefined;
 
                 return (
                   <td
                     key={column.key}
-                    style={{ width, minWidth: width }}
+                    style={{ width, minWidth: width, left: stickyOffset }}
                     className={cn(
-                      "h-10 border-b border-r border-border/55 px-2 py-2 text-sm font-normal text-foreground",
-                      fixed && "font-medium",
+                      "h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm font-normal text-foreground group-hover/excel-row:bg-muted/30",
+                      isSticky && "sticky z-10 font-medium shadow-[1px_0_0_hsl(var(--border))]",
                     )}
                     title={value}
                   >
@@ -343,7 +353,7 @@ function ExcelTable<T extends { id: string }>({
               })}
             </tr>
           ))
-        ) : hideEmptyState ? null : (
+        ) : (
           <tr>
             <td
               colSpan={emptyColSpan}

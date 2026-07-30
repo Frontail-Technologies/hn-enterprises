@@ -7,14 +7,22 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 
 export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login')
+      return
     }
-  }, [isAuthenticated, isLoading, router])
+
+    if (!isLoading && isAuthenticated && user) {
+      const allowed = user.role === 'super_admin' || user.role === 'admin'
+      if (!allowed) {
+        router.replace('/login')
+      }
+    }
+  }, [isAuthenticated, isLoading, router, user])
 
   if (isLoading) {
     return (
@@ -25,6 +33,7 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
   }
 
   if (!isAuthenticated) return null
+  if (user && user.role !== 'super_admin' && user.role !== 'admin') return null
 
   return <DashboardLayout>{children}</DashboardLayout>
 }

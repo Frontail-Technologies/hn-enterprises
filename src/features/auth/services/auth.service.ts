@@ -1,67 +1,70 @@
-import { AuthSession, AuthUser, LoginCredentials } from '@/types/auth'
-import { MOCK_USERS } from '../constants/mock-users'
+import { apiRequest } from "@/lib/api-client";
+import type { AuthUser, LoginCredentials } from "@/types/auth";
 
-const SESSION_KEY = 'buildpro_session'
+type BackendUser = {
+  id: string;
+  name: string;
+  username: string;
+  email?: string;
+  mobile?: string | null;
+  role: AuthUser["role"];
+  status?: string;
+  lastLoginAt?: string | null;
+};
+
+function mapUser(user: BackendUser): AuthUser {
+  return {
+    id: user.id,
+    username: user.username,
+    fullName: user.name,
+    name: user.name,
+    email: user.email,
+    mobile: user.mobile,
+    role: user.role,
+    status: user.status,
+    lastLogin: user.lastLoginAt,
+    lastLoginAt: user.lastLoginAt,
+    isActive: user.status === "active",
+    assignedProjects: [],
+  };
+}
 
 export const authService = {
-  login: async (credentials: LoginCredentials): Promise<AuthSession> => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
+  async login(credentials: LoginCredentials): Promise<AuthUser> {
+    const user = await apiRequest<BackendUser>("/auth/login", {
+      method: "POST",
+      skipRefresh: true,
+      body: JSON.stringify({
+        identifier: credentials.username,
+        password: credentials.password,
+        clientType: "admin",
+      }),
+    });
 
-    const user = MOCK_USERS.find(
-      (u) => u.username === credentials.username && u.password === credentials.password
-    )
-
-    if (!user || !user.isActive) {
-      throw new Error('Invalid username or password')
-    }
-
-    const { password: _, ...safeUser } = user
-
-    const session: AuthSession = {
-      user: safeUser,
-      token: `mock-token-${user.id}-${Date.now()}`,
-      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    }
-
-    return session
+    return mapUser(user);
   },
 
-  logout: (): void => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(SESSION_KEY)
-    }
+  async logout(): Promise<void> {
+    await apiRequest<void>("/auth/logout", {
+      method: "POST",
+      skipRefresh: true,
+    }).catch(() => undefined);
   },
 
-  getCurrentSession: (): AuthSession | null => {
-    if (typeof window === 'undefined') return null
-
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-
+  async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const session: AuthSession = JSON.parse(raw)
-      // Check expiry
-      if (new Date(session.expiresAt) < new Date()) {
-        localStorage.removeItem(SESSION_KEY)
-        return null
-      }
-      return session
+      const user = await apiRequest<BackendUser>("/auth/me");
+      return mapUser(user);
     } catch {
-      return null
+      return null;
     }
   },
 
-  getCurrentUser: (): AuthUser | null => {
-    const session = authService.getCurrentSession()
-    return session?.user ?? null
+  async requestPasswordReset(identifier: string) {
+    return apiRequest<{ resetToken: string | null }>("/auth/request-password-reset", {
+      method: "POST",
+      skipRefresh: true,
+      body: JSON.stringify({ identifier }),
+    });
   },
-
-  isAuthenticated: (): boolean => {
-    return authService.getCurrentSession() !== null
-  },
-}
+};

@@ -226,8 +226,8 @@ export function Sidebar() {
     useState<Record<string, boolean>>(DEFAULT_OPEN_GROUPS);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/login");
   };
 

@@ -60,13 +60,13 @@ export function DrawerShell({
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
-        <div className="flex-1 space-y-3 overflow-y-auto px-4">{children}</div>
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 pb-4">{children}</div>
+        <SheetFooter className="border-t border-border/70 pb-6">
+          <div className="flex w-full items-center justify-between gap-3">
             <SheetClose render={<Button type="button" variant="outline" />}>
               Cancel
             </SheetClose>
-            <Button type="button">Save</Button>
+            <Button type="button" className="min-w-24">Save</Button>
           </div>
         </SheetFooter>
       </SheetContent>

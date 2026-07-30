@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { EyeIcon as Eye, EyeSlashIcon as EyeSlash, WarningIcon as Warning } from '@phosphor-icons/react'
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export function LoginForm() {
-  const { login } = useAuth()
+  const { isAuthenticated, isLoading, login } = useAuth()
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -25,6 +25,12 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   })
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
 
   const onSubmit = async (data: LoginFormValues) => {
     setServerError(null)
@@ -108,11 +114,6 @@ export function LoginForm() {
           'Sign In'
         )}
       </Button>
-
-      {/* Dev hint */}
-      <p className="text-center text-xs text-muted-foreground">
-        Demo: <span className="font-mono text-foreground">admin</span> / <span className="font-mono text-foreground">admin123</span>
-      </p>
     </form>
   )
 }

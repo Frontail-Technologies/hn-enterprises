@@ -24,6 +24,10 @@ import {
   getDashboardStatValue,
 } from "@/features/dashboard/services/dashboard-stats.service";
 
+export type DashboardWorkflowMetric = DashboardMetric & {
+  key: DashboardStatKey;
+};
+
 export type DashboardScope = {
   projectId: string;
   city: string;
@@ -198,7 +202,7 @@ function buildWorkflowMetrics({
 }: {
   customers: typeof customers;
   scope: DashboardScope;
-}): DashboardMetric[] {
+}): DashboardWorkflowMetric[] {
   const metricItems: Array<{
     key: DashboardStatKey;
     label: string;

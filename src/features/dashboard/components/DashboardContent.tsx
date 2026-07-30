@@ -81,18 +81,18 @@ export function DashboardContent() {
           </p>
         </div>
         <CompactStatGrid dashboard>
-          {dashboard.workflowMetrics.map((metric) => (
-            <Link
-              key={metric.label}
-              href={metric.href ?? "/dashboard"}
-              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <MetricCard
-                {...metric}
-                className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
-              />
-            </Link>
-          ))}
+          {dashboard.workflowMetrics.map(({ key: metricKey, ...metric }) => (
+              <Link
+                key={metricKey}
+                href={metric.href ?? "/dashboard"}
+                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <MetricCard
+                  {...metric}
+                  className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
+                />
+              </Link>
+            ))}
         </CompactStatGrid>
       </section>
 

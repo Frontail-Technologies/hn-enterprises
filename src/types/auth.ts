@@ -1,23 +1,28 @@
 export type UserRole =
   | 'super_admin'
   | 'admin'
-  | 'project_manager'
-  | 'accounts'
-  | 'store'
   | 'supervisor'
   | 'field_executive'
   | 'viewer'
+  | 'project_manager'
+  | 'accounts'
+  | 'store'
 
 export interface AuthUser {
   id: string
   username: string
   fullName: string
+  name?: string
+  email?: string
+  mobile?: string | null
   role: UserRole
-  assignedProjects: string[]
+  status?: string
+  assignedProjects?: string[]
   assignedCity?: string
   avatar?: string
-  lastLogin?: string
-  isActive: boolean
+  lastLogin?: string | null
+  lastLoginAt?: string | null
+  isActive?: boolean
 }
 
 export interface LoginCredentials {
