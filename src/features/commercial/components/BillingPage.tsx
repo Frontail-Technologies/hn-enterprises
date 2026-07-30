@@ -8,7 +8,7 @@ import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { customers } from "@/features/customers/services/customers.service";
+import { customers } from "@/features/customers/services/customers.mock";
 import { billingTabs, bills } from "../data/bills.data";
 import { wageRegisterRows } from "../data/wages.data";
 import type { BillingView } from "../types/commercial.types";

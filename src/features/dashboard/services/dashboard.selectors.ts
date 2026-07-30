@@ -11,7 +11,7 @@ import {
 import { bills } from "@/features/commercial/data/bills.data";
 import { materials } from "@/features/commercial/data/materials.data";
 import { payments } from "@/features/commercial/data/payments.data";
-import { customers } from "@/features/customers/services/customers.service";
+import { customers } from "@/features/customers/services/customers.mock";
 import { buildAttendanceRecords } from "@/features/management/data/attendance.data";
 import { planningDprRecords } from "@/features/planning/services/planning.service";
 import { projects, projectSites } from "@/features/projects/services/projects.mock";

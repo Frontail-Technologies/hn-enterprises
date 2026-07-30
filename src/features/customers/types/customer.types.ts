@@ -1,7 +1,14 @@
 import type { StatusValue } from "@/components/shared/StatusBadge";
 
 export type ConnectionType = "Domestic" | "Commercial" | "Industrial";
-export type CustomerStatus = "Draft" | "Active" | "On Hold" | "Completed" | "Archived";
+export type CustomerStatus =
+  | "Draft"
+  | "Pending"
+  | "Active"
+  | "Inactive"
+  | "On Hold"
+  | "Completed"
+  | "Archived";
 export type CustomerSurveyWorkableStatus = "Workable" | "Partially Workable" | "Not Workable";
 export type CustomerSurveyApprovalStatus =
   | "Draft"
@@ -208,6 +215,7 @@ export type Customer = {
   id: string;
   status: CustomerStatus;
   projectId: string;
+  siteId: string;
   projectName: string;
   siteArea: string;
   city: string;
@@ -240,34 +248,6 @@ export type CustomerDocument = {
   uploadedOn: string;
   uploadedBy: string;
   status: StatusValue;
-};
-
-export type CustomerWorkStageRecord = {
-  id: string;
-  stage: string;
-  status: StatusValue;
-  date: string;
-  updatedBy: string;
-  relatedRecord: string;
-  href: string;
-};
-
-export type CustomerGiDetails = {
-  customerId: string;
-  inlet: string;
-  outlet: string;
-  totalGi: string;
-  extraGi: string;
-  pipeSizes: string;
-  valves: string;
-  regulators: string;
-  clamps: string;
-  elbows: string;
-  tees: string;
-  nipples: string;
-  installationDate: string;
-  photos: string[];
-  relatedReport: string;
 };
 
 export type CustomerActivity = {

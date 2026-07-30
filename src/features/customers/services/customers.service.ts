@@ -1,13 +1,13 @@
+import { apiRequest } from "@/lib/api-client";
 import type { MasterSheetColumnValueType } from "@/features/management/masters.config";
 import { getActiveMasterSheetColumns } from "@/features/management/masters.config";
 import type {
   BillingCompletionStatus,
   CommissioningConversionDetails,
   Customer,
-  CustomerActivity,
   CustomerConnectionDetails,
   CustomerDocument,
-  CustomerGiDetails,
+  CustomerFormValues,
   CustomerStatus,
   CustomerSurvey,
   CustomerSurveyApprovalStatus,
@@ -21,7 +21,6 @@ import type {
   LmcPipeStatus,
   LmcPipelineWork,
   MdpeFittings,
-  UploadedImage,
   ValvesRegulators,
 } from "../types/customer.types";
 
@@ -64,7 +63,15 @@ export type LmcCivilWork = Pick<
 >;
 
 export const connectionTypeOptions = ["Domestic", "Commercial", "Industrial"] as const;
-export const customerStatusOptions = ["Draft", "Active", "On Hold", "Completed", "Archived"] as const;
+export const customerStatusOptions = [
+  "Draft",
+  "Pending",
+  "Active",
+  "Inactive",
+  "On Hold",
+  "Completed",
+  "Archived",
+] as const satisfies readonly CustomerStatus[];
 export const paymentStatusOptions = ["Pending", "In Review", "Approved", "Rejected", "Completed"] as const;
 export const surveyWorkableStatusOptions = ["Workable", "Partially Workable", "Not Workable"] as const satisfies readonly CustomerSurveyWorkableStatus[];
 export const surveyApprovalStatusOptions = ["Draft", "Submitted", "In Review", "Approved", "Sent Back", "Rejected"] as const satisfies readonly CustomerSurveyApprovalStatus[];
@@ -335,7 +342,7 @@ export const customerMasterSheetColumns: CustomerMasterSheetColumn[] = [
   })),
 ];
 
-const emptyGiMeasurements: GiMeasurements = {
+export const emptyGiMeasurements: GiMeasurements = {
   tfToRegulator: "",
   inlet: "",
   outlet: "",
@@ -346,7 +353,7 @@ const emptyGiMeasurements: GiMeasurements = {
   giPipeTwoInch: "",
 };
 
-const emptyValvesRegulators: ValvesRegulators = {
+export const emptyValvesRegulators: ValvesRegulators = {
   isolationValveHalfInch: "",
   isolationValveThreeQuarterInch: "",
   isolationValveOneInch: "",
@@ -359,7 +366,7 @@ const emptyValvesRegulators: ValvesRegulators = {
   warningPlate: "",
 };
 
-const emptyFittingsAccessories: FittingsAccessories = {
+export const emptyFittingsAccessories: FittingsAccessories = {
   clampHalfInch: "",
   clamp3InchToHalfInch: "",
   elbowHalfInch: "",
@@ -420,20 +427,8 @@ export const emptyCustomerSurvey: CustomerSurvey = {
   photos: [],
   revisions: [],
 };
-export const emptyLmcPipelineWork: LmcPipelineWork = {
-  pipeRecords: lmcPipeSizeOptions.map((size) => emptyPipeSizeRecord(size)),
-  fourMetresUnderGc: "",
-  fourMetresAboveGc: "",
-  tfHalfInch: "",
-  tfOneInch: "",
-  pcc: "",
-  rccNalaCrossing: "",
-  paverBlocks: "",
-  malua: "",
-  hardRock: "",
-};
 
-function emptyPipeSizeRecord(pipeSize: LmcPipeSize): LmcPipeSizeRecord {
+export function emptyPipeSizeRecord(pipeSize: LmcPipeSize): LmcPipeSizeRecord {
   return {
     id: `pipe-${pipeSize.toLowerCase().replace(/\s+/g, "-")}`,
     pipeSize,
@@ -449,6 +444,19 @@ function emptyPipeSizeRecord(pipeSize: LmcPipeSize): LmcPipeSizeRecord {
     evidence: "",
   };
 }
+
+export const emptyLmcPipelineWork: LmcPipelineWork = {
+  pipeRecords: lmcPipeSizeOptions.map((size) => emptyPipeSizeRecord(size)),
+  fourMetresUnderGc: "",
+  fourMetresAboveGc: "",
+  tfHalfInch: "",
+  tfOneInch: "",
+  pcc: "",
+  rccNalaCrossing: "",
+  paverBlocks: "",
+  malua: "",
+  hardRock: "",
+};
 
 export const emptyMdpeFittings: MdpeFittings = {
   saddle90To32Mm: "",
@@ -491,111 +499,25 @@ export const emptyBillingCompletion: BillingCompletionStatus = {
   remark: "",
 };
 
-function image(id: string, label: string): UploadedImage {
-  return {
-    id,
-    label,
-    fileName: `${id}.jpg`,
-    previewUrl: "",
-    uploadedOn: "2025-02-15",
-  };
-}
-
-function document(args: Partial<CustomerDocument> & Pick<CustomerDocument, "id" | "type" | "category" | "fileName">): CustomerDocument {
-  return {
-    referenceNumber: "",
-    issueDate: "",
-    expiryDate: "",
-    amount: "",
-    remarks: "",
-    uploadedOn: "2025-02-15",
-    uploadedBy: "Demo Admin",
-    status: "Pending",
-    ...args,
-  };
-}
-
-function survey(args: CustomerSurvey): CustomerSurvey {
-  return args;
-}
-
-function surveyPhoto(id: string, label: string, caption: string): CustomerSurvey["photos"][number] {
-  return {
-    id,
-    label,
-    caption,
-    fileName: `${id}.jpg`,
-  };
-}
-
-function surveyRevision(
-  id: string,
-  revisionNumber: string,
-  status: CustomerSurvey["approvalStatus"],
-  submittedBy: string,
-  date: string,
-  notes: string,
-): CustomerSurvey["revisions"][number] {
-  return { id, revisionNumber, status, submittedBy, date, notes };
-}
-
-function createCustomer(args: {
-  id: string;
-  status: CustomerStatus;
-  projectId: string;
-  projectName: string;
-  siteArea: string;
-  city: string;
-  createdDate: string;
-  connection: Partial<CustomerConnectionDetails> & Pick<CustomerConnectionDetails, "customerName" | "mobileNo" | "trBpNo">;
-  gi?: Partial<GiMeasurements>;
-  valves?: Partial<ValvesRegulators>;
-  fittings?: Partial<FittingsAccessories>;
-  lmc?: Partial<LmcPipelineWork>;
-  mdpe?: Partial<MdpeFittings>;
-  commissioning?: Partial<CommissioningConversionDetails>;
-  billing?: Partial<BillingCompletionStatus>;
-  survey?: CustomerSurvey;
-  media?: UploadedImage[];
-  documents?: CustomerDocument[];
-}): Customer {
-  const lmcPipelineWork = mergeLmcPipelineWork(args.lmc);
-  return {
-    id: args.id,
-    status: args.status,
-    projectId: args.projectId,
-    projectName: args.projectName,
-    siteArea: args.siteArea,
-    city: args.city,
-    createdDate: args.createdDate,
-    customerConnection: { ...emptyCustomerConnection, ...args.connection },
-    giMeasurements: { ...emptyGiMeasurements, ...args.gi },
-    valvesRegulators: { ...emptyValvesRegulators, ...args.valves },
-    fittingsAccessories: { ...emptyFittingsAccessories, ...args.fittings },
-    lmcPipelineWork,
-    mdpeFittings: { ...emptyMdpeFittings, ...args.mdpe },
-    commissioningConversion: { ...emptyCommissioningConversion, ...args.commissioning },
-    billingCompletion: { ...emptyBillingCompletion, ...args.billing },
-    survey: args.survey,
-    media: args.media ?? [],
-    documents: args.documents ?? [],
-  };
-}
-
-function mergeLmcPipelineWork(value?: Partial<LmcPipelineWork>): LmcPipelineWork {
-  const recordsBySize = new Map((value?.pipeRecords ?? []).map((record) => [record.pipeSize, record]));
-
-  return {
-    ...emptyLmcPipelineWork,
-    ...value,
-    pipeRecords: lmcPipeSizeOptions.map((pipeSize) => ({
-      ...emptyPipeSizeRecord(pipeSize),
-      ...recordsBySize.get(pipeSize),
-      id: recordsBySize.get(pipeSize)?.id ?? `pipe-${pipeSize.toLowerCase().replace(/\s+/g, "-")}`,
-      pipeSize,
-    })),
-  };
-}
+export const defaultCustomerFormValues: CustomerFormValues = {
+  status: "Draft",
+  projectId: "",
+  siteId: "",
+  projectName: "",
+  siteArea: "",
+  city: "",
+  customerConnection: emptyCustomerConnection,
+  giMeasurements: emptyGiMeasurements,
+  valvesRegulators: emptyValvesRegulators,
+  fittingsAccessories: emptyFittingsAccessories,
+  lmcPipelineWork: emptyLmcPipelineWork,
+  mdpeFittings: emptyMdpeFittings,
+  commissioningConversion: emptyCommissioningConversion,
+  billingCompletion: emptyBillingCompletion,
+  survey: undefined,
+  media: [],
+  documents: [],
+};
 
 export function deriveLmcOverallStatus(records: LmcPipeSizeRecord[]): LmcOverallStatus {
   const applicableRecords = records.filter((record) => deriveLmcPipeCurrentStage(record) !== "Not Required");
@@ -767,193 +689,6 @@ export function getCustomerMasterSheetRows(sourceCustomers: Customer[]): Custome
   });
 }
 
-export const customerMasterSheetDemoRows: CustomerMasterSheetRow[] = [
-  masterSheetDemoRow("demo-797", {
-    reportNoGi: "IND-PKG-HN-797",
-    trBpNo: "T23D007585",
-    mobileNo: "9864054318",
-    customerName: "HIMANGSHU DUTTA",
-    fullAddress: "GANESH MANDIR PATH NOONMATI",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "24020796",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "GC",
-    houseType: "INDIVIDUAL",
-    tfToRegulator: "1.50",
-    inlet: "1.90",
-    outlet: "14.44",
-    totalGiPipeHalfInch: "17.84",
-    giPipeThreeQuarterInch: "0.10",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "3.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "1.00",
-  }),
-  masterSheetDemoRow("demo-798", {
-    reportNoGi: "IND-PKG-HN-798",
-    trBpNo: "T23D007588",
-    mobileNo: "9508450514",
-    customerName: "HIMANGSHU DUTTA",
-    fullAddress: "GANESH MANDIR PATH NOONMATI",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "24020794",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "TP",
-    houseType: "FLAT",
-    tfToRegulator: "0.00",
-    inlet: "1.20",
-    outlet: "8.86",
-    totalGiPipeHalfInch: "10.06",
-    giPipeThreeQuarterInch: "0.00",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "1.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "0.00",
-  }),
-  masterSheetDemoRow("demo-799", {
-    reportNoGi: "IND-PKG-HN-799",
-    trBpNo: "T23D005962",
-    mobileNo: "6001987369",
-    customerName: "MAHADEB PASOWAN",
-    fullAddress: "05 NEW GUWAHATI RAILWAY COLONY BAMUNIMAIDAN RAILWAY COLONY ROAD",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "23072974",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "GC",
-    houseType: "INDIVIDUAL",
-    tfToRegulator: "1.50",
-    inlet: "1.90",
-    outlet: "10.50",
-    totalGiPipeHalfInch: "13.90",
-    giPipeThreeQuarterInch: "0.10",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "1.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "1.00",
-  }),
-  masterSheetDemoRow("demo-800", {
-    reportNoGi: "IND-PKG-HN-800",
-    trBpNo: "T23D005969",
-    mobileNo: "9101811360",
-    customerName: "BHABANI TALUKDAR",
-    fullAddress: "05 NEW GUWAHATI RAILWAY BAMUNIMAIDAN RAILWAY COLONY ROAD",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "23072526",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "GC",
-    houseType: "INDIVIDUAL",
-    tfToRegulator: "1.50",
-    inlet: "1.90",
-    outlet: "6.46",
-    totalGiPipeHalfInch: "9.86",
-    giPipeThreeQuarterInch: "0.10",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "1.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "1.00",
-  }),
-  masterSheetDemoRow("demo-801", {
-    reportNoGi: "IND-PKG-HN-801",
-    trBpNo: "T23D010267",
-    mobileNo: "8486231610",
-    customerName: "ABHESH KUMAR THAKUR",
-    fullAddress: "NEW GUWAHATI RAILWAY COLONY BAMUNIMAIDAN",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "23072241",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "GC",
-    houseType: "INDIVIDUAL",
-    tfToRegulator: "1.50",
-    inlet: "1.90",
-    outlet: "17.89",
-    totalGiPipeHalfInch: "21.29",
-    giPipeThreeQuarterInch: "0.10",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "1.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "1.00",
-  }),
-  masterSheetDemoRow("demo-802", {
-    reportNoGi: "IND-PKG-HN-802",
-    trBpNo: "3106000096",
-    mobileNo: "9101094721 / 9365675752",
-    customerName: "ASWINI SARMA",
-    fullAddress: "NEAR GATE HOSPITAL, ADARANI PATH, GEETA NAGAR",
-    plumberName: "HASIB",
-    supervisorName: "HASIB",
-    meterNo: "23072474",
-    installationDate: "01.05.2026",
-    jobCardDone: "HASIB",
-    connectionType: "GC",
-    houseType: "INDIVIDUAL",
-    tfToRegulator: "1.50",
-    inlet: "1.90",
-    outlet: "17.01",
-    totalGiPipeHalfInch: "20.41",
-    giPipeThreeQuarterInch: "0.10",
-    giPipeOneInch: "0.00",
-    isolationValveHalfInch: "1.00",
-    isolationValveThreeQuarterInch: "0.00",
-    isolationValveOneInch: "0.00",
-    applianceValveHalfInch: "1.00",
-    regulator6BarTo100Mbar: "0.00",
-    regulator6BarTo21Mbar: "0.00",
-    regulator100MbarTo21Mbar: "1.00",
-    warningPlate: "1.00",
-  }),
-];
-
-function masterSheetDemoRow(id: string, values: Record<string, string>): CustomerMasterSheetRow {
-  return {
-    id,
-    customerId: id,
-    values: {
-      projectName: "Demo Master Sheet",
-      siteArea: "Imported CSV Demo",
-      city: "Guwahati",
-      preferredPaymentType: "Cash",
-      kycVerified: "No",
-      lastPaymentDate: "",
-      ...values,
-    },
-  };
-}
-
 function getPipeRecord(records: LmcPipeSizeRecord[], pipeSize: LmcPipeSize) {
   return records.find((record) => record.pipeSize === pipeSize);
 }
@@ -962,709 +697,330 @@ function formatBoolean(value: boolean) {
   return value ? "Yes" : "No";
 }
 
-export const customers: Customer[] = [
-  createCustomer({
-    id: "cust-001",
-    status: "Active",
-    projectId: "shyam-nagar-cgd",
-    projectName: "Shyam Nagar CGD Project",
-    siteArea: "Shyam Nagar Block A",
-    city: "Jaipur",
-    createdDate: "2025-01-24",
-    connection: {
-      reportNoGi: "GI-100245",
-      reportNoGc: "GC-100245",
-      reportNoConversion: "CONV-100245",
-      trBpNo: "BP-100245",
-      mobileNo: "9876543210",
-      customerName: "Rajesh Kumar",
-      fullAddress: "42, Shyam Nagar Block A, Jaipur",
-      scheme: "Standard PNG",
-      plumberName: "Group A",
-      supervisorName: "Ramesh Kumar",
-      jobCardDone: "Yes",
-      connectionType: "Domestic",
-      houseType: "Independent House",
-    },
-    gi: {
-      tfToRegulator: "1.5",
-      inlet: "3.2",
-      outlet: "2.6",
-      totalGiPipeHalfInch: "18.5",
-      giPipeThreeQuarterInch: "2",
-      giPipeOneInch: "0",
-      giPipeOneAndHalfInch: "0",
-      giPipeTwoInch: "0",
-    },
-    valves: {
-      isolationValveHalfInch: "1",
-      isolationValveThreeQuarterInch: "0",
-      isolationValveOneInch: "0",
-      isolationValveOneAndHalfInch: "0",
-      isolationValveTwoInch: "0",
-      applianceValveHalfInch: "1",
-      regulator6BarTo21Mbar: "1",
-      warningPlate: "1",
-    },
-    fittings: {
-      clampHalfInch: "12",
-      elbowHalfInch: "6",
-      teeHalfInch: "1",
-      unionHalfInch: "1",
-      plugHalfInch: "1",
-      fittingsOneAndHalfInchQuantity: "0",
-      fittingsTwoInchQuantity: "0",
-      extraGiAbove10Metres: "8.5",
-    },
-    lmc: {
-      pipeRecords: [
-      {
-        id: "pipe-20-mm",
-        pipeSize: "20 mm",
-        lengthMetres: "18.5",
-        layingDate: "2025-02-09",
-        testingDate: "2025-02-12",
-        purgingDate: "2025-02-12",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Completed",
-        purgingStatus: "Purging Completed",
-        jointFittingDetails: "20 mm service line with standard MDPE joints.",
-        remarks: "Domestic service line completed.",
-        evidence: "lmc-trench.jpg",
-      },
-      {
-        id: "pipe-32-mm",
-        pipeSize: "32 mm",
-        lengthMetres: "4.2",
-        layingDate: "2025-02-09",
-        testingDate: "2025-02-12",
-        purgingDate: "2025-02-12",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Completed",
-        purgingStatus: "Purging Completed",
-        jointFittingDetails: "32 mm transition near service tee.",
-        remarks: "-",
-        evidence: "joint-32mm.jpg",
-      },
-      {
-        id: "pipe-63-mm",
-        pipeSize: "63 mm",
-        lengthMetres: "0",
-        layingDate: "",
-        testingDate: "",
-        purgingDate: "",
-        layingStatus: "Not Required",
-        testingStatus: "Not Required",
-        purgingStatus: "Not Required",
-        jointFittingDetails: "-",
-        remarks: "-",
-        evidence: "-",
-      },
-      {
-        id: "pipe-90-mm",
-        pipeSize: "90 mm",
-        lengthMetres: "0",
-        layingDate: "",
-        testingDate: "",
-        purgingDate: "",
-        layingStatus: "Not Required",
-        testingStatus: "Not Required",
-        purgingStatus: "Not Required",
-        jointFittingDetails: "-",
-        remarks: "-",
-        evidence: "-",
-      },
-      ],
-      fourMetresUnderGc: "4",
-      fourMetresAboveGc: "2",
-      tfHalfInch: "1",
-      tfOneInch: "0",
-      pcc: "3",
-      rccNalaCrossing: "0",
-      paverBlocks: "6",
-      malua: "1",
-      hardRock: "0",
-    },
-    mdpe: {
-      saddle90To32Mm: "0",
-      saddle90Mm: "0",
-      saddle63To32Mm: "1",
-      saddle32To20Mm: "1",
-      tee90Mm: "0",
-      tee32Mm: "1",
-      tee20Mm: "2",
-      reducerCoupler90To63Mm: "0",
-      reducerCoupler63To32Mm: "0",
-      reducerCoupler32To20Mm: "1",
-      coupler90Mm: "0",
-      coupler32Mm: "2",
-      coupler20Mm: "3",
-      endCap90Mm: "0",
-    },
-    commissioning: {
-      meterNo: "MTR-77881",
-      installationDate: "2025-02-08",
-      commissioningDate: "2025-02-15",
-      conversionDate: "",
-      regulatorPressure: "21 mbar",
-      regulatorNo: "REG-2219",
-      meterType: "Smart Meter",
-      meterReading: "128.4 SCM",
-      nonConversionRemark: "Customer requested weekend conversion.",
-    },
-    billing: {
-      paymentStatus: "Approved",
-      paymentMode: "UPI",
-      initialAmount: "3500",
-      jmrDone: true,
-      jmrSubmittedInPbg: true,
-      giBillDone: true,
-      gcBillDone: true,
-      conversionBillDone: false,
-      remark: "Conversion bill pending.",
-    },
-    survey: survey({
-      id: "survey-001",
-      surveyId: "SUR-100245",
-      surveyDate: "2025-01-28",
-      assignedSurveyor: "Vikas Saini",
-      submittedBy: "Vikas Saini",
-      submissionDate: "2025-01-28 16:40",
-      latitude: 26.8951,
-      longitude: 75.7684,
-      captureAccuracy: "8 m",
-      workableStatus: "Workable",
-      approvalStatus: "Submitted",
-      initialMeasurements: "Front wall meter point, 18.5 m estimated GI path, clear route to kitchen.",
-      siteAccessibility: "Approved",
-      meterPlacement: "Workable",
-      pipelineRoute: "Workable",
-      civilWorkRequired: "No",
-      obstaclesRemarks: "No obstruction found.",
-      notes: "Customer available after 10 AM. Meter can be placed on front wall.",
-      reason: "",
-      recommendedAction: "Proceed for GI planning.",
-      expectedResolutionDate: "",
-      approvalComments: "Pending supervisor approval.",
-      photos: [
-        surveyPhoto("site_front_bp_100245", "Site front photo", "Front elevation with meter approach."),
-        surveyPhoto("meter_location_bp_100245", "Meter location photo", "Marked meter point near front wall."),
-        surveyPhoto("pipeline_route_bp_100245", "Pipeline route photo", "Route is clear from riser to kitchen wall."),
-        surveyPhoto("obstruction_bp_100245", "Obstruction photo", "No obstruction captured."),
-      ],
-      revisions: [
-        surveyRevision("rev-1", "Revision 1", "Submitted", "Vikas Saini", "2025-01-28", "Initial survey submitted with workable route details."),
-      ],
-    }),
-    media: [image("meter-location", "Meter Location"), image("lmc-trench", "LMC Trench")],
-    documents: [
-      document({
-        id: "cust-001-doc-1",
-        type: "Meter Photo",
-        referenceNumber: "MTR-77881",
-        category: "Meter Photo",
-        issueDate: "2025-02-08",
-        fileName: "meter_photo_bp_100245.jpg",
-        uploadedOn: "2025-02-08",
-        uploadedBy: "Vikas Saini",
-        status: "Approved",
-      }),
-      document({
-        id: "cust-001-doc-2",
-        type: "GI Report",
-        referenceNumber: "GI-100245",
-        category: "GI Report",
-        issueDate: "2025-02-08",
-        amount: "18.5 m",
-        fileName: "gi_report_bp_100245.pdf",
-        uploadedOn: "2025-02-08",
-        uploadedBy: "Ramesh Kumar",
-        status: "Approved",
-      }),
-      document({
-        id: "cust-001-doc-3",
-        type: "LMC / Site Evidence",
-        referenceNumber: "LMC-100245",
-        category: "LMC / Site Evidence",
-        issueDate: "2025-02-12",
-        fileName: "lmc_trench_bp_100245.jpg",
-        uploadedOn: "2025-02-12",
-        uploadedBy: "Ramesh Kumar",
-        status: "Submitted",
-      }),
-    ],
-  }),
-  createCustomer({
-    id: "cust-002",
-    status: "Active",
-    projectId: "shyam-nagar-cgd",
-    projectName: "Shyam Nagar CGD Project",
-    siteArea: "Shyam Nagar Block B",
-    city: "Jaipur",
-    createdDate: "2025-02-02",
-    connection: {
-      reportNoGi: "GI-553901",
-      reportNoGc: "GC-553901",
-      trBpNo: "TR-553901",
-      mobileNo: "9823411122",
-      customerName: "Meena Sharma",
-      fullAddress: "11, New Sanganer Road, Shyam Nagar, Jaipur",
-      scheme: "Deposit Waiver",
-      plumberName: "Group B",
-      supervisorName: "Kavita Joshi",
-      jobCardDone: "No",
-      connectionType: "Domestic",
-      houseType: "Apartment",
-    },
-    gi: {
-      tfToRegulator: "1",
-      inlet: "2.4",
-      outlet: "1.8",
-      totalGiPipeHalfInch: "12",
-      giPipeThreeQuarterInch: "0",
-      giPipeOneInch: "0",
-      giPipeOneAndHalfInch: "0",
-      giPipeTwoInch: "0",
-    },
-    valves: {
-      isolationValveHalfInch: "1",
-      isolationValveThreeQuarterInch: "0",
-      isolationValveOneInch: "0",
-      isolationValveOneAndHalfInch: "0",
-      isolationValveTwoInch: "0",
-      applianceValveHalfInch: "1",
-      regulator6BarTo21Mbar: "1",
-      warningPlate: "1",
-    },
-    fittings: {
-      clampHalfInch: "10",
-      elbowHalfInch: "5",
-      teeHalfInch: "1",
-      fittingsOneAndHalfInchQuantity: "0",
-      fittingsTwoInchQuantity: "0",
-      extraGiAbove10Metres: "2",
-    },
-    lmc: {
-      pipeRecords: [
-      {
-        id: "pipe-20-mm",
-        pipeSize: "20 mm",
-        lengthMetres: "12",
-        layingDate: "2025-02-16",
-        testingDate: "",
-        purgingDate: "",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Pending",
-        purgingStatus: "Not Started",
-        jointFittingDetails: "20 mm line laid up to meter point.",
-        remarks: "Testing pending.",
-        evidence: "front-photo.jpg",
-      },
-      {
-        id: "pipe-90-mm",
-        pipeSize: "90 mm",
-        lengthMetres: "0",
-        testingDate: "",
-        purgingDate: "",
-        layingStatus: "Not Required",
-        testingStatus: "Not Required",
-        purgingStatus: "Not Required",
-        jointFittingDetails: "-",
-        remarks: "-",
-        evidence: "-",
-        layingDate: "",
-      },
-      ],
-      paverBlocks: "2",
-    },
-    mdpe: { saddle32To20Mm: "1", tee20Mm: "1", coupler20Mm: "2", coupler90Mm: "0", endCap90Mm: "0" },
-    commissioning: { meterNo: "MTR-77892", installationDate: "2025-02-15", regulatorPressure: "21 mbar", regulatorNo: "REG-2231", meterType: "Mechanical", meterReading: "0 SCM" },
-    billing: { paymentStatus: "Pending", paymentMode: "Cash", initialAmount: "1500", jmrDone: false, giBillDone: true, remark: "GC upload pending." },
-    survey: survey({
-      id: "survey-002",
-      surveyId: "SUR-553901",
-      surveyDate: "2025-02-04",
-      assignedSurveyor: "Amit Rathore",
-      submittedBy: "Amit Rathore",
-      submissionDate: "2025-02-04 12:15",
-      latitude: 26.8877,
-      longitude: 75.7592,
-      captureAccuracy: "12 m",
-      workableStatus: "Partially Workable",
-      approvalStatus: "Sent Back",
-      initialMeasurements: "Apartment wall route measured; meter point requires clearance before final GI.",
-      siteAccessibility: "Approved",
-      meterPlacement: "Partially Workable",
-      pipelineRoute: "Partially Workable",
-      civilWorkRequired: "Yes",
-      obstaclesRemarks: "Meter wall needs minor civil clearance.",
-      notes: "Society guard approval required for work entry.",
-      reason: "Meter placement needs confirmation.",
-      recommendedAction: "Revisit with supervisor.",
-      expectedResolutionDate: "2025-02-09",
-      approvalComments: "Upload obstruction photo and revised meter placement.",
-      photos: [
-        surveyPhoto("site_front_tr_553901", "Site front photo", "Apartment entry and approach captured."),
-        surveyPhoto("meter_location_tr_553901", "Meter location photo", "Meter wall needs civil clearance."),
-        surveyPhoto("obstruction_tr_553901", "Obstruction photo", "Obstruction around proposed meter point."),
-      ],
-      revisions: [
-        surveyRevision("rev-1", "Revision 1", "Submitted", "Amit Rathore", "2025-02-04", "Initial survey submitted with partial meter placement details."),
-        surveyRevision("rev-2", "Revision 2", "Sent Back", "Kavita Joshi", "2025-02-06", "Sent back for obstruction photo and revised meter placement."),
-      ],
-    }),
-    media: [image("front-photo", "Front Photo")],
-    documents: [
-      document({
-        id: "cust-002-doc-1",
-        type: "Customer Photo",
-        category: "Customer Photo",
-        issueDate: "2025-02-04",
-        fileName: "site_front_tr_553901.jpg",
-        uploadedOn: "2025-02-04",
-        uploadedBy: "Amit Rathore",
-        status: "Submitted",
-      }),
-      document({
-        id: "cust-002-doc-2",
-        type: "GC Report",
-        referenceNumber: "GC-553901",
-        category: "GC Report",
-        issueDate: "2025-02-14",
-        fileName: "gc_report_tr_553901.pdf",
-        uploadedOn: "2025-02-14",
-        uploadedBy: "Kavita Joshi",
-        status: "In Review",
-      }),
-    ],
-  }),
-  createCustomer({
-    id: "cust-003",
-    status: "Active",
-    projectId: "green-city-phase-1",
-    projectName: "Green City Phase 1",
-    siteArea: "Commercial Block",
-    city: "Indore",
-    createdDate: "2025-02-11",
-    connection: {
-      reportNoGi: "GI-220118",
-      reportNoGc: "GC-220118",
-      reportNoConversion: "CONV-220118",
-      trBpNo: "BP-220118",
-      mobileNo: "9810012200",
-      customerName: "Green Mart Store",
-      fullAddress: "Shop 8, Green City Phase 1, Indore",
-      scheme: "Commercial Plan",
-      plumberName: "Commercial Team",
-      supervisorName: "Neha Verma",
-      jobCardDone: "Yes",
-      connectionType: "Commercial",
-      houseType: "Retail Shop",
-    },
-    gi: {
-      tfToRegulator: "2",
-      inlet: "4",
-      outlet: "3.5",
-      totalGiPipeHalfInch: "8",
-      giPipeThreeQuarterInch: "6",
-      giPipeOneInch: "4",
-      giPipeOneAndHalfInch: "2",
-      giPipeTwoInch: "1",
-    },
-    valves: {
-      isolationValveHalfInch: "2",
-      isolationValveThreeQuarterInch: "1",
-      isolationValveOneInch: "1",
-      isolationValveOneAndHalfInch: "1",
-      isolationValveTwoInch: "1",
-      applianceValveHalfInch: "2",
-      regulator6BarTo100Mbar: "1",
-      regulator100MbarTo21Mbar: "1",
-      warningPlate: "2",
-    },
-    fittings: {
-      clampHalfInch: "18",
-      clamp3InchToHalfInch: "4",
-      elbowHalfInch: "8",
-      teeHalfInch: "2",
-      unionHalfInch: "2",
-      fittingsOneAndHalfInchQuantity: "3",
-      fittingsTwoInchQuantity: "2",
-      extraGiAbove10Metres: "16",
-    },
-    lmc: {
-      pipeRecords: [
-      {
-        id: "pipe-20-mm",
-        pipeSize: "20 mm",
-        lengthMetres: "26",
-        layingDate: "2025-02-22",
-        testingDate: "2025-02-26",
-        purgingDate: "2025-02-26",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Completed",
-        purgingStatus: "Purging Completed",
-        jointFittingDetails: "20 mm commercial branch complete.",
-        remarks: "OK",
-        evidence: "commercial-meter.jpg",
-      },
-      {
-        id: "pipe-32-mm",
-        pipeSize: "32 mm",
-        lengthMetres: "8",
-        layingDate: "2025-02-22",
-        testingDate: "2025-02-26",
-        purgingDate: "2025-02-26",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Completed",
-        purgingStatus: "Purging Completed",
-        jointFittingDetails: "32 mm line with tee and couplers.",
-        remarks: "OK",
-        evidence: "gc-complete.jpg",
-      },
-      {
-        id: "pipe-90-mm",
-        pipeSize: "90 mm",
-        lengthMetres: "2",
-        layingDate: "2025-02-22",
-        testingDate: "2025-02-26",
-        purgingDate: "2025-02-26",
-        layingStatus: "Laying Completed",
-        testingStatus: "Testing Completed",
-        purgingStatus: "Purging Completed",
-        jointFittingDetails: "90 mm coupler and 90-63 reducer installed as per BOQ.",
-        remarks: "Commercial BOQ item.",
-        evidence: "90mm-joint.jpg",
-      },
-      ],
-      pcc: "4",
-    },
-    mdpe: {
-      saddle90Mm: "1",
-      saddle63To32Mm: "1",
-      tee90Mm: "1",
-      tee32Mm: "2",
-      reducerCoupler90To63Mm: "1",
-      coupler90Mm: "1",
-      coupler32Mm: "4",
-      endCap90Mm: "1",
-    },
-    commissioning: {
-      meterNo: "MTR-88021",
-      installationDate: "2025-02-22",
-      commissioningDate: "2025-03-01",
-      conversionDate: "2025-03-04",
-      regulatorPressure: "100 mbar",
-      regulatorNo: "REG-3341",
-      meterType: "Smart Meter",
-      meterReading: "546.2 SCM",
-    },
-    billing: { paymentStatus: "Approved", paymentMode: "Bank Transfer", initialAmount: "12000", jmrDone: true, jmrSubmittedInPbg: true, giBillDone: true, gcBillDone: true, conversionBillDone: true, remark: "Completed." },
-    survey: survey({
-      id: "survey-003",
-      surveyId: "SUR-220118",
-      surveyDate: "2025-02-13",
-      assignedSurveyor: "Pawan Jain",
-      submittedBy: "Pawan Jain",
-      submissionDate: "2025-02-13 17:30",
-      latitude: 22.7196,
-      longitude: 75.8577,
-      captureAccuracy: "6 m",
-      workableStatus: "Workable",
-      approvalStatus: "Approved",
-      initialMeasurements: "Commercial meter location marked; 26 m branch and 90 mm BOQ fitting noted.",
-      siteAccessibility: "Approved",
-      meterPlacement: "Workable",
-      pipelineRoute: "Workable",
-      civilWorkRequired: "No",
-      obstaclesRemarks: "No obstruction.",
-      notes: "Commercial meter location marked near back entry.",
-      reason: "",
-      recommendedAction: "Proceed to installation.",
-      expectedResolutionDate: "",
-      approvalComments: "Good to proceed.",
-      photos: [
-        surveyPhoto("commercial_site_front", "Site front photo", "Commercial block frontage captured."),
-        surveyPhoto("commercial_meter_point", "Meter location photo", "Commercial meter point marked."),
-        surveyPhoto("commercial_route", "Pipeline route photo", "Route approved for installation."),
-        surveyPhoto("commercial_access", "Access photo", "Back entry access available."),
-        surveyPhoto("commercial_obstruction", "Obstruction photo", "No obstruction around meter point."),
-      ],
-      revisions: [
-        surveyRevision("rev-1", "Revision 1", "Approved", "Neha Verma", "2025-02-13", "Survey approved for GI and GC stages."),
-      ],
-    }),
-    media: [image("commercial-meter", "Commercial Meter"), image("gc-complete", "GC Complete")],
-    documents: [
-      document({
-        id: "cust-003-doc-1",
-        type: "ID / Address Proof",
-        referenceNumber: "ADDR-220118",
-        category: "ID / Address Proof",
-        issueDate: "2025-02-13",
-        fileName: "address_proof_bp_220118.pdf",
-        uploadedOn: "2025-02-13",
-        uploadedBy: "Pawan Jain",
-        status: "Approved",
-      }),
-      document({
-        id: "cust-003-doc-2",
-        type: "Conversion Report",
-        referenceNumber: "CONV-220118",
-        category: "Conversion Report",
-        issueDate: "2025-03-01",
-        fileName: "conversion_report_bp_220118.pdf",
-        uploadedOn: "2025-03-01",
-        uploadedBy: "Neha Verma",
-        status: "Completed",
-      }),
-    ],
-  }),
-  createCustomer({
-    id: "cust-004",
-    status: "On Hold",
-    projectId: "sunrise-enclave-cgd",
-    projectName: "Sunrise Enclave CGD",
-    siteArea: "Sunrise Enclave",
-    city: "Udaipur",
-    createdDate: "2025-03-02",
-    connection: {
-      trBpNo: "TR-783441",
-      mobileNo: "9901122334",
-      customerName: "Rafiq Khan",
-      fullAddress: "7, Sunrise Enclave, Udaipur",
-      scheme: "Standard PNG",
-      plumberName: "Group C",
-      supervisorName: "Priya Nair",
-      jobCardDone: "No",
-      connectionType: "Domestic",
-      houseType: "Villa",
-    },
-    lmc: {
-      pipeRecords: [
-        {
-          ...emptyPipeSizeRecord("20 mm"),
-          layingDate: "2025-03-04",
-          layingStatus: "On Hold",
-          remarks: "Address verification pending.",
-        },
-      ],
-    },
-    commissioning: { nonConversionRemark: "Address verification pending." },
-    billing: { paymentStatus: "In Review", paymentMode: "Cheque", initialAmount: "3500", remark: "Hold until verification is complete." },
-    survey: survey({
-      id: "survey-004",
-      surveyId: "SUR-783441",
-      surveyDate: "2025-03-04",
-      assignedSurveyor: "Sameer Ali",
-      submittedBy: "",
-      submissionDate: "",
-      latitude: 24.5854,
-      longitude: 73.7125,
-      captureAccuracy: "15 m",
-      workableStatus: "Not Workable",
-      approvalStatus: "Draft",
-      initialMeasurements: "Alternate route required; boundary wall blocks proposed service route.",
-      siteAccessibility: "Rejected",
-      meterPlacement: "Not Workable",
-      pipelineRoute: "Not Workable",
-      civilWorkRequired: "Yes",
-      obstaclesRemarks: "Boundary wall blocks proposed route.",
-      notes: "Need alternate route after customer confirmation.",
-      reason: "Pipeline route blocked.",
-      recommendedAction: "Plan alternate route.",
-      expectedResolutionDate: "2025-03-12",
-      approvalComments: "",
-      photos: [
-        surveyPhoto("sunrise_front", "Site front photo", "Villa front and boundary wall captured."),
-        surveyPhoto("sunrise_obstruction", "Obstruction photo", "Boundary wall blocking proposed route."),
-      ],
-      revisions: [],
-    }),
-  }),
-];
-
-export const customerDocuments: CustomerDocument[] = customers[0]?.documents ?? [];
-
-export const customerWorkStages = [];
-
-export const customerGiDetails: CustomerGiDetails = {
-  customerId: "cust-001",
-  inlet: "Kitchen wall inlet",
-  outlet: "Meter outlet to appliance point",
-  totalGi: "18.5 m",
-  extraGi: "2.5 m",
-  pipeSizes: "15MM, 20MM",
-  valves: "2",
-  regulators: "1",
-  clamps: "14",
-  elbows: "8",
-  tees: "2",
-  nipples: "6",
-  installationDate: "2025-02-08",
-  photos: ["Inlet point", "Meter wall", "Kitchen outlet"],
-  relatedReport: "GI Report #GI-245",
-};
-
-export const customerActivity: CustomerActivity[] = [
-  { id: "act-1", title: "Customer created", description: "Customer master record was created.", actor: "Demo Admin", dateTime: "2025-01-24 10:15", relatedRecord: "BP-100245" },
-  { id: "act-2", title: "LMC updated", description: "LMC laying and MDPE fitting quantities were updated.", actor: "Ramesh Kumar", dateTime: "2025-02-12 16:40", relatedRecord: "LMC" },
-];
-
 export const importPreviewRows: ImportPreviewRow[] = [
   { id: "row-1", rowNumber: 2, customerName: "Anil Gupta", mobileNumber: "9876500011", bpTrNumber: "BP-991002", project: "Shyam Nagar CGD Project", area: "Shyam Nagar Block A", status: "Valid", errors: [] },
   { id: "row-2", rowNumber: 3, customerName: "Sunita Jain", mobileNumber: "98000", bpTrNumber: "", project: "Green City Phase 1", area: "Commercial Block", status: "Error", errors: ["Mobile number must be 10 digits", "BP / TR Number is required"] },
   { id: "row-3", rowNumber: 4, customerName: "Hotel Midtown", mobileNumber: "9811100220", bpTrNumber: "BP-991003", project: "Green City Phase 1", area: "Commercial Block", status: "Valid", errors: [] },
 ];
 
-export function getCustomerById(id: string) {
-  return customers.find((customer) => customer.id === id) ?? customers[0];
+// ---- Real backend API + adapters ----
+
+const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
+  Draft: "draft",
+  Pending: "pending",
+  Active: "active",
+  Inactive: "inactive",
+  "On Hold": "on_hold",
+  Completed: "completed",
+  Archived: "archived",
+};
+
+const STATUS_TO_FRONTEND: Record<string, CustomerStatus> = Object.fromEntries(
+  Object.entries(STATUS_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as CustomerStatus]),
+);
+
+const LMC_SIZE_TO_BACKEND: Record<LmcPipeSize, string> = {
+  "20 mm": "20_mm",
+  "32 mm": "32_mm",
+  "63 mm": "63_mm",
+  "90 mm": "90_mm",
+  "125 mm": "125_mm",
+  Other: "other",
+};
+
+const LMC_SIZE_TO_FRONTEND: Record<string, LmcPipeSize> = Object.fromEntries(
+  Object.entries(LMC_SIZE_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as LmcPipeSize]),
+);
+
+const LMC_STATUS_TO_BACKEND: Record<LmcPipeStatus, string> = {
+  "Not Started": "not_started",
+  "In Progress": "in_progress",
+  "Laying Completed": "laying_completed",
+  "Testing Pending": "testing_pending",
+  "Testing Completed": "testing_completed",
+  "Purging Completed": "purging_completed",
+  "Not Required": "not_required",
+  "On Hold": "on_hold",
+};
+
+const LMC_STATUS_TO_FRONTEND: Record<string, LmcPipeStatus> = Object.fromEntries(
+  Object.entries(LMC_STATUS_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as LmcPipeStatus]),
+);
+
+function toDateOnly(value: string | null | undefined) {
+  return value ? value.slice(0, 10) : "";
 }
 
-export function findCustomerById(id: string) {
-  return customers.find((customer) => customer.id === id);
+function numOrEmpty(value: string | number | null | undefined) {
+  return value == null || value === "" ? "" : String(value);
 }
 
-export const projectOptions = Array.from(
-  new Map(customers.map((customer) => [customer.projectId, customer.projectName])),
-).map(([value, label]) => ({ value, label }));
+type BackendCustomer = {
+  id: string;
+  projectId: string;
+  siteId: string;
+  trBpNumber: string;
+  mobileNumber: string | null;
+  customerName: string;
+  fullAddress: string | null;
+  city: string | null;
+  connectionType: string | null;
+  houseType: string | null;
+  scheme: string | null;
+  plumberName: string | null;
+  supervisorName: string | null;
+  giReportNumber: string | null;
+  gcReportNumber: string | null;
+  conversionReportNumber: string | null;
+  status: string;
+  survey: Record<string, unknown> | null;
+  giMeasurements: Record<string, unknown> | null;
+  valvesRegulators: Record<string, unknown> | null;
+  fittingsAccessories: Record<string, unknown> | null;
+  lmcPipelineWork: Record<string, unknown> | null;
+  mdpeFittings: Record<string, unknown> | null;
+  commissioningConversion: Record<string, unknown> | null;
+  billingCompletion: Record<string, unknown> | null;
+  createdAt: string;
+  lmcPipeRecords?: BackendLmcPipeRecord[];
+  documents?: BackendCustomerDocument[];
+};
 
-export const cityAreaOptions = Array.from(
-  new Set(customers.map((customer) => `${customer.city} / ${customer.siteArea}`)),
-);
+type BackendLmcPipeRecord = {
+  id: string;
+  pipeSize: string;
+  lengthMetres: string | null;
+  layingDate: string | null;
+  testingDate: string | null;
+  purgingDate: string | null;
+  layingStatus: string;
+  testingStatus: string;
+  purgingStatus: string;
+  jointFittingDetails: string | null;
+  remarks: string | null;
+  evidence: Record<string, unknown>[] | null;
+};
 
-export const siteOptionsByProject = customers.reduce<Record<string, string[]>>(
-  (options, customer) => {
-    options[customer.projectId] = Array.from(new Set([...(options[customer.projectId] ?? []), customer.siteArea]));
-    return options;
-  },
-  {},
-);
+type BackendCustomerDocument = {
+  id: string;
+  documentType: string;
+  category: string | null;
+  referenceNumber: string | null;
+  issueDate: string | null;
+  expiryDate: string | null;
+  amount: string | null;
+  fileUrl: string;
+  fileName: string;
+  status: string;
+  remarks: string | null;
+  uploadedAt: string;
+};
 
-export const assignmentOptionsBySite = customers.reduce<Record<string, { supervisors: string[]; plumbers: string[]; fieldExecutives: string[] }>>(
-  (options, customer) => {
-    const current = options[customer.siteArea] ?? { supervisors: [], plumbers: [], fieldExecutives: [] };
-    options[customer.siteArea] = {
-      supervisors: Array.from(new Set([...current.supervisors, customer.customerConnection.supervisorName])),
-      plumbers: Array.from(new Set([...current.plumbers, customer.customerConnection.plumberName])),
-      fieldExecutives: current.fieldExecutives,
-    };
-    return options;
-  },
-  {},
-);
-
-export function getCustomerDisplay(customer: Customer) {
+function mapPipeRecord(raw: BackendLmcPipeRecord): LmcPipeSizeRecord {
   return {
-    name: customer.customerConnection.customerName,
-    mobile: customer.customerConnection.mobileNo,
-    trBpNo: customer.customerConnection.trBpNo,
-    address: customer.customerConnection.fullAddress,
-    meterNo: customer.commissioningConversion.meterNo,
-    connectionType: customer.customerConnection.connectionType,
-    supervisor: customer.customerConnection.supervisorName,
-    plumber: customer.customerConnection.plumberName,
-    paymentStatus: customer.billingCompletion.paymentStatus,
+    id: raw.id,
+    pipeSize: LMC_SIZE_TO_FRONTEND[raw.pipeSize] ?? "Other",
+    lengthMetres: numOrEmpty(raw.lengthMetres),
+    layingDate: toDateOnly(raw.layingDate),
+    testingDate: toDateOnly(raw.testingDate),
+    purgingDate: toDateOnly(raw.purgingDate),
+    layingStatus: LMC_STATUS_TO_FRONTEND[raw.layingStatus] ?? "Not Started",
+    testingStatus: LMC_STATUS_TO_FRONTEND[raw.testingStatus] ?? "Not Started",
+    purgingStatus: LMC_STATUS_TO_FRONTEND[raw.purgingStatus] ?? "Not Started",
+    jointFittingDetails: raw.jointFittingDetails ?? "",
+    remarks: raw.remarks ?? "",
+    evidence: raw.evidence?.length ? raw.evidence.map((item) => String(item.fileName ?? item.label ?? "")).join(", ") : "",
   };
 }
 
+function mapPipeRecords(records: BackendLmcPipeRecord[] | undefined): LmcPipeSizeRecord[] {
+  const bySize = new Map((records ?? []).map((record) => [LMC_SIZE_TO_FRONTEND[record.pipeSize] ?? "Other", record]));
+  return lmcPipeSizeOptions.map((size) => (bySize.has(size) ? mapPipeRecord(bySize.get(size)!) : emptyPipeSizeRecord(size)));
+}
+
+function mapDocument(raw: BackendCustomerDocument): CustomerDocument {
+  return {
+    id: raw.id,
+    type: raw.documentType,
+    referenceNumber: raw.referenceNumber ?? "",
+    category: raw.category ?? raw.documentType,
+    issueDate: toDateOnly(raw.issueDate),
+    expiryDate: toDateOnly(raw.expiryDate),
+    amount: numOrEmpty(raw.amount),
+    fileName: raw.fileName,
+    remarks: raw.remarks ?? "",
+    uploadedOn: toDateOnly(raw.uploadedAt),
+    uploadedBy: "",
+    status: raw.status as CustomerDocument["status"],
+  };
+}
+
+function mapCustomer(raw: BackendCustomer, projectName?: string, siteArea?: string): Customer {
+  return {
+    id: raw.id,
+    status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
+    projectId: raw.projectId,
+    siteId: raw.siteId,
+    projectName: projectName ?? "",
+    siteArea: siteArea ?? "",
+    city: raw.city ?? "",
+    createdDate: toDateOnly(raw.createdAt),
+    customerConnection: {
+      ...emptyCustomerConnection,
+      trBpNo: raw.trBpNumber,
+      mobileNo: raw.mobileNumber ?? "",
+      customerName: raw.customerName,
+      fullAddress: raw.fullAddress ?? "",
+      connectionType: (raw.connectionType as CustomerConnectionDetails["connectionType"]) || "Domestic",
+      houseType: raw.houseType ?? "",
+      scheme: raw.scheme ?? "",
+      plumberName: raw.plumberName ?? "",
+      supervisorName: raw.supervisorName ?? "",
+      reportNoGi: raw.giReportNumber ?? "",
+      reportNoGc: raw.gcReportNumber ?? "",
+      reportNoConversion: raw.conversionReportNumber ?? "",
+    },
+    giMeasurements: { ...emptyGiMeasurements, ...(raw.giMeasurements as Partial<GiMeasurements> | null) },
+    valvesRegulators: { ...emptyValvesRegulators, ...(raw.valvesRegulators as Partial<ValvesRegulators> | null) },
+    fittingsAccessories: { ...emptyFittingsAccessories, ...(raw.fittingsAccessories as Partial<FittingsAccessories> | null) },
+    lmcPipelineWork: {
+      ...emptyLmcPipelineWork,
+      ...(raw.lmcPipelineWork as Partial<LmcPipelineWork> | null),
+      pipeRecords: mapPipeRecords(raw.lmcPipeRecords),
+    },
+    mdpeFittings: { ...emptyMdpeFittings, ...(raw.mdpeFittings as Partial<MdpeFittings> | null) },
+    commissioningConversion: {
+      ...emptyCommissioningConversion,
+      ...(raw.commissioningConversion as Partial<CommissioningConversionDetails> | null),
+    },
+    billingCompletion: { ...emptyBillingCompletion, ...(raw.billingCompletion as Partial<BillingCompletionStatus> | null) },
+    survey: raw.survey ? { ...emptyCustomerSurvey, ...(raw.survey as Partial<CustomerSurvey>) } : undefined,
+    media: [],
+    documents: (raw.documents ?? []).map(mapDocument),
+  };
+}
+
+function mapFormValuesToBody(values: CustomerFormValues) {
+  return {
+    projectId: values.projectId,
+    siteId: values.siteId,
+    trBpNumber: values.customerConnection.trBpNo,
+    mobileNumber: values.customerConnection.mobileNo || undefined,
+    customerName: values.customerConnection.customerName,
+    fullAddress: values.customerConnection.fullAddress || undefined,
+    city: values.city || undefined,
+    connectionType: values.customerConnection.connectionType,
+    houseType: values.customerConnection.houseType || undefined,
+    scheme: values.customerConnection.scheme || undefined,
+    plumberName: values.customerConnection.plumberName || undefined,
+    supervisorName: values.customerConnection.supervisorName || undefined,
+    giReportNumber: values.customerConnection.reportNoGi || undefined,
+    gcReportNumber: values.customerConnection.reportNoGc || undefined,
+    conversionReportNumber: values.customerConnection.reportNoConversion || undefined,
+    status: STATUS_TO_BACKEND[values.status],
+    survey: values.survey,
+    giMeasurements: values.giMeasurements,
+    valvesRegulators: values.valvesRegulators,
+    fittingsAccessories: values.fittingsAccessories,
+    lmcPipelineWork: {
+      fourMetresUnderGc: values.lmcPipelineWork.fourMetresUnderGc,
+      fourMetresAboveGc: values.lmcPipelineWork.fourMetresAboveGc,
+      tfHalfInch: values.lmcPipelineWork.tfHalfInch,
+      tfOneInch: values.lmcPipelineWork.tfOneInch,
+      pcc: values.lmcPipelineWork.pcc,
+      rccNalaCrossing: values.lmcPipelineWork.rccNalaCrossing,
+      paverBlocks: values.lmcPipelineWork.paverBlocks,
+      malua: values.lmcPipelineWork.malua,
+      hardRock: values.lmcPipelineWork.hardRock,
+    },
+    mdpeFittings: values.mdpeFittings,
+    commissioningConversion: values.commissioningConversion,
+    billingCompletion: values.billingCompletion,
+  };
+}
+
+function mapPipeRecordToBody(record: LmcPipeSizeRecord) {
+  return {
+    pipeSize: LMC_SIZE_TO_BACKEND[record.pipeSize] ?? "other",
+    lengthMetres: record.lengthMetres || undefined,
+    layingDate: record.layingDate || undefined,
+    testingDate: record.testingDate || undefined,
+    purgingDate: record.purgingDate || undefined,
+    layingStatus: LMC_STATUS_TO_BACKEND[record.layingStatus] ?? "not_started",
+    testingStatus: LMC_STATUS_TO_BACKEND[record.testingStatus] ?? "not_started",
+    purgingStatus: LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started",
+    jointFittingDetails: record.jointFittingDetails || undefined,
+    remarks: record.remarks || undefined,
+    evidence: record.evidence
+      ? record.evidence.split(",").map((fileName) => ({ fileName: fileName.trim() }))
+      : undefined,
+  };
+}
+
+function mapDocumentToBody(doc: CustomerDocument) {
+  return {
+    documentType: doc.type || doc.category,
+    category: doc.category || undefined,
+    referenceNumber: doc.referenceNumber || undefined,
+    issueDate: doc.issueDate || undefined,
+    expiryDate: doc.expiryDate || undefined,
+    amount: doc.amount ? Number(doc.amount.replace(/[^0-9.]/g, "")) || undefined : undefined,
+    fileUrl: doc.fileName ? `uploads/${doc.fileName}` : "uploads/document",
+    fileName: doc.fileName || "document",
+    remarks: doc.remarks || undefined,
+  };
+}
+
+export const customersApi = {
+  async list(params: { search?: string; projectId?: string; siteId?: string; status?: CustomerStatus } = {}): Promise<Customer[]> {
+    const query = new URLSearchParams({ limit: "200" });
+    if (params.search) query.set("search", params.search);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.siteId) query.set("siteId", params.siteId);
+    if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
+    const rows = await apiRequest<BackendCustomer[]>(`/customers?${query.toString()}`);
+    return rows.map((row) => mapCustomer(row));
+  },
+
+  async get(id: string): Promise<Customer> {
+    const raw = await apiRequest<BackendCustomer>(`/customers/${id}`);
+    return mapCustomer(raw);
+  },
+
+  async create(values: CustomerFormValues): Promise<Customer> {
+    const raw = await apiRequest<BackendCustomer>("/customers", {
+      method: "POST",
+      body: JSON.stringify(mapFormValuesToBody(values)),
+    });
+    return mapCustomer(raw);
+  },
+
+  async update(id: string, values: CustomerFormValues): Promise<Customer> {
+    const raw = await apiRequest<BackendCustomer>(`/customers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(mapFormValuesToBody(values)),
+    });
+    return mapCustomer(raw);
+  },
+
+  async upsertLmcPipeRecord(customerId: string, record: LmcPipeSizeRecord): Promise<LmcPipeSizeRecord> {
+    const raw = await apiRequest<BackendLmcPipeRecord>(`/customers/${customerId}/lmc-pipes`, {
+      method: "PUT",
+      body: JSON.stringify(mapPipeRecordToBody(record)),
+    });
+    return mapPipeRecord(raw);
+  },
+
+  async listDocuments(customerId: string): Promise<CustomerDocument[]> {
+    const rows = await apiRequest<BackendCustomerDocument[]>(`/customers/${customerId}/documents`);
+    return rows.map(mapDocument);
+  },
+
+  async createDocument(customerId: string, doc: CustomerDocument): Promise<CustomerDocument> {
+    const raw = await apiRequest<BackendCustomerDocument>(`/customers/${customerId}/documents`, {
+      method: "POST",
+      body: JSON.stringify(mapDocumentToBody(doc)),
+    });
+    return mapDocument(raw);
+  },
+};

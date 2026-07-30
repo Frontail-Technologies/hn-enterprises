@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ElementType } from "react";
 import { payments } from "@/features/commercial/data/payments.data";
-import { customerActivity, customers } from "@/features/customers/services/customers.service";
+import { customerActivity, customers } from "@/features/customers/services/customers.mock";
 import { planningDprRecords } from "@/features/planning/services/planning.service";
 import { projectActivity } from "@/features/projects/services/projects.mock";
 

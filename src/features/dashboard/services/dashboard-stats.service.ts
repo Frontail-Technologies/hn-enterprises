@@ -1,8 +1,6 @@
 import type { Customer } from "@/features/customers/types/customer.types";
-import {
-  customers,
-  deriveLmcPipeCurrentStage,
-} from "@/features/customers/services/customers.service";
+import { deriveLmcPipeCurrentStage } from "@/features/customers/services/customers.service";
+import { customers } from "@/features/customers/services/customers.mock";
 
 export type DashboardStatKey =
   | "total-customers"

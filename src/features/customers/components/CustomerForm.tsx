@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ImageSquareIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,27 +40,22 @@ import {
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useProjectSitesQuery, useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import {
   billingCompletionFields,
   deriveLmcPipeCurrentStage,
   commissioningConversionFields,
   customerConnectionFields,
   customerStatusOptions,
+  defaultCustomerFormValues,
   deriveLmcOverallStatus,
-  emptyBillingCompletion,
-  emptyCommissioningConversion,
-  emptyCustomerConnection,
   emptyCustomerSurvey,
-  emptyLmcPipelineWork,
-  emptyMdpeFittings,
   fittingAccessoryFields,
   giMeasurementFields,
   isolationValveFields,
   lmcPipeRecordFields,
   lmcPipelineFields,
   mdpeFittingFields,
-  projectOptions,
-  siteOptionsByProject,
   surveyApprovalStatusOptions,
   surveyConditionStatusOptions,
   surveyWorkableStatusOptions,
@@ -67,9 +63,10 @@ import {
   type LmcCivilWork,
   type LmcPipeEditableFields,
 } from "../services/customers.service";
+import { useCreateCustomer, useCustomerQuery, useUpdateCustomer } from "../hooks/useCustomers";
+import { customersApi } from "../services/customers.service";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import type {
-  Customer,
   CustomerFormValues,
   CustomerSurvey,
   CustomerSurveyPhoto,
@@ -77,78 +74,84 @@ import type {
   LmcPipelineWork,
 } from "../types/customer.types";
 
-const defaultValues: CustomerFormValues = {
-  status: "Draft",
-  projectId: "",
-  projectName: "",
-  siteArea: "",
-  city: "",
-  customerConnection: emptyCustomerConnection,
-  giMeasurements: {
-    tfToRegulator: "",
-    inlet: "",
-    outlet: "",
-    totalGiPipeHalfInch: "",
-    giPipeThreeQuarterInch: "",
-    giPipeOneInch: "",
-    giPipeOneAndHalfInch: "",
-    giPipeTwoInch: "",
-  },
-  valvesRegulators: {
-    isolationValveHalfInch: "",
-    isolationValveThreeQuarterInch: "",
-    isolationValveOneInch: "",
-    isolationValveOneAndHalfInch: "",
-    isolationValveTwoInch: "",
-    applianceValveHalfInch: "",
-    regulator6BarTo100Mbar: "",
-    regulator6BarTo21Mbar: "",
-    regulator100MbarTo21Mbar: "",
-    warningPlate: "",
-  },
-  fittingsAccessories: {
-    clampHalfInch: "",
-    clamp3InchToHalfInch: "",
-    elbowHalfInch: "",
-    mfElbowHalfInch: "",
-    socketHalfInch: "",
-    teeHalfInch: "",
-    nipple2Inch: "",
-    nipple3Inch: "",
-    nipple4Inch: "",
-    reducerElbowThreeQuarterToHalfInch: "",
-    threeQuarterInchTo3Inch: "",
-    unionHalfInch: "",
-    plugHalfInch: "",
-    fittingsOneAndHalfInchQuantity: "",
-    fittingsTwoInchQuantity: "",
-    extraGiAbove10Metres: "",
-  },
-  lmcPipelineWork: emptyLmcPipelineWork,
-  mdpeFittings: emptyMdpeFittings,
-  commissioningConversion: emptyCommissioningConversion,
-  billingCompletion: emptyBillingCompletion,
-  survey: emptyCustomerSurvey,
-  media: [],
-  documents: [],
-};
-
 interface CustomerFormProps {
   mode: "create" | "edit";
-  customer?: Customer;
+  customerId?: string;
 }
 
-export function CustomerForm({ mode, customer }: CustomerFormProps) {
+export function CustomerForm({ mode, customerId }: CustomerFormProps) {
   const isEdit = mode === "edit";
-  const initialValues = customer ? toFormValues(customer) : defaultValues;
+  const { data: customer, isLoading } = useCustomerQuery(customerId ?? "");
+
+  if (isEdit && isLoading) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading customer...</p>;
+  }
+
+  return (
+    <CustomerFormFields
+      key={customer?.id ?? "create"}
+      mode={mode}
+      customerId={customerId}
+      initialValues={customer ?? defaultCustomerFormValues}
+    />
+  );
+}
+
+function CustomerFormFields({
+  mode,
+  customerId,
+  initialValues,
+}: {
+  mode: "create" | "edit";
+  customerId?: string;
+  initialValues: CustomerFormValues;
+}) {
+  const router = useRouter();
+  const isEdit = mode === "edit";
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
-  const siteOptions = siteOptionsByProject[values.projectId] ?? [];
+  const { data: projects = [] } = useProjectsQuery();
+  const { data: sites = [] } = useProjectSitesQuery(values.projectId);
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer(customerId ?? "");
+  const mutation = isEdit ? updateCustomer : createCustomer;
+
+  const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
+
+  const handleSave = async () => {
+    if (!values.customerConnection.customerName.trim() || !values.projectId || !values.siteId) return;
+
+    const saved = await mutation.mutateAsync(values);
+
+    const editedPipeRecords = values.lmcPipelineWork.pipeRecords.filter(
+      (record) =>
+        record.lengthMetres || record.layingDate || record.testingDate || record.purgingDate ||
+        record.jointFittingDetails || (record.remarks && record.remarks !== "-") ||
+        record.layingStatus !== "Not Started" || record.testingStatus !== "Not Started" || record.purgingStatus !== "Not Started",
+    );
+
+    for (const record of editedPipeRecords) {
+      await customersApi.upsertLmcPipeRecord(saved.id, record);
+    }
+
+    const newDocuments = values.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
+    for (const doc of newDocuments) {
+      await customersApi.createDocument(saved.id, doc);
+    }
+
+    router.push(`/customers/${saved.id}`);
+  };
 
   return (
     <div>
       <PageHeader title={isEdit ? "Edit Customer" : "Create Customer"} />
 
-      <form className="pb-28">
+      <form
+        className="pb-28"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSave();
+        }}
+      >
         <Tabs defaultValue="customer" className="flex flex-col gap-3">
           <div className="border-b border-border/70">
             <TabsList variant="line" className="flex w-full max-w-full justify-start gap-6 overflow-x-auto p-0">
@@ -179,7 +182,8 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
                         ...current,
                         projectId: projectId ?? "",
                         projectName: project?.label ?? "",
-                        siteArea: siteOptionsByProject[projectId ?? ""]?.[0] ?? "",
+                        siteId: "",
+                        siteArea: "",
                       }));
                     }}
                   >
@@ -197,16 +201,20 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
                 </FormField>
                 <FormField label="Site / Area">
                   <Select
-                    value={values.siteArea || undefined}
-                    onValueChange={(siteArea) => setValues((current) => ({ ...current, siteArea: siteArea ?? "" }))}
+                    value={values.siteId || undefined}
+                    onValueChange={(siteId) => {
+                      const site = sites.find((item) => item.id === siteId);
+                      setValues((current) => ({ ...current, siteId: siteId ?? "", siteArea: site?.name ?? "" }));
+                    }}
+                    disabled={!values.projectId}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select site / area" />
                     </SelectTrigger>
                     <SelectContent>
-                      {siteOptions.map((site) => (
-                        <SelectItem key={site} value={site}>
-                          {site}
+                      {sites.map((site) => (
+                        <SelectItem key={site.id} value={site.id}>
+                          {site.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -334,19 +342,26 @@ export function CustomerForm({ mode, customer }: CustomerFormProps) {
           </TabsContent>
 
           <TabsContent value="reports">
-            <CustomerReportsPanel customerId={customer?.id} customer={customer} />
+            <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "" } : undefined} />
           </TabsContent>
         </Tabs>
 
+        {mutation.isError ? (
+          <p className="mt-3 text-sm text-destructive">
+            {mutation.error instanceof Error ? mutation.error.message : "Unable to save customer"}
+          </p>
+        ) : null}
+
         <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
           <Link
-            href={isEdit && customer ? `/customers/${customer.id}` : "/customers"}
+            href={isEdit && customerId ? `/customers/${customerId}` : "/customers"}
             className={buttonVariants({ variant: "outline", size: "default" })}
           >
             Cancel
           </Link>
-          {!isEdit ? <Button type="button" variant="outline">Save Draft</Button> : null}
-          <Button type="button">{isEdit ? "Save Changes" : "Save Customer"}</Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Save Customer"}
+          </Button>
         </div>
       </form>
     </div>
@@ -846,12 +861,4 @@ function TextField({
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
     </FormField>
   );
-}
-
-
-function toFormValues(customer: Customer): CustomerFormValues {
-  const values = { ...customer } as Partial<Customer>;
-  delete values.id;
-  delete values.createdDate;
-  return values as CustomerFormValues;
 }

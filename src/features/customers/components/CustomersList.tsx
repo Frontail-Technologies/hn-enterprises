@@ -16,21 +16,18 @@ import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
 import {
   customerMasterSheetColumns,
-  customerMasterSheetDemoRows,
-  customers,
   getCustomerMasterSheetRows,
   type CustomerMasterSheetRow,
 } from "../services/customers.service";
+import { useCustomersQuery } from "../hooks/useCustomers";
 
 export function CustomersList() {
   const router = useRouter();
   const [masterSheetSearch, setMasterSheetSearch] = useState("");
-  const realCustomerIds = useMemo(() => new Set(customers.map((customer) => customer.id)), []);
+  const { data: customers = [], isLoading } = useCustomersQuery();
+  const realCustomerIds = useMemo(() => new Set(customers.map((customer) => customer.id)), [customers]);
 
-  const masterSheetRows = useMemo(
-    () => [...getCustomerMasterSheetRows(customers), ...customerMasterSheetDemoRows],
-    [],
-  );
+  const masterSheetRows = useMemo(() => getCustomerMasterSheetRows(customers), [customers]);
 
   const masterSheetColumns: ExcelColumn<CustomerMasterSheetRow>[] = useMemo(
     () =>
@@ -104,7 +101,7 @@ export function CustomersList() {
         <ExcelDataGrid
           columns={masterSheetColumns}
           rows={filteredMasterSheetRows}
-          emptyTitle="No customer master records found"
+          emptyTitle={isLoading ? "Loading customers..." : "No customer master records found"}
           onRowClick={(row) => {
             if (realCustomerIds.has(row.customerId)) {
               router.push(`/customers/${row.customerId}/edit`);

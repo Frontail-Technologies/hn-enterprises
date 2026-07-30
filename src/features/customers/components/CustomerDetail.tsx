@@ -47,7 +47,6 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   billingCompletionFields,
   commissioningConversionFields,
-  customerActivity,
   deriveLmcPipeCurrentStage,
   customerConnectionFields,
   deriveLmcOverallStatus,
@@ -61,6 +60,8 @@ import {
   type LmcPipeEditableFields,
   type LmcCivilWork,
 } from "../services/customers.service";
+import { customerActivity } from "../services/customers.mock";
+import { useCustomerQuery, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import type {
   Customer,
@@ -94,10 +95,20 @@ const customerSectionLinks = [
   { href: "#approvals", label: "Approvals / History" },
 ];
 
-export function CustomerDetail({ customer }: { customer: Customer }) {
+export function CustomerDetail({ customerId }: { customerId: string }) {
+  const { data: customer, isLoading, isError } = useCustomerQuery(customerId);
   const searchParams = useSearchParams();
-  const connection = customer.customerConnection;
   const initialPipeId = searchParams.get("pipe");
+
+  if (isLoading) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading customer...</p>;
+  }
+
+  if (isError || !customer) {
+    return <p className="p-4 text-sm text-destructive">Unable to load this customer.</p>;
+  }
+
+  const connection = customer.customerConnection;
 
   return (
     <div className="space-y-4">
@@ -167,7 +178,12 @@ export function CustomerDetail({ customer }: { customer: Customer }) {
         </section>
 
         <section id="lmc" className="scroll-mt-16">
-          <LmcPipelineDetail values={customer.lmcPipelineWork} initialPipeId={initialPipeId} />
+          <LmcPipelineDetail
+            key={customer.id}
+            customerId={customer.id}
+            values={customer.lmcPipelineWork}
+            initialPipeId={initialPipeId}
+          />
         </section>
 
         <section id="mdpe" className="scroll-mt-16">
@@ -398,14 +414,17 @@ function SurveyRevisionHistory({ revisions }: { revisions: CustomerSurveyRevisio
 }
 
 function LmcPipelineDetail({
+  customerId,
   values: initialValues,
   initialPipeId,
 }: {
+  customerId: string;
   values: LmcPipelineWork;
   initialPipeId?: string | null;
 }) {
   const [values, setValues] = useState(initialValues);
   const [editingPipeId, setEditingPipeId] = useState<string | null>(initialPipeId ?? null);
+  const upsertPipeRecord = useUpsertLmcPipeRecord(customerId);
   const editingPipe = values.pipeRecords.find((record) => record.id === editingPipeId) ?? null;
   const overallStatus = deriveLmcOverallStatus(values.pipeRecords);
   const pipeInputFields = lmcPipeRecordFields.filter(
@@ -419,6 +438,13 @@ function LmcPipelineDetail({
         record.id === nextRecord.id ? nextRecord : record,
       ),
     }));
+  };
+
+  const closeSheet = () => {
+    if (editingPipe) {
+      upsertPipeRecord.mutate(editingPipe);
+    }
+    setEditingPipeId(null);
   };
 
   return (
@@ -469,7 +495,7 @@ function LmcPipelineDetail({
         </div>
       </SectionCard>
 
-      <Sheet open={Boolean(editingPipe)} onOpenChange={(open) => !open && setEditingPipeId(null)}>
+      <Sheet open={Boolean(editingPipe)} onOpenChange={(open) => !open && closeSheet()}>
         <SheetContent className="!w-[min(56rem,calc(100vw-1rem))] !max-w-none gap-0 overflow-x-hidden border-l-0 shadow-none">
           {editingPipe ? (
             <>
@@ -502,8 +528,8 @@ function LmcPipelineDetail({
                 </div>
               </div>
               <SheetFooter className="bg-card/95 px-5 py-4">
-                <Button type="button" onClick={() => setEditingPipeId(null)}>
-                  Done
+                <Button type="button" disabled={upsertPipeRecord.isPending} onClick={closeSheet}>
+                  {upsertPipeRecord.isPending ? "Saving..." : "Done"}
                 </Button>
               </SheetFooter>
             </>

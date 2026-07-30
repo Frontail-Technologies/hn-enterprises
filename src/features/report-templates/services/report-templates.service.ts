@@ -1,4 +1,4 @@
-import { customers, getCustomerById } from "@/features/customers/services/customers.service";
+import { customers, getCustomerById } from "@/features/customers/services/customers.mock";
 import type { Customer } from "@/features/customers/types/customer.types";
 import {
   gcChecklistItems,

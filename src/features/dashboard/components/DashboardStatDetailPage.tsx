@@ -16,7 +16,7 @@ import {
   getDashboardStatRows,
 } from "@/features/dashboard/services/dashboard-stats.service";
 import { formatDate } from "@/features/commercial/utils/format";
-import { customers } from "@/features/customers/services/customers.service";
+import { customers } from "@/features/customers/services/customers.mock";
 
 export function DashboardStatDetailPage({
   statKey,
