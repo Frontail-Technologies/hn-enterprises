@@ -879,6 +879,8 @@ function mapCustomer(raw: BackendCustomer, projectName?: string, siteArea?: stri
       reportNoGi: raw.giReportNumber ?? "",
       reportNoGc: raw.gcReportNumber ?? "",
       reportNoConversion: raw.conversionReportNumber ?? "",
+      // master-import writes this into billingCompletion.jobCardDone, not a top-level column
+      jobCardDone: String((raw.billingCompletion as Record<string, unknown> | null)?.jobCardDone ?? ""),
     },
     giMeasurements: { ...emptyGiMeasurements, ...(raw.giMeasurements as Partial<GiMeasurements> | null) },
     valvesRegulators: { ...emptyValvesRegulators, ...(raw.valvesRegulators as Partial<ValvesRegulators> | null) },
@@ -935,7 +937,9 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     },
     mdpeFittings: values.mdpeFittings,
     commissioningConversion: values.commissioningConversion,
-    billingCompletion: values.billingCompletion,
+    // jobCardDone lives in the customerConnection tab in the UI, but master-import (and this
+    // adapter's read side) stores it in billingCompletion - no top-level column for it.
+    billingCompletion: { ...values.billingCompletion, jobCardDone: values.customerConnection.jobCardDone },
   };
 }
 
