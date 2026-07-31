@@ -244,6 +244,7 @@ export type CustomerDocument = {
   expiryDate: string;
   amount: string;
   fileName: string;
+  fileUrl?: string;
   remarks: string;
   uploadedOn: string;
   uploadedBy: string;

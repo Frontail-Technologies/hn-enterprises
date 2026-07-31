@@ -848,6 +848,7 @@ function mapDocument(raw: BackendCustomerDocument): CustomerDocument {
     expiryDate: toDateOnly(raw.expiryDate),
     amount: numOrEmpty(raw.amount),
     fileName: raw.fileName,
+    fileUrl: raw.fileUrl,
     remarks: raw.remarks ?? "",
     uploadedOn: toDateOnly(raw.uploadedAt),
     uploadedBy: "",
@@ -969,7 +970,7 @@ function mapDocumentToBody(doc: CustomerDocument) {
     issueDate: doc.issueDate || undefined,
     expiryDate: doc.expiryDate || undefined,
     amount: doc.amount ? Number(doc.amount.replace(/[^0-9.]/g, "")) || undefined : undefined,
-    fileUrl: doc.fileName ? `uploads/${doc.fileName}` : "uploads/document",
+    fileUrl: doc.fileUrl || (doc.fileName ? `uploads/${doc.fileName}` : "uploads/document"),
     fileName: doc.fileName || "document",
     remarks: doc.remarks || undefined,
   };

@@ -43,13 +43,18 @@ async function refreshSession() {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { skipRefresh, headers, ...init } = options;
+  // FormData bodies must not get a manual Content-Type - the browser sets the multipart
+  // boundary itself. Only default to JSON for plain (string/undefined) bodies.
+  const isFormData = init.body instanceof FormData;
+  const requestHeaders = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...headers,
+  };
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: requestHeaders,
   });
 
   if (response.status === 401 && !skipRefresh && !path.startsWith("/auth/")) {
@@ -58,10 +63,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const retry = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-      },
+      headers: requestHeaders,
     });
 
     return parseResponse<T>(retry);

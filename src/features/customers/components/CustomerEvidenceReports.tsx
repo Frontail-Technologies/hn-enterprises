@@ -33,6 +33,7 @@ import { FormField } from "@/components/shared/FormField";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
+import { uploadFile } from "@/lib/upload";
 import {
   reportTemplates,
   resolveReportTemplateDataFromCustomer,
@@ -50,12 +51,14 @@ import type {
 } from "../types/customer.types";
 
 export function CustomerEvidencePanel({
+  customerId,
   survey,
   lmcPipelineWork,
   documents,
   editable = false,
   onDocumentsChange,
 }: {
+  customerId?: string;
   survey?: CustomerSurvey;
   lmcPipelineWork: LmcPipelineWork;
   documents: CustomerDocument[];
@@ -105,6 +108,7 @@ export function CustomerEvidencePanel({
     <div className="space-y-3">
       {editable && onDocumentsChange ? (
         <CustomerEvidenceUpload
+          customerId={customerId}
           open={uploadOpen}
           onOpenChange={setUploadOpen}
           documents={documents}
@@ -132,11 +136,13 @@ const customerEvidenceCategories = [
 ] as const;
 
 function CustomerEvidenceUpload({
+  customerId,
   open,
   onOpenChange,
   documents,
   onDocumentsChange,
 }: {
+  customerId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   documents: CustomerDocument[];
@@ -146,14 +152,36 @@ function CustomerEvidenceUpload({
   const [referenceNumber, setReferenceNumber] = useState("");
   const [evidenceDate, setEvidenceDate] = useState("");
   const [fileName, setFileName] = useState("");
+  const [fileUrl, setFileUrl] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   const resetForm = () => {
     setCategory("LMC / Site Evidence");
     setReferenceNumber("");
     setEvidenceDate("");
     setFileName("");
+    setFileUrl("");
     setRemarks("");
+    setUploadError("");
+  };
+
+  const handleFileSelect = async (file: File | undefined) => {
+    if (!file) return;
+    setIsUploading(true);
+    setUploadError("");
+    try {
+      const uploaded = await uploadFile(file, "customers", customerId);
+      setFileName(uploaded.fileName);
+      setFileUrl(uploaded.url);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+      setFileName("");
+      setFileUrl("");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const saveEvidence = () => {
@@ -167,6 +195,7 @@ function CustomerEvidenceUpload({
       expiryDate: "",
       amount: "",
       fileName: fileName || "customer-evidence.jpg",
+      fileUrl,
       remarks,
       uploadedOn: evidenceDate || today,
       uploadedBy: "Demo Admin",
@@ -230,10 +259,17 @@ function CustomerEvidenceUpload({
               <Input
                 type="file"
                 accept="image/*,.pdf,.doc,.docx"
-                onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
+                disabled={isUploading}
+                onChange={(event) => void handleFileSelect(event.target.files?.[0])}
               />
-              {fileName ? (
-                <p className="mt-1 text-xs text-muted-foreground">Selected: {fileName}</p>
+              {isUploading ? (
+                <p className="mt-1 text-xs text-muted-foreground">Uploading...</p>
+              ) : null}
+              {!isUploading && fileName ? (
+                <p className="mt-1 text-xs text-muted-foreground">Uploaded: {fileName}</p>
+              ) : null}
+              {uploadError ? (
+                <p className="mt-1 text-xs text-destructive">{uploadError}</p>
               ) : null}
             </FormField>
             <FormField label="Remarks">
@@ -249,7 +285,7 @@ function CustomerEvidenceUpload({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={saveEvidence}>
+            <Button type="button" onClick={saveEvidence} disabled={isUploading}>
               Save Evidence
             </Button>
           </SheetFooter>

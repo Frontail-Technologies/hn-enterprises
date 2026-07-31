@@ -54,6 +54,7 @@ export type ProjectDocument = {
   amount: string;
   category: string;
   fileName: string;
+  fileUrl?: string;
   remarks: string;
   uploadedOn: string;
   uploadedBy: string;

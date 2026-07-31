@@ -200,6 +200,7 @@ function mapProjectDocument(raw: BackendProjectDocument): ProjectDocument {
     amount: formatCurrency(raw.amount),
     category: raw.documentType,
     fileName: raw.fileName,
+    fileUrl: raw.fileUrl,
     remarks: raw.remarks ?? "",
     uploadedOn: toDateOnly(raw.uploadedAt),
     uploadedBy: "",
@@ -213,7 +214,7 @@ function mapProjectDocumentToBody(doc: ProjectDocument) {
     documentDate: doc.documentDate || undefined,
     expiryDate: doc.expiryDate || undefined,
     amount: parseCurrency(doc.amount),
-    fileUrl: doc.fileName ? `uploads/${doc.fileName}` : "uploads/document.pdf",
+    fileUrl: doc.fileUrl || (doc.fileName ? `uploads/${doc.fileName}` : "uploads/document.pdf"),
     fileName: doc.fileName || "document.pdf",
     remarks: doc.remarks || undefined,
   };

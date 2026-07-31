@@ -57,6 +57,7 @@ import {
   useSaveProjectSite,
   useCreateProjectDocument,
 } from "@/features/projects/hooks/useProjects";
+import { uploadFile } from "@/lib/upload";
 import type {
   ActivityItem,
   AssignedUser,
@@ -715,6 +716,7 @@ function ProjectDocuments({ projectId }: { projectId: string }) {
       </SectionCard>
 
       <DocumentDialog
+        projectId={projectId}
         open={dialogOpen}
         title={editingId ? "Edit Document" : "Upload Document"}
         draft={draft}
@@ -1169,6 +1171,7 @@ function DocumentDialog({
   setDraft,
   onOpenChange,
   onSave,
+  projectId,
 }: {
   open: boolean;
   title: string;
@@ -1176,7 +1179,25 @@ function DocumentDialog({
   setDraft: React.Dispatch<React.SetStateAction<ProjectDocument>>;
   onOpenChange: (open: boolean) => void;
   onSave: () => void;
+  projectId: string;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleFileSelect = async (file: File | undefined) => {
+    if (!file) return;
+    setIsUploading(true);
+    setUploadError("");
+    try {
+      const uploaded = await uploadFile(file, "projects", projectId);
+      setDraft((current) => ({ ...current, fileName: uploaded.fileName, fileUrl: uploaded.url }));
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -1264,12 +1285,22 @@ function DocumentDialog({
               setDraft((current) => ({ ...current, expiryDate: value }))
             }
           />
-          <CompactInput
-            label="File"
-            type="file"
-            value=""
-            onChange={() => undefined}
-          />
+          <FormField label="File">
+            <Input
+              type="file"
+              disabled={isUploading}
+              onChange={(event) => void handleFileSelect(event.target.files?.[0])}
+            />
+            {isUploading ? (
+              <p className="mt-1 text-xs text-muted-foreground">Uploading...</p>
+            ) : null}
+            {!isUploading && draft.fileName ? (
+              <p className="mt-1 text-xs text-muted-foreground">Uploaded: {draft.fileName}</p>
+            ) : null}
+            {uploadError ? (
+              <p className="mt-1 text-xs text-destructive">{uploadError}</p>
+            ) : null}
+          </FormField>
           <FormField label="Remarks">
             <Textarea
               value={draft.remarks}
@@ -1286,7 +1317,7 @@ function DocumentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onSave}>Save Document</Button>
+          <Button onClick={onSave} disabled={isUploading}>Save Document</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

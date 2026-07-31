@@ -331,6 +331,7 @@ function CustomerFormFields({
 
           <TabsContent value="images">
             <CustomerEvidencePanel
+              customerId={customerId}
               survey={values.survey}
               lmcPipelineWork={values.lmcPipelineWork}
               documents={values.documents}
