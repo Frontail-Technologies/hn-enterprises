@@ -1,5 +1,4 @@
 import {
-  CalendarCheckIcon,
   ClipboardTextIcon,
   CurrencyInrIcon,
   FileTextIcon,
@@ -11,7 +10,6 @@ import {
 import type { ElementType } from "react";
 import { payments } from "@/features/commercial/data/payments.data";
 import { customerActivity, customers } from "@/features/customers/services/customers.mock";
-import { planningDprRecords } from "@/features/planning/services/planning.service";
 import { projectActivity } from "@/features/projects/services/projects.mock";
 
 export type ActivityType =
@@ -132,19 +130,10 @@ function buildActivities(): DashboardActivity[] {
     icon: activity.title.toLowerCase().includes("document") ? FileTextIcon : FolderOpenIcon,
   }));
 
-  const dprRows = planningDprRecords.map<DashboardActivity>((record) => ({
-    id: `dpr-${record.id}`,
-    title: `DPR ${record.status.toLowerCase()}`,
-    description: `${record.photoCount} photos attached. ${record.remarks}`,
-    type: "DPR",
-    actor: "Amit Rathore",
-    supervisor: "Amit Rathore",
-    project: "Shyam Nagar CGD Project",
-    site: record.siteAddress,
-    relatedRecord: record.id.toUpperCase(),
-    dateTime: `${record.date} 18:00`,
-    icon: CalendarCheckIcon,
-  }));
+  // DPR is now backed by a real API (see features/planning/services/planning.service.ts); this
+  // synchronous mock-data activity feed doesn't fetch it, so DPR rows are omitted here rather than
+  // fabricated. Wiring it to a live fetch is a separate change.
+  const dprRows: DashboardActivity[] = [];
 
   const paymentRows = payments.map<DashboardActivity>((payment) => ({
     id: `payment-${payment.id}`,

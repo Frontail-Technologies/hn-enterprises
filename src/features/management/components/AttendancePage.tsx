@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   addMonths,
   eachDayOfInterval,
@@ -23,8 +24,8 @@ import {
 } from "@/components/ui/select";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { cn } from "@/lib/utils";
-import { supervisorOptions } from "../data/staff.data";
-import { buildAttendanceRecords, type AttendanceViewMode } from "../data/attendance.data";
+import { attendanceKey, useAttendanceQuery, useRosterQuery } from "../hooks/useAttendance";
+import type { AttendanceViewMode } from "../data/attendance.data";
 import { AttendanceLegend } from "./attendance/AttendanceLegend";
 import { AttendanceRegister } from "./attendance/AttendanceRegister";
 import { AttendanceDrawer } from "./attendance/AttendanceDrawer";
@@ -38,10 +39,23 @@ export function AttendancePage() {
   const [selectedSupervisor, setSelectedSupervisor] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const attendanceRecords = useMemo(
-    () => buildAttendanceRecords(calendarMonth),
+  const queryClient = useQueryClient();
+  const monthRange = useMemo(
+    () => ({
+      from: format(startOfMonth(calendarMonth), "yyyy-MM-dd"),
+      to: format(endOfMonth(calendarMonth), "yyyy-MM-dd"),
+    }),
     [calendarMonth],
   );
+  const { data: roster = [] } = useRosterQuery("supervisor,field_executive");
+  const {
+    data: attendanceRecords = [],
+    isLoading,
+    error: loadError,
+  } = useAttendanceQuery(monthRange);
+  const refetchRecords = () =>
+    queryClient.invalidateQueries({ queryKey: attendanceKey(monthRange.from, monthRange.to) });
+
   const visibleRecords = useMemo(
     () =>
       selectedSupervisor === "all"
@@ -54,7 +68,7 @@ export function AttendancePage() {
   const selectedSupervisorName =
     selectedSupervisor === "all"
       ? "All Supervisors"
-      : (supervisorOptions.find(
+      : (roster.find(
           (supervisor) => supervisor.id === selectedSupervisor,
         )?.name ?? "Supervisor");
   const monthDays = useMemo(() => {
@@ -93,7 +107,7 @@ export function AttendancePage() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Supervisors</SelectItem>
-          {supervisorOptions.map((supervisor) => (
+          {roster.map((supervisor) => (
             <SelectItem key={supervisor.id} value={supervisor.id}>
               {supervisor.name}
             </SelectItem>
@@ -150,11 +164,19 @@ export function AttendancePage() {
         {attendanceControls}
       </div>
 
+      {loadError ? (
+        <p className="text-sm text-destructive">
+          {loadError instanceof Error ? loadError.message : "Unable to load attendance"}
+        </p>
+      ) : null}
+
       {viewMode === "register" ? (
         <AttendanceRegister
           month={calendarMonth}
           records={attendanceRecords}
+          roster={roster}
           selectedSupervisor={selectedSupervisor}
+          onRecordSaved={refetchRecords}
         />
       ) : null}
 
@@ -163,7 +185,7 @@ export function AttendancePage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AttendanceLegend />
             <p className="text-xs font-medium text-muted-foreground">
-              Showing attendance for{" "}
+              {isLoading ? "Loading..." : "Showing attendance for"}{" "}
               <span className="text-foreground">{selectedSupervisorName}</span>
             </p>
           </div>
@@ -251,6 +273,8 @@ export function AttendancePage() {
         date={selectedDate}
         record={selectedRecord}
         selectedSupervisor={selectedSupervisor}
+        roster={roster}
+        onSaved={refetchRecords}
       />
     </div>
   );

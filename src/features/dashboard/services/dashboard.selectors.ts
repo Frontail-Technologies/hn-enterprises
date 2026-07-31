@@ -12,8 +12,6 @@ import { bills } from "@/features/commercial/data/bills.data";
 import { materials } from "@/features/commercial/data/materials.data";
 import { payments } from "@/features/commercial/data/payments.data";
 import { customers } from "@/features/customers/services/customers.mock";
-import { buildAttendanceRecords } from "@/features/management/data/attendance.data";
-import { planningDprRecords } from "@/features/planning/services/planning.service";
 import { projects, projectSites } from "@/features/projects/services/projects.mock";
 import type {
   DashboardMetric,
@@ -142,7 +140,9 @@ function buildAdminMetrics({
   const monthlyExpenses = scopedPayments
     .filter((payment) => payment.status === "Approved")
     .reduce((sum, payment) => sum + payment.amount, 0);
-  const dprPending = planningDprRecords.filter((record) => record.status !== "Approved").length;
+  // DPR is now backed by a real API (see features/planning/); this synchronous mock-data selector
+  // doesn't fetch it, so this metric shows 0 rather than a fabricated count.
+  const dprPending = 0;
 
   return [
     {
@@ -267,15 +267,14 @@ function buildWorkflowMetrics({
 }
 
 function buildAttendanceRows(): AttendanceSummaryRow[] {
-  const records = buildAttendanceRecords(new Date(2026, 6, 1));
-  const count = (status: string) =>
-    records.filter((record) => record.status === status).length;
-
+  // Attendance is now backed by a real API (see features/management/services/attendance.service.ts);
+  // this dashboard tile still renders from the rest of this file's synchronous mock data, so it shows
+  // zeros here rather than fabricating counts. Wiring it to a live fetch is a separate change.
   return [
-    { id: "present", label: "Present", value: count("Present"), helper: "Marked on site" },
-    { id: "late", label: "Late", value: count("Late"), helper: "Late check-in" },
-    { id: "absent", label: "Absent", value: count("Absent"), helper: "Needs review" },
-    { id: "leave", label: "Leave", value: count("Leave"), helper: "Approved leave" },
+    { id: "present", label: "Present", value: 0, helper: "Marked on site" },
+    { id: "late", label: "Late", value: 0, helper: "Late check-in" },
+    { id: "absent", label: "Absent", value: 0, helper: "Needs review" },
+    { id: "leave", label: "Leave", value: 0, helper: "Approved leave" },
   ];
 }
 
@@ -292,7 +291,9 @@ function buildAlerts(
   const sentBackSurveys = scopedCustomers.filter(
     (customer) => customer.survey?.approvalStatus === "Sent Back",
   );
-  const submittedDpr = planningDprRecords.filter((record) => record.status === "Submitted");
+  // DPR is now backed by a real API (see features/planning/); this synchronous mock-data selector
+  // doesn't fetch it, so no DPR alerts are fabricated here.
+  const submittedDpr: { id: string; siteAddress: string; photoCount: number }[] = [];
 
   return [
     ...lowStock.map<DashboardAlert>((material) => ({

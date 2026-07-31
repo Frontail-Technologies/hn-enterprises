@@ -5,18 +5,21 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { PageShell } from "@/components/shared/PageShell";
-import {
-  createSitePlan,
-  getPlanningSupervisorById,
-} from "../services/planning.service";
+import { useSitePlansQuery } from "../hooks/usePlanning";
+import { planningTaskTemplates } from "../services/planning.service";
 import type { PlanTask } from "../types/planning.types";
 
 export function PlanningPlanPage() {
   const searchParams = useSearchParams();
-  const supervisor = getPlanningSupervisorById(searchParams.get("supervisor"));
-  const siteLabel = searchParams.get("site") ?? supervisor.area;
+  const siteId = searchParams.get("siteId") ?? "";
+  const supervisorId = searchParams.get("supervisorId") ?? "";
   const date = searchParams.get("date") ?? "2026-07-22";
-  const tasks = useMemo(() => createSitePlan(1).tasks, []);
+
+  const { data: sitePlans = [], isLoading } = useSitePlansQuery({ siteId, supervisorId, date });
+  const plan = sitePlans[0];
+  const tasks = plan?.tasks ?? planningTaskTemplates.map((template) => ({ ...template, qty: "", worker: "" }));
+  const siteLabel = plan?.siteLabel || "Unknown site";
+  const supervisorName = plan?.supervisorName || "Unknown supervisor";
 
   const totalQty = useMemo(
     () => tasks.reduce((sum, task) => sum + (Number(task.qty) || 0), 0),
@@ -26,10 +29,10 @@ export function PlanningPlanPage() {
   return (
     <PageShell
       title="Planning"
-      subtitle={`${supervisor.name} - ${siteLabel}`}
+      subtitle={`${supervisorName} - ${siteLabel}`}
       actions={
         <Link
-          href={`/planning/dpr?supervisor=${supervisor.id}&site=${encodeURIComponent(siteLabel)}&date=${date}`}
+          href={`/planning/dpr?supervisorId=${supervisorId}&siteId=${siteId}&date=${date}`}
           className={buttonVariants({ variant: "outline" })}
         >
           Open DPR
@@ -48,7 +51,15 @@ export function PlanningPlanPage() {
           </div>
         </div>
 
-        <PlanningTaskTable siteLabel={siteLabel} tasks={tasks} />
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : !plan ? (
+          <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
+            No plan filed for this site and date yet.
+          </p>
+        ) : (
+          <PlanningTaskTable siteLabel={siteLabel} tasks={tasks} />
+        )}
       </div>
     </PageShell>
   );

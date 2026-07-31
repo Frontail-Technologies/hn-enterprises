@@ -18,17 +18,9 @@ export function attendanceCellClass(status: AttendanceStatus) {
   }
 }
 
-export function getGeneratedAttendanceStatus(
-  staffId: string,
-  day: Date,
-): AttendanceStatus | "Holiday" {
-  const dayNumber = Number(format(day, "d"));
+export function getGeneratedAttendanceStatus(day: Date): AttendanceStatus | "Holiday" {
   if (getDay(day) === 0) return "Holiday";
-  if (staffId === "st-5" && dayNumber % 11 === 0) return "Absent";
-  if (staffId === "st-4" && dayNumber % 13 === 0) return "Leave";
-  if (staffId === "st-6" && dayNumber % 9 === 0) return "Late";
-  if (staffId === "st-8" && dayNumber % 12 === 0) return "Half Day";
-  return "Present";
+  return "Not Marked";
 }
 
 export function attendanceRegisterLabel(status: AttendanceStatus | "Holiday") {
@@ -78,7 +70,7 @@ export function getAttendanceRegisterCell(
   const record = records.find(
     (item) => item.staffId === staffId && item.date === date,
   );
-  const status = record?.status ?? getGeneratedAttendanceStatus(staffId, day);
+  const status = record?.status ?? getGeneratedAttendanceStatus(day);
 
   return {
     date,

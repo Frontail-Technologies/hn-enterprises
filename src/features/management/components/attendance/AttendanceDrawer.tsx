@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoTile } from "@/components/shared/InfoTile";
-import { supervisorOptions } from "../../data/staff.data";
+import { attendanceApi } from "../../services/attendance.service";
+import type { RosterUser } from "../../services/users.service";
 import type { AttendanceRecord, AttendanceStatus } from "../../data/attendance.data";
 
 function toTimeInputValue(value?: string) {
@@ -42,19 +43,21 @@ export function AttendanceDrawer({
   date,
   record,
   selectedSupervisor,
+  roster,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   date: Date | null;
   record?: AttendanceRecord;
   selectedSupervisor: string;
+  roster: RosterUser[];
+  onSaved?: () => void;
 }) {
-  const defaultSupervisor =
-    supervisorOptions.find(
-      (supervisor) => supervisor.id === selectedSupervisor,
-    ) ?? supervisorOptions[0];
-  const [status, setStatus] = useState<AttendanceStatus>(
-    record?.status ?? "Present",
+  const targetStaffId = record?.staffId ?? (selectedSupervisor !== "all" ? selectedSupervisor : undefined);
+  const defaultSupervisor = roster.find((person) => person.id === selectedSupervisor);
+  const [status, setStatus] = useState<Exclude<AttendanceStatus, "Not Marked">>(
+    record?.status && record.status !== "Not Marked" ? record.status : "Present",
   );
   const [checkInTime, setCheckInTime] = useState(
     toTimeInputValue(record?.checkInTime),
@@ -62,6 +65,9 @@ export function AttendanceDrawer({
   const [checkOutTime, setCheckOutTime] = useState(
     toTimeInputValue(record?.checkOutTime),
   );
+  const [remarks, setRemarks] = useState(record?.remarks ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const location =
     typeof record?.latitude === "number" &&
     typeof record?.longitude === "number"
@@ -70,7 +76,7 @@ export function AttendanceDrawer({
 
   const hasLocation = Boolean(location);
   const staffName =
-    record?.staffName ?? defaultSupervisor?.name ?? "Supervisor";
+    record?.staffName || defaultSupervisor?.name || "Select a supervisor";
   const mapSrc = location
     ? (() => {
         const delta = 0.006;
@@ -83,6 +89,28 @@ export function AttendanceDrawer({
         return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${location.latitude},${location.longitude}`;
       })()
     : null;
+
+  const handleSave = async () => {
+    if (!date || !targetStaffId) return;
+    setIsSaving(true);
+    setSaveError("");
+    try {
+      await attendanceApi.upsert({
+        userId: targetStaffId,
+        date: format(date, "yyyy-MM-dd"),
+        status,
+        checkInTime: checkInTime || undefined,
+        checkOutTime: checkOutTime || undefined,
+        remarks: remarks || undefined,
+      });
+      onSaved?.();
+      onOpenChange(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save attendance");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -97,6 +125,11 @@ export function AttendanceDrawer({
         </SheetHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
+          {!targetStaffId ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-700">
+              Select a specific supervisor filter to mark or edit attendance for this day.
+            </p>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">
@@ -105,7 +138,7 @@ export function AttendanceDrawer({
               <Select
                 value={status}
                 onValueChange={(value) => {
-                  if (value) setStatus(value as AttendanceStatus);
+                  if (value) setStatus(value as Exclude<AttendanceStatus, "Not Marked">);
                 }}
               >
                 <SelectTrigger>
@@ -119,7 +152,7 @@ export function AttendanceDrawer({
                       "Late",
                       "Half Day",
                       "Leave",
-                    ] as AttendanceStatus[]
+                    ] as Exclude<AttendanceStatus, "Not Marked">[]
                   ).map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
@@ -208,8 +241,16 @@ export function AttendanceDrawer({
             <span className="text-xs font-medium text-muted-foreground">
               Remarks
             </span>
-            <Textarea defaultValue={record?.remarks} className="min-h-24" />
+            <Textarea
+              value={remarks}
+              onChange={(event) => setRemarks(event.target.value)}
+              className="min-h-24"
+            />
           </label>
+
+          {saveError ? (
+            <p className="text-xs text-destructive">{saveError}</p>
+          ) : null}
         </div>
 
         <SheetFooter className="border-t border-border/70">
@@ -217,7 +258,9 @@ export function AttendanceDrawer({
             <SheetClose render={<Button type="button" variant="outline" />}>
               Cancel
             </SheetClose>
-            <Button type="button">Save Changes</Button>
+            <Button type="button" onClick={handleSave} disabled={!targetStaffId || isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </SheetFooter>
       </SheetContent>

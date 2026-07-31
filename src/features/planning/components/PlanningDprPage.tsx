@@ -14,19 +14,22 @@ import {
 } from "@/components/ui/dialog";
 import { PageShell } from "@/components/shared/PageShell";
 import { DprGeneratedPreview } from "./DprGeneratedPreview";
-import {
-  createDprTasks,
-  getPlanningSupervisorById,
-} from "../services/planning.service";
+import { useDprRecordsQuery } from "../hooks/usePlanning";
 
 export function PlanningDprPage() {
   const searchParams = useSearchParams();
-  const supervisor = getPlanningSupervisorById(searchParams.get("supervisor"));
-  const siteLabel = searchParams.get("site") ?? supervisor.area;
+  const siteId = searchParams.get("siteId") ?? "";
+  const supervisorId = searchParams.get("supervisorId") ?? "";
   const date = searchParams.get("date") ?? "2026-07-22";
-  const remarks = "Daily work submitted by supervisor.";
-  const tasks = useMemo(() => createDprTasks(), []);
+
+  const { data: dprRecords = [], isLoading } = useDprRecordsQuery({ siteId, supervisorId, date });
+  const record = dprRecords[0];
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  const tasks = useMemo(() => record?.tasks ?? [], [record]);
+  const remarks = record?.remarks ?? "";
+  const siteLabel = record?.siteLabel || "Unknown site";
+  const supervisorName = record?.supervisorName || "Unknown supervisor";
 
   const totalCompleted = useMemo(
     () => tasks.reduce((sum, item) => sum + (Number(item.completedQty) || 0), 0),
@@ -36,19 +39,21 @@ export function PlanningDprPage() {
   return (
     <PageShell
       title="DPR"
-      subtitle={`${supervisor.name} - ${siteLabel}`}
+      subtitle={`${supervisorName} - ${siteLabel}`}
       actions={
         <>
           <Link
-            href={`/planning/plan?supervisor=${supervisor.id}&site=${encodeURIComponent(siteLabel)}&date=${date}`}
+            href={`/planning/plan?supervisorId=${supervisorId}&siteId=${siteId}&date=${date}`}
             className={buttonVariants({ variant: "outline" })}
           >
             Open Planning
           </Link>
-          <Button type="button" onClick={() => setPreviewOpen(true)}>
-            <FilePdfIcon size={15} />
-            Generate DPR
-          </Button>
+          {record ? (
+            <Button type="button" onClick={() => setPreviewOpen(true)}>
+              <FilePdfIcon size={15} />
+              Generate DPR
+            </Button>
+          ) : null}
         </>
       }
     >
@@ -64,53 +69,85 @@ export function PlanningDprPage() {
           </div>
         </div>
 
-        <section className="rounded-lg border border-border/70 bg-card">
-          <div className="border-b border-border/70 px-3 py-2">
-            <h2 className="text-sm font-semibold text-foreground">DPR Work Items</h2>
-            <p className="text-xs text-muted-foreground">
-              Compact entry view for selected supervisor and site.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-sm">
-              <thead>
-                <tr className="bg-secondary/80 text-xs font-semibold text-muted-foreground">
-                  <th className="border border-border/60 px-3 py-2 text-left">Task</th>
-                  <th className="w-28 border border-border/60 px-3 py-2 text-left">Planned</th>
-                  <th className="w-32 border border-border/60 px-3 py-2 text-left">Completed</th>
-                  <th className="w-56 border border-border/60 px-3 py-2 text-left">Plumber / Labour</th>
-                  <th className="w-72 border border-border/60 px-3 py-2 text-left">Delay Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="bg-card">
-                    <td className="border border-border/55 px-3 py-2 font-medium text-foreground">
-                      {task.label}
-                    </td>
-                    <td className="border border-border/55 px-3 py-2 text-center">
-                      {task.plannedQty || "-"}
-                    </td>
-                    <td className="border border-border/55 px-3 py-2 text-center">
-                      {task.completedQty || "-"}
-                    </td>
-                    <td className="border border-border/55 px-3 py-2">
-                      {task.worker || "-"}
-                    </td>
-                    <td className="border border-border/55 px-3 py-2">
-                      {task.delayReason || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : !record ? (
+          <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
+            No DPR filed for this site and date yet.
+          </p>
+        ) : (
+          <>
+            <section className="rounded-lg border border-border/70 bg-card">
+              <div className="border-b border-border/70 px-3 py-2">
+                <h2 className="text-sm font-semibold text-foreground">DPR Work Items</h2>
+                <p className="text-xs text-muted-foreground">
+                  Compact entry view for selected supervisor and site.
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[980px] border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-secondary/80 text-xs font-semibold text-muted-foreground">
+                      <th className="border border-border/60 px-3 py-2 text-left">Task</th>
+                      <th className="w-28 border border-border/60 px-3 py-2 text-left">Planned</th>
+                      <th className="w-32 border border-border/60 px-3 py-2 text-left">Completed</th>
+                      <th className="w-56 border border-border/60 px-3 py-2 text-left">Plumber / Labour</th>
+                      <th className="w-72 border border-border/60 px-3 py-2 text-left">Delay Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((task) => (
+                      <tr key={task.id} className="bg-card">
+                        <td className="border border-border/55 px-3 py-2 font-medium text-foreground">
+                          {task.label}
+                        </td>
+                        <td className="border border-border/55 px-3 py-2 text-center">
+                          {task.plannedQty || "-"}
+                        </td>
+                        <td className="border border-border/55 px-3 py-2 text-center">
+                          {task.completedQty || "-"}
+                        </td>
+                        <td className="border border-border/55 px-3 py-2">
+                          {task.worker || "-"}
+                        </td>
+                        <td className="border border-border/55 px-3 py-2">
+                          {task.delayReason || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-        <div className="rounded-lg border border-border/70 bg-card px-3 py-2">
-          <p className="text-xs font-medium text-muted-foreground">Supervisor Remarks</p>
-          <p className="mt-1 text-sm text-foreground">{remarks || "-"}</p>
-        </div>
+            <div className="rounded-lg border border-border/70 bg-card px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground">Supervisor Remarks</p>
+              <p className="mt-1 text-sm text-foreground">{remarks || "-"}</p>
+            </div>
+
+            {record.evidence.length ? (
+              <div className="rounded-lg border border-border/70 bg-card px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Photos ({record.evidence.length})
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {record.evidence.map((file) => (
+                    <a
+                      key={file.id}
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block h-20 w-20 overflow-hidden rounded-md border border-border"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={file.fileUrl} alt={file.fileName} className="h-full w-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>

@@ -16,11 +16,6 @@ export type PlanningTaskTemplate = {
   label: string;
 };
 
-export type SiteOption = {
-  label: string;
-  value: string;
-};
-
 export type PlanTask = {
   id: PlanningTaskId;
   label: string;
@@ -30,8 +25,20 @@ export type PlanTask = {
 
 export type SitePlan = {
   id: string;
-  siteAddress: string;
+  projectId: string;
+  siteId: string;
+  siteLabel: string;
+  supervisorId: string;
+  supervisorName: string;
   tasks: PlanTask[];
+};
+
+export type EvidenceFile = {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
+  capturedAt?: string;
 };
 
 export type DprTask = {
@@ -46,22 +53,23 @@ export type DprTask = {
 export type DprRecord = {
   id: string;
   date: string;
-  siteAddress: string;
+  projectId: string;
+  siteId: string;
+  siteLabel: string;
+  supervisorId: string;
+  supervisorName: string;
   status: "Draft" | "Submitted" | "Approved";
-  photoCount: number;
+  evidence: EvidenceFile[];
   remarks: string;
   tasks: DprTask[];
 };
 
-export type PlanningSupervisorProject = {
-  id: string;
+export type PlanningEntryRow = {
   supervisorId: string;
   supervisorName: string;
   projectId: string;
-  projectName: string;
+  siteId: string;
   siteArea: string;
-  planningPercent: string;
-  dprPercent: string;
-  clientPercent: string;
-  status: "In Progress" | "Completed" | "Pending";
+  planFiled: boolean;
+  dprStatus: "Not Filed" | "Draft" | "Submitted" | "Approved";
 };

@@ -14,44 +14,75 @@ import { DatePicker } from "@/components/shared/DatePicker";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
-import { planningSupervisorProjects } from "../services/planning.service";
-import type { PlanningSupervisorProject } from "../types/planning.types";
+import { useDprRecordsQuery, useSitePlansQuery } from "../hooks/usePlanning";
+import type { PlanningEntryRow } from "../types/planning.types";
 
-type FilterKey =
-  | "supervisorName"
-  | "siteArea"
-  | "planningPercent"
-  | "dprPercent"
-  | "clientPercent"
-  | "status";
+type FilterKey = "supervisorName" | "siteArea" | "planFiled" | "dprStatus";
 
 type ActiveFilters = Partial<Record<FilterKey, string[]>>;
 
 const columns: Array<{ key: FilterKey; label: string; width: string }> = [
   { key: "supervisorName", label: "Supervisor", width: "w-56" },
   { key: "siteArea", label: "Area / Site", width: "w-56" },
-  { key: "planningPercent", label: "Planning Supervisor Wise", width: "w-48" },
-  { key: "dprPercent", label: "DPR Supervisor Wise", width: "w-44" },
-  { key: "clientPercent", label: "Client Planning & DPR", width: "w-48" },
-  { key: "status", label: "Status", width: "w-36" },
+  { key: "planFiled", label: "Plan Filed", width: "w-32" },
+  { key: "dprStatus", label: "DPR Status", width: "w-36" },
 ];
 
 export function PlanningEntryPage() {
   const [date, setDate] = useState("2026-07-22");
   const [filters, setFilters] = useState<ActiveFilters>({});
 
+  const { data: sitePlans = [] } = useSitePlansQuery({ date });
+  const { data: dprRecords = [] } = useDprRecordsQuery({ date });
+
+  const rows = useMemo(() => {
+    const map = new Map<string, PlanningEntryRow>();
+
+    sitePlans.forEach((plan) => {
+      map.set(`${plan.supervisorId}-${plan.siteId}`, {
+        supervisorId: plan.supervisorId,
+        supervisorName: plan.supervisorName,
+        projectId: plan.projectId,
+        siteId: plan.siteId,
+        siteArea: plan.siteLabel,
+        planFiled: true,
+        dprStatus: "Not Filed",
+      });
+    });
+
+    dprRecords.forEach((record) => {
+      const key = `${record.supervisorId}-${record.siteId}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.dprStatus = record.status;
+      } else {
+        map.set(key, {
+          supervisorId: record.supervisorId,
+          supervisorName: record.supervisorName,
+          projectId: record.projectId,
+          siteId: record.siteId,
+          siteArea: record.siteLabel,
+          planFiled: false,
+          dprStatus: record.status,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [sitePlans, dprRecords]);
+
   const filteredRows = useMemo(() => {
-    return planningSupervisorProjects.filter((row) =>
+    return rows.filter((row) =>
       columns.every((column) => {
         const selected = filters[column.key] ?? [];
         if (!selected.length) return true;
         return selected.includes(String(row[column.key]));
       }),
     );
-  }, [filters]);
+  }, [rows, filters]);
 
   const groupedRows = useMemo(() => {
-    const groups = new Map<string, PlanningSupervisorProject[]>();
+    const groups = new Map<string, PlanningEntryRow[]>();
     filteredRows.forEach((row) => {
       const current = groups.get(row.supervisorId) ?? [];
       current.push(row);
@@ -74,87 +105,93 @@ export function PlanningEntryPage() {
           <div className="border-b border-border/70 px-3 py-2">
             <h2 className="text-sm font-semibold text-foreground">Supervisor Wise Work</h2>
             <p className="text-xs text-muted-foreground">
-              Supervisors can manage multiple sites. Use column filters to narrow the sheet.
+              Showing plans and DPRs actually filed for the selected date. Use column filters to narrow the sheet.
             </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1040px] border-collapse text-sm">
-              <thead>
-                <tr className="bg-secondary/85 text-xs font-semibold text-muted-foreground">
-                  {columns.map((column) => (
-                    <th
-                      key={column.key}
-                      className={cn(
-                        "border border-border/60 px-3 py-2 text-left",
-                        column.width,
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span>{column.label}</span>
-                        <ColumnFilter
-                          columnKey={column.key}
-                          label={column.label}
-                          rows={planningSupervisorProjects}
-                          selected={filters[column.key] ?? []}
-                          onApply={(values) =>
-                            setFilters((current) => ({
-                              ...current,
-                              [column.key]: values,
-                            }))
-                          }
-                        />
-                      </div>
+          {!rows.length ? (
+            <p className="px-3 py-6 text-sm text-muted-foreground">
+              Nothing filed for this date yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] border-collapse text-sm">
+                <thead>
+                  <tr className="bg-secondary/85 text-xs font-semibold text-muted-foreground">
+                    {columns.map((column) => (
+                      <th
+                        key={column.key}
+                        className={cn(
+                          "border border-border/60 px-3 py-2 text-left",
+                          column.width,
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span>{column.label}</span>
+                          <ColumnFilter
+                            columnKey={column.key}
+                            label={column.label}
+                            rows={rows}
+                            selected={filters[column.key] ?? []}
+                            onApply={(values) =>
+                              setFilters((current) => ({
+                                ...current,
+                                [column.key]: values,
+                              }))
+                            }
+                          />
+                        </div>
+                      </th>
+                    ))}
+                    <th className="w-40 border border-border/60 px-3 py-2 text-left">
+                      Actions
                     </th>
-                  ))}
-                  <th className="w-40 border border-border/60 px-3 py-2 text-left">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupedRows.map((group) =>
-                  group.map((row, index) => (
-                    <tr key={row.id} className="bg-card hover:bg-muted/25">
-                      {index === 0 ? (
-                        <td
-                          className="border border-border/55 px-3 py-2 align-top font-semibold text-foreground"
-                          rowSpan={group.length}
-                        >
-                          {row.supervisorName}
-                          <div className="mt-1 text-xs font-normal text-muted-foreground">
-                            {group.length} site{group.length > 1 ? "s" : ""}
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedRows.map((group) =>
+                    group.map((row, index) => (
+                      <tr key={`${row.supervisorId}-${row.siteId}`} className="bg-card hover:bg-muted/25">
+                        {index === 0 ? (
+                          <td
+                            className="border border-border/55 px-3 py-2 align-top font-semibold text-foreground"
+                            rowSpan={group.length}
+                          >
+                            {row.supervisorName}
+                            <div className="mt-1 text-xs font-normal text-muted-foreground">
+                              {group.length} site{group.length > 1 ? "s" : ""}
+                            </div>
+                          </td>
+                        ) : null}
+                        <td className="border border-border/55 px-3 py-2">{row.siteArea}</td>
+                        <td className="border border-border/55 px-3 py-2">
+                          <StatusBadge status={row.planFiled ? "Completed" : "Pending"} />
+                        </td>
+                        <td className="border border-border/55 px-3 py-2">
+                          <StatusBadge status={row.dprStatus} />
+                        </td>
+                        <td className="border border-border/55 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/planning/plan?supervisorId=${row.supervisorId}&siteId=${row.siteId}&date=${date}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                            >
+                              Planning <ArrowSquareOutIcon size={13} />
+                            </Link>
+                            <Link
+                              href={`/planning/dpr?supervisorId=${row.supervisorId}&siteId=${row.siteId}&date=${date}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                            >
+                              DPR <ArrowSquareOutIcon size={13} />
+                            </Link>
                           </div>
                         </td>
-                      ) : null}
-                      <td className="border border-border/55 px-3 py-2">{row.siteArea}</td>
-                      <td className="border border-border/55 px-3 py-2">{row.planningPercent}</td>
-                      <td className="border border-border/55 px-3 py-2">{row.dprPercent}</td>
-                      <td className="border border-border/55 px-3 py-2">{row.clientPercent}</td>
-                      <td className="border border-border/55 px-3 py-2">
-                        <StatusBadge status={row.status} />
-                      </td>
-                      <td className="border border-border/55 px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/planning/plan?supervisor=${row.supervisorId}&site=${encodeURIComponent(row.siteArea)}&date=${date}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                          >
-                            Planning <ArrowSquareOutIcon size={13} />
-                          </Link>
-                          <Link
-                            href={`/planning/dpr?supervisor=${row.supervisorId}&site=${encodeURIComponent(row.siteArea)}&date=${date}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                          >
-                            DPR <ArrowSquareOutIcon size={13} />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </PageShell>
@@ -170,7 +207,7 @@ function ColumnFilter({
 }: {
   columnKey: FilterKey;
   label: string;
-  rows: PlanningSupervisorProject[];
+  rows: PlanningEntryRow[];
   selected: string[];
   onApply: (values: string[]) => void;
 }) {

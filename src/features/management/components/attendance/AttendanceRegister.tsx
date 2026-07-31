@@ -3,18 +3,23 @@ import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { attendanceRegisterPeople, type AttendanceRecord } from "../../data/attendance.data";
+import type { AttendanceRecord } from "../../data/attendance.data";
+import type { RosterUser } from "../../services/users.service";
 import { AttendanceDrawer } from "./AttendanceDrawer";
 import { attendanceRegisterCellClass, getAttendanceRegisterCell } from "./attendance-utils";
 
 export function AttendanceRegister({
   month,
   records,
+  roster,
   selectedSupervisor,
+  onRecordSaved,
 }: {
   month: Date;
   records: AttendanceRecord[];
+  roster: RosterUser[];
   selectedSupervisor: string;
+  onRecordSaved?: () => void;
 }) {
   const [selectedCell, setSelectedCell] = useState<{
     staffId: string;
@@ -31,11 +36,11 @@ export function AttendanceRegister({
   );
   const people = useMemo(
     () =>
-      attendanceRegisterPeople.filter(
+      roster.filter(
         (person) =>
           selectedSupervisor === "all" || person.id === selectedSupervisor,
       ),
-    [selectedSupervisor],
+    [roster, selectedSupervisor],
   );
   const rows = useMemo(
     () =>
@@ -92,9 +97,6 @@ export function AttendanceRegister({
                   <AttendanceHeaderCell className="w-48 min-w-48">
                     Name
                   </AttendanceHeaderCell>
-                  <AttendanceHeaderCell className="w-44 min-w-44">
-                    Place of Work
-                  </AttendanceHeaderCell>
                 </tr>
               </thead>
               <tbody>
@@ -105,9 +107,6 @@ export function AttendanceRegister({
                     </AttendanceBodyCell>
                     <AttendanceBodyCell className="font-medium text-foreground">
                       {row.person.name}
-                    </AttendanceBodyCell>
-                    <AttendanceBodyCell>
-                      {row.person.placeOfWork}
                     </AttendanceBodyCell>
                   </tr>
                 ))}
@@ -200,6 +199,8 @@ export function AttendanceRegister({
         date={selectedCell?.date ?? null}
         record={selectedCell?.record}
         selectedSupervisor={selectedCell?.staffId ?? "all"}
+        roster={roster}
+        onSaved={onRecordSaved}
       />
     </section>
   );

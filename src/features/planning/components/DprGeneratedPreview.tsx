@@ -4,7 +4,6 @@ import { format, parseISO } from "date-fns";
 import { PrinterIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import type { DprTask } from "../types/planning.types";
-import { siteAddressLabels } from "../services/planning.service";
 
 export function DprGeneratedPreview({
   date,
@@ -40,9 +39,7 @@ export function DprGeneratedPreview({
                 <td className="border border-border px-2 py-1 font-medium">DATE</td>
                 <td className="border border-border px-2 py-1">{formattedDate}</td>
                 <td className="border border-border px-2 py-1 font-medium">ADDRESS</td>
-                <td className="border border-border px-2 py-1">
-                  {siteAddressLabels[siteAddress] ?? siteAddress}
-                </td>
+                <td className="border border-border px-2 py-1">{siteAddress}</td>
               </tr>
               <tr className="font-semibold">
                 <td className="w-2/5 border border-border px-2 py-1">TASK</td>
