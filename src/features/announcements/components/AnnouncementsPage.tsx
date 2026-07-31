@@ -267,6 +267,7 @@ function AnnouncementDialog({
           <FormField label="Image (optional)">
             <ImageUploadPreview
               images={images}
+              module="announcements"
               onChange={(nextImages) =>
                 onDraftChange((current) => ({ ...current, image: nextImages.at(-1) }))
               }

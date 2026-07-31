@@ -7,10 +7,14 @@ export function ImageProofField({
   label,
   description,
   images = [],
+  module,
+  recordId,
 }: {
   label: string;
   description: string;
   images?: ImagePreviewItem[];
+  module: string;
+  recordId?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -18,7 +22,7 @@ export function ImageProofField({
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <ImageUploadPreview images={images} />
+      <ImageUploadPreview images={images} module={module} recordId={recordId} />
     </div>
   );
 }

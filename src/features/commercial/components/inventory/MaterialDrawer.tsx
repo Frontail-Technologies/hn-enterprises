@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { DrawerShell } from "@/components/shared/DrawerShell";
 import { QuickField } from "@/components/shared/QuickField";
 import { materials } from "../../data/materials.data";
@@ -46,6 +46,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Purchase Bill / Receipt"
           description="Upload vendor bill, receipt or material purchase proof."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -71,6 +72,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="SIV / Handover Proof"
           description="Upload free-issue challan, receipt or vehicle proof."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -92,6 +94,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Consumption Proof"
           description="Upload RA bill or consumption supporting document."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -115,6 +118,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Issue Slip / Handover Proof"
           description="Upload store issue slip or handover proof image."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -142,6 +146,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Return Slip / Material Photo"
           description="Upload return slip or returned material proof."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -166,6 +171,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Adjustment Proof"
           description="Upload approval or physical verification proof."
+          module="inventory"
         />
         <QuickField label="Reason / Remarks" textarea />
       </>
@@ -190,6 +196,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
         <ImageProofField
           label="Report / Site Proof"
           description="Upload report, site photo or material usage proof."
+          module="inventory"
         />
         <QuickField label="Remarks" textarea />
       </>
@@ -209,6 +216,7 @@ function InventoryDrawerFields({ action }: { action: string }) {
       <ImageProofField
         label="Bill / Receipt Photo"
         description="Upload material bill, store receipt or handover proof image."
+      module="inventory"
       />
       <QuickField label="Remarks" textarea />
     </>

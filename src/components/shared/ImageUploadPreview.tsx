@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -17,57 +17,88 @@ import {
   AttachmentTrigger,
 } from "@/components/ui/attachment";
 import { cn } from "@/lib/utils";
+import { uploadFile } from "@/lib/upload";
 
 export type ImagePreviewItem = {
   id: string;
   label: string;
   fileName: string;
   previewUrl?: string;
+  fileUrl?: string;
   uploadedOn?: string;
+  status?: "uploading" | "uploaded" | "error";
 };
 
 interface ImageUploadPreviewProps {
   images: ImagePreviewItem[];
   onChange?: (images: ImagePreviewItem[]) => void;
   className?: string;
+  module: string;
+  recordId?: string;
 }
 
 export function ImageUploadPreview({
   images,
   onChange,
   className,
+  module,
+  recordId,
 }: ImageUploadPreviewProps) {
   const [localItems, setLocalItems] = useState<ImagePreviewItem[]>(images);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isControlled = Boolean(onChange);
   const items = isControlled ? images : localItems;
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   function update(nextItems: ImagePreviewItem[]) {
+    itemsRef.current = nextItems;
     if (!isControlled) setLocalItems(nextItems);
     onChange?.(nextItems);
   }
 
-  function addFiles(files: FileList | null) {
+  function patchItem(id: string, patch: Partial<ImagePreviewItem>) {
+    update(itemsRef.current.map((image) => (image.id === id ? { ...image, ...patch } : image)));
+  }
+
+  async function addFiles(files: FileList | null) {
     const nextFiles = Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
     if (inputRef.current) inputRef.current.value = "";
     if (!nextFiles.length) return;
-    update([
-      ...items,
-      ...nextFiles.map((file, index) => ({
+
+    const staged = nextFiles.map((file, index) => {
+      const preview: ImagePreviewItem = {
         id: `img-${Date.now()}-${index}`,
         label: file.name.replace(/\.[^.]+$/, ""),
         fileName: file.name,
         previewUrl: URL.createObjectURL(file),
         uploadedOn: new Date().toISOString(),
-      })),
-    ]);
+        status: "uploading",
+      };
+      return { file, preview };
+    });
+
+    update([...itemsRef.current, ...staged.map(({ preview }) => preview)]);
+
+    await Promise.all(
+      staged.map(async ({ file, preview: { id } }) => {
+        try {
+          const uploaded = await uploadFile(file, module, recordId);
+          patchItem(id, { fileUrl: uploaded.url, fileName: uploaded.fileName, status: "uploaded" });
+        } catch {
+          patchItem(id, { status: "error" });
+        }
+      }),
+    );
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
-    addFiles(event.dataTransfer.files);
+    void addFiles(event.dataTransfer.files);
   }
 
   return (
@@ -92,7 +123,7 @@ export function ImageUploadPreview({
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(event) => addFiles(event.target.files)}
+          onChange={(event) => void addFiles(event.target.files)}
         />
         <AttachmentTrigger onClick={() => inputRef.current?.click()} />
         <AttachmentMedia className="bg-primary/10 text-primary">
@@ -147,6 +178,12 @@ export function ImageUploadPreview({
               />
               <AttachmentDescription className="mt-0">
                 {item.fileName}
+                {item.status === "uploading" ? (
+                  <span className="ml-1.5 text-primary">Uploading...</span>
+                ) : null}
+                {item.status === "error" ? (
+                  <span className="ml-1.5 text-destructive">Upload failed</span>
+                ) : null}
               </AttachmentDescription>
             </AttachmentContent>
             <AttachmentActions className="ml-auto">

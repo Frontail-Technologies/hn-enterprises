@@ -67,6 +67,7 @@ import type {
   Customer,
   CustomerSurvey,
   CustomerSurveyRevision,
+  LmcEvidenceFile,
   LmcPipeSizeRecord,
   LmcPipelineWork,
 } from "../types/customer.types";
@@ -429,7 +430,7 @@ function LmcPipelineDetail({
   const overallStatus = deriveLmcOverallStatus(values.pipeRecords);
   const pipeInputFields = lmcPipeRecordFields.filter(
     (field) => field.key !== "evidence",
-  ) as FieldDefinition<LmcPipeEditableFields>[];
+  ) as FieldDefinition<Omit<LmcPipeEditableFields, "evidence">>[];
 
   const updatePipeRecord = (nextRecord: LmcPipeSizeRecord) => {
     setValues((current) => ({
@@ -516,13 +517,15 @@ function LmcPipelineDetail({
                     <ImageUploadPreview
                       key={editingPipe.id}
                       className="min-w-0"
-                      images={evidenceFilesToImages(editingPipe.evidence, editingPipe.pipeSize)}
+                      images={evidenceFilesToImages(editingPipe.evidence)}
                       onChange={(images) =>
                         updatePipeRecord({
                           ...editingPipe,
                           evidence: imagesToEvidenceFiles(images),
                         })
                       }
+                      module="customers"
+                      recordId={customerId}
                     />
                   </FormField>
                 </div>
@@ -558,7 +561,7 @@ function pickCivilFields(values: LmcPipelineWork): LmcCivilWork {
   };
 }
 
-function pickPipeEditableFields(record: LmcPipeSizeRecord): LmcPipeEditableFields {
+function pickPipeEditableFields(record: LmcPipeSizeRecord): Omit<LmcPipeEditableFields, "evidence"> {
   return {
     lengthMetres: record.lengthMetres,
     layingDate: record.layingDate,
@@ -569,7 +572,6 @@ function pickPipeEditableFields(record: LmcPipeSizeRecord): LmcPipeEditableField
     purgingStatus: record.purgingStatus,
     jointFittingDetails: record.jointFittingDetails,
     remarks: record.remarks,
-    evidence: record.evidence,
   };
 }
 
@@ -669,51 +671,47 @@ function formatValue(value: string | boolean, input?: string) {
   return value;
 }
 
-function EvidencePreview({ files }: { files: string }) {
-  const images = splitEvidenceFiles(files).filter(isImageFile);
-
-  if (!images.length) return <span>{files && files !== "-" ? files : "-"}</span>;
+function EvidencePreview({ files }: { files: LmcEvidenceFile[] }) {
+  if (!files.length) return <span>-</span>;
 
   return (
     <div className="flex max-w-56 flex-wrap gap-1.5">
-      {images.map((fileName) => (
+      {files.map((file) => (
         <span
-          key={fileName}
+          key={file.id}
           className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/25 px-1.5 py-1 text-xs text-foreground"
-          title={fileName}
+          title={file.fileName}
         >
-          <ImageSquareIcon size={14} className="text-primary" />
-          <span className="max-w-24 truncate">{fileName}</span>
+          {file.fileUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={file.fileUrl} alt={file.fileName} className="h-4 w-4 rounded-xs object-cover" />
+          ) : (
+            <ImageSquareIcon size={14} className="text-primary" />
+          )}
+          <span className="max-w-24 truncate">{file.fileName}</span>
         </span>
       ))}
     </div>
   );
 }
 
-function evidenceFilesToImages(files: string, labelPrefix: string): ImagePreviewItem[] {
-  return splitEvidenceFiles(files)
-    .filter(isImageFile)
-    .map((fileName, index) => ({
-      id: `${labelPrefix.toLowerCase().replace(/\s+/g, "-")}-${index}-${fileName}`,
-      label: fileName.replace(/\.[^.]+$/, ""),
-      fileName,
-      uploadedOn: "",
-    }));
+function evidenceFilesToImages(files: LmcEvidenceFile[]): ImagePreviewItem[] {
+  return files.map((file) => ({
+    id: file.id,
+    label: file.label,
+    fileName: file.fileName,
+    fileUrl: file.fileUrl,
+    status: file.fileUrl ? "uploaded" : undefined,
+  }));
 }
 
-function imagesToEvidenceFiles(images: ImagePreviewItem[]) {
-  return images.map((image) => image.fileName).join(", ");
-}
-
-function splitEvidenceFiles(files: string) {
-  return files
-    .split(",")
-    .map((file) => file.trim())
-    .filter((file) => file && file !== "-");
-}
-
-function isImageFile(fileName: string) {
-  return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(fileName);
+function imagesToEvidenceFiles(images: ImagePreviewItem[]): LmcEvidenceFile[] {
+  return images.map((image) => ({
+    id: image.id,
+    label: image.label,
+    fileName: image.fileName,
+    fileUrl: image.fileUrl,
+  }));
 }
 
 function formatDate(value: string) {

@@ -72,17 +72,19 @@ export function CustomerEvidencePanel({
     title: photo.label,
     caption: photo.caption,
     fileName: photo.fileName,
+    fileUrl: photo.fileUrl,
     status: survey?.approvalStatus ?? "Submitted",
     uploadedOn: survey?.surveyDate ?? "",
   }));
 
   const lmcEvidence = [
     ...lmcPipelineWork.pipeRecords.flatMap((pipe) =>
-      splitEvidenceFiles(pipe.evidence).map((fileName, index) => ({
-        id: `${pipe.id}-${index}`,
+      pipe.evidence.map((file) => ({
+        id: file.id,
         title: `${pipe.pipeSize} Evidence`,
         caption: pipe.remarks || pipe.jointFittingDetails || "Pipe evidence",
-        fileName,
+        fileName: file.fileName,
+        fileUrl: file.fileUrl,
         status: pipe.purgingStatus,
         uploadedOn: pipe.purgingDate || pipe.testingDate || pipe.layingDate,
       })),
@@ -425,6 +427,7 @@ type EvidenceItem = {
   title: string;
   caption: string;
   fileName: string;
+  fileUrl?: string;
   status: string;
   uploadedOn: string;
 };
@@ -451,7 +454,10 @@ function MediaSection({ title, items }: { title: string; items: EvidenceItem[] }
                 className="relative flex h-24 w-32 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted/25 text-primary"
                 title={item.fileName}
               >
-                {isImageFile(item.fileName) ? (
+                {item.fileUrl && isImageFile(item.fileName) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.fileUrl} alt={item.fileName} className="h-full w-full object-cover" />
+                ) : isImageFile(item.fileName) ? (
                   <ImageSquareIcon size={30} />
                 ) : (
                   <FilePdfIcon size={30} />
@@ -530,6 +536,7 @@ function documentToEvidence(document: CustomerDocument): EvidenceItem {
     title: document.type || document.category,
     caption: document.remarks || `Uploaded on ${document.uploadedOn || "-"}`,
     fileName: document.fileName,
+    fileUrl: document.fileUrl,
     status: document.status,
     uploadedOn: document.uploadedOn || document.issueDate,
   };
@@ -569,13 +576,6 @@ function getCustomerReportStatus(templateId: ReportTemplateId, customer?: Custom
   }
 
   return customer.status;
-}
-
-function splitEvidenceFiles(files: string) {
-  return files
-    .split(",")
-    .map((file) => file.trim())
-    .filter((file) => file && file !== "-");
 }
 
 function isImageFile(fileName: string) {

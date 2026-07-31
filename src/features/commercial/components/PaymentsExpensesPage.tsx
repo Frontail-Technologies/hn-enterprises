@@ -161,6 +161,7 @@ function PaymentDrawer({
         label="Receipt / Photo"
         description="Upload payment proof, expense bill or receipt image."
         images={existingImages}
+        module="expenses"
       />
       <QuickField
         label="Status"

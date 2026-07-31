@@ -70,6 +70,7 @@ import type {
   CustomerFormValues,
   CustomerSurvey,
   CustomerSurveyPhoto,
+  LmcEvidenceFile,
   LmcPipeSizeRecord,
   LmcPipelineWork,
 } from "../types/customer.types";
@@ -245,6 +246,7 @@ function CustomerFormFields({
             <CustomerSurveyEditor
               survey={values.survey ?? emptyCustomerSurvey}
               onChange={(survey) => setValues((current) => ({ ...current, survey }))}
+              customerId={customerId}
             />
           </TabsContent>
 
@@ -282,6 +284,7 @@ function CustomerFormFields({
             <LmcPipelineEditor
               values={values.lmcPipelineWork}
               onChange={(next) => setValues((current) => ({ ...current, lmcPipelineWork: next }))}
+              customerId={customerId}
             />
           </TabsContent>
           <TabsContent value="civil">
@@ -372,9 +375,11 @@ function CustomerFormFields({
 function CustomerSurveyEditor({
   survey,
   onChange,
+  customerId,
 }: {
   survey: CustomerSurvey;
   onChange: (survey: CustomerSurvey) => void;
+  customerId?: string;
 }) {
   const update = <K extends keyof CustomerSurvey>(key: K, value: CustomerSurvey[K]) => {
     onChange({ ...survey, [key]: value });
@@ -499,6 +504,8 @@ function CustomerSurveyEditor({
         <ImageUploadPreview
           images={surveyPhotosToImages(survey.photos)}
           onChange={(images) => update("photos", imagesToSurveyPhotos(images))}
+          module="customers"
+          recordId={customerId}
         />
       </SectionCard>
     </div>
@@ -537,6 +544,8 @@ function surveyPhotosToImages(photos: CustomerSurveyPhoto[]): ImagePreviewItem[]
     id: photo.id,
     label: photo.label,
     fileName: photo.fileName,
+    fileUrl: photo.fileUrl,
+    status: photo.fileUrl ? "uploaded" : undefined,
   }));
 }
 
@@ -546,21 +555,24 @@ function imagesToSurveyPhotos(images: ImagePreviewItem[]): CustomerSurveyPhoto[]
     label: image.label,
     caption: image.label,
     fileName: image.fileName,
+    fileUrl: image.fileUrl,
   }));
 }
 function LmcPipelineEditor({
   values,
   onChange,
+  customerId,
 }: {
   values: LmcPipelineWork;
   onChange: (values: LmcPipelineWork) => void;
+  customerId?: string;
 }) {
   const [editingPipeId, setEditingPipeId] = useState<string | null>(null);
   const editingPipe = values.pipeRecords.find((record) => record.id === editingPipeId) ?? null;
   const overallStatus = deriveLmcOverallStatus(values.pipeRecords);
   const pipeInputFields = lmcPipeRecordFields.filter(
     (field) => field.key !== "evidence",
-  ) as FieldDefinition<LmcPipeEditableFields>[];
+  ) as FieldDefinition<Omit<LmcPipeEditableFields, "evidence">>[];
 
   const updatePipeRecord = (nextRecord: LmcPipeSizeRecord) => {
     onChange({
@@ -641,13 +653,15 @@ function LmcPipelineEditor({
                     <ImageUploadPreview
                       key={editingPipe.id}
                       className="min-w-0"
-                      images={evidenceFilesToImages(editingPipe.evidence, editingPipe.pipeSize)}
+                      images={evidenceFilesToImages(editingPipe.evidence)}
                       onChange={(images) =>
                         updatePipeRecord({
                           ...editingPipe,
                           evidence: imagesToEvidenceFiles(images),
                         })
                       }
+                      module="customers"
+                      recordId={customerId}
                     />
                   </FormField>
                 </div>
@@ -666,7 +680,7 @@ function LmcPipelineEditor({
   );
 }
 
-function pickPipeEditableFields(record: LmcPipeSizeRecord): LmcPipeEditableFields {
+function pickPipeEditableFields(record: LmcPipeSizeRecord): Omit<LmcPipeEditableFields, "evidence"> {
   return {
     lengthMetres: record.lengthMetres,
     layingDate: record.layingDate,
@@ -677,47 +691,37 @@ function pickPipeEditableFields(record: LmcPipeSizeRecord): LmcPipeEditableField
     purgingStatus: record.purgingStatus,
     jointFittingDetails: record.jointFittingDetails,
     remarks: record.remarks,
-    evidence: record.evidence,
   };
 }
 
-function EvidenceSummary({ files }: { files: string }) {
-  const images = evidenceFilesToImages(files, "Evidence");
-
-  if (!images.length) return <span>-</span>;
+function EvidenceSummary({ files }: { files: LmcEvidenceFile[] }) {
+  if (!files.length) return <span>-</span>;
 
   return (
     <span className="inline-flex items-center justify-end gap-1.5">
       <ImageSquareIcon size={15} className="text-primary" />
-      <span>{images.length} image{images.length > 1 ? "s" : ""}</span>
+      <span>{files.length} image{files.length > 1 ? "s" : ""}</span>
     </span>
   );
 }
 
-function evidenceFilesToImages(files: string, labelPrefix: string): ImagePreviewItem[] {
-  return splitEvidenceFiles(files)
-    .filter(isImageFile)
-    .map((fileName, index) => ({
-      id: `${labelPrefix.toLowerCase().replace(/\s+/g, "-")}-${index}-${fileName}`,
-      label: fileName.replace(/\.[^.]+$/, ""),
-      fileName,
-      uploadedOn: "",
-    }));
+function evidenceFilesToImages(files: LmcEvidenceFile[]): ImagePreviewItem[] {
+  return files.map((file) => ({
+    id: file.id,
+    label: file.label,
+    fileName: file.fileName,
+    fileUrl: file.fileUrl,
+    status: file.fileUrl ? "uploaded" : undefined,
+  }));
 }
 
-function imagesToEvidenceFiles(images: ImagePreviewItem[]) {
-  return images.map((image) => image.fileName).join(", ");
-}
-
-function splitEvidenceFiles(files: string) {
-  return files
-    .split(",")
-    .map((file) => file.trim())
-    .filter((file) => file && file !== "-");
-}
-
-function isImageFile(fileName: string) {
-  return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(fileName);
+function imagesToEvidenceFiles(images: ImagePreviewItem[]): LmcEvidenceFile[] {
+  return images.map((image) => ({
+    id: image.id,
+    label: image.label,
+    fileName: image.fileName,
+    fileUrl: image.fileUrl,
+  }));
 }
 
 function pickCivilFields(values: LmcPipelineWork): LmcCivilWork {

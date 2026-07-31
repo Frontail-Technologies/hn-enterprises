@@ -31,6 +31,7 @@ export type CustomerSurveyPhoto = {
   label: string;
   caption: string;
   fileName: string;
+  fileUrl?: string;
 };
 
 export type CustomerSurveyRevision = {
@@ -155,6 +156,13 @@ export type LmcPipeStatus =
 
 export type LmcOverallStatus = "Not Started" | "In Progress" | "Completed" | "On Hold";
 
+export type LmcEvidenceFile = {
+  id: string;
+  label: string;
+  fileName: string;
+  fileUrl?: string;
+};
+
 export type LmcPipeSizeRecord = {
   id: string;
   pipeSize: LmcPipeSize;
@@ -167,7 +175,7 @@ export type LmcPipeSizeRecord = {
   purgingStatus: LmcPipeStatus;
   jointFittingDetails: string;
   remarks: string;
-  evidence: string;
+  evidence: LmcEvidenceFile[];
 };
 
 export type MdpeFittings = {

@@ -15,6 +15,7 @@ import type {
   FittingsAccessories,
   GiMeasurements,
   ImportPreviewRow,
+  LmcEvidenceFile,
   LmcOverallStatus,
   LmcPipeSizeRecord,
   LmcPipeSize,
@@ -441,7 +442,7 @@ export function emptyPipeSizeRecord(pipeSize: LmcPipeSize): LmcPipeSizeRecord {
     purgingStatus: "Not Started",
     jointFittingDetails: "",
     remarks: "",
-    evidence: "",
+    evidence: [],
   };
 }
 
@@ -816,6 +817,16 @@ type BackendCustomerDocument = {
   uploadedAt: string;
 };
 
+function mapEvidenceFile(item: Record<string, unknown>, index: number): LmcEvidenceFile {
+  const fileName = String(item.fileName ?? item.label ?? "");
+  return {
+    id: typeof item.id === "string" && item.id ? item.id : `evidence-${index}-${fileName}`,
+    label: typeof item.label === "string" && item.label ? item.label : fileName.replace(/\.[^.]+$/, ""),
+    fileName,
+    fileUrl: typeof item.fileUrl === "string" ? item.fileUrl : undefined,
+  };
+}
+
 function mapPipeRecord(raw: BackendLmcPipeRecord): LmcPipeSizeRecord {
   return {
     id: raw.id,
@@ -829,7 +840,7 @@ function mapPipeRecord(raw: BackendLmcPipeRecord): LmcPipeSizeRecord {
     purgingStatus: LMC_STATUS_TO_FRONTEND[raw.purgingStatus] ?? "Not Started",
     jointFittingDetails: raw.jointFittingDetails ?? "",
     remarks: raw.remarks ?? "",
-    evidence: raw.evidence?.length ? raw.evidence.map((item) => String(item.fileName ?? item.label ?? "")).join(", ") : "",
+    evidence: raw.evidence?.length ? raw.evidence.map(mapEvidenceFile) : [],
   };
 }
 
@@ -956,8 +967,13 @@ function mapPipeRecordToBody(record: LmcPipeSizeRecord) {
     purgingStatus: LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started",
     jointFittingDetails: record.jointFittingDetails || undefined,
     remarks: record.remarks || undefined,
-    evidence: record.evidence
-      ? record.evidence.split(",").map((fileName) => ({ fileName: fileName.trim() }))
+    evidence: record.evidence.length
+      ? record.evidence.map((file) => ({
+          id: file.id,
+          label: file.label,
+          fileName: file.fileName,
+          fileUrl: file.fileUrl,
+        }))
       : undefined,
   };
 }
