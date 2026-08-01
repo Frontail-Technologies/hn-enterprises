@@ -8,10 +8,12 @@ import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { customers } from "@/features/customers/services/customers.mock";
-import { billingTabs, bills } from "../data/bills.data";
+import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { billingTabs } from "../data/bills.data";
 import { wageRegisterRows } from "../data/wages.data";
 import type { BillingView } from "../types/commercial.types";
+import type { Bill } from "../types/bill.types";
+import { useBillsQuery } from "../hooks/useBills";
 import { formatDate, money, sum, uniqOptions } from "../utils/format";
 import { getBillHref } from "../utils/billing.utils";
 import { BillDrawer } from "./billing/BillDrawer";
@@ -23,6 +25,8 @@ import { TableSection } from "./shared/TableSection";
 
 export function BillingPage() {
   const [activeView, setActiveView] = useState<BillingView>("wages");
+  const { data: bills = [] } = useBillsQuery();
+  const { data: customers = [] } = useCustomersQuery();
   const totals = {
     billed: sum(bills.map((bill) => bill.totalAmount)),
     received: sum(bills.map((bill) => bill.paidAmount)),
@@ -45,32 +49,33 @@ export function BillingPage() {
     status: "all",
     supervisor: "all",
   });
+  const getBillCustomer = useMemo(
+    () => (bill: Bill) => customers.find((customer) => customer.id === bill.customerId),
+    [customers],
+  );
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
-    return bills.filter(
-      (row) => {
-        const customer = getBillCustomer(row);
-        return (
-          (!search ||
-            [
-              row.billNumber,
-              row.projectCustomer,
-              customer?.customerConnection.customerName,
-              customer?.siteArea,
-              customer?.customerConnection.supervisorName,
-            ]
-              .join(" ")
-              .toLowerCase()
-              .includes(search)) &&
-          (filters.stage === "all" || row.stage === filters.stage) &&
-          (filters.status === "all" || row.status === filters.status) &&
-          (filters.supervisor === "all" ||
-            customer?.customerConnection.supervisorName === filters.supervisor)
-        );
-      },
-    );
-  }, [filters]);
-  const columns: ColumnDef<(typeof bills)[number]>[] = [
+    return bills.filter((row) => {
+      const customer = getBillCustomer(row);
+      return (
+        (!search ||
+          [
+            row.billNumber,
+            customer?.customerConnection.customerName,
+            customer?.siteArea,
+            customer?.customerConnection.supervisorName,
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(search)) &&
+        (filters.stage === "all" || row.stage === filters.stage) &&
+        (filters.status === "all" || row.status === filters.status) &&
+        (filters.supervisor === "all" ||
+          customer?.customerConnection.supervisorName === filters.supervisor)
+      );
+    });
+  }, [bills, filters, getBillCustomer]);
+  const columns: ColumnDef<Bill>[] = [
     {
       key: "billNumber",
       header: "Bill Number",
@@ -91,7 +96,7 @@ export function BillingPage() {
         return (
           <div>
             <p className="font-medium text-foreground">
-              {customer?.customerConnection.customerName ?? row.projectCustomer}
+              {customer?.customerConnection.customerName ?? "-"}
             </p>
             <p className="text-xs text-muted-foreground">
               {customer?.siteArea ?? "Project billing"}
@@ -103,7 +108,7 @@ export function BillingPage() {
     {
       key: "supervisor",
       header: "Supervisor",
-      render: (row) => getBillCustomer(row)?.customerConnection.supervisorName ?? "-",
+      render: (row) => getBillCustomer(row)?.customerConnection.supervisorName || "-",
     },
     { key: "stage", header: "Billing Stage" },
     {
@@ -135,7 +140,7 @@ export function BillingPage() {
       key: "actions",
       header: "Actions",
       className: "w-32",
-      render: (row) => <BillingActions bill={row.billNumber} />,
+      render: (row) => <BillingActions bill={row} />,
     },
   ];
 
@@ -144,7 +149,7 @@ export function BillingPage() {
       <PageHeader
         title="Billing"
         subtitle="Track bills, invoices and received payments."
-        actions={<BillDrawer action="Create Bill" />}
+        actions={<BillDrawer triggerLabel="Create Bill" />}
       />
       <UnderlineTabs
         items={billingTabs}
@@ -193,7 +198,9 @@ export function BillingPage() {
                   key: "supervisor",
                   placeholder: "All Supervisors",
                   options: uniqOptions(
-                    customers.map((customer) => customer.customerConnection.supervisorName),
+                    customers
+                      .map((customer) => customer.customerConnection.supervisorName)
+                      .filter((name): name is string => Boolean(name)),
                   ),
                 },
               ]}
@@ -233,12 +240,4 @@ export function BillingPage() {
       )}
     </div>
   );
-}
-
-function getBillCustomer(bill: (typeof bills)[number]) {
-  return bill.customerId
-    ? customers.find((customer) => customer.id === bill.customerId)
-    : customers.find(
-        (customer) => customer.customerConnection.customerName === bill.projectCustomer,
-      );
 }

@@ -1,32 +1,41 @@
 "use client";
 
-import { CalendarBlankIcon, CurrencyInrIcon, DownloadSimpleIcon, FileTextIcon, ReceiptIcon, UserIcon } from "@phosphor-icons/react";
+import { CalendarBlankIcon, CurrencyInrIcon, DownloadSimpleIcon, FileTextIcon, UserIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { paymentHistory } from "../data/bills.data";
+import { useCustomerQuery } from "@/features/customers/hooks/useCustomers";
+import { useBillPaymentsQuery, useBillQuery } from "../hooks/useBills";
+import type { BillPayment } from "../types/bill.types";
 import { formatDate, money } from "../utils/format";
-import { getBill } from "../utils/billing.utils";
 import { BillingActions } from "./billing/BillingActions";
+import { PaymentDrawer } from "./billing/PaymentDrawer";
 import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
 import { DetailSummaryCard } from "./shared/DetailSummaryCard";
 import { Panel } from "./shared/Panel";
 
 export function BillingDetailPage({ id }: { id: string }) {
-  const bill = getBill(id);
-  const paymentsForBill = paymentHistory.filter(
-    (item) => item.billId === bill.id,
-  );
-  const columns: ColumnDef<(typeof paymentHistory)[number]>[] = [
-    { key: "date", header: "Date", render: (row) => formatDate(row.date) },
+  const { data: bill, isLoading, isError } = useBillQuery(id);
+  const { data: payments = [] } = useBillPaymentsQuery(id);
+  const { data: customer } = useCustomerQuery(bill?.customerId ?? "");
+
+  if (isLoading) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading bill...</p>;
+  }
+
+  if (isError || !bill) {
+    return <p className="p-4 text-sm text-destructive">Unable to load this bill.</p>;
+  }
+
+  const columns: ColumnDef<BillPayment>[] = [
+    { key: "paymentDate", header: "Date", render: (row) => formatDate(row.paymentDate) },
     {
       key: "amount",
       header: "Amount",
       render: (row) => <b>{money(row.amount)}</b>,
     },
     { key: "mode", header: "Mode" },
-    { key: "receivedBy", header: "Received By" },
     { key: "remarks", header: "Remarks" },
   ];
 
@@ -40,8 +49,8 @@ export function BillingDetailPage({ id }: { id: string }) {
       />
       <PageHeader
         title={bill.billNumber}
-        subtitle={`${bill.stage} billing for ${bill.projectCustomer}`}
-        actions={<BillingActions bill={bill.billNumber} labels />}
+        subtitle={`${bill.stage} billing for ${customer?.customerConnection.customerName ?? "customer"}`}
+        actions={<BillingActions bill={bill} labels />}
       />
       <DetailSummaryCard
         title="Bill Overview"
@@ -77,8 +86,8 @@ export function BillingDetailPage({ id }: { id: string }) {
         rightItems={[
           {
             icon: <UserIcon size={15} />,
-            label: "Project / Customer",
-            value: bill.projectCustomer,
+            label: "Customer",
+            value: customer?.customerConnection.customerName ?? "-",
           },
           {
             icon: <FileTextIcon size={15} />,
@@ -95,23 +104,21 @@ export function BillingDetailPage({ id }: { id: string }) {
             label: "Pending Amount",
             value: money(bill.pendingAmount),
           },
-          {
-            icon: <ReceiptIcon size={15} />,
-            label: "Invoice / PDF",
-            value: `${bill.billNumber}.pdf`,
-          },
         ]}
       />
       <Panel
         title="Payment History"
         actions={
-          <Button type="button" variant="outline" size="sm">
-            <DownloadSimpleIcon size={14} />
-            Download Invoice
-          </Button>
+          <div className="flex items-center gap-2">
+            <PaymentDrawer billId={bill.id} />
+            <Button type="button" variant="outline" size="sm">
+              <DownloadSimpleIcon size={14} />
+              Download Invoice
+            </Button>
+          </div>
         }
       >
-        <DataTable data={paymentsForBill} columns={columns} />
+        <DataTable data={payments} columns={columns} />
       </Panel>
     </div>
   );

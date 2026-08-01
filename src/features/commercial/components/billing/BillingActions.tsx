@@ -1,26 +1,29 @@
 import { DownloadSimpleIcon, EyeIcon, NotePencilIcon, ReceiptIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
-import { getBillByNumber, getBillHref } from "../../utils/billing.utils";
+import { getBillHref } from "../../utils/billing.utils";
+import type { Bill } from "../../types/bill.types";
 import { ActionLink } from "../shared/ActionLink";
 import { BillDrawer } from "./BillDrawer";
+import { PaymentDrawer } from "./PaymentDrawer";
 
 export function BillingActions({
   bill,
   labels = false,
 }: {
-  bill: string;
+  bill: Bill;
   labels?: boolean;
 }) {
   return (
     <div className="flex items-center gap-1">
       <ActionLink
-        href={getBillHref(getBillByNumber(bill))}
+        href={getBillHref(bill)}
         label="View"
         icon={<EyeIcon size={15} />}
         labels={labels}
       />
       <BillDrawer
-        action="Edit Draft"
+        bill={bill}
+        triggerLabel="Edit Bill"
         icon={<NotePencilIcon size={15} />}
         iconOnly={!labels}
       />
@@ -29,8 +32,8 @@ export function BillingActions({
         icon={<DownloadSimpleIcon size={15} />}
         labels={labels}
       />
-      <BillDrawer
-        action="Record Payment"
+      <PaymentDrawer
+        billId={bill.id}
         icon={<ReceiptIcon size={15} />}
         iconOnly={!labels}
       />
