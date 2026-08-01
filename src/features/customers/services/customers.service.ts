@@ -109,7 +109,6 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
   { key: "connectionType", label: "Connection Type", input: "select", options: connectionTypeOptions },
   { key: "houseType", label: "House Type" },
   { key: "scheme", label: "Scheme" },
-  { key: "plumberName", label: "Assigned Plumber" },
   { key: "supervisorName", label: "Assigned Supervisor" },
   { key: "jobCardDone", label: "Job Card Done", input: "select", options: yesNoOptions },
   { key: "reportNoGi", label: "GI Report Number" },
@@ -395,6 +394,7 @@ export const emptyCustomerConnection: CustomerConnectionDetails = {
   customerName: "",
   fullAddress: "",
   scheme: "",
+  plumberId: "",
   plumberName: "",
   supervisorName: "",
   jobCardDone: "",
@@ -768,6 +768,7 @@ type BackendCustomer = {
   connectionType: string | null;
   houseType: string | null;
   scheme: string | null;
+  plumberId: string | null;
   plumberName: string | null;
   supervisorName: string | null;
   giReportNumber: string | null;
@@ -886,6 +887,7 @@ function mapCustomer(raw: BackendCustomer, projectName?: string, siteArea?: stri
       connectionType: (raw.connectionType as CustomerConnectionDetails["connectionType"]) || "Domestic",
       houseType: raw.houseType ?? "",
       scheme: raw.scheme ?? "",
+      plumberId: raw.plumberId ?? "",
       plumberName: raw.plumberName ?? "",
       supervisorName: raw.supervisorName ?? "",
       reportNoGi: raw.giReportNumber ?? "",
@@ -926,7 +928,7 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     connectionType: values.customerConnection.connectionType,
     houseType: values.customerConnection.houseType || undefined,
     scheme: values.customerConnection.scheme || undefined,
-    plumberName: values.customerConnection.plumberName || undefined,
+    plumberId: values.customerConnection.plumberId || undefined,
     supervisorName: values.customerConnection.supervisorName || undefined,
     giReportNumber: values.customerConnection.reportNoGi || undefined,
     gcReportNumber: values.customerConnection.reportNoGc || undefined,

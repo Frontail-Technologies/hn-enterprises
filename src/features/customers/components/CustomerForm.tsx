@@ -41,6 +41,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectSitesQuery, useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import {
   billingCompletionFields,
   deriveLmcPipeCurrentStage,
@@ -112,6 +113,7 @@ function CustomerFormFields({
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
   const { data: projects = [] } = useProjectsQuery();
   const { data: sites = [] } = useProjectSitesQuery(values.projectId);
+  const { data: plumbers = [] } = usePlumbersQuery();
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer(customerId ?? "");
   const mutation = isEdit ? updateCustomer : createCustomer;
@@ -119,7 +121,13 @@ function CustomerFormFields({
   const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
 
   const handleSave = async () => {
-    if (!values.customerConnection.customerName.trim() || !values.projectId || !values.siteId) return;
+    if (
+      !values.customerConnection.customerName.trim() ||
+      !values.projectId ||
+      !values.siteId ||
+      (!isEdit && !values.customerConnection.plumberId)
+    )
+      return;
 
     const saved = await mutation.mutateAsync(values);
 
@@ -216,6 +224,33 @@ function CustomerFormFields({
                       {sites.map((site) => (
                         <SelectItem key={site.id} value={site.id}>
                           {site.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label="Assigned Plumber">
+                  <Select
+                    value={values.customerConnection.plumberId || undefined}
+                    onValueChange={(plumberId) => {
+                      const plumber = plumbers.find((item) => item.id === plumberId);
+                      setValues((current) => ({
+                        ...current,
+                        customerConnection: {
+                          ...current.customerConnection,
+                          plumberId: plumberId ?? "",
+                          plumberName: plumber?.name ?? "",
+                        },
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select plumber" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plumbers.map((plumber) => (
+                        <SelectItem key={plumber.id} value={plumber.id}>
+                          {plumber.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

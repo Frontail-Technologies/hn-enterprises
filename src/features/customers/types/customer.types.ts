@@ -79,6 +79,7 @@ export type CustomerConnectionDetails = {
   customerName: string;
   fullAddress: string;
   scheme: string;
+  plumberId: string;
   plumberName: string;
   supervisorName: string;
   jobCardDone: string;
