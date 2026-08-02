@@ -7,12 +7,14 @@ export function ImageProofField({
   label,
   description,
   images = [],
+  onChange,
   module,
   recordId,
 }: {
   label: string;
   description: string;
   images?: ImagePreviewItem[];
+  onChange?: (images: ImagePreviewItem[]) => void;
   module: string;
   recordId?: string;
 }) {
@@ -22,7 +24,7 @@ export function ImageProofField({
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <ImageUploadPreview images={images} module={module} recordId={recordId} />
+      <ImageUploadPreview images={images} onChange={onChange} module={module} recordId={recordId} />
     </div>
   );
 }

@@ -1,46 +1,112 @@
 "use client";
 
+import { useMemo } from "react";
 import { PackageIcon, ReceiptIcon, UserIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getMaterial,
-  getMaterialCustomerConsumption,
-  getMaterialPbgIssues,
-  getMaterialPlumberBalances,
-  getMaterialPurchases,
-  getMaterialStockRow,
-  getMaterialStoreIssues,
-  getMaterialTransactions,
-} from "../utils/inventory.utils";
+import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { formatDate } from "../utils/format";
+import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
+import { useMaterialQuery, useMaterialTransactionsQuery, usePlumberBalancesQuery } from "../hooks/useMaterials";
+import type { MaterialTransaction } from "../types/material.types";
 import { InventoryActions } from "./inventory/InventoryActions";
 import { StockStatus } from "./inventory/StockStatus";
 import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
 
 export function InventoryDetailPage({ id }: { id: string }) {
-  const material = getMaterial(id);
-  const stock = getMaterialStockRow(material.id);
-  const purchases = getMaterialPurchases(material.id);
-  const pbgIssues = getMaterialPbgIssues(material.id);
-  const storeIssues = getMaterialStoreIssues(material.id);
-  const plumberBalances = getMaterialPlumberBalances(material.id);
-  const customerConsumption = getMaterialCustomerConsumption(material.id);
-  const transactions = getMaterialTransactions(material.id);
-  const receivedQty =
-    purchases.reduce((sum, row) => sum + Number(row.totalPurchaseQty || 0), 0) +
-    pbgIssues.reduce((sum, row) => sum + Number(row.bgTotalIssueStore || 0), 0);
-  const totalIssued =
-    stock?.totalIssue ??
-    storeIssues.reduce((sum, row) => sum + Number(row.totalIssue || 0), 0);
-  const consumed =
-    stock?.consumption ??
-    customerConsumption.reduce((sum, row) => sum + Number(row.usedQty || 0), 0);
-  const returned = stock?.returnQty ?? 0;
-  const available = stock?.balanceMaterial ?? material.availableStock;
+  const { data: material, isLoading, isError } = useMaterialQuery(id);
+  const { data: transactions = [] } = useMaterialTransactionsQuery({ materialId: id });
+  const { data: plumberBalances = [] } = usePlumberBalancesQuery({ materialId: id });
+  const { data: plumbers = [] } = usePlumbersQuery();
+  const { data: customers = [] } = useCustomersQuery();
+  const { data: sites = [] } = useAllProjectSitesQuery();
+
+  const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
+  const customerNameById = useMemo(
+    () => new Map(customers.map((c) => [c.id, c.customerConnection.customerName])),
+    [customers],
+  );
+  const siteNameById = useMemo(() => new Map(sites.map((s) => [s.id, s.name])), [sites]);
+
+  const purchases = useMemo(
+    () => transactions.filter((row) => row.type === "purchase" || row.type === "pbg_issue"),
+    [transactions],
+  );
+  const storeIssues = useMemo(() => transactions.filter((row) => row.type === "issue"), [transactions]);
+  const consumption = useMemo(() => transactions.filter((row) => row.type === "consumption"), [transactions]);
+
+  const receivedQty = purchases.reduce((sum, row) => sum + row.quantity, 0);
+  const issuedQty = storeIssues.reduce((sum, row) => sum + row.quantity, 0);
+  const consumedQty = consumption.reduce((sum, row) => sum + row.quantity, 0);
+  const returnedQty = transactions
+    .filter((row) => row.type === "return")
+    .reduce((sum, row) => sum + row.quantity, 0);
+
+  const plumberLedgerRows = useMemo(
+    () =>
+      plumberBalances.map((row) => ({
+        ...row,
+        id: row.plumberId,
+        plumberName: plumberNameById.get(row.plumberId) ?? "Unknown plumber",
+      })),
+    [plumberBalances, plumberNameById],
+  );
+
+  if (isLoading) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading material...</p>;
+  }
+
+  if (isError || !material) {
+    return <p className="p-4 text-sm text-destructive">Unable to load this material.</p>;
+  }
+
+  const purchaseColumns: ExcelColumn<MaterialTransaction>[] = [
+    { key: "type", label: "Type", width: 130, sticky: true, getValue: (row) => (row.type === "pbg_issue" ? "PBG Issue" : "Purchase") },
+    { key: "vendor", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
+    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
+    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
+    { key: "rate", label: "Rate", width: 110, getValue: (row) => row.rate ?? "-" },
+    { key: "billAmount", label: "Bill Amount", width: 140, getValue: (row) => row.billAmount ?? "-" },
+    { key: "referenceNo", label: "Reference No.", width: 150, getValue: (row) => row.referenceNo },
+  ];
+
+  const storeIssueColumns: ExcelColumn<MaterialTransaction>[] = [
+    { key: "slipNo", label: "Slip No.", width: 130, sticky: true, getValue: (row) => row.referenceNo },
+    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
+    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
+    { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
+    { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+  ];
+
+  const transactionColumns: ExcelColumn<MaterialTransaction>[] = [
+    { key: "type", label: "Type", width: 150, sticky: true, getValue: (row) => row.type },
+    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
+    { key: "plumber", label: "Plumber", width: 160, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
+    { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+    { key: "customer", label: "Customer", width: 190, getValue: (row) => customerNameById.get(row.customerId) ?? "-" },
+    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
+    { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
+  ];
+
+  const consumptionColumns: ExcelColumn<MaterialTransaction>[] = [
+    { key: "customer", label: "Customer", width: 190, sticky: true, getValue: (row) => customerNameById.get(row.customerId) ?? "-" },
+    { key: "usedQty", label: "Used Qty", width: 120, getValue: (row) => row.quantity },
+    { key: "plumber", label: "Plumber", width: 150, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
+    { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
+    { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
+    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
+  ];
+
+  const plumberBalanceColumns: ExcelColumn<(typeof plumberLedgerRows)[number]>[] = [
+    { key: "plumberName", label: "Plumber / Team", width: 170, sticky: true, getValue: (row) => row.plumberName },
+    { key: "issued", label: "Total Issued", width: 130, getValue: (row) => row.issued },
+    { key: "consumed", label: "Consumed", width: 120, getValue: (row) => row.consumed },
+    { key: "returned", label: "Returned", width: 120, getValue: (row) => row.returned },
+    { key: "balance", label: "Balance", width: 120, getValue: (row) => row.balance },
+  ];
 
   return (
     <div className="space-y-5">
@@ -52,8 +118,8 @@ export function InventoryDetailPage({ id }: { id: string }) {
       />
       <PageHeader
         title={material.name}
-        subtitle={`${material.category} / ${material.unit} / ${material.store}`}
-        actions={<InventoryActions material={material.name} labels />}
+        subtitle={`${material.category || "Uncategorised"} / ${material.unit}`}
+        actions={<InventoryActions material={material} labels />}
       />
 
       <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.45fr)]">
@@ -62,11 +128,11 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={3}
             items={[
               { icon: <PackageIcon size={15} />, label: "Unit", value: material.unit },
-              { icon: <PackageIcon size={15} />, label: "Available", value: `${available} ${material.unit}` },
+              { icon: <PackageIcon size={15} />, label: "Available", value: `${material.currentBalance} ${material.unit}` },
               { icon: <PackageIcon size={15} />, label: "Received", value: receivedQty || "-" },
-              { icon: <PackageIcon size={15} />, label: "Issued", value: totalIssued || "-" },
-              { icon: <PackageIcon size={15} />, label: "Consumed", value: consumed || "-" },
-              { icon: <PackageIcon size={15} />, label: "Returned", value: returned || "-" },
+              { icon: <PackageIcon size={15} />, label: "Issued", value: issuedQty || "-" },
+              { icon: <PackageIcon size={15} />, label: "Consumed", value: consumedQty || "-" },
+              { icon: <PackageIcon size={15} />, label: "Returned", value: returnedQty || "-" },
             ]}
           />
         </SectionCard>
@@ -76,9 +142,9 @@ export function InventoryDetailPage({ id }: { id: string }) {
             <KeyValueGrid
               compact
               items={[
-                { icon: <PackageIcon size={15} />, label: "Store / Site", value: material.store },
+                { icon: <PackageIcon size={15} />, label: "Reorder Level", value: material.reorderLevel },
                 { icon: <ReceiptIcon size={15} />, label: "Purchase Rows", value: purchases.length },
-                { icon: <UserIcon size={15} />, label: "Plumber Balances", value: plumberBalances.length },
+                { icon: <UserIcon size={15} />, label: "Plumber Balances", value: plumberLedgerRows.length },
               ]}
             />
           </div>
@@ -88,7 +154,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
       <SectionCard title="Plumber Ledger">
         <ExcelDataGrid
           columns={plumberBalanceColumns}
-          rows={plumberBalances}
+          rows={plumberLedgerRows}
           maxHeightClassName="max-h-[34vh]"
           emptyTitle="No plumber balance for this material"
         />
@@ -96,8 +162,8 @@ export function InventoryDetailPage({ id }: { id: string }) {
 
       <SectionCard title="Customer / BP Consumption">
         <ExcelDataGrid
-          columns={customerConsumptionColumns}
-          rows={customerConsumption}
+          columns={consumptionColumns}
+          rows={consumption}
           maxHeightClassName="max-h-[40vh]"
           emptyTitle="No customer consumption found for this material"
         />
@@ -133,73 +199,3 @@ export function InventoryDetailPage({ id }: { id: string }) {
     </div>
   );
 }
-
-const plumberBalanceColumns: ExcelColumn<
-  ReturnType<typeof getMaterialPlumberBalances>[number]
->[] = [
-  { key: "plumber", label: "Plumber / Team", width: 170, sticky: true, getValue: (row) => row.plumber },
-  { key: "site", label: "Site", width: 190, getValue: (row) => row.site },
-  { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
-  { key: "totalIssued", label: "Total Issued", width: 130, getValue: (row) => row.totalIssued },
-  { key: "consumed", label: "Consumed", width: 120, getValue: (row) => row.consumed },
-  { key: "returned", label: "Returned", width: 120, getValue: (row) => row.returned },
-  { key: "balance", label: "Balance", width: 120, getValue: (row) => row.balance },
-  { key: "lastSlipNo", label: "Last Slip No.", width: 140, getValue: (row) => row.lastSlipNo },
-  {
-    key: "status",
-    label: "Status",
-    width: 150,
-    getValue: (row) => row.status,
-    render: (row) => <StatusBadge status={row.status} />,
-  },
-];
-
-const customerConsumptionColumns: ExcelColumn<
-  ReturnType<typeof getMaterialCustomerConsumption>[number]
->[] = [
-  { key: "bpNo", label: "BP / TR No.", width: 130, sticky: true, getValue: (row) => row.bpNo },
-  { key: "customerName", label: "Customer", width: 180, sticky: true, getValue: (row) => row.customerName },
-  { key: "usedQty", label: "Used Qty", width: 120, getValue: (row) => row.usedQty },
-  { key: "address", label: "Address", width: 260, getValue: (row) => row.address },
-  { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
-  { key: "plumber", label: "Plumber", width: 130, getValue: (row) => row.plumber },
-  { key: "installationDate", label: "Installation Date", width: 150, getValue: (row) => formatDate(row.installationDate) },
-  { key: "testingDate", label: "Testing Date", width: 140, getValue: (row) => formatDate(row.testingDate) },
-  { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
-  { key: "plumberBillNo", label: "Plumber Bill No.", width: 150, getValue: (row) => row.plumberBillNo },
-  { key: "bgGasBillNo", label: "BG Gas Bill No.", width: 150, getValue: (row) => row.bgGasBillNo },
-];
-
-const purchaseColumns: ExcelColumn<ReturnType<typeof getMaterialPurchases>[number]>[] = [
-  { key: "item", label: "Item", width: 220, sticky: true, getValue: (row) => row.item },
-  { key: "vendor", label: "Vendor", width: 160, getValue: (row) => row.vendor },
-  { key: "lastPurchaseDate", label: "Date", width: 130, getValue: (row) => formatDate(row.lastPurchaseDate) },
-  { key: "totalPurchaseQty", label: "Purchase Qty", width: 140, getValue: (row) => row.totalPurchaseQty },
-  { key: "totalAmount", label: "Total Amount", width: 150, getValue: (row) => row.totalAmount },
-  { key: "invoice441Qty", label: "Inv 441 Qty", width: 120, getValue: (row) => row.invoice441Qty },
-  { key: "invoice441Rate", label: "Inv 441 Rate", width: 130, getValue: (row) => row.invoice441Rate },
-  { key: "invoice442Qty", label: "Inv 442 Qty", width: 120, getValue: (row) => row.invoice442Qty },
-  { key: "invoice442Rate", label: "Inv 442 Rate", width: 130, getValue: (row) => row.invoice442Rate },
-];
-
-const storeIssueColumns: ExcelColumn<ReturnType<typeof getMaterialStoreIssues>[number]>[] = [
-  { key: "itemName", label: "Item", width: 220, sticky: true, getValue: (row) => row.itemName },
-  { key: "slipNo", label: "Slip No.", width: 120, getValue: (row) => row.slipNo },
-  { key: "issueDate", label: "Date", width: 130, getValue: (row) => formatDate(row.issueDate) },
-  { key: "totalIssue", label: "Total Issue", width: 130, getValue: (row) => row.totalIssue },
-  { key: "ati", label: "ATI", width: 100, getValue: (row) => row.ati },
-  { key: "babar", label: "Babar", width: 100, getValue: (row) => row.babar },
-  { key: "abdul", label: "Abdul", width: 100, getValue: (row) => row.abdul },
-  { key: "firoj", label: "Firoj", width: 100, getValue: (row) => row.firoj },
-  { key: "jabed", label: "Jabed", width: 100, getValue: (row) => row.jabed },
-  { key: "returnQty", label: "Return", width: 100, getValue: (row) => row.returnQty },
-];
-
-const transactionColumns: ExcelColumn<ReturnType<typeof getMaterialTransactions>[number]>[] = [
-  { key: "type", label: "Type", width: 130, sticky: true, getValue: (row) => row.type },
-  { key: "projectSite", label: "Project / Site", width: 190, getValue: (row) => row.projectSite },
-  { key: "quantity", label: "Quantity", width: 130, getValue: (row) => row.quantity },
-  { key: "by", label: "Updated By", width: 150, getValue: (row) => row.by },
-  { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.date) },
-  { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
-];
