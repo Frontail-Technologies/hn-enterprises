@@ -34,6 +34,7 @@ export type ProjectSite = {
   fullAddress: string;
   latitude: number;
   longitude: number;
+  supervisorId: string;
   supervisor: string;
   plannedConnections: number;
   startDate: string;

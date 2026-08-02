@@ -88,6 +88,7 @@ type BackendProjectSite = {
   latitude: string | null;
   longitude: string | null;
   plannedConnections: number | null;
+  supervisorId: string | null;
   supervisorName: string | null;
   startDate: string | null;
   endDate: string | null;
@@ -161,6 +162,7 @@ function mapProjectSite(raw: BackendProjectSite): ProjectSite {
     fullAddress: raw.address ?? "",
     latitude: raw.latitude ? Number(raw.latitude) : 0,
     longitude: raw.longitude ? Number(raw.longitude) : 0,
+    supervisorId: raw.supervisorId ?? "",
     supervisor: raw.supervisorName ?? "",
     plannedConnections: raw.plannedConnections ?? 0,
     startDate: toDateOnly(raw.startDate),
@@ -179,7 +181,7 @@ function mapProjectSiteToBody(site: ProjectSite) {
     latitude: site.latitude || undefined,
     longitude: site.longitude || undefined,
     plannedConnections: site.plannedConnections || undefined,
-    supervisorName: site.supervisor || undefined,
+    supervisorId: site.supervisorId || undefined,
     startDate: site.startDate || undefined,
     endDate: site.endDate || undefined,
     remarks: site.remarks || undefined,

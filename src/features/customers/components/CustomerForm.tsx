@@ -42,6 +42,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectSitesQuery, useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import {
   billingCompletionFields,
   deriveLmcPipeCurrentStage,
@@ -114,6 +115,7 @@ function CustomerFormFields({
   const { data: projects = [] } = useProjectsQuery();
   const { data: sites = [] } = useProjectSitesQuery(values.projectId);
   const { data: plumbers = [] } = usePlumbersQuery();
+  const { data: supervisors = [] } = useRosterQuery("supervisor");
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer(customerId ?? "");
   const mutation = isEdit ? updateCustomer : createCustomer;
@@ -251,6 +253,33 @@ function CustomerFormFields({
                       {plumbers.map((plumber) => (
                         <SelectItem key={plumber.id} value={plumber.id}>
                           {plumber.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label="Assigned Supervisor">
+                  <Select
+                    value={values.customerConnection.supervisorId || undefined}
+                    onValueChange={(supervisorId) => {
+                      const supervisor = supervisors.find((item) => item.id === supervisorId);
+                      setValues((current) => ({
+                        ...current,
+                        customerConnection: {
+                          ...current.customerConnection,
+                          supervisorId: supervisorId ?? "",
+                          supervisorName: supervisor?.name ?? "",
+                        },
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select supervisor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisors.map((supervisor) => (
+                        <SelectItem key={supervisor.id} value={supervisor.id}>
+                          {supervisor.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

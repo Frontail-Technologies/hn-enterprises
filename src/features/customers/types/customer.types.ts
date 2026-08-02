@@ -81,6 +81,7 @@ export type CustomerConnectionDetails = {
   scheme: string;
   plumberId: string;
   plumberName: string;
+  supervisorId: string;
   supervisorName: string;
   jobCardDone: string;
   connectionType: ConnectionType;

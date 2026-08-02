@@ -37,6 +37,7 @@ type BackendMaterialTransaction = {
   rate: string | null;
   billAmount: string | null;
   plumberId: string | null;
+  supervisorId: string | null;
   supervisorName: string | null;
   siteId: string | null;
   storeLabel: string | null;
@@ -93,6 +94,7 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     rate: raw.rate != null ? Number(raw.rate) : null,
     billAmount: raw.billAmount != null ? Number(raw.billAmount) : null,
     plumberId: raw.plumberId ?? "",
+    supervisorId: raw.supervisorId ?? "",
     supervisorName: raw.supervisorName ?? "",
     siteId: raw.siteId ?? "",
     storeLabel: raw.storeLabel ?? "",
@@ -119,7 +121,7 @@ function mapTransactionFormToBody(type: MaterialTransactionType, values: Materia
     rate: values.rate ? Number(values.rate) : undefined,
     billAmount: values.billAmount ? Number(values.billAmount) : undefined,
     plumberId: values.plumberId || undefined,
-    supervisorName: values.supervisorName || undefined,
+    supervisorId: values.supervisorId || undefined,
     siteId: values.siteId || undefined,
     storeLabel: values.storeLabel || undefined,
     customerId: values.customerId || undefined,

@@ -109,7 +109,6 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
   { key: "connectionType", label: "Connection Type", input: "select", options: connectionTypeOptions },
   { key: "houseType", label: "House Type" },
   { key: "scheme", label: "Scheme" },
-  { key: "supervisorName", label: "Assigned Supervisor" },
   { key: "jobCardDone", label: "Job Card Done", input: "select", options: yesNoOptions },
   { key: "reportNoGi", label: "GI Report Number" },
   { key: "reportNoGc", label: "GC Report Number", readOnly: true },
@@ -396,6 +395,7 @@ export const emptyCustomerConnection: CustomerConnectionDetails = {
   scheme: "",
   plumberId: "",
   plumberName: "",
+  supervisorId: "",
   supervisorName: "",
   jobCardDone: "",
   connectionType: "Domestic",
@@ -770,6 +770,7 @@ type BackendCustomer = {
   scheme: string | null;
   plumberId: string | null;
   plumberName: string | null;
+  supervisorId: string | null;
   supervisorName: string | null;
   giReportNumber: string | null;
   gcReportNumber: string | null;
@@ -889,6 +890,7 @@ function mapCustomer(raw: BackendCustomer, projectName?: string, siteArea?: stri
       scheme: raw.scheme ?? "",
       plumberId: raw.plumberId ?? "",
       plumberName: raw.plumberName ?? "",
+      supervisorId: raw.supervisorId ?? "",
       supervisorName: raw.supervisorName ?? "",
       reportNoGi: raw.giReportNumber ?? "",
       reportNoGc: raw.gcReportNumber ?? "",
@@ -929,7 +931,7 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     houseType: values.customerConnection.houseType || undefined,
     scheme: values.customerConnection.scheme || undefined,
     plumberId: values.customerConnection.plumberId || undefined,
-    supervisorName: values.customerConnection.supervisorName || undefined,
+    supervisorId: values.customerConnection.supervisorId || undefined,
     giReportNumber: values.customerConnection.reportNoGi || undefined,
     gcReportNumber: values.customerConnection.reportNoGc || undefined,
     conversionReportNumber: values.customerConnection.reportNoConversion || undefined,

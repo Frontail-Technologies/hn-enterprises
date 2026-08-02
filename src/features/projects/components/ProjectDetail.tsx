@@ -14,6 +14,7 @@ import {
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import {
@@ -952,6 +953,8 @@ function SiteDialog({
   onOpenChange: (open: boolean) => void;
   onSave: () => void;
 }) {
+  const { data: supervisors = [] } = useRosterQuery("supervisor");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
@@ -1003,13 +1006,30 @@ function SiteDialog({
                 }))
               }
             />
-            <CompactInput
-              label="Supervisor"
-              value={draft.supervisor}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, supervisor: value }))
-              }
-            />
+            <FormField label="Supervisor">
+              <Select
+                value={draft.supervisorId || undefined}
+                onValueChange={(supervisorId) => {
+                  const supervisor = supervisors.find((item) => item.id === supervisorId);
+                  setDraft((current) => ({
+                    ...current,
+                    supervisorId: supervisorId ?? "",
+                    supervisor: supervisor?.name ?? "",
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select supervisor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {supervisors.map((supervisor) => (
+                    <SelectItem key={supervisor.id} value={supervisor.id}>
+                      {supervisor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
             <CompactInput
               label="Planned Connections"
               type="number"
@@ -1483,6 +1503,7 @@ const emptySite: ProjectSite = {
   fullAddress: "",
   latitude: 26.8951,
   longitude: 75.7684,
+  supervisorId: "",
   supervisor: "",
   plannedConnections: 0,
   startDate: "",

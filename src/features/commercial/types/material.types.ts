@@ -44,6 +44,7 @@ export type MaterialTransaction = {
   rate: number | null;
   billAmount: number | null;
   plumberId: string;
+  supervisorId: string;
   supervisorName: string;
   siteId: string;
   storeLabel: string;
@@ -67,7 +68,7 @@ export type MaterialTransactionFormValues = {
   rate: string;
   billAmount: string;
   plumberId: string;
-  supervisorName: string;
+  supervisorId: string;
   siteId: string;
   storeLabel: string;
   customerId: string;

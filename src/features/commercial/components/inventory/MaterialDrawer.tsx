@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useAllProjectSitesQuery } from "../../hooks/useAllProjectSites";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
 import type { MaterialTransactionFormValues, MaterialTransactionType } from "../../types/material.types";
@@ -60,7 +61,7 @@ function emptyValues(): MaterialTransactionFormValues {
     rate: "",
     billAmount: "",
     plumberId: "",
-    supervisorName: "",
+    supervisorId: "",
     siteId: "",
     storeLabel: "",
     customerId: "",
@@ -99,6 +100,7 @@ export function MaterialDrawer({
   const [saveError, setSaveError] = useState("");
   const { data: materials = [] } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
+  const { data: supervisors = [] } = useRosterQuery("supervisor");
   const { data: sites = [] } = useAllProjectSitesQuery();
   const { data: customers = [] } = useCustomersQuery();
   const createTransaction = useCreateMaterialTransaction(type);
@@ -163,6 +165,26 @@ export function MaterialDrawer({
           {plumbers.map((plumber) => (
             <SelectItem key={plumber.id} value={plumber.id}>
               {plumber.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+
+  const supervisorField = (
+    <Field label="Supervisor">
+      <Select
+        value={values.supervisorId || undefined}
+        onValueChange={(supervisorId) => set("supervisorId", supervisorId ?? "")}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select supervisor" />
+        </SelectTrigger>
+        <SelectContent>
+          {supervisors.map((supervisor) => (
+            <SelectItem key={supervisor.id} value={supervisor.id}>
+              {supervisor.name}
             </SelectItem>
           ))}
         </SelectContent>
@@ -280,9 +302,7 @@ export function MaterialDrawer({
               <Field label="SIV No.">
                 <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
               </Field>
-              <Field label="Person">
-                <Input value={values.supervisorName} onChange={(event) => set("supervisorName", event.target.value)} />
-              </Field>
+              {supervisorField}
               {dateField("Issue Date")}
               {quantityField("Quantity")}
               <Field label="Vendor Name">
@@ -323,9 +343,7 @@ export function MaterialDrawer({
               </Field>
               {dateField("Issue Date")}
               {plumberField}
-              <Field label="Supervisor">
-                <Input value={values.supervisorName} onChange={(event) => set("supervisorName", event.target.value)} />
-              </Field>
+              {supervisorField}
               {siteField}
               {quantityField("Issued Quantity")}
             </>
@@ -386,9 +404,7 @@ export function MaterialDrawer({
               {customerField}
               {siteField}
               {plumberField}
-              <Field label="Supervisor">
-                <Input value={values.supervisorName} onChange={(event) => set("supervisorName", event.target.value)} />
-              </Field>
+              {supervisorField}
               <Field label="Report No.">
                 <Input value={values.reportNo} onChange={(event) => set("reportNo", event.target.value)} />
               </Field>
