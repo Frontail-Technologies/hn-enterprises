@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
+import { format, subMonths } from "date-fns";
+import { DownloadSimpleIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,31 +12,50 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { cn } from "@/lib/utils";
-import { wageRegisterRows } from "../../data/wages.data";
+import { useWagesQuery } from "../../hooks/useWages";
 import { money } from "../../utils/format";
+import { WageDrawer } from "./WageDrawer";
+
+function monthOptions() {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, index) => {
+    const date = subMonths(now, index);
+    return { value: format(date, "yyyy-MM"), label: format(date, "MMMM yyyy") };
+  });
+}
 
 export function WageRegister() {
+  const options = useMemo(() => monthOptions(), []);
+  const [month, setMonth] = useState(options[0].value);
+  const { data: wages = [] } = useWagesQuery({ month });
+  const { data: plumbers = [] } = usePlumbersQuery();
+  const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
+
   return (
     <section className="rounded-lg border border-border/70 bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
         <div>
           <p className="text-sm font-semibold text-foreground">Wage Register</p>
           <p className="text-xs text-muted-foreground">
-            Payroll-style register with attendance days, deductions and net
-            payment.
+            Payroll-style register with attendance days, deductions and net payment.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select defaultValue="may-2026">
-            <SelectTrigger className="h-8 w-[150px] bg-card">
+          <Select value={month} onValueChange={(value) => { if (value) setMonth(value); }}>
+            <SelectTrigger className="h-8 w-37.5 bg-card">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="may-2026">May 2026</SelectItem>
-              <SelectItem value="apr-2026">April 2026</SelectItem>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          <WageDrawer month={month} triggerLabel="Add Wage Entry" />
           <Button type="button" variant="outline" size="sm">
             <DownloadSimpleIcon size={14} />
             Export Wage Sheet
@@ -46,25 +68,17 @@ export function WageRegister() {
             <table className="w-max border-separate border-spacing-0 text-sm">
               <thead>
                 <tr>
-                  <RegisterHeaderCell className="w-16 min-w-16">
-                    Sl No.
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-52 min-w-52">
-                    Name
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36">
-                    Category
-                  </RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-16 min-w-16">Sl No.</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-52 min-w-52">Name</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36">Category</RegisterHeaderCell>
                 </tr>
               </thead>
               <tbody>
-                {wageRegisterRows.map((row, index) => (
+                {wages.map((row, index) => (
                   <tr key={row.id} className="hover:bg-muted/25">
-                    <RegisterBodyCell className="text-center font-medium">
-                      {index + 1}
-                    </RegisterBodyCell>
+                    <RegisterBodyCell className="text-center font-medium">{index + 1}</RegisterBodyCell>
                     <RegisterBodyCell className="font-medium text-foreground">
-                      {row.name}
+                      {plumberNameById.get(row.plumberId) ?? "Unknown"}
                     </RegisterBodyCell>
                     <RegisterBodyCell>{row.category}</RegisterBodyCell>
                   </tr>
@@ -76,64 +90,34 @@ export function WageRegister() {
             <table className="min-w-max border-separate border-spacing-0 text-sm">
               <thead>
                 <tr>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">
-                    Rate of Wage
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-center">
-                    Days Worked
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">
-                    Basic
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">
-                    Total
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-28 min-w-28 text-right">
-                    PF
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-28 min-w-28 text-right">
-                    ESIC
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36 text-right">
-                    Total Deduction
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36 text-right">
-                    Net Payment
-                  </RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-center">
-                    Status
-                  </RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Rate of Wage</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Days Worked</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Basic</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Total</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-28 min-w-28 text-right">PF</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-28 min-w-28 text-right">ESIC</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Total Deduction</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Net Payment</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Status</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-20 min-w-20 text-center">Edit</RegisterHeaderCell>
                 </tr>
               </thead>
               <tbody>
-                {wageRegisterRows.map((row) => (
+                {wages.map((row) => (
                   <tr key={row.id} className="hover:bg-muted/25">
-                    <RegisterBodyCell className="text-right">
-                      {money(row.wageRate)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-center font-medium">
-                      {row.daysWorked}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">
-                      {money(row.basic)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">
-                      {money(row.total)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">
-                      {money(row.pf)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">
-                      {money(row.esic)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">
-                      {money(row.totalDeduction)}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-right font-semibold">
-                      {money(row.netPayment)}
-                    </RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.wageRate)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-center font-medium">{row.daysWorked}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.basic)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.total)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.pf)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.esic)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right">{money(row.totalDeduction)}</RegisterBodyCell>
+                    <RegisterBodyCell className="text-right font-semibold">{money(row.netPayment)}</RegisterBodyCell>
                     <RegisterBodyCell className="text-center">
                       <StatusBadge status={row.status} />
+                    </RegisterBodyCell>
+                    <RegisterBodyCell className="text-center">
+                      <WageDrawer month={month} wage={row} icon={<NotePencilIcon size={15} />} iconOnly />
                     </RegisterBodyCell>
                   </tr>
                 ))}
@@ -146,13 +130,7 @@ export function WageRegister() {
   );
 }
 
-function RegisterHeaderCell({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function RegisterHeaderCell({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <th
       className={cn(
@@ -165,20 +143,9 @@ function RegisterHeaderCell({
   );
 }
 
-function RegisterBodyCell({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function RegisterBodyCell({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <td
-      className={cn(
-        "h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground",
-        className,
-      )}
-    >
+    <td className={cn("h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground", className)}>
       {children}
     </td>
   );
