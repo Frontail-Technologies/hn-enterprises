@@ -1,22 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { auditLogs } from "../data/audit-logs.data";
+import { useAuditLogsQuery } from "../hooks/useAuditLogs";
+import type { AuditLog } from "../services/audit-logs.service";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
 export function AuditLogsPage() {
   const [filters, setFilters] = useState({ search: "", module: "all" });
-  const data = auditLogs.filter(
-    (row) =>
-      (!filters.search ||
-        row.user.toLowerCase().includes(filters.search.toLowerCase())) &&
-      (filters.module === "all" || row.module === filters.module),
+  const { data: auditLogs = [] } = useAuditLogsQuery();
+  const data = useMemo(
+    () =>
+      auditLogs.filter(
+        (row) =>
+          (!filters.search ||
+            row.user.toLowerCase().includes(filters.search.toLowerCase()) ||
+            row.description.toLowerCase().includes(filters.search.toLowerCase())) &&
+          (filters.module === "all" || row.module === filters.module),
+      ),
+    [auditLogs, filters],
   );
-  const columns: ColumnDef<(typeof auditLogs)[number]>[] = [
+  const columns: ColumnDef<AuditLog>[] = [
     { key: "user", header: "User", render: (row) => <b>{row.user}</b> },
     { key: "action", header: "Action" },
     { key: "module", header: "Module" },
