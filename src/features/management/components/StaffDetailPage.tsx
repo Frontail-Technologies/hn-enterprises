@@ -6,13 +6,21 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate, formatDateTime } from "../utils/format";
-import { staff } from "../data/staff.data";
+import { useStaffMemberQuery } from "../hooks/useStaff";
 import { PageShell } from "./shared/PageShell";
 
 export function StaffDetailPage({ id }: { id: string }) {
-  const staffMember = staff.find((row) => row.id === id);
+  const { data: staffMember, isLoading, isError } = useStaffMemberQuery(id);
 
-  if (!staffMember) {
+  if (isLoading) {
+    return (
+      <PageShell title="Staff Details" subtitle="View employee and payment details.">
+        <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">Loading...</div>
+      </PageShell>
+    );
+  }
+
+  if (isError || !staffMember) {
     return (
       <PageShell title="Staff Details" subtitle="View employee and payment details.">
         <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">
@@ -28,7 +36,7 @@ export function StaffDetailPage({ id }: { id: string }) {
   return (
     <PageShell
       title={staffMember.name}
-      subtitle={`${staffMember.role} : ${staffMember.assignedProjects}`}
+      subtitle={staffMember.role}
       actions={
         <Link
           href={`/staff/${staffMember.id}/edit`}
@@ -53,10 +61,10 @@ export function StaffDetailPage({ id }: { id: string }) {
             items={[
               { label: "Name", value: staffMember.name },
               { label: "Role", value: staffMember.role },
-              { label: "Mobile", value: staffMember.contact },
-              { label: "Assigned Projects", value: staffMember.assignedProjects },
-              { label: "Joining Date", value: formatDate(staffMember.joiningDate) },
-              { label: "Last Active", value: formatDateTime(staffMember.lastActive) },
+              { label: "Username", value: staffMember.username },
+              { label: "Mobile", value: staffMember.contact || "-" },
+              { label: "Email", value: staffMember.email },
+              { label: "Last Login", value: staffMember.lastLogin ? formatDateTime(staffMember.lastLogin) : "Never" },
             ]}
           />
         </section>
@@ -71,8 +79,10 @@ export function StaffDetailPage({ id }: { id: string }) {
             items={[
               { label: "Salary Type", value: staffMember.salaryType },
               { label: "Monthly Salary", value: formatAmount(staffMember.monthlySalary) },
+              { label: "Allowance", value: formatAmount(staffMember.allowance) },
               { label: "Payment Type", value: staffMember.paymentAccountType },
-              { label: "Last Revision", value: formatDate(staffMember.lastSalaryRevisionDate) },
+              { label: "Last Revision", value: staffMember.lastSalaryRevisionDate ? formatDate(staffMember.lastSalaryRevisionDate) : "-" },
+              { label: "Next Review", value: staffMember.nextSalaryReviewDate ? formatDate(staffMember.nextSalaryReviewDate) : "-" },
             ]}
           />
         </section>
@@ -85,18 +95,18 @@ export function StaffDetailPage({ id }: { id: string }) {
           <KeyValueGrid
             columns={2}
             items={[
-              { label: "Account Holder", value: staffMember.accountHolderName },
+              { label: "Account Holder", value: staffMember.accountHolderName || "-" },
               isBankAccount
-                ? { label: "Bank Type", value: staffMember.bankType }
-                : { label: "UPI Type", value: isUpi ? staffMember.upiType : "-" },
+                ? { label: "Bank Type", value: staffMember.bankType || "-" }
+                : { label: "UPI Type", value: isUpi ? staffMember.upiType || "-" : "-" },
               isBankAccount
-                ? { label: "Bank Name", value: staffMember.bankName }
-                : { label: "UPI ID", value: isUpi ? staffMember.upiId : "-" },
+                ? { label: "Bank Name", value: staffMember.bankName || "-" }
+                : { label: "UPI ID", value: isUpi ? staffMember.upiId || "-" : "-" },
               isBankAccount
-                ? { label: "Account Number", value: staffMember.accountNumber }
+                ? { label: "Account Number", value: staffMember.accountNumber || "-" }
                 : { label: "Account Number", value: "-" },
               isBankAccount
-                ? { label: "IFSC Code", value: staffMember.ifscCode }
+                ? { label: "IFSC Code", value: staffMember.ifscCode || "-" }
                 : { label: "IFSC Code", value: "-" },
             ]}
           />

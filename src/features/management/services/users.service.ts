@@ -33,10 +33,10 @@ export type CreateUserFormValues = {
 
 export type UpdateUserFormValues = Omit<CreateUserFormValues, "password">;
 
-type BackendRole = "super_admin" | "admin" | "supervisor" | "field_executive" | "viewer";
-type BackendStatus = "active" | "inactive" | "suspended";
+export type BackendRole = "super_admin" | "admin" | "supervisor" | "field_executive" | "viewer";
+export type BackendStatus = "active" | "inactive" | "suspended";
 
-const ROLE_TO_FRONTEND: Record<BackendRole, UserRole> = {
+export const ROLE_TO_FRONTEND: Record<BackendRole, UserRole> = {
   super_admin: "Super Admin",
   admin: "Admin",
   supervisor: "Supervisor",
@@ -44,7 +44,7 @@ const ROLE_TO_FRONTEND: Record<BackendRole, UserRole> = {
   viewer: "Viewer",
 };
 
-const ROLE_TO_BACKEND: Record<UserRole, BackendRole> = {
+export const ROLE_TO_BACKEND: Record<UserRole, BackendRole> = {
   "Super Admin": "super_admin",
   Admin: "admin",
   Supervisor: "supervisor",
@@ -52,13 +52,13 @@ const ROLE_TO_BACKEND: Record<UserRole, BackendRole> = {
   Viewer: "viewer",
 };
 
-const STATUS_TO_FRONTEND: Record<BackendStatus, UserStatus> = {
+export const STATUS_TO_FRONTEND: Record<BackendStatus, UserStatus> = {
   active: "Active",
   inactive: "Inactive",
   suspended: "Suspended",
 };
 
-const STATUS_TO_BACKEND: Record<UserStatus, BackendStatus> = {
+export const STATUS_TO_BACKEND: Record<UserStatus, BackendStatus> = {
   Active: "active",
   Inactive: "inactive",
   Suspended: "suspended",

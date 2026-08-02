@@ -6,12 +6,13 @@ import { EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
-import { DrawerShell } from "@/components/shared/DrawerShell";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { QuickField } from "@/components/shared/QuickField";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { staff } from "../data/staff.data";
+import { useStaffQuery } from "../hooks/useStaff";
+import { useUsersQuery } from "../hooks/useUsers";
+import type { Staff } from "../types/staff.types";
 import { formatDateTime, uniqOptions } from "../utils/format";
+import { StaffDrawer } from "./StaffDrawer";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
@@ -21,31 +22,33 @@ export function StaffResourcesPage() {
     role: "all",
     status: "all",
   });
+  const { data: staff = [] } = useStaffQuery();
+  const { data: users = [] } = useUsersQuery();
+  const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return staff.filter(
       (row) =>
         (!search ||
           row.name.toLowerCase().includes(search) ||
-          row.contact.includes(search)) &&
+          row.contact.toLowerCase().includes(search)) &&
         (filters.role === "all" || row.role === filters.role) &&
         (filters.status === "all" || row.status === filters.status),
     );
-  }, [filters]);
-  const columns: ColumnDef<(typeof staff)[number]>[] = [
+  }, [staff, filters]);
+  const columns: ColumnDef<Staff>[] = [
     { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
     { key: "role", header: "Role" },
     { key: "contact", header: "Contact" },
-    { key: "assignedProjects", header: "Assigned Projects" },
     {
       key: "status",
       header: "Status",
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
-      key: "lastActive",
-      header: "Last Active",
-      render: (row) => formatDateTime(row.lastActive),
+      key: "lastLogin",
+      header: "Last Login",
+      render: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never"),
     },
     {
       key: "actions",
@@ -78,8 +81,8 @@ export function StaffResourcesPage() {
   return (
     <PageShell
       title="Staff & Resources"
-      subtitle="Manage employees, supervisors, field executives, plumbers and teams."
-      actions={<StaffDrawer />}
+      subtitle="Manage employees, supervisors and field executives — payroll details linked to their real login."
+      actions={<StaffDrawer users={users} staffedUserIds={staffedUserIds} />}
     >
       <FilterSheetButton
         searchKey="search"
@@ -105,33 +108,5 @@ export function StaffResourcesPage() {
       />
       <PaginatedDataTable data={data} columns={columns} />
     </PageShell>
-  );
-}
-
-function StaffDrawer({
-  mode = "add",
-  iconOnly = false,
-}: {
-  mode?: "add" | "edit";
-  iconOnly?: boolean;
-}) {
-  return (
-    <DrawerShell
-      title={mode === "edit" ? "Edit Staff" : "Add Staff"}
-      description="Create or update employee and team assignments."
-      triggerLabel={mode === "edit" ? "Edit" : "Add Staff"}
-      icon={mode === "edit" ? <NotePencilIcon size={15} /> : undefined}
-      iconOnly={iconOnly}
-    >
-      <QuickField label="Name" />
-      <QuickField label="Mobile" />
-      <QuickField
-        label="Role"
-        select
-        options={["Supervisor", "Field Executive", "Plumber Team", "Admin"]}
-      />
-      <QuickField label="Assigned Projects" />
-      <QuickField label="Status" select options={["Active", "Inactive"]} />
-    </DrawerShell>
   );
 }
