@@ -6,7 +6,6 @@ import {
   MegaphoneIcon,
   PaperPlaneTiltIcon,
   PlusIcon,
-  TrashIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +24,12 @@ import { FormField } from "@/components/shared/FormField";
 import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { announcements as initialAnnouncements } from "../services/announcements.service";
+import {
+  useAnnouncementsQuery,
+  useCreateAnnouncement,
+  usePublishAnnouncement,
+  useUpdateAnnouncement,
+} from "../hooks/useAnnouncements";
 import type { Announcement } from "../types/announcement.types";
 
 const emptyDraft: Announcement = {
@@ -33,15 +37,19 @@ const emptyDraft: Announcement = {
   title: "",
   message: "",
   status: "Draft",
-  createdBy: "Demo Admin",
+  createdBy: "",
   createdOn: "",
 };
 
 export function AnnouncementsPage() {
-  const [list, setList] = useState<Announcement[]>(initialAnnouncements);
+  const { data: list = [], isLoading } = useAnnouncementsQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Announcement>(emptyDraft);
+
+  const createMutation = useCreateAnnouncement();
+  const updateMutation = useUpdateAnnouncement(editingId ?? "");
+  const publishMutation = usePublishAnnouncement();
 
   const openCreate = () => {
     setEditingId(null);
@@ -55,42 +63,40 @@ export function AnnouncementsPage() {
     setDialogOpen(true);
   };
 
-  const deleteAnnouncement = (id: string) => {
-    setList((current) => current.filter((item) => item.id !== id));
-  };
-
-  const saveAnnouncement = (nextStatus: Announcement["status"]) => {
-    if (!draft.title.trim() || !draft.message.trim()) return;
-
-    const today = new Date().toISOString().slice(0, 10);
-    const nextDraft: Announcement = {
-      ...draft,
-      status: nextStatus,
-      createdOn: draft.createdOn || today,
-      sentOn: nextStatus === "Sent" ? draft.sentOn || today : draft.sentOn,
-    };
-
-    if (editingId) {
-      setList((current) => current.map((item) => (item.id === editingId ? nextDraft : item)));
-    } else {
-      setList((current) => [
-        { ...nextDraft, id: `ann-${String(current.length + 1).padStart(3, "0")}` },
-        ...current,
-      ]);
-    }
-
+  const closeDialog = () => {
     setDialogOpen(false);
     setEditingId(null);
     setDraft(emptyDraft);
   };
 
-  const pushAnnouncement = (announcement: Announcement) => {
-    const today = new Date().toISOString().slice(0, 10);
-    setList((current) =>
-      current.map((item) =>
-        item.id === announcement.id ? { ...item, status: "Sent", sentOn: today } : item,
-      ),
-    );
+  const draftFormValues = () => ({
+    title: draft.title,
+    message: draft.message,
+    imageUrl: draft.image?.fileUrl,
+    imageFileName: draft.image?.fileName,
+  });
+
+  const saveDraft = async () => {
+    if (!draft.title.trim() || !draft.message.trim()) return;
+    if (editingId) {
+      await updateMutation.mutateAsync(draftFormValues());
+    } else {
+      await createMutation.mutateAsync(draftFormValues());
+    }
+    closeDialog();
+  };
+
+  const publishFromDialog = async () => {
+    if (!draft.title.trim() || !draft.message.trim()) return;
+    const saved = editingId
+      ? await updateMutation.mutateAsync(draftFormValues())
+      : await createMutation.mutateAsync(draftFormValues());
+    await publishMutation.mutateAsync(saved.id);
+    closeDialog();
+  };
+
+  const publishRow = (id: string) => {
+    void publishMutation.mutateAsync(id);
   };
 
   const columns: ColumnDef<Announcement>[] = [
@@ -150,7 +156,7 @@ export function AnnouncementsPage() {
                 variant="ghost"
                 size="icon-xs"
                 aria-label="Push announcement"
-                onClick={() => pushAnnouncement(announcement)}
+                onClick={() => publishRow(announcement.id)}
               >
                 <PaperPlaneTiltIcon size={14} />
               </Button>
@@ -165,17 +171,6 @@ export function AnnouncementsPage() {
               onClick={() => openEdit(announcement)}
             >
               <MegaphoneIcon size={14} />
-            </Button>
-          </ActionTooltip>
-          <ActionTooltip label="Delete">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Delete announcement"
-              onClick={() => deleteAnnouncement(announcement.id)}
-            >
-              <TrashIcon size={14} />
             </Button>
           </ActionTooltip>
         </div>
@@ -200,7 +195,7 @@ export function AnnouncementsPage() {
         <DataTable
           columns={columns}
           data={list}
-          emptyTitle="No announcements yet"
+          emptyTitle={isLoading ? "Loading announcements..." : "No announcements yet"}
           emptyDescription="Create an announcement to push it to the mobile app."
           variant="striped"
         />
@@ -211,9 +206,9 @@ export function AnnouncementsPage() {
         title={editingId ? "Edit Announcement" : "New Announcement"}
         draft={draft}
         onDraftChange={setDraft}
-        onOpenChange={setDialogOpen}
-        onSaveDraft={() => saveAnnouncement("Draft")}
-        onPush={() => saveAnnouncement("Sent")}
+        onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+        onSaveDraft={() => void saveDraft()}
+        onPush={() => void publishFromDialog()}
       />
     </div>
   );
