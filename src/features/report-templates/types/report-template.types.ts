@@ -16,8 +16,6 @@ export type ReportTemplateDefinition = {
   title: string;
   category: ReportTemplateCategory;
   description: string;
-  defaultCustomerId: string;
-  defaultRecordId?: string;
 };
 
 export type ReportTemplateData = {

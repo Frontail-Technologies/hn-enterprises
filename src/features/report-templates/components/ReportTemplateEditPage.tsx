@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, EyeIcon, SaveIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getReportTemplateById, resolveReportTemplateData } from "../services/report-templates.service";
-import type { ReportTemplateId } from "../types/report-template.types";
+import { useReportTemplateData } from "../hooks/useReportTemplateData";
+import { getReportTemplateById } from "../services/report-templates.service";
+import type { ReportTemplateData, ReportTemplateId } from "../types/report-template.types";
 
 type MappingRow = {
   id: string;
@@ -20,9 +22,9 @@ type MappingRow = {
 
 export function ReportTemplateEditPage({ templateId }: { templateId: ReportTemplateId }) {
   const template = getReportTemplateById(templateId);
-  const data = template
-    ? resolveReportTemplateData(template.id, template.defaultCustomerId, template.defaultRecordId)
-    : null;
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customerId") ?? undefined;
+  const { data } = useReportTemplateData(templateId, customerId);
 
   const initialRows = useMemo(() => (data ? buildMappingRows(data) : []), [data]);
   const [title, setTitle] = useState(template?.title ?? "");
@@ -31,7 +33,7 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
   const [rows, setRows] = useState<MappingRow[]>(initialRows);
   const [savedAt, setSavedAt] = useState("");
 
-  if (!template || !data) {
+  if (!template) {
     return (
       <div className="rounded-sm border border-border bg-card p-6">
         <p className="text-sm font-semibold text-foreground">Template not found</p>
@@ -52,6 +54,8 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
     setSavedAt(new Date().toLocaleTimeString());
   }
 
+  const displayRows = rows.length ? rows : initialRows;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -65,12 +69,12 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
           </Link>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Edit Template</h1>
           <p className="text-sm text-muted-foreground">
-            Configure template labels and mock data mappings before final PDF generation.
+            Configure template labels and data mappings before final PDF generation.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/reports/templates/${template.id}`}
+            href={customerId ? `/reports/templates/${template.id}?customerId=${customerId}` : `/reports/templates/${template.id}`}
             className={buttonVariants({ variant: "outline" })}
           >
             <EyeIcon size={15} />
@@ -93,8 +97,8 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
         {[
           ["Template", title],
           ["Category", category],
-          ["Default Customer", template.defaultCustomerId],
-          ["Mapped Fields", `${rows.length}`],
+          ["Customer", customerId ?? "Not selected"],
+          ["Mapped Fields", `${displayRows.length}`],
         ].map(([label, value]) => (
           <div key={label} className="min-w-0">
             <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
@@ -136,13 +140,14 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
             />
           </div>
 
-          <div className="rounded-sm border border-border bg-muted/40 p-3">
-            <p className="text-xs font-semibold text-foreground">Default data source</p>
-            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-              <p>Customer: {template.defaultCustomerId}</p>
-              <p>Record: {template.defaultRecordId ?? "-"}</p>
+          {!customerId ? (
+            <div className="rounded-sm border border-border bg-muted/40 p-3">
+              <p className="text-xs font-semibold text-foreground">No customer selected</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Pick a customer from the templates list to see real sample values below.
+              </p>
             </div>
-          </div>
+          ) : null}
         </section>
 
         <section className="overflow-hidden rounded-sm border border-border bg-card">
@@ -164,7 +169,7 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {displayRows.map((row) => (
                   <tr key={row.id} className="align-top">
                     <td className="w-[160px] border-b border-r border-border px-3 py-2 text-xs font-medium text-muted-foreground">
                       {row.section}
@@ -197,7 +202,7 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
   );
 }
 
-function buildMappingRows(data: NonNullable<ReturnType<typeof resolveReportTemplateData>>): MappingRow[] {
+function buildMappingRows(data: ReportTemplateData): MappingRow[] {
   const rows: Array<Omit<MappingRow, "id">> = [
     { section: "Header", label: "Client", source: "client", sample: data.client },
     { section: "Header", label: "Consultant", source: "consultant", sample: data.consultant },
@@ -210,10 +215,10 @@ function buildMappingRows(data: NonNullable<ReturnType<typeof resolveReportTempl
     { section: "Meter", label: "Meter Type", source: "customer.commissioningConversion.meterType", sample: data.meterType },
     { section: "Regulator", label: "Regulator No", source: "customer.commissioningConversion.regulatorNo", sample: data.regulatorNo },
     { section: "Regulator", label: "Regulator Pressure", source: "customer.commissioningConversion.regulatorPressure", sample: data.regulatorPressure },
-    { section: "Testing", label: "Riser Testing Pressure", source: "pressure.pressureRange", sample: data.riserTestingPressure },
-    { section: "Testing", label: "Testing Time", source: "pressure.duration", sample: data.riserTestingTime },
+    { section: "Testing", label: "Riser Testing Pressure", source: "(no real source - blank)", sample: data.riserTestingPressure },
+    { section: "Testing", label: "Testing Time", source: "(no real source - blank)", sample: data.riserTestingTime },
     { section: "JMR", label: "Meter Reading", source: "customer.commissioningConversion.meterReading", sample: data.meterReading },
-    { section: "Common", label: "Remarks", source: "record.remarks", sample: data.remarks },
+    { section: "Common", label: "Remarks", source: "customer.billingCompletion.remark", sample: data.remarks },
   ];
 
   return rows.map((row, index) => ({ id: `mapping-${index + 1}`, ...row }));

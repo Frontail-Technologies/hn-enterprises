@@ -1,13 +1,5 @@
-import { customers, getCustomerById } from "@/features/customers/services/customers.mock";
+import { customersApi } from "@/features/customers/services/customers.service";
 import type { Customer } from "@/features/customers/types/customer.types";
-import {
-  gcChecklistItems,
-  gcEvidenceItems,
-  getGcUploadById,
-  getJmrById,
-  getPressureTestById,
-  pressureReadings,
-} from "../data/mock-report-sources";
 import type {
   PdfTableRow,
   ReportTemplateData,
@@ -21,54 +13,42 @@ export const reportTemplates: ReportTemplateDefinition[] = [
     title: "JMR Sheet / Customer Consent Form",
     category: "JMR",
     description: "Customer consent, GI measurements, joint meter reading and signatures.",
-    defaultCustomerId: "cust-001",
-    defaultRecordId: "jmr-002",
   },
   {
     id: "png-connection-job-card",
     title: "PNG Connection Job Card",
     category: "Job Card",
     description: "Connection job card with sketch space, materials and testing details.",
-    defaultCustomerId: "cust-001",
   },
   {
     id: "testing-report-mdpe-line",
     title: "Testing Report MDPE Line",
     category: "Testing",
     description: "Pneumatic testing checklist, pipe size summary and result.",
-    defaultCustomerId: "cust-001",
-    defaultRecordId: "tp-002",
   },
   {
     id: "pressure-observation-chart",
     title: "Pressure Observation Chart",
     category: "Testing",
     description: "Time-wise pressure observation readings with signature blocks.",
-    defaultCustomerId: "cust-001",
-    defaultRecordId: "tp-002",
   },
   {
     id: "gc-report",
     title: "GC Report Template",
     category: "GC",
     description: "GC upload evidence, checklist status and reviewer remarks.",
-    defaultCustomerId: "cust-001",
-    defaultRecordId: "gcu-002",
   },
   {
     id: "pre-commissioning-report",
     title: "Pre-Commissioning Report",
     category: "Pre-Commissioning",
     description: "N2 purging, PE pipe length, valve chamber and readiness checklist report.",
-    defaultCustomerId: "cust-001",
-    defaultRecordId: "pc-001",
   },
   {
     id: "conversion-report",
     title: "Conversion Report",
     category: "Conversion",
     description: "NG conversion report with meter, regulator, conversion date and signatures.",
-    defaultCustomerId: "cust-001",
   },
 ];
 
@@ -76,27 +56,20 @@ export function getReportTemplateById(id: string) {
   return reportTemplates.find((template) => template.id === id);
 }
 
-export function resolveReportTemplateData(
+export async function resolveReportTemplateData(
   templateId: ReportTemplateId,
-  customerId?: string,
-  recordId?: string,
-): ReportTemplateData {
-  const template = getReportTemplateById(templateId);
-  const customer = getCustomerById(customerId ?? template?.defaultCustomerId ?? customers[0].id);
-  return resolveReportTemplateDataFromCustomer(templateId, customer, recordId);
+  customerId: string,
+): Promise<ReportTemplateData> {
+  const customer = await customersApi.get(customerId);
+  return resolveReportTemplateDataFromCustomer(templateId, customer);
 }
 
 export function resolveReportTemplateDataFromCustomer(
   templateId: ReportTemplateId,
   customer: Customer,
-  recordId?: string,
 ): ReportTemplateData {
-  const template = getReportTemplateById(templateId);
   const connection = customer.customerConnection;
   const commissioning = customer.commissioningConversion;
-  const pressure = getPressureTestById(recordId ?? template?.defaultRecordId ?? "tp-002");
-  const jmr = getJmrById(recordId ?? template?.defaultRecordId ?? "jmr-002");
-  const gcUpload = getGcUploadById(recordId ?? template?.defaultRecordId ?? "gcu-002");
 
   return {
     companyName: "PURBA BHARATI GAS PVT. LTD.",
@@ -108,7 +81,7 @@ export function resolveReportTemplateDataFromCustomer(
     chargeArea: customer.city,
     location: customer.siteArea,
     reportNo: selectReportNo(templateId, connection.reportNoGi, connection.reportNoGc, connection.reportNoConversion),
-    date: formatPaperDate(pressure.testDate || customer.createdDate),
+    date: formatPaperDate(customer.createdDate),
     customerName: connection.customerName,
     bpNo: connection.trBpNo,
     phoneNo: connection.mobileNo,
@@ -120,32 +93,22 @@ export function resolveReportTemplateDataFromCustomer(
     regulatorNo: commissioning.regulatorNo,
     regulatorMake: "GREENGLOB",
     regulatorPressure: commissioning.regulatorPressure,
-    riserTestingPressure: pressure.pressureRange,
-    riserTestingTime: pressure.duration,
-    meterTestingPressure: pressure.pressureDrop,
-    meterTestingTime: pressure.duration,
+    // Pressure/JMR/GC-upload testing details no longer exist as standalone features in this app
+    // (see the removed mock-report-sources.ts) - left blank rather than fabricated.
+    riserTestingPressure: "-",
+    riserTestingTime: "-",
+    meterTestingPressure: "-",
+    meterTestingTime: "-",
     conversionDate: formatPaperDate(commissioning.conversionDate),
     meterReading: commissioning.meterReading,
-    remarks: resolveRemarks(templateId, customer.billingCompletion.remark, pressure.remarks, jmr.remarks, gcUpload.remarks),
+    remarks: customer.billingCompletion.remark || "-",
     giRows: buildGiRows(customer),
     materialRows: buildMaterialRows(customer),
-    checklistRows: buildTestingChecklistRows(pressure.result),
+    checklistRows: buildTestingChecklistRows(),
     pipeSummaryRows: buildPipeSummaryRows(customer),
     pressureRows: buildPressureRows(),
-    gcChecklistRows: gcChecklistItems.map((item, index) => [
-      index + 1,
-      item.label,
-      item.required ? "Required" : "Optional",
-      item.status,
-      item.remarks,
-    ]),
-    gcEvidenceRows: gcEvidenceItems.map((item, index) => [
-      index + 1,
-      item.title,
-      item.type,
-      item.fileName,
-      item.status,
-    ]),
+    gcChecklistRows: gcChecklistItems.map((item, index) => [index + 1, item.label, item.required ? "Required" : "Optional", "-", "-"]),
+    gcEvidenceRows: gcEvidenceItems.map((item, index) => [index + 1, item.title, item.type, "-", "Pending"]),
   };
 }
 
@@ -154,14 +117,6 @@ function selectReportNo(templateId: ReportTemplateId, gi: string, gc: string, co
   if (templateId === "pressure-observation-chart" || templateId === "testing-report-mdpe-line" || templateId === "pre-commissioning-report") return gi;
   if (templateId === "png-connection-job-card" || templateId === "conversion-report") return conversion || gi;
   return gi;
-}
-
-function resolveRemarks(templateId: ReportTemplateId, billing: string, pressure: string, jmr: string, gc: string) {
-  if (templateId === "gc-report") return gc;
-  if (templateId === "testing-report-mdpe-line" || templateId === "pressure-observation-chart" || templateId === "pre-commissioning-report") return pressure;
-  if (templateId === "jmr-customer-consent") return jmr;
-  if (templateId === "conversion-report") return billing;
-  return billing;
 }
 
 function buildGiRows(customer: Customer): PdfTableRow[] {
@@ -198,7 +153,10 @@ function buildMaterialRows(customer: Customer): PdfTableRow[] {
   ];
 }
 
-function buildTestingChecklistRows(result: string): PdfTableRow[] {
+// Fixed instructional text printed on every copy of this form - not per-customer data, so it
+// stays even though the actual test result (a real inspection outcome) has no data source
+// anymore and is left blank below.
+function buildTestingChecklistRows(): PdfTableRow[] {
   return [
     ["Flushing: Pipe cleaned from water & debris", "Yes / No / NA"],
     ["GI Sleeves / Half round concrete sleeve properly installed", "Yes / No / NA"],
@@ -208,7 +166,7 @@ function buildTestingChecklistRows(result: string): PdfTableRow[] {
     ["Videography / Photography (Real Time showing Test Pressure)", "Yes / No / NA"],
     ["Backfilling of soil done after completion of Pressure Testing", "Yes / No / NA"],
     ["Isometric Sketch showing complete length of pipeline section", "Yes / No / NA"],
-    ["Result", result || "-"],
+    ["Result", "-"],
   ];
 }
 
@@ -224,20 +182,15 @@ function buildPipeSummaryRows(customer: Customer): PdfTableRow[] {
     ]);
 }
 
+// Pressure observation readings no longer exist as a real, standalone feature in this app - the
+// form prints as a blank 12-row observation chart ready to be filled in by hand rather than
+// fabricated readings.
 function buildPressureRows(): PdfTableRow[] {
-  const baseRows = pressureReadings.map((reading, index) => [
-    index + 1,
-    formatPaperDate("2025-02-18"),
-    reading.time,
-    reading.pressure,
-  ]);
-
-  while (baseRows.length < 12) {
-    const next = baseRows.length + 1;
-    baseRows.push([next, "", "", ""]);
+  const rows: PdfTableRow[] = [];
+  for (let index = 1; index <= 12; index += 1) {
+    rows.push([index, "", "", ""]);
   }
-
-  return baseRows;
+  return rows;
 }
 
 function formatPaperDate(value: string) {
@@ -247,3 +200,20 @@ function formatPaperDate(value: string) {
   if (!year || !month || !day) return value;
   return `${day}.${month}.${year}`;
 }
+
+// Static form structure (which checklist items / evidence categories this report expects) - not
+// per-customer data, so it stays as fixed template content even though the actual inspection
+// status/remarks/file names (a real per-customer outcome) have no data source and are blanked
+// in resolveReportTemplateDataFromCustomer above.
+const gcChecklistItems: Array<{ label: string; required: boolean }> = [
+  { label: "Trench depth as per approved drawing", required: true },
+  { label: "Pipe bedding and warning tape laid", required: true },
+  { label: "Joint fusion records available", required: true },
+  { label: "Backfilling completed", required: false },
+];
+
+const gcEvidenceItems: Array<{ title: string; type: string }> = [
+  { title: "Trench Photo", type: "Photo" },
+  { title: "Pipe Laying Photo", type: "Photo" },
+  { title: "Fusion Joint Record", type: "Document" },
+];
