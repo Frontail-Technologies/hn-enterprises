@@ -18,3 +18,10 @@ export async function uploadFile(file: File, module: string, recordId?: string):
     body: formData,
   });
 }
+
+export function resolveFileUrl(url: string | null | undefined) {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005/api").replace(/\/api\/?$/, "");
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}
