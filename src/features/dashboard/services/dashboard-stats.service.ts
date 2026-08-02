@@ -1,6 +1,5 @@
 import type { Customer } from "@/features/customers/types/customer.types";
 import { deriveLmcPipeCurrentStage } from "@/features/customers/services/customers.service";
-import { customers } from "@/features/customers/services/customers.mock";
 
 export type DashboardStatKey =
   | "total-customers"
@@ -82,11 +81,11 @@ export function getDashboardStatDefinition(key: DashboardStatKey) {
   return dashboardStatDefinitions.find((definition) => definition.key === key)!;
 }
 
-export function getDashboardStatRows(key: DashboardStatKey, source = customers): DashboardStatRow[] {
+export function getDashboardStatRows(key: DashboardStatKey, source: Customer[]): DashboardStatRow[] {
   return source.filter((customer) => matchesStat(customer, key)).map((customer) => buildRow(customer, key));
 }
 
-export function getDashboardStatValue(key: DashboardStatKey, source = customers) {
+export function getDashboardStatValue(key: DashboardStatKey, source: Customer[]) {
   const total = source.length;
   const rows = getDashboardStatRows(key, source);
 

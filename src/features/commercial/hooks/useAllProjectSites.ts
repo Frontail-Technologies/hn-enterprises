@@ -16,3 +16,14 @@ export function useAllProjectSitesQuery() {
     },
   });
 }
+
+export function useAllProjectSitesFullQuery() {
+  return useQuery({
+    queryKey: ["projects", "all-sites", "full"],
+    queryFn: async () => {
+      const projects = await projectsApi.list();
+      const sitesByProject = await Promise.all(projects.map((project) => projectsApi.listSites(project.id)));
+      return sitesByProject.flat();
+    },
+  });
+}

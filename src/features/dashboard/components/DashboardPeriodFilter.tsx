@@ -11,10 +11,6 @@ import {
   dashboardPeriods,
   type DashboardPeriod,
 } from "@/features/dashboard/data/dashboard.data";
-import {
-  dashboardCityOptions,
-  dashboardProjectOptions,
-} from "@/features/dashboard/services/dashboard.selectors";
 
 interface DashboardPeriodFilterProps {
   value: DashboardPeriod;
@@ -27,6 +23,8 @@ interface DashboardPeriodFilterProps {
   city: string;
   onProjectChange: (value: string) => void;
   onCityChange: (value: string) => void;
+  projectOptions: Array<{ label: string; value: string }>;
+  cityOptions: Array<{ label: string; value: string }>;
 }
 
 export function DashboardPeriodFilter({
@@ -40,6 +38,8 @@ export function DashboardPeriodFilter({
   city,
   onProjectChange,
   onCityChange,
+  projectOptions,
+  cityOptions,
 }: DashboardPeriodFilterProps) {
   const selectedMonthLabel =
     monthOptions.find((option) => option.value === month)?.label ?? "Select month";
@@ -52,7 +52,7 @@ export function DashboardPeriodFilter({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Projects</SelectItem>
-          {dashboardProjectOptions.map((option) => (
+          {projectOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>
@@ -66,7 +66,7 @@ export function DashboardPeriodFilter({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Cities</SelectItem>
-          {dashboardCityOptions.map((option) => (
+          {cityOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>

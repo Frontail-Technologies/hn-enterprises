@@ -60,7 +60,7 @@ import {
   type LmcPipeEditableFields,
   type LmcCivilWork,
 } from "../services/customers.service";
-import { customerActivity } from "../services/customers.mock";
+import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
 import { useCustomerQuery, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import type {
@@ -236,6 +236,7 @@ function CustomerSectionNav() {
 }
 
 function CustomerApprovalsHistory({ customer }: { customer: Customer }) {
+  const { data: workProgressUpdates = [] } = useWorkProgressListQuery({ customerId: customer.id });
   const rows: CustomerApprovalRow[] = [
     customer.survey
       ? {
@@ -284,20 +285,28 @@ function CustomerApprovalsHistory({ customer }: { customer: Customer }) {
       </SectionCard>
 
       <SectionCard title="Activity History">
-        <div className="relative space-y-3 before:absolute before:left-2.5 before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
-          {customerActivity.map((activity) => (
-            <div key={activity.id} className="relative flex gap-3">
-              <span className="mt-1 h-5 w-5 rounded-full border-4 border-background bg-primary" />
-              <div className="rounded-lg bg-muted/20 px-3 py-2">
-                <p className="text-sm font-semibold text-foreground">{activity.title}</p>
-                <p className="text-xs text-muted-foreground">{activity.description}</p>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">
-                  {activity.actor} - {formatDateTime(activity.dateTime)} - {activity.relatedRecord}
-                </p>
+        {workProgressUpdates.length ? (
+          <div className="relative space-y-3 before:absolute before:left-2.5 before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
+            {workProgressUpdates.map((update) => (
+              <div key={update.id} className="relative flex gap-3">
+                <span className="mt-1 h-5 w-5 rounded-full border-4 border-background bg-primary" />
+                <div className="rounded-lg bg-muted/20 px-3 py-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    {update.stage} — {update.status}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {update.remarks || update.nextRequiredAction || "-"}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-muted-foreground">
+                    {update.supervisor?.name ?? "-"} - {formatDateTime(update.createdAt)} - {update.stage}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No work progress updates recorded yet.</p>
+        )}
       </SectionCard>
     </div>
   );

@@ -16,7 +16,7 @@ import {
   getDashboardStatRows,
 } from "@/features/dashboard/services/dashboard-stats.service";
 import { formatDate } from "@/features/commercial/utils/format";
-import { customers } from "@/features/customers/services/customers.mock";
+import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 
 export function DashboardStatDetailPage({
   statKey,
@@ -29,14 +29,12 @@ export function DashboardStatDetailPage({
 }) {
   const [search, setSearch] = useState("");
   const definition = getDashboardStatDefinition(statKey);
+  const { data: customers = [], isLoading } = useCustomersQuery({
+    projectId: projectId === "all" ? undefined : projectId,
+  });
   const scopedCustomers = useMemo(
-    () =>
-      customers.filter((customer) => {
-        const projectMatch = projectId === "all" || customer.projectId === projectId;
-        const cityMatch = city === "all" || customer.city === city;
-        return projectMatch && cityMatch;
-      }),
-    [city, projectId],
+    () => customers.filter((customer) => city === "all" || customer.city === city),
+    [city, customers],
   );
   const rows = useMemo(() => getDashboardStatRows(statKey, scopedCustomers), [scopedCustomers, statKey]);
   const filteredRows = useMemo(() => {
@@ -79,7 +77,7 @@ export function DashboardStatDetailPage({
       <ExcelDataGrid
         columns={columns}
         rows={filteredRows}
-        emptyTitle="No matching records found"
+        emptyTitle={isLoading ? "Loading..." : "No matching records found"}
         maxHeightClassName="max-h-[68vh]"
       />
     </PageShell>

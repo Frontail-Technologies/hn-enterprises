@@ -1,26 +1,10 @@
-import {
-  ClipboardTextIcon,
-  CurrencyInrIcon,
-  FileTextIcon,
-  FolderOpenIcon,
-  GaugeIcon,
-  ReceiptIcon,
-  UsersThreeIcon,
-} from "@phosphor-icons/react";
+import { ClipboardTextIcon, CurrencyInrIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import type { ElementType } from "react";
-import { payments } from "@/features/commercial/data/payments.data";
-import { customerActivity, customers } from "@/features/customers/services/customers.mock";
-import { projectActivity } from "@/features/projects/services/projects.mock";
+import type { Payment } from "@/features/commercial/types/payment.types";
+import type { DprRecord } from "@/features/planning/types/planning.types";
+import type { WorkProgressUpdate } from "@/features/work-progress/types/work-progress.types";
 
-export type ActivityType =
-  | "Customer"
-  | "Project"
-  | "Survey"
-  | "DPR"
-  | "Billing"
-  | "Inventory"
-  | "Attendance"
-  | "Document";
+export type ActivityType = "Work" | "Survey" | "DPR" | "Billing";
 
 export type DashboardActivity = {
   id: string;
@@ -38,174 +22,81 @@ export type DashboardActivity = {
 
 export type ActivityFilters = {
   search: string;
-  type: string;
-  supervisor: string;
-  project: string;
-  sort: string;
+  sort: "newest" | "oldest";
 };
 
-export const activityTypeOptions = [
-  "Customer",
-  "Project",
-  "Survey",
-  "DPR",
-  "Billing",
-  "Inventory",
-  "Attendance",
-  "Document",
-].map((type) => ({ label: type, value: type }));
+export function buildActivities(data: {
+  workProgress: WorkProgressUpdate[];
+  dprRecords: DprRecord[];
+  payments: Payment[];
+}): DashboardActivity[] {
+  const workRows = data.workProgress.map<DashboardActivity>((update) => ({
+    id: `work-${update.id}`,
+    title: `${update.stage} : ${update.status}`,
+    description: update.remarks || update.nextRequiredAction || "Work progress updated",
+    type: update.stage === "Survey" ? "Survey" : "Work",
+    actor: update.supervisor?.name ?? "-",
+    supervisor: update.supervisor?.name ?? "-",
+    project: update.project?.name ?? "-",
+    site: update.site?.name ?? "-",
+    relatedRecord: update.customer?.trBpNumber ?? "-",
+    dateTime: update.createdAt,
+    icon: UsersThreeIcon,
+  }));
 
-export function getActivityRows(filters: ActivityFilters) {
+  const dprRows = data.dprRecords.map<DashboardActivity>((record) => ({
+    id: `dpr-${record.id}`,
+    title: `DPR ${record.status}`,
+    description: record.remarks || "Daily progress report",
+    type: "DPR",
+    actor: record.supervisorName,
+    supervisor: record.supervisorName,
+    project: "-",
+    site: record.siteLabel,
+    relatedRecord: record.id.slice(0, 8).toUpperCase(),
+    dateTime: record.date,
+    icon: ClipboardTextIcon,
+  }));
+
+  const paymentRows = data.payments.map<DashboardActivity>((payment) => ({
+    id: `payment-${payment.id}`,
+    title: `${payment.category} ${payment.status.toLowerCase()}`,
+    description: payment.purpose || payment.remarks || "-",
+    type: "Billing",
+    actor: "Accounts",
+    supervisor: payment.paidTo,
+    project: "-",
+    site: "-",
+    relatedRecord: payment.id.slice(0, 8).toUpperCase(),
+    dateTime: payment.paymentDate,
+    icon: CurrencyInrIcon,
+  }));
+
+  return [...workRows, ...dprRows, ...paymentRows];
+}
+
+export function getActivityRows(activities: DashboardActivity[], filters: ActivityFilters) {
   const search = filters.search.trim().toLowerCase();
 
-  return buildActivities()
+  return activities
     .filter((activity) => {
-      const searchMatch =
-        !search ||
-        [
-          activity.title,
-          activity.description,
-          activity.actor,
-          activity.supervisor,
-          activity.project,
-          activity.site,
-          activity.relatedRecord,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(search);
-      const typeMatch = filters.type === "all" || activity.type === filters.type;
-      const supervisorMatch =
-        filters.supervisor === "all" || activity.supervisor === filters.supervisor;
-      const projectMatch = filters.project === "all" || activity.project === filters.project;
-
-      return searchMatch && typeMatch && supervisorMatch && projectMatch;
+      if (!search) return true;
+      return [
+        activity.title,
+        activity.description,
+        activity.actor,
+        activity.supervisor,
+        activity.project,
+        activity.site,
+        activity.relatedRecord,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
     })
     .sort((first, second) => {
       const a = new Date(first.dateTime).getTime();
       const b = new Date(second.dateTime).getTime();
       return filters.sort === "oldest" ? a - b : b - a;
     });
-}
-
-export function getActivityFilterOptions() {
-  const activities = buildActivities();
-
-  return {
-    supervisors: uniqueOptions(
-      activities.map((activity) => activity.supervisor).filter(Boolean),
-    ),
-    projects: uniqueOptions(activities.map((activity) => activity.project).filter(Boolean)),
-  };
-}
-
-function buildActivities(): DashboardActivity[] {
-  const customerRows = customerActivity.flatMap<DashboardActivity>((activity) =>
-    customers.slice(0, 2).map((customer, index) => ({
-      id: `customer-${activity.id}-${customer.id}`,
-      title: activity.title,
-      description: activity.description,
-      type: activity.title.toLowerCase().includes("survey") ? "Survey" : "Customer",
-      actor: activity.actor,
-      supervisor: customer.customerConnection.supervisorName,
-      project: customer.projectName,
-      site: customer.siteArea,
-      relatedRecord: index === 0 ? activity.relatedRecord : customer.customerConnection.trBpNo,
-      dateTime: normalizeDateTime(activity.dateTime, index),
-      icon: UsersThreeIcon,
-    })),
-  );
-
-  const projectRows = projectActivity.map<DashboardActivity>((activity, index) => ({
-    id: `project-${activity.id}`,
-    title: activity.title,
-    description: activity.description,
-    type: activity.title.toLowerCase().includes("document") ? "Document" : "Project",
-    actor: activity.actor,
-    supervisor: activity.actor,
-    project: "Shyam Nagar CGD Project",
-    site: index === 1 ? "Shyam Nagar Block A" : "-",
-    relatedRecord: activity.relatedRecord,
-    dateTime: normalizeDateTime(activity.dateTime, index),
-    icon: activity.title.toLowerCase().includes("document") ? FileTextIcon : FolderOpenIcon,
-  }));
-
-  // DPR is now backed by a real API (see features/planning/services/planning.service.ts); this
-  // synchronous mock-data activity feed doesn't fetch it, so DPR rows are omitted here rather than
-  // fabricated. Wiring it to a live fetch is a separate change.
-  const dprRows: DashboardActivity[] = [];
-
-  const paymentRows = payments.map<DashboardActivity>((payment) => ({
-    id: `payment-${payment.id}`,
-    title: `${payment.category} ${payment.status.toLowerCase()}`,
-    description: `${payment.paidTo} - ${payment.projectSite}`,
-    type: "Billing",
-    actor: "Accounts",
-    supervisor: payment.paidTo,
-    project: payment.projectSite,
-    site: payment.projectSite,
-    relatedRecord: payment.id.toUpperCase(),
-    dateTime: `${payment.date} 16:30`,
-    icon: CurrencyInrIcon,
-  }));
-
-  const systemRows: DashboardActivity[] = [
-    {
-      id: "inventory-alert-mat-002",
-      title: "Material stock alert",
-      description: "Brass Regulator reached reorder level.",
-      type: "Inventory",
-      actor: "System",
-      supervisor: "Store Admin",
-      project: "Shyam Nagar CGD Project",
-      site: "Shyam Nagar Block B",
-      relatedRecord: "MAT-002",
-      dateTime: "2025-02-18 11:15",
-      icon: GaugeIcon,
-    },
-    {
-      id: "attendance-late-st-1",
-      title: "Late attendance marked",
-      description: "Amit Rathore checked in after scheduled time.",
-      type: "Attendance",
-      actor: "Amit Rathore",
-      supervisor: "Amit Rathore",
-      project: "Shyam Nagar CGD Project",
-      site: "Shyam Nagar Block B",
-      relatedRecord: "ATT-002",
-      dateTime: "2026-07-02 10:05",
-      icon: ClipboardTextIcon,
-    },
-    {
-      id: "bill-overdue-003",
-      title: "Bill overdue",
-      description: "Commissioning bill has pending amount.",
-      type: "Billing",
-      actor: "Accounts",
-      supervisor: "Neha Verma",
-      project: "Green City Phase 1",
-      site: "Green City Township",
-      relatedRecord: "BILL-2025-003",
-      dateTime: "2025-02-18 09:45",
-      icon: ReceiptIcon,
-    },
-  ];
-
-  return [...customerRows, ...projectRows, ...dprRows, ...paymentRows, ...systemRows];
-}
-
-function uniqueOptions(values: string[]) {
-  return Array.from(new Set(values))
-    .sort((a, b) => a.localeCompare(b))
-    .map((value) => ({ label: value, value }));
-}
-
-function normalizeDateTime(value: string, offsetDays: number) {
-  const normalized = value.replace(" ", "T");
-  const date = new Date(normalized);
-
-  if (Number.isNaN(date.getTime())) return value;
-  date.setDate(date.getDate() + offsetDays);
-
-  return date.toISOString().slice(0, 16).replace("T", " ");
 }

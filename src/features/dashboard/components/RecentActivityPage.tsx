@@ -13,22 +13,31 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import {
+  buildActivities,
   getActivityRows,
   type ActivityFilters,
   type DashboardActivity,
 } from "@/features/dashboard/services/activity.service";
+import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
+import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
+import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
 
 const initialFilters: ActivityFilters = {
   search: "",
-  type: "all",
-  supervisor: "all",
-  project: "all",
   sort: "newest",
 };
 
 export function RecentActivityPage() {
   const [filters, setFilters] = useState<ActivityFilters>(initialFilters);
-  const rows = useMemo(() => getActivityRows(filters), [filters]);
+  const { data: workProgress = [], isLoading: workProgressLoading } = useWorkProgressListQuery({ limit: 100 });
+  const { data: dprRecords = [], isLoading: dprLoading } = useDprRecordsQuery({});
+  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
+  const isLoading = workProgressLoading || dprLoading || paymentsLoading;
+  const activities = useMemo(
+    () => buildActivities({ workProgress, dprRecords, payments }),
+    [workProgress, dprRecords, payments],
+  );
+  const rows = useMemo(() => getActivityRows(activities, filters), [activities, filters]);
 
   return (
     <PageShell title="Recent Activity">
@@ -70,7 +79,7 @@ export function RecentActivityPage() {
         <ExcelDataGrid
           columns={activityColumns}
           rows={rows}
-          emptyTitle="No activity found"
+          emptyTitle={isLoading ? "Loading..." : "No activity found"}
           maxHeightClassName="h-[calc(100vh-170px)] max-h-none"
         />
       </div>

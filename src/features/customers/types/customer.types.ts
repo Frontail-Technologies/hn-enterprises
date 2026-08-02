@@ -261,15 +261,6 @@ export type CustomerDocument = {
   status: StatusValue;
 };
 
-export type CustomerActivity = {
-  id: string;
-  title: string;
-  description: string;
-  actor: string;
-  dateTime: string;
-  relatedRecord: string;
-};
-
 export type ImportPreviewRow = {
   id: string;
   rowNumber: number;

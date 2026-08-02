@@ -6,13 +6,12 @@ import {
   emptyLmcPipelineWork,
   emptyMdpeFittings,
 } from "./customers.service";
-import type { Customer, CustomerActivity } from "../types/customer.types";
+import type { Customer } from "../types/customer.types";
 
 /**
- * Static placeholder data still consumed by dashboard aggregation (dashboard.selectors.ts,
- * activity.service.ts, dashboard-stats.service.ts, DashboardStatDetailPage.tsx, BillingPage.tsx,
- * report-templates.service.ts) until those features are wired to the real backend too - see
- * INTEGRATION_PLAN.md. The real customers screens use customers.service.ts's customersApi instead.
+ * Static placeholder data still consumed by report-templates.service.ts until that feature is
+ * wired to the real backend too - see INTEGRATION_PLAN.md. The real customers screens use
+ * customers.service.ts's customersApi instead.
  */
 export const customers: Customer[] = [
   {
@@ -198,25 +197,6 @@ export const customers: Customer[] = [
     },
     media: [],
     documents: [],
-  },
-];
-
-export const customerActivity: CustomerActivity[] = [
-  {
-    id: "act-1",
-    title: "Customer created",
-    description: "Customer master record was created.",
-    actor: "Demo Admin",
-    dateTime: "2025-01-24 10:15",
-    relatedRecord: "BP-100245",
-  },
-  {
-    id: "act-2",
-    title: "LMC updated",
-    description: "LMC laying and MDPE fitting quantities were updated.",
-    actor: "Ramesh Kumar",
-    dateTime: "2025-02-12 16:40",
-    relatedRecord: "LMC",
   },
 ];
 

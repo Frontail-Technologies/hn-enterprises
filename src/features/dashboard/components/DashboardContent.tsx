@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 import { WarningIcon } from "@phosphor-icons/react";
 import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
 import { MetricCard } from "@/components/shared/MetricCard";
@@ -10,14 +11,26 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
 import {
+  type ActivityItem,
   type DashboardMetricPeriod,
   type DashboardPeriod,
 } from "@/features/dashboard/data/dashboard.data";
+import {
+  buildActivities,
+} from "@/features/dashboard/services/activity.service";
 import {
   getAdminDashboardData,
   type AttendanceSummaryRow,
   type DashboardAlert,
 } from "@/features/dashboard/services/dashboard.selectors";
+import { useAllProjectSitesFullQuery } from "@/features/commercial/hooks/useAllProjectSites";
+import { useBillsQuery } from "@/features/commercial/hooks/useBills";
+import { useMaterialsQuery } from "@/features/commercial/hooks/useMaterials";
+import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
+import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
 
 export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
@@ -33,15 +46,47 @@ export function DashboardContent() {
         ? "this-month"
         : period;
 
+  const { data: customers = [] } = useCustomersQuery();
+  const { data: projects = [] } = useProjectsQuery();
+  const { data: projectSites = [] } = useAllProjectSitesFullQuery();
+  const { data: bills = [] } = useBillsQuery();
+  const { data: payments = [] } = usePaymentsQuery();
+  const { data: materials = [] } = useMaterialsQuery();
+  const { data: dprRecords = [] } = useDprRecordsQuery({});
+  const { data: workProgress = [] } = useWorkProgressListQuery({ limit: 20 });
+
+  const projectOptions = useMemo(
+    () => projects.map((project) => ({ label: `${project.code} - ${project.name}`, value: project.id })),
+    [projects],
+  );
+  const cityOptions = useMemo(
+    () =>
+      Array.from(new Set(projects.map((project) => project.city))).map((cityName) => ({
+        label: cityName,
+        value: cityName,
+      })),
+    [projects],
+  );
+
   const dashboard = useMemo(
     () =>
-      getAdminDashboardData({
-        projectId,
-        city,
-        period: metricPeriod,
-      }),
-    [city, metricPeriod, projectId],
+      getAdminDashboardData(
+        { projectId, city, period: metricPeriod },
+        { customers, projects, projectSites, bills, payments, materials, dprRecords },
+      ),
+    [city, customers, dprRecords, materials, metricPeriod, payments, bills, projectId, projectSites, projects],
   );
+
+  const activityItems = useMemo(() => {
+    return buildActivities({ workProgress, dprRecords, payments })
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+      .slice(0, 6)
+      .map((activity) => ({
+        title: activity.title,
+        time: formatRelativeTime(activity.dateTime),
+        icon: activity.icon,
+      }));
+  }, [dprRecords, payments, workProgress]);
 
   return (
     <PageShell
@@ -59,6 +104,8 @@ export function DashboardContent() {
           city={city}
           onProjectChange={setProjectId}
           onCityChange={setCity}
+          projectOptions={projectOptions}
+          cityOptions={cityOptions}
         />
       }
       contentClassName="space-y-5"
@@ -98,10 +145,16 @@ export function DashboardContent() {
 
       <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
         <AttendanceSummary rows={dashboard.attendanceRows} />
-        <AlertsAndActivity alerts={dashboard.alerts} />
+        <AlertsAndActivity alerts={dashboard.alerts} activityItems={activityItems} />
       </section>
     </PageShell>
   );
+}
+
+function formatRelativeTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${formatDistanceToNow(date)} ago`;
 }
 
 function AttendanceSummary({ rows }: { rows: AttendanceSummaryRow[] }) {
@@ -125,7 +178,13 @@ function AttendanceSummary({ rows }: { rows: AttendanceSummaryRow[] }) {
   );
 }
 
-function AlertsAndActivity({ alerts }: { alerts: DashboardAlert[] }) {
+function AlertsAndActivity({
+  alerts,
+  activityItems,
+}: {
+  alerts: DashboardAlert[];
+  activityItems: ActivityItem[];
+}) {
   return (
     <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-[0.8fr_1.2fr]">
       <SectionCard title="Alerts">
@@ -154,7 +213,7 @@ function AlertsAndActivity({ alerts }: { alerts: DashboardAlert[] }) {
           )}
         </div>
       </SectionCard>
-      <RecentActivityCard />
+      <RecentActivityCard items={activityItems} />
     </div>
   );
 }

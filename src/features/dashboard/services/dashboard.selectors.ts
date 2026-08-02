@@ -8,11 +8,12 @@ import {
   UsersThreeIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import { bills } from "@/features/commercial/data/bills.data";
-import { materials } from "@/features/commercial/data/materials.data";
-import { payments } from "@/features/commercial/data/payments.data";
-import { customers } from "@/features/customers/services/customers.mock";
-import { projects, projectSites } from "@/features/projects/services/projects.mock";
+import type { Bill } from "@/features/commercial/types/bill.types";
+import type { Material } from "@/features/commercial/types/material.types";
+import type { Payment } from "@/features/commercial/types/payment.types";
+import type { Customer } from "@/features/customers/types/customer.types";
+import type { DprRecord } from "@/features/planning/types/planning.types";
+import type { Project, ProjectSite } from "@/features/projects/types/project.types";
 import type {
   DashboardMetric,
   DashboardMetricPeriod,
@@ -32,6 +33,16 @@ export type DashboardScope = {
   period: DashboardMetricPeriod;
 };
 
+export type DashboardData = {
+  customers: Customer[];
+  projects: Project[];
+  projectSites: ProjectSite[];
+  bills: Bill[];
+  payments: Payment[];
+  materials: Material[];
+  dprRecords: DprRecord[];
+};
+
 export type AttendanceSummaryRow = {
   id: string;
   label: string;
@@ -46,56 +57,34 @@ export type DashboardAlert = {
   tone: "warning" | "danger" | "info";
 };
 
-export const dashboardProjectOptions = projects.map((project) => ({
-  label: `${project.code} - ${project.name}`,
-  value: project.id,
-}));
+export function getAdminDashboardData(scope: DashboardScope, data: DashboardData) {
+  const scopedProjects = getScopedProjects(data.projects, scope);
+  const scopedCustomers = getScopedCustomers(data.customers, scope);
+  const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
+  const scopedBills = data.bills.filter((bill) => scopedCustomerIds.has(bill.customerId));
+  const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
 
-export const dashboardCityOptions = Array.from(
-  new Set(projects.map((project) => project.city)),
-).map((city) => ({ label: city, value: city }));
-
-export function getAdminDashboardData(scope: DashboardScope) {
-  const scopedProjects = getScopedProjects(scope);
-  const scopedCustomers = getScopedCustomers(scope);
-  const scopedProjectNames = new Set(scopedProjects.map((project) => project.name));
-  const scopedBills = bills.filter(
-    (bill) =>
-      scopedProjectNames.has(bill.projectCustomer) ||
-      scopedCustomers.some(
-        (customer) =>
-          customer.id === bill.customerId ||
-          customer.customerConnection.customerName === bill.projectCustomer,
-      ),
-  );
-  const visibleBills = scopedBills.length ? scopedBills : bills;
-  const visiblePayments = payments.filter((payment) =>
-    scope.city === "all"
-      ? true
-      : payment.projectSite.toLowerCase().includes(scope.city.toLowerCase()),
-  );
   const metrics = buildAdminMetrics({
     projectsCount: scopedProjects.length,
-    activeSites: getActiveSiteCount(scope),
+    activeSites: getActiveSiteCount(data.projectSites, scope),
     customers: scopedCustomers,
-    bills: visibleBills,
-    payments: visiblePayments.length ? visiblePayments : payments,
-    periodFactor: getPeriodFactor(scope.period),
+    bills: scopedBills,
+    payments: scopedPayments,
+    materials: data.materials,
+    dprRecords: data.dprRecords,
+    period: scope.period,
   });
-  const workflowMetrics = buildWorkflowMetrics({
-    customers: scopedCustomers,
-    scope,
-  });
+  const workflowMetrics = buildWorkflowMetrics({ customers: scopedCustomers, scope });
 
   return {
     metrics,
     workflowMetrics,
     attendanceRows: buildAttendanceRows(),
-    alerts: buildAlerts(visibleBills, visiblePayments.length ? visiblePayments : payments, scopedCustomers),
+    alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, data.dprRecords),
   };
 }
 
-function getScopedProjects({ projectId, city }: DashboardScope) {
+function getScopedProjects(projects: Project[], { projectId, city }: DashboardScope) {
   return projects.filter((project) => {
     const projectMatch = projectId === "all" || project.id === projectId;
     const cityMatch = city === "all" || project.city === city;
@@ -103,7 +92,7 @@ function getScopedProjects({ projectId, city }: DashboardScope) {
   });
 }
 
-function getScopedCustomers({ projectId, city }: DashboardScope) {
+function getScopedCustomers(customers: Customer[], { projectId, city }: DashboardScope) {
   return customers.filter((customer) => {
     const projectMatch = projectId === "all" || customer.projectId === projectId;
     const cityMatch = city === "all" || customer.city === city;
@@ -111,55 +100,82 @@ function getScopedCustomers({ projectId, city }: DashboardScope) {
   });
 }
 
+function getPeriodRange(period: DashboardMetricPeriod) {
+  const now = new Date();
+  if (period === "today") {
+    return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to: now };
+  }
+  if (period === "this-year") {
+    return { from: new Date(now.getFullYear(), 0, 1), to: now };
+  }
+  return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+}
+
+function withinRange(value: string | undefined, range: { from: Date; to: Date }) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date >= range.from && date <= range.to;
+}
+
 function buildAdminMetrics({
   projectsCount,
   activeSites,
-  customers: scopedCustomers,
-  bills: scopedBills,
-  payments: scopedPayments,
-  periodFactor,
+  customers,
+  bills,
+  payments,
+  materials,
+  dprRecords,
+  period,
 }: {
   projectsCount: number;
   activeSites: number;
-  customers: typeof customers;
-  bills: typeof bills;
-  payments: typeof payments;
-  periodFactor: number;
+  customers: Customer[];
+  bills: Bill[];
+  payments: Payment[];
+  materials: Material[];
+  dprRecords: DprRecord[];
+  period: DashboardMetricPeriod;
 }): DashboardMetric[] {
-  const totalCustomers = scopedCustomers.length;
+  const range = getPeriodRange(period);
+  const totalCustomers = customers.length;
   const lowStockItems = materials.filter((material) =>
     ["Low Stock", "Out of Stock"].includes(material.status),
   ).length;
   const pendingApprovals =
-    scopedCustomers.filter((customer) =>
+    customers.filter((customer) =>
       ["Submitted", "In Review", "Sent Back"].includes(customer.survey?.approvalStatus ?? ""),
     ).length +
-    scopedPayments.filter((payment) => payment.status === "Submitted").length +
-    scopedBills.filter((bill) => bill.status === "Submitted").length;
-  const billingPending = scopedBills.reduce((sum, bill) => sum + bill.pendingAmount, 0);
-  const monthlyExpenses = scopedPayments
-    .filter((payment) => payment.status === "Approved")
+    payments.filter((payment) => payment.status === "Submitted").length +
+    bills.filter((bill) => bill.status === "Submitted").length;
+  // Billing/expenses are genuinely period-scoped (a bill/payment happens on a date); project and
+  // customer counts are current-state snapshots, not flow metrics, so they aren't scaled by period.
+  const billingPending = bills
+    .filter((bill) => withinRange(bill.billDate, range))
+    .reduce((sum, bill) => sum + bill.pendingAmount, 0);
+  const monthlyExpenses = payments
+    .filter((payment) => payment.status === "Approved" && withinRange(payment.paymentDate, range))
     .reduce((sum, payment) => sum + payment.amount, 0);
-  // DPR is now backed by a real API (see features/planning/); this synchronous mock-data selector
-  // doesn't fetch it, so this metric shows 0 rather than a fabricated count.
-  const dprPending = 0;
+  const dprPending = dprRecords.filter(
+    (record) => record.status !== "Approved" && withinRange(record.date, range),
+  ).length;
 
   return [
     {
       label: "Total Projects",
-      value: String(scaleCount(projectsCount, periodFactor)),
+      value: String(projectsCount),
       helperText: "Across selected scope",
       icon: FolderOpenIcon,
     },
     {
       label: "Active Sites",
-      value: String(scaleCount(activeSites, periodFactor)),
+      value: String(activeSites),
       helperText: "Field locations",
       icon: GaugeIcon,
     },
     {
       label: "Total Customers",
-      value: String(scaleCount(totalCustomers, periodFactor)),
+      value: String(totalCustomers),
       helperText: "Master records",
       icon: UsersThreeIcon,
     },
@@ -171,25 +187,25 @@ function buildAdminMetrics({
     },
     {
       label: "Pending Approvals",
-      value: String(scaleCount(pendingApprovals, periodFactor)),
+      value: String(pendingApprovals),
       helperText: "Submitted / sent back",
       icon: ClipboardTextIcon,
     },
     {
       label: "Billing Pending",
-      value: money(billingPending * periodFactor),
+      value: money(billingPending),
       helperText: "Receivable amount",
       icon: InvoiceIcon,
     },
     {
       label: "Monthly Expenses",
-      value: money(monthlyExpenses * periodFactor),
+      value: money(monthlyExpenses),
       helperText: "Approved expenses",
       icon: CurrencyInrIcon,
     },
     {
       label: "DPR Pending",
-      value: String(scaleCount(dprPending, periodFactor)),
+      value: String(dprPending),
       helperText: "Supervisor submissions",
       icon: CalendarCheckIcon,
     },
@@ -197,10 +213,10 @@ function buildAdminMetrics({
 }
 
 function buildWorkflowMetrics({
-  customers: scopedCustomers,
+  customers,
   scope,
 }: {
-  customers: typeof customers;
+  customers: Customer[];
   scope: DashboardScope;
 }): DashboardWorkflowMetric[] {
   const metricItems: Array<{
@@ -261,15 +277,15 @@ function buildWorkflowMetrics({
 
   return metricItems.map((metric) => ({
     ...metric,
-    value: getDashboardStatValue(metric.key, scopedCustomers),
+    value: getDashboardStatValue(metric.key, customers),
     href: `/dashboard/stats/${metric.key}?projectId=${scope.projectId}&city=${encodeURIComponent(scope.city)}`,
   }));
 }
 
 function buildAttendanceRows(): AttendanceSummaryRow[] {
   // Attendance is now backed by a real API (see features/management/services/attendance.service.ts);
-  // this dashboard tile still renders from the rest of this file's synchronous mock data, so it shows
-  // zeros here rather than fabricating counts. Wiring it to a live fetch is a separate change.
+  // this dashboard tile isn't wired to a live fetch yet, so it shows zeros here rather than
+  // fabricating counts. Wiring it to a live fetch is a separate change.
   return [
     { id: "present", label: "Present", value: 0, helper: "Marked on site" },
     { id: "late", label: "Late", value: 0, helper: "Late check-in" },
@@ -279,39 +295,36 @@ function buildAttendanceRows(): AttendanceSummaryRow[] {
 }
 
 function buildAlerts(
-  scopedBills: typeof bills,
-  scopedPayments: typeof payments,
-  scopedCustomers: typeof customers,
+  bills: Bill[],
+  payments: Payment[],
+  customers: Customer[],
+  materials: Material[],
+  dprRecords: DprRecord[],
 ): DashboardAlert[] {
-  const lowStock = materials.filter((material) =>
-    ["Low Stock", "Out of Stock"].includes(material.status),
-  );
-  const overdueBills = scopedBills.filter((bill) => bill.status === "Overdue");
-  const submittedPayments = scopedPayments.filter((payment) => payment.status === "Submitted");
-  const sentBackSurveys = scopedCustomers.filter(
-    (customer) => customer.survey?.approvalStatus === "Sent Back",
-  );
-  // DPR is now backed by a real API (see features/planning/); this synchronous mock-data selector
-  // doesn't fetch it, so no DPR alerts are fabricated here.
-  const submittedDpr: { id: string; siteAddress: string; photoCount: number }[] = [];
+  const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+  const lowStock = materials.filter((material) => ["Low Stock", "Out of Stock"].includes(material.status));
+  const overdueBills = bills.filter((bill) => bill.status === "Overdue");
+  const submittedPayments = payments.filter((payment) => payment.status === "Submitted");
+  const sentBackSurveys = customers.filter((customer) => customer.survey?.approvalStatus === "Sent Back");
+  const submittedDpr = dprRecords.filter((record) => record.status === "Submitted");
 
   return [
     ...lowStock.map<DashboardAlert>((material) => ({
       id: `stock-${material.id}`,
       title: `${material.name} needs stock attention`,
-      description: `${material.availableStock} ${material.unit} available at ${material.store}`,
+      description: `${material.currentBalance} ${material.unit} available (reorder at ${material.reorderLevel})`,
       tone: material.status === "Out of Stock" ? "danger" : "warning",
     })),
     ...overdueBills.map<DashboardAlert>((bill) => ({
       id: `bill-${bill.id}`,
       title: `${bill.billNumber} is overdue`,
-      description: `${bill.projectCustomer} has ${money(bill.pendingAmount)} pending`,
+      description: `${customerById.get(bill.customerId)?.customerConnection.customerName ?? "Customer"} has ${money(bill.pendingAmount)} pending`,
       tone: "danger",
     })),
     ...submittedPayments.map<DashboardAlert>((payment) => ({
       id: `payment-${payment.id}`,
       title: "Expense awaiting approval",
-      description: `${payment.submittedBy} submitted ${money(payment.amount)} for ${payment.site}`,
+      description: `${payment.paidTo} submitted ${money(payment.amount)} for ${payment.purpose || payment.category}`,
       tone: "warning",
     })),
     ...sentBackSurveys.map<DashboardAlert>((customer) => ({
@@ -323,28 +336,17 @@ function buildAlerts(
     ...submittedDpr.map<DashboardAlert>((record) => ({
       id: `dpr-${record.id}`,
       title: "DPR awaiting admin review",
-      description: `${record.photoCount} photos submitted for ${record.siteAddress}`,
+      description: `${record.evidence.length} photos submitted for ${record.siteLabel}`,
       tone: "info",
     })),
   ].slice(0, 6);
 }
 
-function getActiveSiteCount(scope: DashboardScope) {
+function getActiveSiteCount(projectSites: ProjectSite[], scope: DashboardScope) {
   return projectSites.filter((site) => {
     const cityMatch = scope.city === "all" || site.city === scope.city;
     return cityMatch && site.status !== "Not Started";
   }).length;
-}
-
-function getPeriodFactor(period: DashboardMetricPeriod) {
-  if (period === "today") return 0.2;
-  if (period === "this-year") return 3;
-  return 1;
-}
-
-function scaleCount(value: number, factor: number) {
-  if (!value) return 0;
-  return Math.max(1, Math.round(value * factor));
 }
 
 function money(value: number) {
