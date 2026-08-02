@@ -1,6 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
-import type { MasterSheetColumnValueType } from "@/features/management/masters.config";
-import { getActiveMasterSheetColumns } from "@/features/management/masters.config";
+import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/features/management/types/masters.types";
 import type {
   BillingCompletionStatus,
   CommissioningConversionDetails,
@@ -226,7 +225,7 @@ export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[]
   { key: "remark", label: "Remark", input: "textarea" },
 ];
 
-const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
+export const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
   { key: "reportNoGi", label: "Report No-GI", group: "Reports", width: 150, sticky: true },
   { key: "reportNoGc", label: "Report No-GC", group: "Reports", width: 150, sticky: true },
   { key: "reportNoConversion", label: "Report No-Conversion", group: "Reports", width: 180, sticky: true },
@@ -328,18 +327,22 @@ const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
   { key: "billingRemark", label: "Remark", group: "Billing", width: 220 },
 ];
 
-export const customerMasterSheetColumns: CustomerMasterSheetColumn[] = [
-  ...baseCustomerMasterSheetColumns,
-  ...getActiveMasterSheetColumns().map((column) => ({
-    key: column.key,
-    label: column.label,
-    group: column.group,
-    width: column.width,
-    valueType: column.valueType,
-    required: column.required,
-    dropdownOptions: column.dropdownOptions,
-  })),
-];
+export function buildCustomerMasterSheetColumns(
+  activeCustomFields: { key: string; label: string; group: string; width: number; valueType: MasterSheetColumnValueType; required: boolean; dropdownOptions: string[] }[],
+): CustomerMasterSheetColumn[] {
+  return [
+    ...baseCustomerMasterSheetColumns,
+    ...activeCustomFields.map((column) => ({
+      key: column.key,
+      label: column.label,
+      group: column.group,
+      width: column.width,
+      valueType: column.valueType,
+      required: column.required,
+      dropdownOptions: column.dropdownOptions,
+    })),
+  ];
+}
 
 export const emptyGiMeasurements: GiMeasurements = {
   tfToRegulator: "",

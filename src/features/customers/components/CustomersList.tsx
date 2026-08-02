@@ -15,27 +15,29 @@ import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGr
 import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
 import {
-  customerMasterSheetColumns,
+  buildCustomerMasterSheetColumns,
   getCustomerMasterSheetRows,
   type CustomerMasterSheetRow,
 } from "../services/customers.service";
 import { useCustomersQuery } from "../hooks/useCustomers";
+import { useCustomFieldsQuery } from "@/features/management/hooks/useMasters";
 
 export function CustomersList() {
   const router = useRouter();
   const [masterSheetSearch, setMasterSheetSearch] = useState("");
   const { data: customers = [], isLoading } = useCustomersQuery();
+  const { data: activeCustomFields = [] } = useCustomFieldsQuery("Active");
   const realCustomerIds = useMemo(() => new Set(customers.map((customer) => customer.id)), [customers]);
 
   const masterSheetRows = useMemo(() => getCustomerMasterSheetRows(customers), [customers]);
 
   const masterSheetColumns: ExcelColumn<CustomerMasterSheetRow>[] = useMemo(
     () =>
-      customerMasterSheetColumns.map((column) => ({
+      buildCustomerMasterSheetColumns(activeCustomFields).map((column) => ({
         ...column,
         getValue: (row) => row.values[column.key],
       })),
-    [],
+    [activeCustomFields],
   );
 
   const filteredMasterSheetRows = useMemo(() => {
