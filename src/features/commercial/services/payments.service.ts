@@ -106,7 +106,14 @@ function mapFormToBody(values: PaymentFormValues) {
     status: STATUS_TO_BACKEND[values.status],
     purpose: values.purpose || undefined,
     remarks: values.remarks || undefined,
-    evidence: values.evidence.length ? values.evidence : undefined,
+    evidence: values.evidence.length
+      ? values.evidence.map((item) => ({
+          id: item.id,
+          label: item.label,
+          fileName: item.fileName,
+          fileUrl: item.fileUrl,
+        }))
+      : undefined,
   };
 }
 

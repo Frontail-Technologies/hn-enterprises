@@ -72,7 +72,7 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
     payments: scopedPayments,
     materials: data.materials,
     dprRecords: data.dprRecords,
-    period: scope.period,
+    scope,
   });
   const workflowMetrics = buildWorkflowMetrics({ customers: scopedCustomers, scope });
 
@@ -84,7 +84,10 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
   };
 }
 
-function getScopedProjects(projects: Project[], { projectId, city }: DashboardScope) {
+export function getScopedProjects(
+  projects: Project[],
+  { projectId, city }: Pick<DashboardScope, "projectId" | "city">,
+) {
   return projects.filter((project) => {
     const projectMatch = projectId === "all" || project.id === projectId;
     const cityMatch = city === "all" || project.city === city;
@@ -100,7 +103,7 @@ function getScopedCustomers(customers: Customer[], { projectId, city }: Dashboar
   });
 }
 
-function getPeriodRange(period: DashboardMetricPeriod) {
+export function getPeriodRange(period: DashboardMetricPeriod) {
   const now = new Date();
   if (period === "today") {
     return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to: now };
@@ -111,7 +114,7 @@ function getPeriodRange(period: DashboardMetricPeriod) {
   return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
 }
 
-function withinRange(value: string | undefined, range: { from: Date; to: Date }) {
+export function withinRange(value: string | undefined, range: { from: Date; to: Date }) {
   if (!value) return false;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return false;
@@ -126,7 +129,7 @@ function buildAdminMetrics({
   payments,
   materials,
   dprRecords,
-  period,
+  scope,
 }: {
   projectsCount: number;
   activeSites: number;
@@ -135,9 +138,11 @@ function buildAdminMetrics({
   payments: Payment[];
   materials: Material[];
   dprRecords: DprRecord[];
-  period: DashboardMetricPeriod;
+  scope: DashboardScope;
 }): DashboardMetric[] {
-  const range = getPeriodRange(period);
+  const range = getPeriodRange(scope.period);
+  const scopeQuery = `projectId=${encodeURIComponent(scope.projectId)}&city=${encodeURIComponent(scope.city)}`;
+  const periodQuery = `${scopeQuery}&period=${encodeURIComponent(scope.period)}`;
   const totalCustomers = customers.length;
   const lowStockItems = materials.filter((material) =>
     ["Low Stock", "Out of Stock"].includes(material.status),
@@ -166,48 +171,56 @@ function buildAdminMetrics({
       value: String(projectsCount),
       helperText: "Across selected scope",
       icon: FolderOpenIcon,
+      href: `/dashboard/summary/total-projects?${scopeQuery}`,
     },
     {
       label: "Active Sites",
       value: String(activeSites),
       helperText: "Field locations",
       icon: GaugeIcon,
+      href: `/dashboard/summary/active-sites?${scopeQuery}`,
     },
     {
       label: "Total Customers",
       value: String(totalCustomers),
       helperText: "Master records",
       icon: UsersThreeIcon,
+      href: `/dashboard/stats/total-customers?${scopeQuery}`,
     },
     {
       label: "Stock Alerts",
       value: String(lowStockItems),
       helperText: "Low / out of stock",
       icon: WarningIcon,
+      href: `/dashboard/summary/stock-alerts?${scopeQuery}`,
     },
     {
       label: "Pending Approvals",
       value: String(pendingApprovals),
       helperText: "Submitted / sent back",
       icon: ClipboardTextIcon,
+      href: `/dashboard/summary/pending-approvals?${scopeQuery}`,
     },
     {
       label: "Billing Pending",
       value: money(billingPending),
       helperText: "Receivable amount",
       icon: InvoiceIcon,
+      href: `/dashboard/summary/billing-pending?${periodQuery}`,
     },
     {
       label: "Monthly Expenses",
       value: money(monthlyExpenses),
       helperText: "Approved expenses",
       icon: CurrencyInrIcon,
+      href: `/dashboard/summary/monthly-expenses?${periodQuery}`,
     },
     {
       label: "DPR Pending",
       value: String(dprPending),
       helperText: "Supervisor submissions",
       icon: CalendarCheckIcon,
+      href: `/dashboard/summary/dpr-pending?${periodQuery}`,
     },
   ];
 }
@@ -342,11 +355,15 @@ function buildAlerts(
   ].slice(0, 6);
 }
 
-function getActiveSiteCount(projectSites: ProjectSite[], scope: DashboardScope) {
+export function getActiveSites(projectSites: ProjectSite[], { city }: Pick<DashboardScope, "city">) {
   return projectSites.filter((site) => {
-    const cityMatch = scope.city === "all" || site.city === scope.city;
+    const cityMatch = city === "all" || site.city === city;
     return cityMatch && site.status !== "Not Started";
-  }).length;
+  });
+}
+
+function getActiveSiteCount(projectSites: ProjectSite[], scope: DashboardScope) {
+  return getActiveSites(projectSites, scope).length;
 }
 
 function money(value: number) {

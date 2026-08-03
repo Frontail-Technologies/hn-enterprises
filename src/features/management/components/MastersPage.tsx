@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -65,9 +66,9 @@ export function MastersPage() {
   const isHolidayTab = activeTab === "Holidays";
   const category = !isColumnTab && !isHolidayTab ? (activeTab as MasterValueCategory) : undefined;
 
-  const { data: values = [] } = useMasterValuesQuery(category ?? "Payment Types", undefined);
-  const { data: customFields = [] } = useCustomFieldsQuery();
-  const { data: holidays = [] } = useHolidaysQuery();
+  const { data: values = [], isLoading: valuesLoading } = useMasterValuesQuery(category ?? "Payment Types", undefined);
+  const { data: customFields = [], isLoading: customFieldsLoading } = useCustomFieldsQuery();
+  const { data: holidays = [], isLoading: holidaysLoading } = useHolidaysQuery();
 
   const valueData = useMemo(() => {
     if (!category) return [];
@@ -92,6 +93,36 @@ export function MastersPage() {
     const query = search.toLowerCase();
     return holidays.filter((row) => !query || row.name.toLowerCase().includes(query) || row.type.toLowerCase().includes(query));
   }, [holidays, search]);
+
+  const tableLoading = isColumnTab ? customFieldsLoading : isHolidayTab ? holidaysLoading : valuesLoading;
+
+  const valueExportColumns: ExportColumn<MasterValue>[] = [
+    { label: "Value", getValue: (row) => row.value },
+    { label: "Description", getValue: (row) => row.description },
+    { label: "Status", getValue: (row) => row.status },
+  ];
+
+  const columnExportColumns: ExportColumn<CustomField>[] = [
+    { label: "Column Label", getValue: (row) => row.label },
+    { label: "Group", getValue: (row) => row.group },
+    { label: "Value Type", getValue: (row) => row.valueType },
+    { label: "Options", getValue: (row) => (row.valueType === "Dropdown" ? row.dropdownOptions.join(", ") : "-") },
+    { label: "Required", getValue: (row) => (row.required ? "Yes" : "No") },
+    { label: "Status", getValue: (row) => row.status },
+  ];
+
+  const holidayExportColumns: ExportColumn<Holiday>[] = [
+    { label: "Holiday Name", getValue: (row) => row.name },
+    { label: "Date", getValue: (row) => row.date },
+    { label: "Type", getValue: (row) => row.type },
+    { label: "Status", getValue: (row) => row.status },
+  ];
+
+  function handleExport() {
+    if (isColumnTab) void exportRowsToExcel("master-sheet-columns.xlsx", columnExportColumns, columnData);
+    else if (isHolidayTab) void exportRowsToExcel("holidays.xlsx", holidayExportColumns, holidayData);
+    else void exportRowsToExcel(`${activeTab.toLowerCase().replace(/\s+/g, "-")}.xlsx`, valueExportColumns, valueData);
+  }
 
   const valueColumns: ColumnDef<MasterValue>[] = [
     { key: "value", header: "Value", render: (row) => <span className="font-semibold text-foreground">{row.value}</span> },
@@ -148,15 +179,30 @@ export function MastersPage() {
         />
       }
       actions={
-        isColumnTab ? (
-          <CustomFieldDrawer />
-        ) : isHolidayTab ? (
-          <HolidayDrawer />
-        ) : category ? (
-          <MasterValueDrawer category={category} />
-        ) : null
+        <>
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={handleExport}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+          {isColumnTab ? (
+            <CustomFieldDrawer />
+          ) : isHolidayTab ? (
+            <HolidayDrawer />
+          ) : category ? (
+            <MasterValueDrawer category={category} />
+          ) : null}
+        </>
       }
     >
+      {activeTab === "Material Categories" ? (
+        <div className="rounded-sm border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          Material categories are only groups like GI Pipe, MDPE Pipe, Valve, Tools. Actual stock items are added from Inventory & Material using Add Material.
+        </div>
+      ) : null}
       <div className="max-w-sm">
         <Input
           value={search}
@@ -167,11 +213,11 @@ export function MastersPage() {
         />
       </div>
       {isColumnTab ? (
-        <PaginatedDataTable data={columnData} columns={columnColumns} />
+        <PaginatedDataTable data={columnData} columns={columnColumns} isLoading={tableLoading} />
       ) : isHolidayTab ? (
-        <PaginatedDataTable data={holidayData} columns={holidayColumns} />
+        <PaginatedDataTable data={holidayData} columns={holidayColumns} isLoading={tableLoading} />
       ) : (
-        <PaginatedDataTable data={valueData} columns={valueColumns} />
+        <PaginatedDataTable data={valueData} columns={valueColumns} isLoading={tableLoading} />
       )}
     </PageShell>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon, WarningIcon, EyeIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon, WarningIcon, EyeIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DatePicker } from "@/components/shared/DatePicker";
@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { exportRowsToExcel } from "@/lib/export-excel";
+import { resolveFileUrl } from "@/lib/upload";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,7 @@ import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
 import { useCreatePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentMode, PaymentStatus } from "../types/payment.types";
 import { formatDate, money, sum } from "../utils/format";
+import { flushImageUploads, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { ImageProofField } from "./shared/ImageProofField";
 import { StatCardRow, SummaryValue } from "./shared/StatCards";
 
@@ -45,7 +48,7 @@ const statuses: PaymentStatus[] = ["Draft", "Submitted", "Approved", "Rejected"]
 
 export function PaymentsExpensesPage() {
   const [active, setActive] = useState<PaymentCategory>(categories[0]);
-  const { data: payments = [] } = usePaymentsQuery();
+  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: sites = [] } = useAllProjectSitesQuery();
   const { data: customers = [] } = useCustomersQuery();
@@ -109,7 +112,25 @@ export function PaymentsExpensesPage() {
       <PageHeader
         title="Payments & Expenses"
         subtitle="Manage field payments, rent, material expenses and approvals."
-        actions={<PaymentDrawer defaultCategory={active} />}
+        actions={
+          <>
+            <button
+              type="button"
+              className={buttonVariants({ variant: "outline", size: "default" })}
+              onClick={() =>
+                void exportRowsToExcel(
+                  `${active.toLowerCase().replace(/\s+/g, "-")}.xlsx`,
+                  columns.filter((column) => column.key !== "actions"),
+                  data,
+                )
+              }
+            >
+              <DownloadSimpleIcon size={15} />
+              Export Excel
+            </button>
+            <PaymentDrawer defaultCategory={active} />
+          </>
+        }
       />
       <StatCardRow>
         <SummaryValue label="Approved This Month" value={money(monthlyTotal)} icon={<ReceiptIcon size={17} />} />
@@ -126,15 +147,16 @@ export function PaymentsExpensesPage() {
         />
       </StatCardRow>
       <PaymentTabNav active={active} onChange={setActive} />
-      <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" />
+      <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" isLoading={paymentsLoading} />
     </div>
   );
 }
 
 function PaymentActions({ payment }: { payment: Payment }) {
+  const href = resolveFileUrl(payment.evidence[0]?.fileUrl);
   return (
     <div className="flex items-center gap-1">
-      <ActionButton label="View" icon={<EyeIcon size={15} />} />
+      <ActionButton label="View" icon={<EyeIcon size={15} />} href={href} disabled={!href} />
       <PaymentDrawer payment={payment} iconOnly />
     </div>
   );
@@ -215,10 +237,12 @@ function PaymentDrawer({
     }
     setSaveError("");
     try {
+      const evidence = await flushImageUploads(values.evidence as ImagePreviewItem[], "expenses");
+      const payload = { ...values, evidence: evidence as PaymentFormValues["evidence"] };
       if (payment) {
-        await updatePayment.mutateAsync(values);
+        await updatePayment.mutateAsync(payload);
       } else {
-        await createPayment.mutateAsync(values);
+        await createPayment.mutateAsync(payload);
       }
       setOpen(false);
     } catch (error) {

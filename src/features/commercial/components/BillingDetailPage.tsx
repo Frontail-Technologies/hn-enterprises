@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { exportGridToExcel, type GridCell } from "@/lib/export-excel";
 import { useCustomerQuery } from "@/features/customers/hooks/useCustomers";
 import { useBillPaymentsQuery, useBillQuery } from "../hooks/useBills";
 import type { BillPayment } from "../types/bill.types";
@@ -14,6 +15,7 @@ import { PaymentDrawer } from "./billing/PaymentDrawer";
 import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
 import { DetailSummaryCard } from "./shared/DetailSummaryCard";
 import { Panel } from "./shared/Panel";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 export function BillingDetailPage({ id }: { id: string }) {
   const { data: bill, isLoading, isError } = useBillQuery(id);
@@ -21,7 +23,7 @@ export function BillingDetailPage({ id }: { id: string }) {
   const { data: customer } = useCustomerQuery(bill?.customerId ?? "");
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading bill...</p>;
+    return <PageLoading />;
   }
 
   if (isError || !bill) {
@@ -38,6 +40,28 @@ export function BillingDetailPage({ id }: { id: string }) {
     { key: "mode", header: "Mode" },
     { key: "remarks", header: "Remarks" },
   ];
+
+  function handleDownloadInvoice() {
+    if (!bill) return;
+    const bold = (value: string | number): GridCell => ({ value, bold: true });
+    const grid: GridCell[][] = [
+      [bold("INVOICE")],
+      [bold("Bill Number"), bill.billNumber, bold("Bill Date"), formatDate(bill.billDate)],
+      [bold("Customer"), customer?.customerConnection.customerName ?? "-", bold("Billing Stage"), bill.stage],
+      [bold("Due Date"), formatDate(bill.dueDate), bold("Status"), bill.status],
+      [bold("Total Amount"), money(bill.totalAmount), bold("Tax"), money(bill.tax)],
+      [bold("Paid Amount"), money(bill.paidAmount), bold("Pending Amount"), money(bill.pendingAmount)],
+      [],
+      [bold("Date"), bold("Amount"), bold("Mode"), bold("Remarks")],
+      ...payments.map((payment) => [
+        formatDate(payment.paymentDate),
+        money(payment.amount),
+        payment.mode,
+        payment.remarks || "-",
+      ]),
+    ];
+    void exportGridToExcel(`invoice-${bill.billNumber}.xlsx`, grid);
+  }
 
   return (
     <div className="space-y-5">
@@ -111,7 +135,7 @@ export function BillingDetailPage({ id }: { id: string }) {
         actions={
           <div className="flex items-center gap-2">
             <PaymentDrawer billId={bill.id} />
-            <Button type="button" variant="outline" size="sm">
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadInvoice}>
               <DownloadSimpleIcon size={14} />
               Download Invoice
             </Button>

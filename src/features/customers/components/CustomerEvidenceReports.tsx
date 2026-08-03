@@ -33,7 +33,12 @@ import { FormField } from "@/components/shared/FormField";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
-import { uploadFile } from "@/lib/upload";
+import { resolveFileUrl } from "@/lib/upload";
+import {
+  flushImageUploads,
+  ImageUploadPreview,
+  type ImagePreviewItem,
+} from "@/components/shared/ImageUploadPreview";
 import {
   reportTemplates,
   resolveReportTemplateDataFromCustomer,
@@ -51,23 +56,23 @@ import type {
 } from "../types/customer.types";
 
 export function CustomerEvidencePanel({
-  customerId,
   survey,
   lmcPipelineWork,
   documents,
   editable = false,
   onDocumentsChange,
+  customerId,
 }: {
-  customerId?: string;
   survey?: CustomerSurvey;
   lmcPipelineWork: LmcPipelineWork;
   documents: CustomerDocument[];
   editable?: boolean;
   onDocumentsChange?: (documents: CustomerDocument[]) => void;
+  customerId?: string;
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const surveyPhotos = (survey?.photos ?? []).map((photo) => ({
+  const surveyPhotos = (survey?.evidence ?? []).map((photo) => ({
     id: photo.id,
     title: photo.label,
     caption: photo.caption,
@@ -110,11 +115,11 @@ export function CustomerEvidencePanel({
     <div className="space-y-3">
       {editable && onDocumentsChange ? (
         <CustomerEvidenceUpload
-          customerId={customerId}
           open={uploadOpen}
           onOpenChange={setUploadOpen}
           documents={documents}
           onDocumentsChange={onDocumentsChange}
+          customerId={customerId}
         />
       ) : null}
       <MediaSection title="Survey Photos" items={surveyPhotos} />
@@ -138,75 +143,66 @@ const customerEvidenceCategories = [
 ] as const;
 
 function CustomerEvidenceUpload({
-  customerId,
   open,
   onOpenChange,
   documents,
   onDocumentsChange,
+  customerId,
 }: {
-  customerId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   documents: CustomerDocument[];
   onDocumentsChange: (documents: CustomerDocument[]) => void;
+  customerId?: string;
 }) {
   const [category, setCategory] = useState<string>("LMC / Site Evidence");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [evidenceDate, setEvidenceDate] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
+  const [images, setImages] = useState<ImagePreviewItem[]>([]);
   const [remarks, setRemarks] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const resetForm = () => {
     setCategory("LMC / Site Evidence");
     setReferenceNumber("");
     setEvidenceDate("");
-    setFileName("");
-    setFileUrl("");
+    setImages([]);
     setRemarks("");
-    setUploadError("");
+    setSaveError("");
   };
 
-  const handleFileSelect = async (file: File | undefined) => {
-    if (!file) return;
-    setIsUploading(true);
-    setUploadError("");
+  const saveEvidence = async () => {
+    if (!images.length) return;
+    setSaveError("");
+    setIsSaving(true);
     try {
-      const uploaded = await uploadFile(file, "customers", customerId);
-      setFileName(uploaded.fileName);
-      setFileUrl(uploaded.url);
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Upload failed");
-      setFileName("");
-      setFileUrl("");
+      const uploaded = await flushImageUploads(images, "customers", customerId);
+      const today = new Date().toISOString().slice(0, 10);
+      const newDocuments: CustomerDocument[] = uploaded.map((image, index) => ({
+        id: `cust-evidence-${Date.now()}-${index}`,
+        type: category,
+        referenceNumber,
+        category,
+        issueDate: evidenceDate,
+        expiryDate: "",
+        amount: "",
+        fileName: image.fileName,
+        fileUrl: image.fileUrl ?? "",
+        remarks,
+        uploadedOn: evidenceDate || today,
+        uploadedBy: "Demo Admin",
+        status: "Submitted",
+      }));
+
+      onDocumentsChange([...documents, ...newDocuments]);
+      resetForm();
+      onOpenChange(false);
+    } catch {
+      setSaveError("Some files failed to upload. Please retry or remove them before saving.");
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
-  };
-
-  const saveEvidence = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const nextDocument: CustomerDocument = {
-      id: `cust-evidence-${Date.now()}`,
-      type: category,
-      referenceNumber,
-      category,
-      issueDate: evidenceDate,
-      expiryDate: "",
-      amount: "",
-      fileName: fileName || "customer-evidence.jpg",
-      fileUrl,
-      remarks,
-      uploadedOn: evidenceDate || today,
-      uploadedBy: "Demo Admin",
-      status: "Submitted",
-    };
-
-    onDocumentsChange([...documents, nextDocument]);
-    resetForm();
-    onOpenChange(false);
   };
 
   return (
@@ -229,7 +225,7 @@ function CustomerEvidenceUpload({
           <SheetHeader className="border-b border-border/70 px-5 py-4">
             <SheetTitle>Upload Evidence</SheetTitle>
             <SheetDescription>
-              Keep this simple: select category, attach file, add reference/date if needed.
+              Keep this simple: select category, attach photos, add reference/date if needed.
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
@@ -257,22 +253,8 @@ function CustomerEvidenceUpload({
             <FormField label="Evidence Date">
               <DatePicker value={evidenceDate} onChange={setEvidenceDate} className="w-full" />
             </FormField>
-            <FormField label="File / Photo">
-              <Input
-                type="file"
-                accept="image/*,.pdf,.doc,.docx"
-                disabled={isUploading}
-                onChange={(event) => void handleFileSelect(event.target.files?.[0])}
-              />
-              {isUploading ? (
-                <p className="mt-1 text-xs text-muted-foreground">Uploading...</p>
-              ) : null}
-              {!isUploading && fileName ? (
-                <p className="mt-1 text-xs text-muted-foreground">Uploaded: {fileName}</p>
-              ) : null}
-              {uploadError ? (
-                <p className="mt-1 text-xs text-destructive">{uploadError}</p>
-              ) : null}
+            <FormField label="Photos">
+              <ImageUploadPreview images={images} onChange={setImages} module="customers" recordId={customerId} />
             </FormField>
             <FormField label="Remarks">
               <Textarea
@@ -282,13 +264,14 @@ function CustomerEvidenceUpload({
                 placeholder="Optional notes"
               />
             </FormField>
+            {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
           </div>
           <SheetFooter className="flex-row justify-end border-t border-border/70 px-5 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={saveEvidence} disabled={isUploading}>
-              Save Evidence
+            <Button type="button" onClick={() => void saveEvidence()} disabled={!images.length || isSaving}>
+              {isSaving ? "Saving..." : "Save Evidence"}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -448,27 +431,30 @@ function MediaSection({ title, items }: { title: string; items: EvidenceItem[] }
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {visibleItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="relative flex h-24 w-32 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted/25 text-primary"
-                title={item.fileName}
-              >
-                {item.fileUrl && isImageFile(item.fileName) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.fileUrl} alt={item.fileName} className="h-full w-full object-cover" />
-                ) : isImageFile(item.fileName) ? (
-                  <ImageSquareIcon size={30} />
-                ) : (
-                  <FilePdfIcon size={30} />
-                )}
-                {index === visibleItems.length - 1 && hiddenCount ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/75 text-base font-semibold text-foreground">
-                    +{hiddenCount}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+            {visibleItems.map((item, index) => {
+              const href = resolveFileUrl(item.fileUrl);
+              return (
+                <div
+                  key={item.id}
+                  className="relative flex h-24 w-32 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted/25 text-primary"
+                  title={item.fileName}
+                >
+                  {href && isImageFile(item.fileName) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={href} alt={item.fileName} className="h-full w-full object-cover" />
+                  ) : isImageFile(item.fileName) ? (
+                    <ImageSquareIcon size={30} />
+                  ) : (
+                    <FilePdfIcon size={30} />
+                  )}
+                  {index === visibleItems.length - 1 && hiddenCount ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/75 text-base font-semibold text-foreground">
+                      +{hiddenCount}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
@@ -489,41 +475,47 @@ function UploadedPdfSection({ items }: { items: EvidenceItem[] }) {
         <p className="text-sm text-muted-foreground">No PDFs uploaded.</p>
       ) : (
         <div className="divide-y divide-border overflow-hidden rounded-sm border border-border/70 bg-background">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 px-3 py-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
-                <FilePdfIcon size={17} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
-                <p className="truncate text-xs text-muted-foreground">{item.fileName}</p>
+          {items.map((item) => {
+            const href = resolveFileUrl(item.fileUrl);
+            return (
+              <div key={item.id} className="flex items-center gap-3 px-3 py-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
+                  <FilePdfIcon size={17} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">{item.fileName}</p>
+                </div>
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  {formatDisplayDate(item.uploadedOn)}
+                </span>
+                <StatusBadge status={item.status} />
+                <div className="flex items-center gap-1">
+                  <ActionTooltip label="Preview">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), !href && "pointer-events-none opacity-50")}
+                      aria-label={`Preview ${item.title}`}
+                    >
+                      <EyeIcon size={15} />
+                    </a>
+                  </ActionTooltip>
+                  <ActionTooltip label="Download">
+                    <a
+                      href={href}
+                      download={item.fileName}
+                      className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), !href && "pointer-events-none opacity-50")}
+                      aria-label={`Download ${item.title}`}
+                    >
+                      <DownloadSimpleIcon size={15} />
+                    </a>
+                  </ActionTooltip>
+                </div>
               </div>
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                {formatDisplayDate(item.uploadedOn)}
-              </span>
-              <StatusBadge status={item.status} />
-              <div className="flex items-center gap-1">
-                <ActionTooltip label="Preview">
-                  <button
-                    type="button"
-                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                    aria-label={`Preview ${item.title}`}
-                  >
-                    <EyeIcon size={15} />
-                  </button>
-                </ActionTooltip>
-                <ActionTooltip label="Download">
-                  <button
-                    type="button"
-                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                    aria-label={`Download ${item.title}`}
-                  >
-                    <DownloadSimpleIcon size={15} />
-                  </button>
-                </ActionTooltip>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </SectionCard>

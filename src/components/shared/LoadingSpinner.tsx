@@ -1,13 +1,29 @@
-export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const sizeMap = { sm: 'w-4 h-4', md: 'w-7 h-7', lg: 'w-10 h-10' }
+import { cn } from "@/lib/utils";
+
+export function LoadingSpinner({
+  size = "md",
+  className,
+  label = "Loading",
+}: {
+  size?: "sm" | "md" | "lg";
+  className?: string;
+  label?: string;
+}) {
+  const sizeMap = { sm: "w-4 h-4", md: "w-7 h-7", lg: "w-10 h-10" };
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div
+      role="status"
+      aria-label={label}
+      className={cn("flex items-center justify-center", className)}
+    >
       <div
-        className={`${sizeMap[size]} border-2 border-border border-t-primary rounded-full animate-spin`}
+        className={cn(
+          sizeMap[size],
+          "rounded-full border-2 border-border border-t-primary animate-spin",
+        )}
       />
-      {size !== 'sm' && (
-        <p className="text-xs text-muted-foreground font-medium">Loading...</p>
-      )}
+      <span className="sr-only">{label}</span>
     </div>
-  )
+  );
 }

@@ -60,6 +60,14 @@ export const authService = {
     }
   },
 
+
+  async changePassword(newPassword: string): Promise<void> {
+    await apiRequest<void>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ newPassword }),
+    });
+  },
+
   async requestPasswordReset(identifier: string) {
     return apiRequest<{ resetToken: string | null }>("/auth/request-password-reset", {
       method: "POST",

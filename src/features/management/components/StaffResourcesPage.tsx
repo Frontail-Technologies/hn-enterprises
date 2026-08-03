@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useStaffQuery } from "../hooks/useStaff";
 import { useUsersQuery } from "../hooks/useUsers";
 import type { Staff } from "../types/staff.types";
@@ -16,13 +17,21 @@ import { StaffDrawer } from "./StaffDrawer";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
+const exportColumns: ExportColumn<Staff>[] = [
+  { label: "Name", getValue: (row) => row.name },
+  { label: "Role", getValue: (row) => row.role },
+  { label: "Contact", getValue: (row) => row.contact },
+  { label: "Status", getValue: (row) => row.status },
+  { label: "Last Login", getValue: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never") },
+];
+
 export function StaffResourcesPage() {
   const [filters, setFilters] = useState({
     search: "",
     role: "all",
     status: "all",
   });
-  const { data: staff = [] } = useStaffQuery();
+  const { data: staff = [], isLoading: staffLoading } = useStaffQuery();
   const { data: users = [] } = useUsersQuery();
   const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
   const data = useMemo(() => {
@@ -82,7 +91,19 @@ export function StaffResourcesPage() {
     <PageShell
       title="Staff & Resources"
       subtitle="Manage employees, supervisors and field executives — payroll details linked to their real login."
-      actions={<StaffDrawer users={users} staffedUserIds={staffedUserIds} />}
+      actions={
+        <>
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("staff.xlsx", exportColumns, data)}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+          <StaffDrawer users={users} staffedUserIds={staffedUserIds} />
+        </>
+      }
     >
       <FilterSheetButton
         searchKey="search"
@@ -106,7 +127,7 @@ export function StaffResourcesPage() {
         }
         onReset={() => setFilters({ search: "", role: "all", status: "all" })}
       />
-      <PaginatedDataTable data={data} columns={columns} />
+      <PaginatedDataTable data={data} columns={columns} isLoading={staffLoading} />
     </PageShell>
   );
 }

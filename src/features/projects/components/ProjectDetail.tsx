@@ -17,6 +17,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { resolveFileUrl, uploadFile } from "@/lib/upload";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
@@ -58,7 +60,7 @@ import {
   useSaveProjectSite,
   useCreateProjectDocument,
 } from "@/features/projects/hooks/useProjects";
-import { uploadFile } from "@/lib/upload";
+import { PageLoading } from "@/components/shared/PageLoading";
 import type {
   ActivityItem,
   AssignedUser,
@@ -209,7 +211,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   const { data: project, isLoading, isError } = useProjectQuery(projectId);
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading project...</p>;
+    return <PageLoading />;
   }
 
   if (isError || !project) {
@@ -633,15 +635,21 @@ function ProjectDocuments({ projectId }: { projectId: string }) {
       key: "actions",
       header: "Actions",
       className: "w-64",
-      render: () => (
-        <div className="flex flex-wrap items-center gap-1">
-          <ActionButton label="Preview" icon={<EyeIcon size={13} />} />
-          <ActionButton
-            label="Download"
-            icon={<DownloadSimpleIcon size={13} />}
-          />
-        </div>
-      ),
+      render: (doc) => {
+        const href = resolveFileUrl(doc.fileUrl);
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            <ActionButton label="Preview" icon={<EyeIcon size={13} />} href={href} disabled={!href} />
+            <ActionButton
+              label="Download"
+              icon={<DownloadSimpleIcon size={13} />}
+              href={href}
+              download={doc.fileName || true}
+              disabled={!href}
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -717,13 +725,13 @@ function ProjectDocuments({ projectId }: { projectId: string }) {
       </SectionCard>
 
       <DocumentDialog
-        projectId={projectId}
         open={dialogOpen}
         title={editingId ? "Edit Document" : "Upload Document"}
         draft={draft}
         setDraft={setDraft}
         onOpenChange={setDialogOpen}
         onSave={saveDocument}
+        projectId={projectId}
       />
     </div>
   );
@@ -769,18 +777,25 @@ function ProjectTeam() {
             </Button>
           </ActionTooltip>
           <ActionTooltip label="Remove">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Remove assignment"
-              onClick={() =>
+            <DeleteConfirmDialog
+              itemName={`${user.name} assignment`}
+              onConfirm={() =>
                 setUsers((current) =>
                   current.filter((item) => item.id !== user.id),
                 )
               }
-            >
-              <TrashIcon size={14} />
-            </Button>
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Remove assignment"
+                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <TrashIcon size={14} />
+                </Button>
+              }
+            />
           </ActionTooltip>
         </div>
       ),
@@ -1206,13 +1221,14 @@ function DocumentDialog({
 
   const handleFileSelect = async (file: File | undefined) => {
     if (!file) return;
-    setIsUploading(true);
+    setDraft((current) => ({ ...current, fileName: file.name, fileUrl: "" }));
     setUploadError("");
+    setIsUploading(true);
     try {
       const uploaded = await uploadFile(file, "projects", projectId);
-      setDraft((current) => ({ ...current, fileName: uploaded.fileName, fileUrl: uploaded.url }));
+      setDraft((current) => ({ ...current, fileUrl: uploaded.url }));
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Upload failed");
+      setUploadError(error instanceof Error ? error.message : "Unable to upload file");
     } finally {
       setIsUploading(false);
     }
@@ -1308,18 +1324,14 @@ function DocumentDialog({
           <FormField label="File">
             <Input
               type="file"
-              disabled={isUploading}
               onChange={(event) => void handleFileSelect(event.target.files?.[0])}
             />
             {isUploading ? (
-              <p className="mt-1 text-xs text-muted-foreground">Uploading...</p>
+              <p className="mt-1 text-xs text-primary">Uploading {draft.fileName}...</p>
+            ) : draft.fileUrl ? (
+              <p className="mt-1 text-xs text-muted-foreground">Ready to save: {draft.fileName}</p>
             ) : null}
-            {!isUploading && draft.fileName ? (
-              <p className="mt-1 text-xs text-muted-foreground">Uploaded: {draft.fileName}</p>
-            ) : null}
-            {uploadError ? (
-              <p className="mt-1 text-xs text-destructive">{uploadError}</p>
-            ) : null}
+            {uploadError ? <p className="mt-1 text-xs text-destructive">{uploadError}</p> : null}
           </FormField>
           <FormField label="Remarks">
             <Textarea

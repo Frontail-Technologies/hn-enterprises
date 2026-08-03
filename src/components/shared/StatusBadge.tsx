@@ -21,6 +21,9 @@ export type StatusValue =
   | 'Not Workable'
   | 'Partially Workable'
   | 'Sent'
+  | 'Open'
+  | 'Resolved'
+  | 'Closed'
 
 
 type StatusGroup = 'success' | 'warning' | 'primary' | 'info' | 'purple' | 'destructive' | 'neutral'
@@ -45,6 +48,9 @@ const STATUS_GROUP: Record<StatusValue, StatusGroup> = {
   Archived:            'neutral',
   Inactive:            'neutral',
   'Not Started':       'neutral',
+  Open:                'warning',
+  Resolved:            'success',
+  Closed:              'neutral',
 }
 
 

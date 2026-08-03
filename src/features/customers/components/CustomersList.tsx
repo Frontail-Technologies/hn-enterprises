@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
+import { exportRowsToExcel } from "@/lib/export-excel";
 import {
   buildCustomerMasterSheetColumns,
   getCustomerMasterSheetRows,
@@ -68,6 +69,7 @@ export function CustomersList() {
           <button
             type="button"
             className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("customers.xlsx", masterSheetColumns, filteredMasterSheetRows)}
           >
             <DownloadSimpleIcon size={15} />
             Export Excel
@@ -103,7 +105,8 @@ export function CustomersList() {
         <ExcelDataGrid
           columns={masterSheetColumns}
           rows={filteredMasterSheetRows}
-          emptyTitle={isLoading ? "Loading customers..." : "No customer master records found"}
+          emptyTitle="No customer master records found"
+          isLoading={isLoading}
           onRowClick={(row) => {
             if (realCustomerIds.has(row.customerId)) {
               router.push(`/customers/${row.customerId}/edit`);

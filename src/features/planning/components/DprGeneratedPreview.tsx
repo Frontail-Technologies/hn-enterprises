@@ -1,8 +1,9 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { PrinterIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { exportGridToExcel, type GridCell } from "@/lib/export-excel";
 import type { DprTask } from "../types/planning.types";
 
 export function DprGeneratedPreview({
@@ -18,17 +19,29 @@ export function DprGeneratedPreview({
 }) {
   const formattedDate = date ? format(parseISO(date), "dd.MM.yyyy") : "-";
 
+  function handleExport() {
+    const bold = (value: string | number): GridCell => ({ value, bold: true });
+    const grid: GridCell[][] = [
+      [bold("DPR/PLANNING")],
+      [bold("DATE"), formattedDate, bold("ADDRESS"), siteAddress],
+      [bold("TASK"), bold("QTY"), bold("PLUMBER/LABOURE"), bold("REMARKS")],
+      ...tasks.map((task) => [task.label, task.completedQty || "-", task.worker || "-", task.delayReason || "-"]),
+      [bold("Supervisor Remarks"), remarks || "-"],
+    ];
+    void exportGridToExcel(`dpr-${date || "report"}.xlsx`, grid);
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex justify-end print:hidden">
-        <Button type="button" variant="outline" onClick={() => window.print()}>
-          <PrinterIcon size={15} />
-          Print
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" onClick={handleExport}>
+          <DownloadSimpleIcon size={15} />
+          Export Excel
         </Button>
       </div>
-      <div className="rounded-lg border border-border bg-card p-4 print:border-black print:p-0">
+      <div className="rounded-lg border border-border bg-card p-4">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm print:text-xs">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
             <tbody>
               <tr>
                 <td className="border border-border px-2 py-1 text-center font-semibold" colSpan={4}>

@@ -34,6 +34,7 @@ import {
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import {
+  flushImageUploads,
   ImageUploadPreview,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
@@ -68,6 +69,7 @@ import {
 import { useCreateCustomer, useCustomerQuery, useUpdateCustomer } from "../hooks/useCustomers";
 import { customersApi } from "../services/customers.service";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
+import { PageLoading } from "@/components/shared/PageLoading";
 import type {
   CustomerFormValues,
   CustomerSurvey,
@@ -87,7 +89,7 @@ export function CustomerForm({ mode, customerId }: CustomerFormProps) {
   const { data: customer, isLoading } = useCustomerQuery(customerId ?? "");
 
   if (isEdit && isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading customer...</p>;
+    return <PageLoading />;
   }
 
   return (
@@ -112,6 +114,7 @@ function CustomerFormFields({
   const router = useRouter();
   const isEdit = mode === "edit";
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
+  const [uploadError, setUploadError] = useState("");
   const { data: projects = [] } = useProjectsQuery();
   const { data: sites = [] } = useProjectSitesQuery(values.projectId);
   const { data: plumbers = [] } = usePlumbersQuery();
@@ -131,9 +134,36 @@ function CustomerFormFields({
     )
       return;
 
-    const saved = await mutation.mutateAsync(values);
+    setUploadError("");
+    let readyValues = values;
+    try {
+      const surveyEvidence = values.survey
+        ? await flushImageUploads(values.survey.evidence as ImagePreviewItem[], "customers", customerId)
+        : undefined;
+      const pipeRecords = await Promise.all(
+        values.lmcPipelineWork.pipeRecords.map(async (record) => ({
+          ...record,
+          evidence: (await flushImageUploads(
+            record.evidence as ImagePreviewItem[],
+            "customers",
+            customerId,
+          )) as LmcEvidenceFile[],
+        })),
+      );
+      readyValues = {
+        ...values,
+        survey: values.survey && surveyEvidence ? { ...values.survey, evidence: surveyEvidence as CustomerSurveyPhoto[] } : values.survey,
+        lmcPipelineWork: { ...values.lmcPipelineWork, pipeRecords },
+      };
+      setValues(readyValues);
+    } catch {
+      setUploadError("Some evidence photos failed to upload. Please retry or remove them before saving.");
+      return;
+    }
 
-    const editedPipeRecords = values.lmcPipelineWork.pipeRecords.filter(
+    const saved = await mutation.mutateAsync(readyValues);
+
+    const editedPipeRecords = readyValues.lmcPipelineWork.pipeRecords.filter(
       (record) =>
         record.lengthMetres || record.layingDate || record.testingDate || record.purgingDate ||
         record.jointFittingDetails || (record.remarks && record.remarks !== "-") ||
@@ -144,7 +174,7 @@ function CustomerFormFields({
       await customersApi.upsertLmcPipeRecord(saved.id, record);
     }
 
-    const newDocuments = values.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
+    const newDocuments = readyValues.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
     for (const doc of newDocuments) {
       await customersApi.createDocument(saved.id, doc);
     }
@@ -398,7 +428,6 @@ function CustomerFormFields({
 
           <TabsContent value="images">
             <CustomerEvidencePanel
-              customerId={customerId}
               survey={values.survey}
               lmcPipelineWork={values.lmcPipelineWork}
               documents={values.documents}
@@ -406,6 +435,7 @@ function CustomerFormFields({
               onDocumentsChange={(documents) =>
                 setValues((current) => ({ ...current, documents }))
               }
+              customerId={customerId}
             />
           </TabsContent>
 
@@ -414,6 +444,7 @@ function CustomerFormFields({
           </TabsContent>
         </Tabs>
 
+        {uploadError ? <p className="mt-3 text-sm text-destructive">{uploadError}</p> : null}
         {mutation.isError ? (
           <p className="mt-3 text-sm text-destructive">
             {mutation.error instanceof Error ? mutation.error.message : "Unable to save customer"}
@@ -566,8 +597,8 @@ function CustomerSurveyEditor({
 
       <SectionCard title="Survey Photos">
         <ImageUploadPreview
-          images={surveyPhotosToImages(survey.photos)}
-          onChange={(images) => update("photos", imagesToSurveyPhotos(images))}
+          images={surveyPhotosToImages(survey.evidence)}
+          onChange={(images) => update("evidence", imagesToSurveyPhotos(images))}
           module="customers"
           recordId={customerId}
         />
@@ -609,7 +640,9 @@ function surveyPhotosToImages(photos: CustomerSurveyPhoto[]): ImagePreviewItem[]
     label: photo.label,
     fileName: photo.fileName,
     fileUrl: photo.fileUrl,
-    status: photo.fileUrl ? "uploaded" : undefined,
+    previewUrl: photo.previewUrl,
+    status: photo.status ?? (photo.fileUrl ? "uploaded" : undefined),
+    file: photo.file,
   }));
 }
 
@@ -620,6 +653,9 @@ function imagesToSurveyPhotos(images: ImagePreviewItem[]): CustomerSurveyPhoto[]
     caption: image.label,
     fileName: image.fileName,
     fileUrl: image.fileUrl,
+    previewUrl: image.previewUrl,
+    status: image.status,
+    file: image.file,
   }));
 }
 function LmcPipelineEditor({
@@ -775,7 +811,9 @@ function evidenceFilesToImages(files: LmcEvidenceFile[]): ImagePreviewItem[] {
     label: file.label,
     fileName: file.fileName,
     fileUrl: file.fileUrl,
-    status: file.fileUrl ? "uploaded" : undefined,
+    previewUrl: file.previewUrl,
+    status: file.status ?? (file.fileUrl ? "uploaded" : undefined),
+    file: file.file,
   }));
 }
 
@@ -785,6 +823,9 @@ function imagesToEvidenceFiles(images: ImagePreviewItem[]): LmcEvidenceFile[] {
     label: image.label,
     fileName: image.fileName,
     fileUrl: image.fileUrl,
+    previewUrl: image.previewUrl,
+    status: image.status,
+    file: image.file,
   }));
 }
 

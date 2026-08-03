@@ -2,8 +2,8 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { LoadingSpinner } from './LoadingSpinner'
 import { TableEmptyRow } from './TableEmptyRow'
+import { TableLoader } from './TableLoader'
 
 export interface ColumnDef<T> {
   key: string
@@ -44,20 +44,12 @@ export function DataTable<T extends { id: string }>({
   stickyHeader,
   stickyLastColumn,
 }: DataTableProps<T>) {
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <LoadingSpinner />
-      </div>
-    )
-  }
-
   const striped = variant === 'striped'
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0)
 
   return (
     <div className={cn('w-full overflow-x-auto rounded-lg border border-border/70 bg-card [&_tbody_svg]:text-primary', containerClassName)}>
-      <Table className={tableClassName}>
+      <Table className={cn('min-w-full', tableClassName)}>
         <TableHeader className={cn(stickyHeader && 'sticky top-0 z-10')}>
           <TableRow className="border-b border-border/70 bg-secondary/80 hover:bg-secondary/80">
             {showSerialNumber && (
@@ -81,7 +73,9 @@ export function DataTable<T extends { id: string }>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length ? data.map((row, index) => (
+          {isLoading ? (
+            <TableLoader colSpan={visibleColumnCount} />
+          ) : data.length ? data.map((row, index) => (
             <TableRow
               key={row.id}
               className={cn(

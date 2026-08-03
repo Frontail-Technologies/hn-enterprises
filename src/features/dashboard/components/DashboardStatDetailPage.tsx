@@ -17,6 +17,7 @@ import {
 } from "@/features/dashboard/services/dashboard-stats.service";
 import { formatDate } from "@/features/commercial/utils/format";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { exportRowsToExcel } from "@/lib/export-excel";
 
 export function DashboardStatDetailPage({
   statKey,
@@ -59,7 +60,17 @@ export function DashboardStatDetailPage({
             <ArrowLeftIcon size={14} />
             Back
           </Link>
-          <Button type="button" size="sm">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() =>
+              void exportRowsToExcel(
+                `${statKey}.xlsx`,
+                columns.filter((column) => column.key !== "actions"),
+                filteredRows,
+              )
+            }
+          >
             <DownloadSimpleIcon size={14} />
             Export Excel
           </Button>
@@ -77,7 +88,8 @@ export function DashboardStatDetailPage({
       <ExcelDataGrid
         columns={columns}
         rows={filteredRows}
-        emptyTitle={isLoading ? "Loading..." : "No matching records found"}
+        emptyTitle="No matching records found"
+        isLoading={isLoading}
         maxHeightClassName="max-h-[68vh]"
       />
     </PageShell>

@@ -91,31 +91,17 @@ export function PdfPage({ children }: { children: ReactNode }) {
   );
 }
 
-export function PdfHeader({
-  title,
-  subtitle,
-  rightLogo = true,
-}: {
-  title: string;
-  subtitle?: string;
-  rightLogo?: boolean;
-}) {
+export function PdfHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={[pdfStyles.row, { borderWidth: 1, borderColor: "#222222" }]}>
       <View style={[pdfStyles.cell, { width: "15%", borderWidth: 0, alignItems: "center" }]}>
         {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image does not support alt. */}
         <Image src="/logo.png" style={{ width: 42, height: 28, objectFit: "contain" }} />
       </View>
-      <View style={[pdfStyles.cell, { width: rightLogo ? "70%" : "85%", borderTopWidth: 0, borderBottomWidth: 0 }]}>
+      <View style={[pdfStyles.cell, { width: "85%", borderTopWidth: 0, borderBottomWidth: 0 }]}>
         <Text style={pdfStyles.title}>{title}</Text>
         {subtitle ? <Text style={pdfStyles.subtitle}>{subtitle}</Text> : null}
       </View>
-      {rightLogo ? (
-        <View style={[pdfStyles.cell, { width: "15%", borderWidth: 0, alignItems: "center" }]}>
-          {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image does not support alt. */}
-          <Image src="/logo.png" style={{ width: 42, height: 28, objectFit: "contain" }} />
-        </View>
-      ) : null}
     </View>
   );
 }

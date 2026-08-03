@@ -24,8 +24,8 @@ import {
   GearIcon as Gear,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   MegaphoneIcon as Megaphone,
+  WarningIcon as Warning,
   SignOutIcon as SignOut,
-  UserIcon as User,
   LockIcon as Lock,
   CaretUpDownIcon as CaretUpDown,
   CaretDownIcon as CaretDown,
@@ -35,6 +35,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV_ITEMS, NAV_GROUPS } from "@/constants/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { authService } from "@/features/auth/services/auth.service";
 import { NavItem, NavGroup } from "@/types/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -102,6 +103,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Gear,
   ClockCounterClockwise,
   Megaphone,
+  Warning,
 };
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
@@ -363,11 +365,6 @@ export function Sidebar() {
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link href="/profile" className="flex items-center gap-2 w-full">
-                <User size={14} /> Profile
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)}>
               <Lock size={14} /> Change Password
             </DropdownMenuItem>
@@ -384,6 +381,7 @@ export function Sidebar() {
       <ChangePasswordDialog
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
+        onPasswordChanged={handleLogout}
       />
     </ShadcnSidebar>
   );
@@ -392,35 +390,37 @@ export function Sidebar() {
 function ChangePasswordDialog({
   open,
   onOpenChange,
+  onPasswordChanged,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPasswordChanged: () => Promise<void>;
 }) {
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
-    setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setMessage(null);
     setError(null);
+    setIsSubmitting(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setMessage(null);
     setError(null);
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError("All password fields are required.");
+    if (!newPassword || !confirmPassword) {
+      setError("New password and confirmation are required.");
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
       return;
     }
 
@@ -429,11 +429,19 @@ function ChangePasswordDialog({
       return;
     }
 
-    setMessage("Password updated successfully.");
-    window.setTimeout(() => {
-      resetForm();
-      onOpenChange(false);
-    }, 700);
+    setIsSubmitting(true);
+    try {
+      await authService.changePassword(newPassword);
+      setMessage("Password updated successfully. Please login again.");
+      window.setTimeout(() => {
+        resetForm();
+        onOpenChange(false);
+        void onPasswordChanged();
+      }, 600);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to update password.");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -448,16 +456,11 @@ function ChangePasswordDialog({
         <DialogHeader>
           <DialogTitle>Change Password</DialogTitle>
           <DialogDescription>
-            Update your account password. This is a frontend-only mock action for now.
+            Set a new password for your admin account. You will need to login again.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <PasswordField
-            label="Current Password"
-            value={currentPassword}
-            onChange={setCurrentPassword}
-          />
           <PasswordField
             label="New Password"
             value={newPassword}
@@ -473,11 +476,11 @@ function ChangePasswordDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit}>
-            Update Password
+          <Button type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+            {isSubmitting ? "Updating..." : "Update Password"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { useCurrentLocation } from "@/lib/hooks/useCurrentLocation";
 
@@ -13,8 +14,8 @@ const LeafletLocationMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-52 items-center justify-center rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
-        Loading map...
+      <div className="flex h-52 items-center justify-center rounded-lg border border-border bg-muted/30">
+        <LoadingSpinner size="sm" />
       </div>
     ),
   },

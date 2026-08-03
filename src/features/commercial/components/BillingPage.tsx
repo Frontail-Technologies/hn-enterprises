@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FileTextIcon, ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, FileTextIcon, ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
+import { buttonVariants } from "@/components/ui/button";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { billingTabs } from "../data/bills.data";
 import { wageRegisterRows } from "../data/wages.data";
@@ -144,12 +146,41 @@ export function BillingPage() {
     },
   ];
 
+  const exportColumns: ExportColumn<Bill>[] = [
+    { label: "Bill Number", getValue: (row) => row.billNumber },
+    { label: "Customer", getValue: (row) => getBillCustomer(row)?.customerConnection.customerName ?? "-" },
+    { label: "Site", getValue: (row) => getBillCustomer(row)?.siteArea ?? "-" },
+    { label: "Supervisor", getValue: (row) => getBillCustomer(row)?.customerConnection.supervisorName || "-" },
+    { label: "Billing Stage", getValue: (row) => row.stage },
+    { label: "Bill Date", getValue: (row) => formatDate(row.billDate) },
+    { label: "Total Amount", getValue: (row) => row.totalAmount },
+    { label: "Paid Amount", getValue: (row) => row.paidAmount },
+    { label: "Pending Amount", getValue: (row) => row.pendingAmount },
+    { label: "Status", getValue: (row) => row.status },
+  ];
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="Billing"
         subtitle="Track bills, invoices and received payments."
-        actions={<BillDrawer triggerLabel="Create Bill" />}
+        actions={
+          activeView === "bills" ? (
+            <>
+              <button
+                type="button"
+                className={buttonVariants({ variant: "outline", size: "default" })}
+                onClick={() => void exportRowsToExcel("bills.xlsx", exportColumns, data)}
+              >
+                <DownloadSimpleIcon size={15} />
+                Export Excel
+              </button>
+              <BillDrawer triggerLabel="Create Bill" />
+            </>
+          ) : (
+            <BillDrawer triggerLabel="Create Bill" />
+          )
+        }
       />
       <UnderlineTabs
         items={billingTabs}

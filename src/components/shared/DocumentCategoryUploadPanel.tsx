@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { ActionTooltip } from "./ActionTooltip";
 import { DataTable, type ColumnDef } from "./DataTable";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { DatePicker } from "./DatePicker";
 import { SectionCard } from "./SectionCard";
 import { StatusBadge, type StatusValue } from "./StatusBadge";
@@ -176,15 +177,21 @@ export function DocumentCategoryUploadPanel<T extends DocumentUploadRecord>({
                 </Button>
               </ActionTooltip>
               <ActionTooltip label="Delete">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Delete document"
-                  onClick={() => deleteDocument(document.id)}
-                >
-                  <TrashIcon size={13} />
-                </Button>
+                <DeleteConfirmDialog
+                  itemName={document.fileName || "document"}
+                  onConfirm={() => deleteDocument(document.id)}
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Delete document"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <TrashIcon size={13} />
+                    </Button>
+                  }
+                />
               </ActionTooltip>
             </>
           ) : null}

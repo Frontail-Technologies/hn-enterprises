@@ -30,6 +30,7 @@ import { AttendanceLegend } from "./attendance/AttendanceLegend";
 import { AttendanceRegister } from "./attendance/AttendanceRegister";
 import { AttendanceDrawer } from "./attendance/AttendanceDrawer";
 import { attendanceCellClass } from "./attendance/attendance-utils";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 export function AttendancePage() {
   const [calendarMonth, setCalendarMonth] = useState(() =>
@@ -47,7 +48,7 @@ export function AttendancePage() {
     }),
     [calendarMonth],
   );
-  const { data: roster = [] } = useRosterQuery("supervisor,field_executive");
+  const { data: roster = [], isLoading: rosterLoading } = useRosterQuery("supervisor,field_executive");
   const {
     data: attendanceRecords = [],
     isLoading,
@@ -154,10 +155,7 @@ export function AttendancePage() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <UnderlineTabs
-          items={[
-            { id: "register", label: "Register View" },
-            { id: "calendar", label: "Calendar View" },
-          ]}
+          items={[{ id: "register", label: "Register View" }]}
           active={viewMode}
           onChange={(value) => setViewMode(value as AttendanceViewMode)}
         />
@@ -177,6 +175,7 @@ export function AttendancePage() {
           roster={roster}
           selectedSupervisor={selectedSupervisor}
           onRecordSaved={refetchRecords}
+          isLoading={isLoading || rosterLoading}
         />
       ) : null}
 
@@ -184,10 +183,16 @@ export function AttendancePage() {
         <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AttendanceLegend />
-            <p className="text-xs font-medium text-muted-foreground">
-              {isLoading ? "Loading..." : "Showing attendance for"}{" "}
-              <span className="text-foreground">{selectedSupervisorName}</span>
-            </p>
+            <div className="text-xs font-medium text-muted-foreground">
+              {isLoading ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <>
+                  Showing attendance for{" "}
+                  <span className="text-foreground">{selectedSupervisorName}</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-7 overflow-hidden rounded-md border border-border/70 bg-secondary text-xs font-semibold text-muted-foreground">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (

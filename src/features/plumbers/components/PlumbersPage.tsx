@@ -1,16 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NotePencilIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { type ColumnDef } from "@/components/shared/DataTable";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageShell } from "@/features/management/components/shared/PageShell";
 import { PaginatedDataTable } from "@/features/management/components/shared/PaginatedDataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useDeletePlumber, usePlumbersQuery } from "../hooks/usePlumbers";
 import { PlumberDrawer } from "./PlumberDrawer";
 import type { Plumber } from "../types/plumber.types";
+
+const exportColumns: ExportColumn<Plumber>[] = [
+  { label: "Name", getValue: (row) => row.name },
+  { label: "Type", getValue: (row) => (row.type === "team" ? "Team" : "Individual") },
+  { label: "Contact Number", getValue: (row) => row.contactNumber },
+  { label: "Status", getValue: (row) => (row.status === "active" ? "Active" : "Inactive") },
+  { label: "Remarks", getValue: (row) => row.remarks },
+];
 
 export function PlumbersPage() {
   const [filters, setFilters] = useState({ search: "", type: "all", status: "all" });
@@ -27,11 +37,6 @@ export function PlumbersPage() {
       ),
     [plumbers, filters.type, filters.status],
   );
-
-  async function handleDelete(plumber: Plumber) {
-    if (!window.confirm(`Remove "${plumber.name}" from the plumber roster?`)) return;
-    await deletePlumber.mutateAsync(plumber.id);
-  }
 
   const columns: ColumnDef<Plumber>[] = [
     { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
@@ -61,15 +66,10 @@ export function PlumbersPage() {
           >
             <NotePencilIcon size={15} />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDelete(row)}
-            disabled={deletePlumber.isPending}
-          >
-            <TrashIcon size={15} className="text-destructive" />
-          </Button>
+          <DeleteConfirmDialog
+            itemName={row.name}
+            onConfirm={() => deletePlumber.mutateAsync(row.id)}
+          />
         </div>
       ),
     },
@@ -80,10 +80,20 @@ export function PlumbersPage() {
       title="Plumbers"
       subtitle="Roster of individual plumbers and named teams/crews assigned to customer connections."
       actions={
-        <Button type="button" onClick={() => setDrawerState({ open: true })}>
-          <PlusIcon size={15} />
-          Add Plumber
-        </Button>
+        <>
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+          <Button type="button" onClick={() => setDrawerState({ open: true })}>
+            <PlusIcon size={15} />
+            Add Plumber
+          </Button>
+        </>
       }
     >
       <FilterSheetButton

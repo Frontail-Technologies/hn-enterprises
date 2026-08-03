@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
-import { ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,8 +16,8 @@ import {
   AttachmentTitle,
   AttachmentTrigger,
 } from "@/components/ui/attachment";
+import { resolveFileUrl, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
-import { uploadFile } from "@/lib/upload";
 
 export type ImagePreviewItem = {
   id: string;
@@ -26,8 +26,43 @@ export type ImagePreviewItem = {
   previewUrl?: string;
   fileUrl?: string;
   uploadedOn?: string;
-  status?: "uploading" | "uploaded" | "error";
+  status?: "staged" | "uploading" | "uploaded" | "error";
+  file?: File;
 };
+
+/**
+ * Uploads every not-yet-uploaded item (anything still carrying a local `file`) and
+ * returns the resolved list with real `fileUrl`s. Call this from a parent form's save
+ * handler - on the state itself, not a ref into the widget - since the widget may live
+ * inside a tab or dialog that's no longer mounted by the time the user hits Save.
+ * Throws if any file fails to upload, so the caller can stop the save.
+ */
+export async function flushImageUploads(
+  items: ImagePreviewItem[],
+  module: string,
+  recordId?: string,
+): Promise<ImagePreviewItem[]> {
+  const pending = items.filter((item) => item.file && item.status !== "uploaded");
+  if (!pending.length) return items;
+
+  const uploaded = await Promise.all(
+    pending.map(async (item) => {
+      try {
+        const result = await uploadFile(item.file!, module, recordId);
+        return { ...item, fileUrl: result.url, status: "uploaded" as const, file: undefined };
+      } catch {
+        return { ...item, status: "error" as const };
+      }
+    }),
+  );
+
+  const next = items.map((item) => uploaded.find((u) => u.id === item.id) ?? item);
+  if (uploaded.some((item) => item.status === "error")) {
+    throw new Error("One or more files failed to upload");
+  }
+
+  return next;
+}
 
 interface ImageUploadPreviewProps {
   images: ImagePreviewItem[];
@@ -60,11 +95,25 @@ export function ImageUploadPreview({
     onChange?.(nextItems);
   }
 
-  function patchItem(id: string, patch: Partial<ImagePreviewItem>) {
-    update(itemsRef.current.map((image) => (image.id === id ? { ...image, ...patch } : image)));
+  async function runUpload(item: ImagePreviewItem) {
+    if (!item.file) return;
+    try {
+      const uploaded = await uploadFile(item.file, module, recordId);
+      update(
+        itemsRef.current.map((current) =>
+          current.id === item.id
+            ? { ...current, fileUrl: uploaded.url, status: "uploaded", file: undefined }
+            : current,
+        ),
+      );
+    } catch {
+      update(
+        itemsRef.current.map((current) => (current.id === item.id ? { ...current, status: "error" } : current)),
+      );
+    }
   }
 
-  async function addFiles(files: FileList | null) {
+  function addFiles(files: FileList | null) {
     const nextFiles = Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
     if (inputRef.current) inputRef.current.value = "";
     if (!nextFiles.length) return;
@@ -76,29 +125,19 @@ export function ImageUploadPreview({
         fileName: file.name,
         previewUrl: URL.createObjectURL(file),
         uploadedOn: new Date().toISOString(),
-        status: "uploading",
+        status: "staged",
+        file,
       };
-      return { file, preview };
+      return preview;
     });
 
-    update([...itemsRef.current, ...staged.map(({ preview }) => preview)]);
-
-    await Promise.all(
-      staged.map(async ({ file, preview: { id } }) => {
-        try {
-          const uploaded = await uploadFile(file, module, recordId);
-          patchItem(id, { fileUrl: uploaded.url, fileName: uploaded.fileName, status: "uploaded" });
-        } catch {
-          patchItem(id, { status: "error" });
-        }
-      }),
-    );
+    update([...itemsRef.current, ...staged]);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDragging(false);
-    void addFiles(event.dataTransfer.files);
+    addFiles(event.dataTransfer.files);
   }
 
   return (
@@ -123,7 +162,7 @@ export function ImageUploadPreview({
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(event) => void addFiles(event.target.files)}
+          onChange={(event) => addFiles(event.target.files)}
         />
         <AttachmentTrigger onClick={() => inputRef.current?.click()} />
         <AttachmentMedia className="bg-primary/10 text-primary">
@@ -150,54 +189,74 @@ export function ImageUploadPreview({
       </Attachment>
 
       <AttachmentGroup className="flex flex-col gap-2 overflow-visible py-0">
-        {items.map((item) => (
-          <Attachment
-            key={item.id}
-            orientation="horizontal"
-            className="w-full rounded-sm border-border/70"
-          >
-            <AttachmentMedia
-              variant={item.previewUrl ? "image" : "icon"}
-              className="h-14 w-14 rounded-sm"
+        {items.map((item) => {
+          const thumbSrc = item.previewUrl || resolveFileUrl(item.fileUrl);
+          return (
+            <Attachment
+              key={item.id}
+              orientation="horizontal"
+              state={item.status === "uploading" ? "uploading" : item.status === "error" ? "error" : "done"}
+              className="w-full rounded-sm border-border/70"
             >
-              {item.previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.previewUrl} alt={item.label} className="h-full w-full object-cover" />
-              ) : (
-                <ImageSquareIcon size={30} className="text-primary" />
-              )}
-            </AttachmentMedia>
-            <AttachmentContent className="min-w-0 space-y-1">
-              <Input
-                value={item.label}
-                onChange={(event) =>
-                  update(items.map((image) => image.id === item.id ? { ...image, label: event.target.value } : image))
-                }
-                className="h-8 max-w-sm"
-                aria-label="Image label"
-              />
-              <AttachmentDescription className="mt-0">
-                {item.fileName}
-                {item.status === "uploading" ? (
-                  <span className="ml-1.5 text-primary">Uploading...</span>
-                ) : null}
-                {item.status === "error" ? (
-                  <span className="ml-1.5 text-destructive">Upload failed</span>
-                ) : null}
-              </AttachmentDescription>
-            </AttachmentContent>
-            <AttachmentActions className="ml-auto">
-              <AttachmentAction
-                type="button"
-                aria-label="Remove image"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => update(items.filter((image) => image.id !== item.id))}
+              <AttachmentMedia
+                variant={thumbSrc ? "image" : "icon"}
+                className="h-14 w-14 rounded-sm"
               >
-                <TrashIcon size={15} />
-              </AttachmentAction>
-            </AttachmentActions>
-          </Attachment>
-        ))}
+                {thumbSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumbSrc} alt={item.label} className="h-full w-full object-cover" />
+                ) : (
+                  <ImageSquareIcon size={30} className="text-primary" />
+                )}
+              </AttachmentMedia>
+              <AttachmentContent className="min-w-0 space-y-1">
+                <Input
+                  value={item.label}
+                  onChange={(event) =>
+                    update(items.map((image) => image.id === item.id ? { ...image, label: event.target.value } : image))
+                  }
+                  className="h-8 max-w-sm"
+                  aria-label="Image label"
+                />
+                <AttachmentDescription className="mt-0">
+                  {item.fileName}
+                  {item.status === "staged" ? (
+                    <span className="ml-1.5 text-primary">Ready to save</span>
+                  ) : null}
+                  {item.status === "uploading" ? (
+                    <span className="ml-1.5 text-primary">Uploading...</span>
+                  ) : null}
+                  {item.status === "error" ? (
+                    <span className="ml-1.5 text-destructive">Upload failed</span>
+                  ) : null}
+                </AttachmentDescription>
+              </AttachmentContent>
+              <AttachmentActions className="ml-auto">
+                {item.status === "error" ? (
+                  <AttachmentAction
+                    type="button"
+                    aria-label="Retry upload"
+                    className="text-primary hover:text-primary"
+                    onClick={() => {
+                      update(items.map((image) => (image.id === item.id ? { ...image, status: "uploading" } : image)));
+                      void runUpload(item);
+                    }}
+                  >
+                    <ArrowClockwiseIcon size={15} />
+                  </AttachmentAction>
+                ) : null}
+                <AttachmentAction
+                  type="button"
+                  aria-label="Remove image"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => update(items.filter((image) => image.id !== item.id))}
+                >
+                  <TrashIcon size={15} />
+                </AttachmentAction>
+              </AttachmentActions>
+            </Attachment>
+          );
+        })}
       </AttachmentGroup>
     </div>
   );

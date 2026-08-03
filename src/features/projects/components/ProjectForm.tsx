@@ -21,6 +21,7 @@ import {
 } from "@/features/projects/services/projects.service";
 import { useCreateProject, useProjectQuery, useUpdateProject } from "@/features/projects/hooks/useProjects";
 import type { ProjectFormValues } from "../types/project.types";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 const defaultValues: ProjectFormValues = {
   name: "",
@@ -49,7 +50,7 @@ export function ProjectForm({ mode, projectId }: ProjectFormProps) {
   const { data: project, isLoading: isLoadingProject } = useProjectQuery(projectId ?? "");
 
   if (isEdit && isLoadingProject) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading project...</p>;
+    return <PageLoading />;
   }
 
   return (

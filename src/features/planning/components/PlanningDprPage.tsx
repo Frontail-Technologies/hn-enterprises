@@ -15,6 +15,7 @@ import {
 import { PageShell } from "@/components/shared/PageShell";
 import { DprGeneratedPreview } from "./DprGeneratedPreview";
 import { useDprRecordsQuery } from "../hooks/usePlanning";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 export function PlanningDprPage() {
   const searchParams = useSearchParams();
@@ -70,7 +71,7 @@ export function PlanningDprPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-card" />
         ) : !record ? (
           <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
             No DPR filed for this site and date yet.

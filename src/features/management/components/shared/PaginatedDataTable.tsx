@@ -5,11 +5,15 @@ import { Pagination } from "@/components/shared/Pagination";
 export function PaginatedDataTable<T extends { id: string }>({
   data,
   columns,
-  pageSize = 6,
+  pageSize = 50,
+  isLoading,
+  stickyLastColumn = true,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
   pageSize?: number;
+  isLoading?: boolean;
+  stickyLastColumn?: boolean;
 }) {
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(data.length / pageSize));
@@ -35,7 +39,8 @@ export function PaginatedDataTable<T extends { id: string }>({
         columns={columns}
         serialNumberStart={startIndex + 1}
         stickyHeader
-        stickyLastColumn
+        stickyLastColumn={stickyLastColumn}
+        isLoading={isLoading}
       />
     </div>
   );

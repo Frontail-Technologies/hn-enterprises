@@ -4,9 +4,10 @@ import { BillingDetailPage } from "@/features/commercial/components/BillingDetai
 export const metadata: Metadata = { title: "Billing Detail" };
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function Page({ params }: PageProps) {
-  return <BillingDetailPage id={params.id} />;
+export default async function Page({ params }: PageProps) {
+  const { id } = await params;
+  return <BillingDetailPage id={id} />;
 }

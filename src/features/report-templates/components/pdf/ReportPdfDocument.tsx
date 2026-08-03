@@ -52,7 +52,7 @@ function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
   return (
     <Document title="JMR Sheet / Customer Consent Form">
       <PdfPage>
-        <PdfHeader title={data.companyName} subtitle={data.subtitle} rightLogo={false} />
+        <PdfHeader title={data.companyName} subtitle={data.subtitle} />
         <PdfSectionTitle>JMR Sheet / Customer Consent Form</PdfSectionTitle>
         <PdfKeyValueRow
           items={[

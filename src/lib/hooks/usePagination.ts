@@ -8,7 +8,7 @@ interface UsePaginationOptions<T> {
 
 export function usePagination<T>({
   items,
-  pageSize = 10,
+  pageSize = 50,
   initialPage = 1,
 }: UsePaginationOptions<T>) {
   const [page, setPage] = useState(initialPage);

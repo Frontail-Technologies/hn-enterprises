@@ -36,8 +36,6 @@ export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
   const [month, setMonth] = useState("07");
   const [year, setYear] = useState("2026");
-  const [projectId, setProjectId] = useState("all");
-  const [city, setCity] = useState("all");
 
   const metricPeriod: DashboardMetricPeriod =
     period === "custom-year"
@@ -55,26 +53,13 @@ export function DashboardContent() {
   const { data: dprRecords = [] } = useDprRecordsQuery({});
   const { data: workProgress = [] } = useWorkProgressListQuery({ limit: 20 });
 
-  const projectOptions = useMemo(
-    () => projects.map((project) => ({ label: `${project.code} - ${project.name}`, value: project.id })),
-    [projects],
-  );
-  const cityOptions = useMemo(
-    () =>
-      Array.from(new Set(projects.map((project) => project.city))).map((cityName) => ({
-        label: cityName,
-        value: cityName,
-      })),
-    [projects],
-  );
-
   const dashboard = useMemo(
     () =>
       getAdminDashboardData(
-        { projectId, city, period: metricPeriod },
+        { projectId: "all", city: "all", period: metricPeriod },
         { customers, projects, projectSites, bills, payments, materials, dprRecords },
       ),
-    [city, customers, dprRecords, materials, metricPeriod, payments, bills, projectId, projectSites, projects],
+    [customers, dprRecords, materials, metricPeriod, payments, bills, projectSites, projects],
   );
 
   const activityItems = useMemo(() => {
@@ -85,6 +70,7 @@ export function DashboardContent() {
         title: activity.title,
         time: formatRelativeTime(activity.dateTime),
         icon: activity.icon,
+        type: activity.type,
       }));
   }, [dprRecords, payments, workProgress]);
 
@@ -100,23 +86,22 @@ export function DashboardContent() {
           year={year}
           onMonthChange={setMonth}
           onYearChange={setYear}
-          projectId={projectId}
-          city={city}
-          onProjectChange={setProjectId}
-          onCityChange={setCity}
-          projectOptions={projectOptions}
-          cityOptions={cityOptions}
         />
       }
       contentClassName="space-y-5"
     >
       <CompactStatGrid dashboard>
         {dashboard.metrics.map((metric) => (
-          <MetricCard
+          <Link
             key={metric.label}
-            {...metric}
-            className="h-28 max-w-none p-4 sm:w-full"
-          />
+            href={metric.href ?? "/dashboard"}
+            className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <MetricCard
+              {...metric}
+              className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
+            />
+          </Link>
         ))}
       </CompactStatGrid>
 

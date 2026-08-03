@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AttendanceRecord } from "../../data/attendance.data";
@@ -14,12 +15,14 @@ export function AttendanceRegister({
   roster,
   selectedSupervisor,
   onRecordSaved,
+  isLoading = false,
 }: {
   month: Date;
   records: AttendanceRecord[];
   roster: RosterUser[];
   selectedSupervisor: string;
   onRecordSaved?: () => void;
+  isLoading?: boolean;
 }) {
   const [selectedCell, setSelectedCell] = useState<{
     staffId: string;
@@ -100,7 +103,15 @@ export function AttendanceRegister({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={2} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
+                      <div className="flex items-center justify-center py-4">
+                        <LoadingSpinner />
+                      </div>
+                    </td>
+                  </tr>
+                ) : rows.map((row) => (
                   <tr key={row.person.id} className="hover:bg-muted/25">
                     <AttendanceBodyCell className="text-center font-medium">
                       {row.serial}
@@ -145,7 +156,15 @@ export function AttendanceRegister({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={days.length + 4} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
+                      <div className="flex items-center justify-center py-4">
+                        <LoadingSpinner />
+                      </div>
+                    </td>
+                  </tr>
+                ) : rows.map((row) => (
                   <tr key={row.person.id} className="hover:bg-muted/25">
                     {row.cells.map((cell, index) => (
                       <AttendanceBodyCell

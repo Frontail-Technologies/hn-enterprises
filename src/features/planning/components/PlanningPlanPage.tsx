@@ -8,6 +8,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import { useSitePlansQuery } from "../hooks/usePlanning";
 import { planningTaskTemplates } from "../services/planning.service";
 import type { PlanTask } from "../types/planning.types";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 export function PlanningPlanPage() {
   const searchParams = useSearchParams();
@@ -52,7 +53,7 @@ export function PlanningPlanPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-card" />
         ) : !plan ? (
           <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
             No plan filed for this site and date yet.

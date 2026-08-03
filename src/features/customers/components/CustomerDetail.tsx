@@ -63,6 +63,7 @@ import {
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
 import { useCustomerQuery, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
+import { PageLoading } from "@/components/shared/PageLoading";
 import type {
   Customer,
   CustomerSurvey,
@@ -102,7 +103,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const initialPipeId = searchParams.get("pipe");
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading customer...</p>;
+    return <PageLoading />;
   }
 
   if (isError || !customer) {
@@ -216,6 +217,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
             survey={customer.survey}
             lmcPipelineWork={customer.lmcPipelineWork}
             documents={customer.documents}
+            customerId={customer.id}
           />
         </section>
 

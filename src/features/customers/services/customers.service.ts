@@ -13,7 +13,6 @@ import type {
   CustomerSurveyWorkableStatus,
   FittingsAccessories,
   GiMeasurements,
-  ImportPreviewRow,
   LmcEvidenceFile,
   LmcOverallStatus,
   LmcPipeSizeRecord,
@@ -110,8 +109,8 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
   { key: "scheme", label: "Scheme" },
   { key: "jobCardDone", label: "Job Card Done", input: "select", options: yesNoOptions },
   { key: "reportNoGi", label: "GI Report Number" },
-  { key: "reportNoGc", label: "GC Report Number", readOnly: true },
-  { key: "reportNoConversion", label: "Conversion Report Number", readOnly: true },
+  { key: "reportNoGc", label: "GC Report Number" },
+  { key: "reportNoConversion", label: "Conversion Report Number" },
 ];
 
 export const giMeasurementFields: FieldDefinition<GiMeasurements>[] = [
@@ -236,10 +235,10 @@ export const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
   { key: "projectName", label: "Project", group: "Project", width: 190 },
   { key: "siteArea", label: "Site / Area", group: "Project", width: 170 },
   { key: "city", label: "City", group: "Project", width: 120 },
+  { key: "scheme", label: "Scheme", group: "Customer", width: 130 },
   { key: "paymentStatus", label: "Payment Status", group: "Payment", width: 140 },
   { key: "paymentMode", label: "Payment Mode", group: "Payment", width: 130 },
   { key: "initialAmount", label: "Initial Amount", group: "Payment", width: 140 },
-  { key: "scheme", label: "Scheme", group: "Customer", width: 130 },
   { key: "surveyDate", label: "Survey Date", group: "Survey", width: 130 },
   { key: "workableStatus", label: "Workable Status", group: "Survey", width: 150 },
   { key: "surveyRemarks", label: "Survey Remarks", group: "Survey", width: 220 },
@@ -428,7 +427,7 @@ export const emptyCustomerSurvey: CustomerSurvey = {
   recommendedAction: "",
   expectedResolutionDate: "",
   approvalComments: "",
-  photos: [],
+  evidence: [],
   revisions: [],
 };
 
@@ -701,12 +700,6 @@ function formatBoolean(value: boolean) {
   return value ? "Yes" : "No";
 }
 
-export const importPreviewRows: ImportPreviewRow[] = [
-  { id: "row-1", rowNumber: 2, customerName: "Anil Gupta", mobileNumber: "9876500011", bpTrNumber: "BP-991002", project: "Shyam Nagar CGD Project", area: "Shyam Nagar Block A", status: "Valid", errors: [] },
-  { id: "row-2", rowNumber: 3, customerName: "Sunita Jain", mobileNumber: "98000", bpTrNumber: "", project: "Green City Phase 1", area: "Commercial Block", status: "Error", errors: ["Mobile number must be 10 digits", "BP / TR Number is required"] },
-  { id: "row-3", rowNumber: 4, customerName: "Hotel Midtown", mobileNumber: "9811100220", bpTrNumber: "BP-991003", project: "Green City Phase 1", area: "Commercial Block", status: "Valid", errors: [] },
-];
-
 // ---- Real backend API + adapters ----
 
 const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
@@ -790,6 +783,8 @@ type BackendCustomer = {
   createdAt: string;
   lmcPipeRecords?: BackendLmcPipeRecord[];
   documents?: BackendCustomerDocument[];
+  project?: { id: string; name: string } | null;
+  site?: { id: string; name: string } | null;
 };
 
 type BackendLmcPipeRecord = {
@@ -872,14 +867,14 @@ function mapDocument(raw: BackendCustomerDocument): CustomerDocument {
   };
 }
 
-function mapCustomer(raw: BackendCustomer, projectName?: string, siteArea?: string): Customer {
+function mapCustomer(raw: BackendCustomer): Customer {
   return {
     id: raw.id,
     status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
     projectId: raw.projectId,
     siteId: raw.siteId,
-    projectName: projectName ?? "",
-    siteArea: siteArea ?? "",
+    projectName: raw.project?.name ?? "",
+    siteArea: raw.site?.name ?? "",
     city: raw.city ?? "",
     createdDate: toDateOnly(raw.createdAt),
     customerConnection: {

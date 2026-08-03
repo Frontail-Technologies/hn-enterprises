@@ -24,6 +24,7 @@ export type UploadedImage = {
   fileName: string;
   previewUrl: string;
   uploadedOn: string;
+  file?: File;
 };
 
 export type CustomerSurveyPhoto = {
@@ -32,6 +33,10 @@ export type CustomerSurveyPhoto = {
   caption: string;
   fileName: string;
   fileUrl?: string;
+  // Only set while editing on the web, before the file finishes uploading; never persisted.
+  previewUrl?: string;
+  status?: "staged" | "uploading" | "uploaded" | "error";
+  file?: File;
 };
 
 export type CustomerSurveyRevision = {
@@ -66,7 +71,7 @@ export type CustomerSurvey = {
   recommendedAction: string;
   expectedResolutionDate: string;
   approvalComments: string;
-  photos: CustomerSurveyPhoto[];
+  evidence: CustomerSurveyPhoto[];
   revisions: CustomerSurveyRevision[];
 };
 
@@ -163,6 +168,10 @@ export type LmcEvidenceFile = {
   label: string;
   fileName: string;
   fileUrl?: string;
+  // Only set while editing on the web, before the file finishes uploading; never persisted.
+  previewUrl?: string;
+  status?: "staged" | "uploading" | "uploaded" | "error";
+  file?: File;
 };
 
 export type LmcPipeSizeRecord = {
@@ -255,20 +264,9 @@ export type CustomerDocument = {
   amount: string;
   fileName: string;
   fileUrl?: string;
+  file?: File;
   remarks: string;
   uploadedOn: string;
   uploadedBy: string;
   status: StatusValue;
-};
-
-export type ImportPreviewRow = {
-  id: string;
-  rowNumber: number;
-  customerName: string;
-  mobileNumber: string;
-  bpTrNumber: string;
-  project: string;
-  area: string;
-  status: "Valid" | "Error";
-  errors: string[];
 };

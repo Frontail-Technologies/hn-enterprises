@@ -1,12 +1,27 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ActivityItem } from "../data/dashboard.data";
+import type { ActivityType } from "../services/activity.service";
 
 interface RecentActivityCardProps {
   items: ActivityItem[];
 }
+
+const TYPE_CLASSES: Record<ActivityType, string> = {
+  Work: "bg-status-info-bg ring-status-info/20",
+  Survey: "bg-status-purple-bg ring-status-purple/20",
+  DPR: "bg-status-warning-bg ring-status-warning/20",
+  Billing: "bg-status-success-bg ring-status-success/20",
+};
+
+const TYPE_ICON_CLASSES: Record<ActivityType, string> = {
+  Work: "text-status-info-fg",
+  Survey: "text-status-purple-fg",
+  DPR: "text-status-warning-fg",
+  Billing: "text-status-success-fg",
+};
 
 export function RecentActivityCard({ items }: RecentActivityCardProps) {
   return (
@@ -14,15 +29,15 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
       <CardHeader className="border-b border-border/60 pb-2.5">
         <CardTitle>Recent Activity</CardTitle>
         <CardAction>
-          <Button variant="link" size="sm" render={<Link href="/activity" />}>
+          <Link href="/activity" className={buttonVariants({ variant: "link", size: "sm" })}>
             View all
-          </Button>
+          </Link>
         </CardAction>
       </CardHeader>
       <CardContent>
         {items.length ? (
           <div className="space-y-2">
-            {items.map((activity, index) => {
+            {items.map((activity) => {
               const Icon = activity.icon;
 
               return (
@@ -30,10 +45,15 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
                   key={`${activity.title}-${activity.time}`}
                   className={cn(
                     "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-3 py-2.5",
-                    index % 2 === 0 ? "bg-muted/55" : "bg-background",
+                    TYPE_CLASSES[activity.type],
                   )}
                 >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-card text-muted-foreground ring-1 ring-border/70">
+                  <div
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-md bg-card ring-1 ring-border/70",
+                      TYPE_ICON_CLASSES[activity.type],
+                    )}
+                  >
                     <Icon size={13} weight="bold" />
                   </div>
                   <p className="min-w-0 text-xs font-medium leading-snug text-foreground">

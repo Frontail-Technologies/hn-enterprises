@@ -1,4 +1,5 @@
 import type { ElementType } from "react";
+import type { ActivityType } from "@/features/dashboard/services/activity.service";
 
 export type DashboardMetric = {
   label: string;
@@ -30,4 +31,5 @@ export type ActivityItem = {
   title: string;
   time: string;
   icon: ElementType;
+  type: ActivityType;
 };

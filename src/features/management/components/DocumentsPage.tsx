@@ -7,6 +7,7 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { resolveFileUrl } from "@/lib/upload";
 import { useDocumentsQuery } from "../hooks/useDocuments";
 import type { DocumentModule, DocumentRow } from "../services/documents.service";
@@ -14,9 +15,18 @@ import { formatDate } from "../utils/format";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
+const exportColumns: ExportColumn<DocumentRow>[] = [
+  { label: "Document Name", getValue: (row) => row.name },
+  { label: "Category", getValue: (row) => row.category },
+  { label: "Related Module", getValue: (row) => row.module },
+  { label: "Related Record", getValue: (row) => row.relatedName },
+  { label: "Date", getValue: (row) => formatDate(row.uploadedAt) },
+  { label: "Status", getValue: (row) => row.status },
+];
+
 export function DocumentsPage() {
   const [filters, setFilters] = useState<{ search: string; module: string }>({ search: "", module: "all" });
-  const { data: documents = [] } = useDocumentsQuery({
+  const { data: documents = [], isLoading } = useDocumentsQuery({
     search: filters.search || undefined,
     module: filters.module === "all" ? undefined : (filters.module as DocumentModule),
   });
@@ -46,6 +56,16 @@ export function DocumentsPage() {
     <PageShell
       title="Documents"
       subtitle="Central read-only view of documents uploaded on Projects and Customers."
+      actions={
+        <button
+          type="button"
+          className={buttonVariants({ variant: "outline", size: "default" })}
+          onClick={() => void exportRowsToExcel("documents.xlsx", exportColumns, documents)}
+        >
+          <DownloadSimpleIcon size={15} />
+          Export Excel
+        </button>
+      }
     >
       <FilterSheetButton
         searchKey="search"
@@ -65,7 +85,7 @@ export function DocumentsPage() {
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
         onReset={() => setFilters({ search: "", module: "all" })}
       />
-      <PaginatedDataTable data={documents} columns={columns} />
+      <PaginatedDataTable data={documents} columns={columns} isLoading={isLoading} />
     </PageShell>
   );
 }

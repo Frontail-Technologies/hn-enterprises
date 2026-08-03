@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate, formatDateTime } from "../utils/format";
 import { useStaffMemberQuery } from "../hooks/useStaff";
 import { PageShell } from "./shared/PageShell";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 export function StaffDetailPage({ id }: { id: string }) {
   const { data: staffMember, isLoading, isError } = useStaffMemberQuery(id);
@@ -15,7 +16,7 @@ export function StaffDetailPage({ id }: { id: string }) {
   if (isLoading) {
     return (
       <PageShell title="Staff Details" subtitle="View employee and payment details.">
-        <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">Loading...</div>
+        <PageLoading className="min-h-24 rounded-md bg-muted/30" />
       </PageShell>
     );
   }

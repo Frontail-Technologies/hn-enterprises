@@ -130,7 +130,14 @@ function mapTransactionFormToBody(type: MaterialTransactionType, values: Materia
     adjustmentType: values.adjustmentType || undefined,
     vehicleNo: values.vehicleNo || undefined,
     vehicleQty: values.vehicleQty ? Number(values.vehicleQty) : undefined,
-    evidence: values.evidence.length ? values.evidence : undefined,
+    evidence: values.evidence.length
+      ? values.evidence.map((item) => ({
+          id: item.id,
+          label: item.label,
+          fileName: item.fileName,
+          fileUrl: item.fileUrl,
+        }))
+      : undefined,
     remarks: values.remarks || undefined,
   };
 }

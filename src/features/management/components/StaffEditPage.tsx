@@ -25,6 +25,7 @@ import type {
 } from "../types/staff.types";
 import type { UserRole, UserStatus } from "../services/users.service";
 import { PageShell } from "./shared/PageShell";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 const roles: UserRole[] = ["Super Admin", "Admin", "Supervisor", "Field Executive", "Viewer"];
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
@@ -37,9 +38,7 @@ export function StaffEditPage({ id }: { id: string }) {
   if (isLoading) {
     return (
       <PageShell title="Edit Staff" subtitle="Update employee and salary details.">
-        <div className="rounded-lg border border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-          Loading...
-        </div>
+        <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-muted/20" />
       </PageShell>
     );
   }

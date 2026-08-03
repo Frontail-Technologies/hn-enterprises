@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 const LeafletLocationMap = dynamic(
   () =>
@@ -10,8 +11,8 @@ const LeafletLocationMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-44 items-center justify-center rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
-        Loading map...
+      <div className="flex h-44 items-center justify-center rounded-lg border border-border bg-muted/30">
+        <LoadingSpinner size="sm" />
       </div>
     ),
   },

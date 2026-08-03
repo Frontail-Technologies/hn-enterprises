@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowSquareOutIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
+import { ArrowSquareOutIcon, DownloadSimpleIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -14,8 +14,16 @@ import { DatePicker } from "@/components/shared/DatePicker";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useDprRecordsQuery, useSitePlansQuery } from "../hooks/usePlanning";
 import type { PlanningEntryRow } from "../types/planning.types";
+
+const exportColumns: ExportColumn<PlanningEntryRow>[] = [
+  { label: "Supervisor", getValue: (row) => row.supervisorName },
+  { label: "Area / Site", getValue: (row) => row.siteArea },
+  { label: "Plan Filed", getValue: (row) => (row.planFiled ? "Yes" : "No") },
+  { label: "DPR Status", getValue: (row) => row.dprStatus },
+];
 
 type FilterKey = "supervisorName" | "siteArea" | "planFiled" | "dprStatus";
 
@@ -92,7 +100,19 @@ export function PlanningEntryPage() {
   }, [filteredRows]);
 
   return (
-    <PageShell title="DPR / Planning">
+    <PageShell
+      title="DPR / Planning"
+      actions={
+        <button
+          type="button"
+          className={buttonVariants({ variant: "outline", size: "default" })}
+          onClick={() => void exportRowsToExcel("dpr-planning.xlsx", exportColumns, filteredRows)}
+        >
+          <DownloadSimpleIcon size={15} />
+          Export Excel
+        </button>
+      }
+    >
       <div className="space-y-3">
         <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-card p-3 lg:flex-row lg:items-end">
           <div className="w-full lg:w-56">

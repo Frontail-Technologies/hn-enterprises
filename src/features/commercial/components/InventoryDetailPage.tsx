@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { PackageIcon, ReceiptIcon, UserIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, PackageIcon, ReceiptIcon, UserIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { buttonVariants } from "@/components/ui/button";
+import { exportRowsToExcel } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { formatDate } from "../utils/format";
@@ -15,14 +17,15 @@ import type { MaterialTransaction } from "../types/material.types";
 import { InventoryActions } from "./inventory/InventoryActions";
 import { StockStatus } from "./inventory/StockStatus";
 import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
+import { PageLoading } from "@/components/shared/PageLoading";
 
 export function InventoryDetailPage({ id }: { id: string }) {
   const { data: material, isLoading, isError } = useMaterialQuery(id);
-  const { data: transactions = [] } = useMaterialTransactionsQuery({ materialId: id });
-  const { data: plumberBalances = [] } = usePlumberBalancesQuery({ materialId: id });
-  const { data: plumbers = [] } = usePlumbersQuery();
-  const { data: customers = [] } = useCustomersQuery();
-  const { data: sites = [] } = useAllProjectSitesQuery();
+  const { data: transactions = [], isLoading: transactionsLoading } = useMaterialTransactionsQuery({ materialId: id });
+  const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery({ materialId: id });
+  const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
+  const { data: customers = [], isLoading: customersLoading } = useCustomersQuery();
+  const { data: sites = [], isLoading: sitesLoading } = useAllProjectSitesQuery();
 
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
   const customerNameById = useMemo(
@@ -55,8 +58,10 @@ export function InventoryDetailPage({ id }: { id: string }) {
     [plumberBalances, plumberNameById],
   );
 
+  const transactionGridLoading = transactionsLoading || plumbersLoading || customersLoading || sitesLoading;
+
   if (isLoading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading material...</p>;
+    return <PageLoading />;
   }
 
   if (isError || !material) {
@@ -119,7 +124,19 @@ export function InventoryDetailPage({ id }: { id: string }) {
       <PageHeader
         title={material.name}
         subtitle={`${material.category || "Uncategorised"} / ${material.unit}`}
-        actions={<InventoryActions material={material} labels />}
+        actions={
+          <>
+            <button
+              type="button"
+              className={buttonVariants({ variant: "outline", size: "default" })}
+              onClick={() => void exportRowsToExcel(`${material.name}-transactions.xlsx`, transactionColumns, transactions)}
+            >
+              <DownloadSimpleIcon size={15} />
+              Export Excel
+            </button>
+            <InventoryActions material={material} labels />
+          </>
+        }
       />
 
       <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.45fr)]">
@@ -157,6 +174,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
           rows={plumberLedgerRows}
           maxHeightClassName="max-h-[34vh]"
           emptyTitle="No plumber balance for this material"
+          isLoading={plumberBalancesLoading || plumbersLoading}
         />
       </SectionCard>
 
@@ -166,6 +184,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
           rows={consumption}
           maxHeightClassName="max-h-[40vh]"
           emptyTitle="No customer consumption found for this material"
+          isLoading={transactionGridLoading}
         />
       </SectionCard>
 
@@ -176,6 +195,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             rows={purchases}
             maxHeightClassName="max-h-[34vh]"
             emptyTitle="No purchase rows found"
+            isLoading={transactionsLoading}
           />
         </SectionCard>
         <SectionCard title="Store Issue Book">
@@ -184,6 +204,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             rows={storeIssues}
             maxHeightClassName="max-h-[34vh]"
             emptyTitle="No issue rows found"
+            isLoading={transactionsLoading || plumbersLoading || sitesLoading}
           />
         </SectionCard>
       </section>
@@ -194,6 +215,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
           rows={transactions}
           maxHeightClassName="max-h-[34vh]"
           emptyTitle="No transactions found"
+          isLoading={transactionGridLoading}
         />
       </SectionCard>
     </div>

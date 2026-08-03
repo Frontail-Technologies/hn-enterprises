@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { buttonVariants } from "@/components/ui/button";
+import { exportRowsToExcel } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import type { InventoryTab } from "../types/commercial.types";
@@ -14,6 +17,7 @@ import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
 import { useMaterialsQuery, useMaterialTransactionsQuery, usePlumberBalancesQuery } from "../hooks/useMaterials";
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
+import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
 
 const TAB_TO_TRANSACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = {
   purchase: "purchase",
@@ -50,14 +54,14 @@ type PlumberBalanceRow = PlumberBalance & { id: string; plumberName: string; mat
 export function InventoryPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
-  const { data: materials = [] } = useMaterialsQuery();
+  const { data: materials = [], isLoading: materialsLoading } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: customers = [] } = useCustomersQuery();
   const { data: sites = [] } = useAllProjectSitesQuery();
-  const { data: plumberBalances = [] } = usePlumberBalancesQuery();
+  const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery();
 
   const transactionType = TAB_TO_TRANSACTION_TYPE[activeTab];
-  const { data: transactions = [] } = useMaterialTransactionsQuery(
+  const { data: transactions = [], isLoading: transactionsLoading } = useMaterialTransactionsQuery(
     transactionType ? { type: transactionType } : { type: "purchase" },
   );
   const activeTransactions = useMemo(
@@ -254,12 +258,33 @@ export function InventoryPage() {
     },
   ];
 
+  function handleExport() {
+    if (activeTab === "stock") {
+      void exportRowsToExcel("materials-stock.xlsx", stockColumns, materials);
+    } else if (activeTab === "totalIssue") {
+      void exportRowsToExcel("total-issue.xlsx", totalIssueColumns, totalIssueRows);
+    } else if (activeTab === "plumberBalance") {
+      void exportRowsToExcel("plumber-balance.xlsx", plumberBalanceColumns, plumberBalanceRows);
+    } else if (transactionType) {
+      void exportRowsToExcel(`${activeTab}.xlsx`, transactionColumns(transactionType), activeTransactions);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="Inventory & Material"
         subtitle="Real-time stock, purchase, issue and plumber consumption ledger."
-        actions={<MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={buttonVariants({ variant: "outline", size: "default" })} onClick={handleExport}>
+              <DownloadSimpleIcon size={15} />
+              Export Excel
+            </button>
+            <MaterialItemDrawer />
+            <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
+          </div>
+        }
       />
       <InventoryTabNav activeTab={activeTab} onChange={setActiveTab} counts={counts} />
 
@@ -268,16 +293,17 @@ export function InventoryPage() {
           columns={stockColumns}
           rows={materials}
           emptyTitle="No materials in the catalog yet"
+          isLoading={materialsLoading}
           onRowClick={(row) => router.push(`/inventory/${row.id}`)}
         />
       ) : null}
 
       {activeTab === "purchase" ? (
-        <ExcelDataGrid columns={transactionColumns("purchase")} rows={activeTransactions} emptyTitle="No purchase records found" />
+        <ExcelDataGrid columns={transactionColumns("purchase")} rows={activeTransactions} emptyTitle="No purchase records found" isLoading={transactionsLoading} />
       ) : null}
 
       {activeTab === "pbgIssue" ? (
-        <ExcelDataGrid columns={transactionColumns("pbg_issue")} rows={activeTransactions} emptyTitle="No PBG issue records found" />
+        <ExcelDataGrid columns={transactionColumns("pbg_issue")} rows={activeTransactions} emptyTitle="No PBG issue records found" isLoading={transactionsLoading} />
       ) : null}
 
       {activeTab === "pbgConsumption" ? (
@@ -285,15 +311,16 @@ export function InventoryPage() {
           columns={transactionColumns("pbg_consumption")}
           rows={activeTransactions}
           emptyTitle="No PBG consumption records found"
+          isLoading={transactionsLoading}
         />
       ) : null}
 
       {activeTab === "storeIssue" ? (
-        <ExcelDataGrid columns={transactionColumns("issue")} rows={activeTransactions} emptyTitle="No store issue records found" />
+        <ExcelDataGrid columns={transactionColumns("issue")} rows={activeTransactions} emptyTitle="No store issue records found" isLoading={transactionsLoading} />
       ) : null}
 
       {activeTab === "totalIssue" ? (
-        <ExcelDataGrid columns={totalIssueColumns} rows={totalIssueRows} emptyTitle="No issued materials found" />
+        <ExcelDataGrid columns={totalIssueColumns} rows={totalIssueRows} emptyTitle="No issued materials found" isLoading={transactionsLoading} />
       ) : null}
 
       {activeTab === "plumberBalance" ? (
@@ -301,6 +328,7 @@ export function InventoryPage() {
           columns={plumberBalanceColumns}
           rows={plumberBalanceRows}
           emptyTitle="No plumber balance records found"
+          isLoading={plumberBalancesLoading}
         />
       ) : null}
 
@@ -309,6 +337,7 @@ export function InventoryPage() {
           columns={transactionColumns("consumption")}
           rows={activeTransactions}
           emptyTitle="No consumption records found"
+          isLoading={transactionsLoading}
         />
       ) : null}
     </div>

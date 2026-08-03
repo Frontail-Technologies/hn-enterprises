@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DownloadIcon, PrinterIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useReportTemplateData } from "../hooks/useReportTemplateData";
 import type { ReportTemplateDefinition } from "../types/report-template.types";
 import { ReportPdfDocument } from "./pdf/ReportPdfDocument";
@@ -28,10 +29,18 @@ export function ReportTemplatePdfViewer({ template }: { template: ReportTemplate
     );
   }
 
-  if (isLoading || !data) {
+  if (isError) {
     return (
       <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card text-sm text-muted-foreground">
-        {isError ? "Unable to load this customer." : "Loading report data..."}
+        Unable to load this customer.
+      </div>
+    );
+  }
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card">
+        <LoadingSpinner />
       </div>
     );
   }

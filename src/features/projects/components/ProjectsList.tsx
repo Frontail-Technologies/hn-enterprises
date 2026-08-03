@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { exportRowsToExcel } from "@/lib/export-excel";
 import type { Project } from "../types/project.types";
 
 type ProjectMasterSheetRow = {
@@ -69,13 +70,23 @@ export function ProjectsList() {
       title="Projects"
       subtitle="Manage project contracts, cities, clients, and status."
       actions={
-        <Link
-          href="/projects/new"
-          className={buttonVariants({ variant: "default", size: "default" })}
-        >
-          <PlusIcon size={15} />
-          New Project
-        </Link>
+        <>
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+          <Link
+            href="/projects/new"
+            className={buttonVariants({ variant: "default", size: "default" })}
+          >
+            <PlusIcon size={15} />
+            New Project
+          </Link>
+        </>
       }
     >
       <TablePanel
@@ -99,7 +110,8 @@ export function ProjectsList() {
         <ExcelDataGrid
           columns={projectMasterSheetColumns}
           rows={filteredRows}
-          emptyTitle={isLoading ? "Loading projects..." : "No project master records found"}
+          emptyTitle="No project master records found"
+          isLoading={isLoading}
           onRowClick={(row) => router.push(`/projects/${row.id}`)}
         />
       </TablePanel>

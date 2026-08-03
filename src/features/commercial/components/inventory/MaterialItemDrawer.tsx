@@ -1,0 +1,151 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { PlusIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useCreateMaterial } from "../../hooks/useMaterials";
+import type { MaterialFormValues } from "../../types/material.types";
+
+const unitOptions = ["Meter", "Nos", "Roll", "Set", "Kg", "Litre"];
+
+function emptyValues(): MaterialFormValues {
+  return {
+    name: "",
+    category: "",
+    unit: "Nos",
+    reorderLevel: "0",
+  };
+}
+
+function Field({ label, children, helper }: { label: string; children: ReactNode; helper?: string }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      {children}
+      {helper ? <span className="block text-[11px] text-muted-foreground">{helper}</span> : null}
+    </label>
+  );
+}
+
+export function MaterialItemDrawer() {
+  const [open, setOpen] = useState(false);
+  const [values, setValues] = useState<MaterialFormValues>(emptyValues());
+  const [error, setError] = useState("");
+  const createMaterial = useCreateMaterial();
+
+  function set<K extends keyof MaterialFormValues>(key: K, value: MaterialFormValues[K]) {
+    setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      setValues(emptyValues());
+      setError("");
+    }
+    setOpen(nextOpen);
+  }
+
+  async function handleSave() {
+    if (!values.name.trim()) {
+      setError("Material name is required.");
+      return;
+    }
+    if (!values.unit.trim()) {
+      setError("Unit is required.");
+      return;
+    }
+
+    setError("");
+    try {
+      await createMaterial.mutateAsync(values);
+      setOpen(false);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to add material.");
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetTrigger render={<Button type="button" variant="outline" />}>
+        <PlusIcon size={15} />
+        Add Material
+      </SheetTrigger>
+      <SheetContent className="w-full border-border bg-card sm:max-w-md">
+        <SheetHeader className="border-b border-border/70">
+          <SheetTitle>Add Material</SheetTitle>
+          <SheetDescription>
+            Create an actual stock item. Categories only group materials; they are not selectable stock items.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+          <Field label="Material Name" helper={'Example: GI Pipe 20MM, 1/2" GI Tee, 90MM Coupler.'}>
+            <Input
+              value={values.name}
+              onChange={(event) => set("name", event.target.value)}
+              placeholder="Enter material name"
+            />
+          </Field>
+          <Field label="Category" helper="Grouping only. Example: GI Pipe, MDPE Pipe, Valve, Tools.">
+            <Input
+              value={values.category}
+              onChange={(event) => set("category", event.target.value)}
+              placeholder="Enter category"
+            />
+          </Field>
+          <Field label="Unit">
+            <Select value={values.unit} onValueChange={(unit) => set("unit", unit ?? "Nos")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {unitOptions.map((unit) => (
+                  <SelectItem key={unit} value={unit}>
+                    {unit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Reorder Level">
+            <Input
+              type="number"
+              value={values.reorderLevel}
+              onChange={(event) => set("reorderLevel", event.target.value)}
+              placeholder="0"
+            />
+          </Field>
+
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        </div>
+
+        <SheetFooter className="border-t border-border/70">
+          <div className="flex w-full items-center justify-end gap-2">
+            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
+            <Button type="button" onClick={handleSave} disabled={createMaterial.isPending}>
+              {createMaterial.isPending ? "Saving..." : "Save Material"}
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}

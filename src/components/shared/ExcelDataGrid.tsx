@@ -17,6 +17,8 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import {
   Popover,
   PopoverContent,
@@ -37,6 +39,7 @@ interface ExcelDataGridProps<T extends { id: string }> {
   columns: ExcelColumn<T>[];
   rows: T[];
   emptyTitle?: string;
+  isLoading?: boolean;
   maxHeightClassName?: string;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
@@ -48,6 +51,7 @@ export function ExcelDataGrid<T extends { id: string }>({
   columns,
   rows,
   emptyTitle = "No records found",
+  isLoading,
   maxHeightClassName = "max-h-[68vh]",
   onRowClick,
   getRowClassName,
@@ -61,7 +65,12 @@ export function ExcelDataGrid<T extends { id: string }>({
     scrollWidth: 0,
     clientWidth: 0,
   });
+  // Pinned/sticky columns eat a large share of the viewport on small screens, leaving little
+  // room for the rest of the table, so columns aren't fixed there - the whole table just scrolls.
+  const isMobile = useIsMobile();
   const stickyOffsets = useMemo(() => {
+    if (isMobile) return columns.map(() => undefined);
+
     return columns.reduce<{
       offsets: Array<number | undefined>;
       offset: number;
@@ -81,14 +90,16 @@ export function ExcelDataGrid<T extends { id: string }>({
       },
       { offsets: [], offset: 0 },
     ).offsets;
-  }, [columns]);
+  }, [columns, isMobile]);
   const fixedWidth = useMemo(
     () =>
-      columns.reduce(
-        (sum, column) => (column.sticky ? sum + (column.width ?? 140) : sum),
-        0,
-      ),
-    [columns],
+      isMobile
+        ? 0
+        : columns.reduce(
+            (sum, column) => (column.sticky ? sum + (column.width ?? 140) : sum),
+            0,
+          ),
+    [columns, isMobile],
   );
   const canScrollHorizontally = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 4;
 
@@ -169,7 +180,7 @@ export function ExcelDataGrid<T extends { id: string }>({
   }
 
   return (
-    <div className="rounded-lg border border-border/70 bg-card">
+    <div className="rounded-lg border border-border/70 bg-white">
       <div className="border-b border-border/70 px-3 py-2 text-xs text-muted-foreground">
         Showing {filteredRows.length} of {rows.length} records
       </div>
@@ -187,6 +198,7 @@ export function ExcelDataGrid<T extends { id: string }>({
             filters={filters}
             setFilters={setFilters}
             emptyTitle={emptyTitle}
+            isLoading={isLoading}
             emptyColSpan={columns.length}
             onRowClick={onRowClick}
             getRowClassName={getRowClassName}
@@ -209,7 +221,7 @@ export function ExcelDataGrid<T extends { id: string }>({
         ) : null}
       </div>
       {canScrollHorizontally ? (
-        <div className="border-t border-border/70 bg-card py-1">
+        <div className="border-t border-border/70 bg-white py-1">
           <div
             ref={bottomScrollRef}
             className="h-4 overflow-x-auto overflow-y-hidden"
@@ -251,7 +263,7 @@ function HoldScrollButton({
       onPointerCancel={onStop}
       onPointerLeave={onStop}
       className={cn(
-        "absolute top-1/2 z-30 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-border/70 bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-primary focus-visible:opacity-100 group-hover/excel-grid:opacity-100",
+        "absolute top-1/2 z-30 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-border/70 bg-white text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-primary focus-visible:opacity-100 group-hover/excel-grid:opacity-100",
         direction === "left" ? "left-2" : "right-2",
       )}
     >
@@ -268,6 +280,7 @@ function ExcelTable<T extends { id: string }>({
   filters,
   setFilters,
   emptyTitle,
+  isLoading,
   emptyColSpan,
   onRowClick,
   getRowClassName,
@@ -279,12 +292,13 @@ function ExcelTable<T extends { id: string }>({
   filters: ActiveFilters;
   setFilters: Dispatch<SetStateAction<ActiveFilters>>;
   emptyTitle: string;
+  isLoading?: boolean;
   emptyColSpan: number;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
 }) {
   return (
-    <table className="min-w-max border-separate border-spacing-0 text-sm">
+    <table className="min-w-full border-separate border-spacing-0 text-sm">
       <thead>
         <tr>
           {columns.map((column, columnIndex) => {
@@ -296,10 +310,10 @@ function ExcelTable<T extends { id: string }>({
             return (
               <th
                 key={column.key}
-                style={{ width, minWidth: width, left: stickyOffset }}
+                style={{ minWidth: width, left: stickyOffset }}
                 className={cn(
                   "sticky top-0 z-20 h-12 border-b border-r border-border/70 bg-secondary px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground",
-                  isSticky && "z-30 shadow-[1px_0_0_hsl(var(--border))]",
+                  isSticky && "z-30 border-r-primary/30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -323,9 +337,15 @@ function ExcelTable<T extends { id: string }>({
         </tr>
       </thead>
       <tbody>
-        {rows.length ? (
+        {isLoading ? (
+          <tr>
+            <td colSpan={emptyColSpan} className="px-3 py-10 text-center">
+              <LoadingSpinner size="sm" />
+            </td>
+          </tr>
+        ) : rows.length ? (
           rows.map((row) => (
-            <tr key={row.id} className={cn("group/excel-row bg-card hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
+            <tr key={row.id} className={cn("group/excel-row bg-white hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
               {columns.map((column, columnIndex) => {
                 const width = column.width ?? 140;
                 const value = formatCellValue(column.getValue(row));
@@ -336,10 +356,10 @@ function ExcelTable<T extends { id: string }>({
                 return (
                   <td
                     key={column.key}
-                    style={{ width, minWidth: width, left: stickyOffset }}
+                    style={{ minWidth: width, left: stickyOffset }}
                     className={cn(
-                      "h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm font-normal text-foreground group-hover/excel-row:bg-muted/30",
-                      isSticky && "sticky z-10 font-medium shadow-[1px_0_0_hsl(var(--border))]",
+                      "h-10 border-b border-r border-border/55 bg-white px-2 py-2 text-sm font-normal text-foreground group-hover/excel-row:bg-muted/30",
+                      isSticky && "sticky z-10 border-r-primary/25 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                     )}
                     title={value}
                   >
@@ -381,8 +401,17 @@ function ColumnFilter<T extends { id: string }>({
   active: boolean;
   onApply: (values: string[]) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<string[]>(selected);
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      setDraft(selected);
+      setSearch("");
+    }
+    setOpen(nextOpen);
+  }
 
   const values = useMemo(() => {
     const unique = Array.from(
@@ -402,7 +431,7 @@ function ColumnFilter<T extends { id: string }>({
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <button
@@ -453,11 +482,19 @@ function ColumnFilter<T extends { id: string }>({
               onClick={() => {
                 setDraft([]);
                 onApply([]);
+                setOpen(false);
               }}
             >
               Clear
             </Button>
-            <Button type="button" size="sm" onClick={() => onApply(draft)}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                onApply(draft);
+                setOpen(false);
+              }}
+            >
               Apply
             </Button>
           </div>

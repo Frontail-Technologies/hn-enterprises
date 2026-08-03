@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FormField } from "@/components/shared/FormField";
-import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
+import { flushImageUploads, ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
@@ -46,6 +46,7 @@ export function AnnouncementsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Announcement>(emptyDraft);
+  const [saveError, setSaveError] = useState("");
 
   const createMutation = useCreateAnnouncement();
   const updateMutation = useUpdateAnnouncement(editingId ?? "");
@@ -54,12 +55,14 @@ export function AnnouncementsPage() {
   const openCreate = () => {
     setEditingId(null);
     setDraft(emptyDraft);
+    setSaveError("");
     setDialogOpen(true);
   };
 
   const openEdit = (announcement: Announcement) => {
     setEditingId(announcement.id);
     setDraft(announcement);
+    setSaveError("");
     setDialogOpen(true);
   };
 
@@ -67,32 +70,48 @@ export function AnnouncementsPage() {
     setDialogOpen(false);
     setEditingId(null);
     setDraft(emptyDraft);
+    setSaveError("");
   };
 
-  const draftFormValues = () => ({
-    title: draft.title,
-    message: draft.message,
-    imageUrl: draft.image?.fileUrl,
-    imageFileName: draft.image?.fileName,
-  });
+  const resolveDraftFormValues = async () => {
+    const image = draft.image ? (await flushImageUploads([draft.image], "announcements"))[0] : undefined;
+    return {
+      title: draft.title,
+      message: draft.message,
+      imageUrl: image?.fileUrl,
+      imageFileName: image?.fileName,
+    };
+  };
 
   const saveDraft = async () => {
     if (!draft.title.trim() || !draft.message.trim()) return;
-    if (editingId) {
-      await updateMutation.mutateAsync(draftFormValues());
-    } else {
-      await createMutation.mutateAsync(draftFormValues());
+    setSaveError("");
+    try {
+      const values = await resolveDraftFormValues();
+      if (editingId) {
+        await updateMutation.mutateAsync(values);
+      } else {
+        await createMutation.mutateAsync(values);
+      }
+      closeDialog();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save announcement");
     }
-    closeDialog();
   };
 
   const publishFromDialog = async () => {
     if (!draft.title.trim() || !draft.message.trim()) return;
-    const saved = editingId
-      ? await updateMutation.mutateAsync(draftFormValues())
-      : await createMutation.mutateAsync(draftFormValues());
-    await publishMutation.mutateAsync(saved.id);
-    closeDialog();
+    setSaveError("");
+    try {
+      const values = await resolveDraftFormValues();
+      const saved = editingId
+        ? await updateMutation.mutateAsync(values)
+        : await createMutation.mutateAsync(values);
+      await publishMutation.mutateAsync(saved.id);
+      closeDialog();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to push announcement");
+    }
   };
 
   const publishRow = (id: string) => {
@@ -162,17 +181,19 @@ export function AnnouncementsPage() {
               </Button>
             </ActionTooltip>
           ) : null}
-          <ActionTooltip label="Edit">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Edit announcement"
-              onClick={() => openEdit(announcement)}
-            >
-              <MegaphoneIcon size={14} />
-            </Button>
-          </ActionTooltip>
+          {announcement.status === "Draft" ? (
+            <ActionTooltip label="Edit">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Edit announcement"
+                onClick={() => openEdit(announcement)}
+              >
+                <MegaphoneIcon size={14} />
+              </Button>
+            </ActionTooltip>
+          ) : null}
         </div>
       ),
     },
@@ -195,7 +216,8 @@ export function AnnouncementsPage() {
         <DataTable
           columns={columns}
           data={list}
-          emptyTitle={isLoading ? "Loading announcements..." : "No announcements yet"}
+          isLoading={isLoading}
+          emptyTitle="No announcements yet"
           emptyDescription="Create an announcement to push it to the mobile app."
           variant="striped"
         />
@@ -205,6 +227,7 @@ export function AnnouncementsPage() {
         open={dialogOpen}
         title={editingId ? "Edit Announcement" : "New Announcement"}
         draft={draft}
+        saveError={saveError}
         onDraftChange={setDraft}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
         onSaveDraft={() => void saveDraft()}
@@ -218,6 +241,7 @@ function AnnouncementDialog({
   open,
   title,
   draft,
+  saveError,
   onDraftChange,
   onOpenChange,
   onSaveDraft,
@@ -226,6 +250,7 @@ function AnnouncementDialog({
   open: boolean;
   title: string;
   draft: Announcement;
+  saveError: string;
   onDraftChange: React.Dispatch<React.SetStateAction<Announcement>>;
   onOpenChange: (open: boolean) => void;
   onSaveDraft: () => void;
@@ -268,6 +293,7 @@ function AnnouncementDialog({
               }
             />
           </FormField>
+          {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
         </div>
 
         <DialogFooter>

@@ -4,9 +4,10 @@ import { InventoryDetailPage } from "@/features/commercial/components/InventoryD
 export const metadata: Metadata = { title: "Material Detail" };
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function Page({ params }: PageProps) {
-  return <InventoryDetailPage id={params.id} />;
+export default async function Page({ params }: PageProps) {
+  const { id } = await params;
+  return <InventoryDetailPage id={id} />;
 }

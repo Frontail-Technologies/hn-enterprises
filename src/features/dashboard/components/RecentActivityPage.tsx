@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/components/shared/PageShell";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -21,6 +22,7 @@ import {
 import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
+import { exportRowsToExcel } from "@/lib/export-excel";
 
 const initialFilters: ActivityFilters = {
   search: "",
@@ -40,7 +42,19 @@ export function RecentActivityPage() {
   const rows = useMemo(() => getActivityRows(activities, filters), [activities, filters]);
 
   return (
-    <PageShell title="Recent Activity">
+    <PageShell
+      title="Recent Activity"
+      actions={
+        <button
+          type="button"
+          className={buttonVariants({ variant: "outline", size: "default" })}
+          onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
+        >
+          <DownloadSimpleIcon size={15} />
+          Export Excel
+        </button>
+      }
+    >
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-0">
@@ -79,8 +93,8 @@ export function RecentActivityPage() {
         <ExcelDataGrid
           columns={activityColumns}
           rows={rows}
-          emptyTitle={isLoading ? "Loading..." : "No activity found"}
-          maxHeightClassName="h-[calc(100vh-170px)] max-h-none"
+          emptyTitle="No activity found"
+          isLoading={isLoading}
         />
       </div>
     </PageShell>

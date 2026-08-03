@@ -20,7 +20,7 @@ export function Breadcrumb() {
   })
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs">
+    <nav aria-label="Breadcrumb" className="hidden items-center gap-1 text-xs md:flex">
       {crumbs.map((crumb, idx) => (
         <span key={crumb.href} className="flex items-center gap-1">
           {idx > 0 && (

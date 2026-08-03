@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeftIcon, EditIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { getReportTemplateById } from "../services/report-templates.service";
 import type { ReportTemplateId } from "../types/report-template.types";
 
@@ -12,8 +13,8 @@ const ReportTemplatePdfViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card text-sm text-muted-foreground">
-        Loading PDF preview...
+      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card">
+        <LoadingSpinner />
       </div>
     ),
   },
