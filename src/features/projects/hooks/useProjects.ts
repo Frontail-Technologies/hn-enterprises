@@ -81,3 +81,13 @@ export function useCreateProjectDocument(projectId: string) {
     },
   });
 }
+
+export function useDeleteProjectDocument(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => projectsApi.deleteDocument(projectId, documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentsKey(projectId) });
+    },
+  });
+}

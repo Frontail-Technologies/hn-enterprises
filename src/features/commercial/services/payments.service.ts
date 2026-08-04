@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentStatus } from "../types/payment.types";
 
 type BackendCategory = "worker_payment" | "supervisor_payment" | "plumber_payment" | "rent" | "material_expense" | "other_expense";
@@ -93,28 +94,24 @@ function mapPayment(raw: BackendPayment): Payment {
   };
 }
 
-function mapFormToBody(values: PaymentFormValues) {
-  return {
-    category: CATEGORY_TO_BACKEND[values.category],
-    plumberId: values.plumberId || undefined,
-    paidTo: values.paidTo || undefined,
-    siteId: values.siteId || undefined,
-    customerId: values.customerId || undefined,
-    amount: Number(values.amount) || 0,
-    paymentDate: values.paymentDate,
-    mode: MODE_TO_BACKEND[values.mode],
-    status: STATUS_TO_BACKEND[values.status],
-    purpose: values.purpose || undefined,
-    remarks: values.remarks || undefined,
-    evidence: values.evidence.length
-      ? values.evidence.map((item) => ({
-          id: item.id,
-          label: item.label,
-          fileName: item.fileName,
-          fileUrl: item.fileUrl,
-        }))
-      : undefined,
-  };
+// Evidence is embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all.
+function buildPaymentFormData(values: PaymentFormValues): FormData {
+  const formData = new FormData();
+  formData.append("category", CATEGORY_TO_BACKEND[values.category]);
+  if (values.plumberId) formData.append("plumberId", values.plumberId);
+  if (values.paidTo) formData.append("paidTo", values.paidTo);
+  if (values.siteId) formData.append("siteId", values.siteId);
+  if (values.customerId) formData.append("customerId", values.customerId);
+  formData.append("amount", String(Number(values.amount) || 0));
+  formData.append("paymentDate", values.paymentDate);
+  formData.append("mode", MODE_TO_BACKEND[values.mode]);
+  formData.append("status", STATUS_TO_BACKEND[values.status]);
+  if (values.purpose) formData.append("purpose", values.purpose);
+  if (values.remarks) formData.append("remarks", values.remarks);
+  appendEvidenceArray(formData, "evidence", values.evidence as unknown as ImagePreviewItem[]);
+  return formData;
 }
 
 export const paymentsApi = {
@@ -132,7 +129,7 @@ export const paymentsApi = {
   async create(values: PaymentFormValues): Promise<Payment> {
     const raw = await apiRequest<BackendPayment>("/payments", {
       method: "POST",
-      body: JSON.stringify(mapFormToBody(values)),
+      body: buildPaymentFormData(values),
     });
     return mapPayment(raw);
   },
@@ -140,8 +137,12 @@ export const paymentsApi = {
   async update(id: string, values: PaymentFormValues): Promise<Payment> {
     const raw = await apiRequest<BackendPayment>(`/payments/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(mapFormToBody(values)),
+      body: buildPaymentFormData(values),
     });
     return mapPayment(raw);
+  },
+
+  async remove(id: string): Promise<void> {
+    await apiRequest<null>(`/payments/${id}`, { method: "DELETE" });
   },
 };

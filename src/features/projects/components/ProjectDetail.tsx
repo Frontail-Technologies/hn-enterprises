@@ -59,6 +59,7 @@ import {
   useProjectSitesQuery,
   useSaveProjectSite,
   useCreateProjectDocument,
+  useDeleteProjectDocument,
 } from "@/features/projects/hooks/useProjects";
 import { PageLoading } from "@/components/shared/PageLoading";
 import type {
@@ -80,28 +81,6 @@ type ChangeHistoryItem = {
   user: string;
   date: string;
   reason: string;
-};
-
-type ProjectPlanningDprItem = {
-  id: string;
-  date: string;
-  activity: string;
-  site: string;
-  plannedQuantity: string;
-  completedQuantity: string;
-  delayReason: string;
-  supervisor: string;
-  status: StatusValue;
-};
-
-type ProjectApprovalItem = {
-  id: string;
-  reference: string;
-  module: string;
-  submittedBy: string;
-  submittedOn: string;
-  remarks: string;
-  status: StatusValue;
 };
 
 const documentCategories = [
@@ -131,80 +110,12 @@ const teamRoleOptions = [
   "Safety Officer",
 ];
 
-const projectPlanningDprItems: ProjectPlanningDprItem[] = [
-  {
-    id: "dpr-1",
-    date: "2025-02-12",
-    activity: "LMC trenching and pipe laying",
-    site: "Shyam Nagar Block A",
-    plannedQuantity: "220 m",
-    completedQuantity: "185 m",
-    delayReason: "-",
-    supervisor: "Ramesh Kumar",
-    status: "In Progress",
-  },
-  {
-    id: "dpr-2",
-    date: "2025-02-13",
-    activity: "GI installation follow-up",
-    site: "Shyam Nagar Block B",
-    plannedQuantity: "18 connections",
-    completedQuantity: "14 connections",
-    delayReason: "Customer availability",
-    supervisor: "Kavita Joshi",
-    status: "Pending",
-  },
-  {
-    id: "dpr-3",
-    date: "2025-02-14",
-    activity: "GC evidence correction",
-    site: "Shyam Nagar Block B",
-    plannedQuantity: "8 records",
-    completedQuantity: "8 records",
-    delayReason: "-",
-    supervisor: "Amit Rathore",
-    status: "Completed",
-  },
-];
-
-const projectApprovalItems: ProjectApprovalItem[] = [
-  {
-    id: "approval-1",
-    reference: "SUR-553901",
-    module: "Survey",
-    submittedBy: "Amit Rathore",
-    submittedOn: "2025-02-06",
-    remarks: "Meter placement revision submitted.",
-    status: "Sent Back",
-  },
-  {
-    id: "approval-2",
-    reference: "GC-553901",
-    module: "GC Upload",
-    submittedBy: "Kavita Joshi",
-    submittedOn: "2025-02-14",
-    remarks: "GC photos pending final review.",
-    status: "In Review",
-  },
-  {
-    id: "approval-3",
-    reference: "DPR-2025-0214",
-    module: "Planning & DPR",
-    submittedBy: "Ramesh Kumar",
-    submittedOn: "2025-02-14",
-    remarks: "Daily progress submitted for site work.",
-    status: "Approved",
-  },
-];
-
 const projectSectionLinks = [
   { value: "overview", label: "Overview" },
   { value: "contract", label: "Contract & Targets" },
   { value: "sites", label: "Sites" },
   { value: "documents", label: "Documents" },
   { value: "team", label: "Team" },
-  { value: "planning", label: "Planning & DPR" },
-  { value: "approvals", label: "Approvals" },
 ];
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
@@ -260,12 +171,6 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         <TabsContent value="team">
           <ProjectTeam />
         </TabsContent>
-        <TabsContent value="planning">
-          <ProjectPlanningDpr />
-        </TabsContent>
-        <TabsContent value="approvals">
-          <ProjectApprovals />
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -286,62 +191,6 @@ function ProjectSectionNav() {
         ))}
       </TabsList>
     </div>
-  );
-}
-
-function ProjectPlanningDpr() {
-  const columns: ColumnDef<ProjectPlanningDprItem>[] = [
-    { key: "date", header: "Date", render: (item) => formatDate(item.date) },
-    { key: "activity", header: "Activity", className: "min-w-56" },
-    { key: "site", header: "Site" },
-    { key: "plannedQuantity", header: "Planned Qty" },
-    { key: "completedQuantity", header: "Completed Qty" },
-    { key: "delayReason", header: "Delay Reason", className: "min-w-40" },
-    { key: "supervisor", header: "Supervisor" },
-    {
-      key: "status",
-      header: "Status",
-      render: (item) => <StatusBadge status={item.status} />,
-    },
-  ];
-
-  return (
-    <SectionCard title="Planning & DPR">
-      <DataTable
-        columns={columns}
-        data={projectPlanningDprItems}
-        variant="striped"
-      />
-    </SectionCard>
-  );
-}
-
-function ProjectApprovals() {
-  const columns: ColumnDef<ProjectApprovalItem>[] = [
-    { key: "reference", header: "Reference", className: "font-medium" },
-    { key: "module", header: "Module" },
-    { key: "submittedBy", header: "Submitted By" },
-    {
-      key: "submittedOn",
-      header: "Submitted On",
-      render: (item) => formatDate(item.submittedOn),
-    },
-    { key: "remarks", header: "Remarks", className: "min-w-64" },
-    {
-      key: "status",
-      header: "Status",
-      render: (item) => <StatusBadge status={item.status} />,
-    },
-  ];
-
-  return (
-    <SectionCard title="Project Approvals">
-      <DataTable
-        columns={columns}
-        data={projectApprovalItems}
-        variant="striped"
-      />
-    </SectionCard>
   );
 }
 
@@ -611,6 +460,7 @@ function ContractTargets({ project }: { project: Project }) {
 function ProjectDocuments({ projectId }: { projectId: string }) {
   const { data: documents = [], isLoading } = useProjectDocumentsQuery(projectId);
   const createDocumentMutation = useCreateProjectDocument(projectId);
+  const deleteDocumentMutation = useDeleteProjectDocument(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProjectDocument>(emptyDocument);
@@ -646,6 +496,11 @@ function ProjectDocuments({ projectId }: { projectId: string }) {
               href={href}
               download={doc.fileName || true}
               disabled={!href}
+            />
+            <ActionButton
+              label="Delete"
+              icon={<TrashIcon size={13} />}
+              onClick={() => deleteDocumentMutation.mutate(doc.id)}
             />
           </div>
         );

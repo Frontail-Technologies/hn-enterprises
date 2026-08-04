@@ -3,7 +3,9 @@ import type { AdminSummaryStatKey } from "@/features/dashboard/services/dashboar
 import { ActiveSitesSummaryDetail } from "./summary/ActiveSitesSummaryDetail";
 import { BillingPendingSummaryDetail } from "./summary/BillingPendingSummaryDetail";
 import { DprPendingSummaryDetail } from "./summary/DprPendingSummaryDetail";
+import { FieldUpdatesSummaryDetail } from "./summary/FieldUpdatesSummaryDetail";
 import { MonthlyExpensesSummaryDetail } from "./summary/MonthlyExpensesSummaryDetail";
+import { OverdueBillsSummaryDetail } from "./summary/OverdueBillsSummaryDetail";
 import { PendingApprovalsSummaryDetail } from "./summary/PendingApprovalsSummaryDetail";
 import { StockAlertsSummaryDetail } from "./summary/StockAlertsSummaryDetail";
 import { TotalProjectsSummaryDetail } from "./summary/TotalProjectsSummaryDetail";
@@ -24,6 +26,12 @@ export function DashboardSummaryDetailPage({
   }
   if (statKey === "active-sites") {
     return <ActiveSitesSummaryDetail city={city} />;
+  }
+  if (statKey === "overdue-bills") {
+    return <OverdueBillsSummaryDetail projectId={projectId} city={city} />;
+  }
+  if (statKey === "field-updates") {
+    return <FieldUpdatesSummaryDetail period={period} />;
   }
   if (statKey === "stock-alerts") {
     return <StockAlertsSummaryDetail />;

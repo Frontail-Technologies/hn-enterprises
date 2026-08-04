@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import type {
   Material,
   MaterialFormValues,
@@ -110,36 +111,32 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
   };
 }
 
-function mapTransactionFormToBody(type: MaterialTransactionType, values: MaterialTransactionFormValues) {
-  return {
-    materialId: values.materialId,
-    type,
-    quantity: Number(values.quantity) || 0,
-    transactionDate: values.transactionDate,
-    referenceNo: values.referenceNo || undefined,
-    vendorName: values.vendorName || undefined,
-    rate: values.rate ? Number(values.rate) : undefined,
-    billAmount: values.billAmount ? Number(values.billAmount) : undefined,
-    plumberId: values.plumberId || undefined,
-    supervisorId: values.supervisorId || undefined,
-    siteId: values.siteId || undefined,
-    storeLabel: values.storeLabel || undefined,
-    customerId: values.customerId || undefined,
-    reportNo: values.reportNo || undefined,
-    condition: values.condition || undefined,
-    adjustmentType: values.adjustmentType || undefined,
-    vehicleNo: values.vehicleNo || undefined,
-    vehicleQty: values.vehicleQty ? Number(values.vehicleQty) : undefined,
-    evidence: values.evidence.length
-      ? values.evidence.map((item) => ({
-          id: item.id,
-          label: item.label,
-          fileName: item.fileName,
-          fileUrl: item.fileUrl,
-        }))
-      : undefined,
-    remarks: values.remarks || undefined,
-  };
+// Evidence is embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all.
+function buildTransactionFormData(type: MaterialTransactionType, values: MaterialTransactionFormValues): FormData {
+  const formData = new FormData();
+  formData.append("materialId", values.materialId);
+  formData.append("type", type);
+  formData.append("quantity", String(Number(values.quantity) || 0));
+  formData.append("transactionDate", values.transactionDate);
+  if (values.referenceNo) formData.append("referenceNo", values.referenceNo);
+  if (values.vendorName) formData.append("vendorName", values.vendorName);
+  if (values.rate) formData.append("rate", String(Number(values.rate)));
+  if (values.billAmount) formData.append("billAmount", String(Number(values.billAmount)));
+  if (values.plumberId) formData.append("plumberId", values.plumberId);
+  if (values.supervisorId) formData.append("supervisorId", values.supervisorId);
+  if (values.siteId) formData.append("siteId", values.siteId);
+  if (values.storeLabel) formData.append("storeLabel", values.storeLabel);
+  if (values.customerId) formData.append("customerId", values.customerId);
+  if (values.reportNo) formData.append("reportNo", values.reportNo);
+  if (values.condition) formData.append("condition", values.condition);
+  if (values.adjustmentType) formData.append("adjustmentType", values.adjustmentType);
+  if (values.vehicleNo) formData.append("vehicleNo", values.vehicleNo);
+  if (values.vehicleQty) formData.append("vehicleQty", String(Number(values.vehicleQty)));
+  if (values.remarks) formData.append("remarks", values.remarks);
+  appendEvidenceArray(formData, "evidence", values.evidence as unknown as ImagePreviewItem[]);
+  return formData;
 }
 
 export const materialsApi = {
@@ -201,7 +198,7 @@ export const materialsApi = {
   ): Promise<MaterialTransaction> {
     const raw = await apiRequest<BackendMaterialTransaction>("/materials/transactions", {
       method: "POST",
-      body: JSON.stringify(mapTransactionFormToBody(type, values)),
+      body: buildTransactionFormData(type, values),
     });
     return mapTransaction(raw);
   },

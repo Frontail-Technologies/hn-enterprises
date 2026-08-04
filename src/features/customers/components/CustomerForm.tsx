@@ -34,7 +34,6 @@ import {
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import {
-  flushImageUploads,
   ImageUploadPreview,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
@@ -135,51 +134,31 @@ function CustomerFormFields({
       return;
 
     setUploadError("");
-    let readyValues = values;
+
     try {
-      const surveyEvidence = values.survey
-        ? await flushImageUploads(values.survey.evidence as ImagePreviewItem[], "customers", customerId)
-        : undefined;
-      const pipeRecords = await Promise.all(
-        values.lmcPipelineWork.pipeRecords.map(async (record) => ({
-          ...record,
-          evidence: (await flushImageUploads(
-            record.evidence as ImagePreviewItem[],
-            "customers",
-            customerId,
-          )) as LmcEvidenceFile[],
-        })),
+      const saved = await mutation.mutateAsync(values);
+
+      const editedPipeRecords = values.lmcPipelineWork.pipeRecords.filter(
+        (record) =>
+          record.lengthMetres || record.layingDate || record.testingDate || record.purgingDate ||
+          record.jointFittingDetails || (record.remarks && record.remarks !== "-") ||
+          record.layingStatus !== "Not Started" || record.testingStatus !== "Not Started" || record.purgingStatus !== "Not Started",
       );
-      readyValues = {
-        ...values,
-        survey: values.survey && surveyEvidence ? { ...values.survey, evidence: surveyEvidence as CustomerSurveyPhoto[] } : values.survey,
-        lmcPipelineWork: { ...values.lmcPipelineWork, pipeRecords },
-      };
-      setValues(readyValues);
-    } catch {
-      setUploadError("Some evidence photos failed to upload. Please retry or remove them before saving.");
-      return;
+
+      for (const record of editedPipeRecords) {
+        await customersApi.upsertLmcPipeRecord(saved.id, record);
+      }
+
+      const newDocuments = values.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
+      for (const doc of newDocuments) {
+        await customersApi.createDocument(saved.id, doc);
+      }
+
+      router.push(`/customers/${saved.id}`);
+    } catch (error) {
+      console.error("[CustomerForm] save failed", { customerId, error });
+      setUploadError(error instanceof Error ? error.message : "Unable to save customer");
     }
-
-    const saved = await mutation.mutateAsync(readyValues);
-
-    const editedPipeRecords = readyValues.lmcPipelineWork.pipeRecords.filter(
-      (record) =>
-        record.lengthMetres || record.layingDate || record.testingDate || record.purgingDate ||
-        record.jointFittingDetails || (record.remarks && record.remarks !== "-") ||
-        record.layingStatus !== "Not Started" || record.testingStatus !== "Not Started" || record.purgingStatus !== "Not Started",
-    );
-
-    for (const record of editedPipeRecords) {
-      await customersApi.upsertLmcPipeRecord(saved.id, record);
-    }
-
-    const newDocuments = readyValues.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
-    for (const doc of newDocuments) {
-      await customersApi.createDocument(saved.id, doc);
-    }
-
-    router.push(`/customers/${saved.id}`);
   };
 
   return (

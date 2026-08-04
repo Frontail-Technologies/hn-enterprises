@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { appendSingleImage, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { resolveFileUrl } from "@/lib/upload";
 import type { Announcement, AnnouncementStatus } from "../types/announcement.types";
 
@@ -51,9 +52,24 @@ function mapAnnouncement(raw: BackendAnnouncement): Announcement {
 export type AnnouncementFormValues = {
   title: string;
   message: string;
-  imageUrl?: string;
-  imageFileName?: string;
+  image?: ImagePreviewItem;
 };
+
+// The image is embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all.
+function buildAnnouncementFormData(values: AnnouncementFormValues): FormData {
+  const formData = new FormData();
+  formData.append("title", values.title);
+  formData.append("message", values.message);
+  if (values.image?.file) {
+    appendSingleImage(formData, "file", values.image);
+  } else if (values.image?.fileUrl) {
+    formData.append("imageUrl", values.image.fileUrl);
+    formData.append("imageFileName", values.image.fileName);
+  }
+  return formData;
+}
 
 export const announcementsApi = {
   async list(): Promise<Announcement[]> {
@@ -64,12 +80,7 @@ export const announcementsApi = {
   async create(values: AnnouncementFormValues): Promise<Announcement> {
     const raw = await apiRequest<BackendAnnouncement>("/announcements", {
       method: "POST",
-      body: JSON.stringify({
-        title: values.title,
-        message: values.message,
-        imageUrl: values.imageUrl || undefined,
-        imageFileName: values.imageFileName || undefined,
-      }),
+      body: buildAnnouncementFormData(values),
     });
     return mapAnnouncement(raw);
   },
@@ -77,12 +88,7 @@ export const announcementsApi = {
   async update(id: string, values: AnnouncementFormValues): Promise<Announcement> {
     const raw = await apiRequest<BackendAnnouncement>(`/announcements/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        title: values.title,
-        message: values.message,
-        imageUrl: values.imageUrl || undefined,
-        imageFileName: values.imageFileName || undefined,
-      }),
+      body: buildAnnouncementFormData(values),
     });
     return mapAnnouncement(raw);
   },

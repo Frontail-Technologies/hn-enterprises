@@ -12,8 +12,10 @@ import type { Bill } from "@/features/commercial/types/bill.types";
 import type { Material } from "@/features/commercial/types/material.types";
 import type { Payment } from "@/features/commercial/types/payment.types";
 import type { Customer } from "@/features/customers/types/customer.types";
+import type { AttendanceRecord } from "@/features/management/data/attendance.data";
 import type { DprRecord } from "@/features/planning/types/planning.types";
 import type { Project, ProjectSite } from "@/features/projects/types/project.types";
+import type { WorkProgressUpdate } from "@/features/work-progress/types/work-progress.types";
 import type {
   DashboardMetric,
   DashboardMetricPeriod,
@@ -41,6 +43,8 @@ export type DashboardData = {
   payments: Payment[];
   materials: Material[];
   dprRecords: DprRecord[];
+  workProgress: WorkProgressUpdate[];
+  attendance: AttendanceRecord[];
 };
 
 export type AttendanceSummaryRow = {
@@ -63,6 +67,7 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
   const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
   const scopedBills = data.bills.filter((bill) => scopedCustomerIds.has(bill.customerId));
   const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
+  const scopedWorkProgress = data.workProgress.filter((update) => scopedCustomerIds.has(update.customerId));
 
   const metrics = buildAdminMetrics({
     projectsCount: scopedProjects.length,
@@ -72,6 +77,7 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
     payments: scopedPayments,
     materials: data.materials,
     dprRecords: data.dprRecords,
+    workProgress: scopedWorkProgress,
     scope,
   });
   const workflowMetrics = buildWorkflowMetrics({ customers: scopedCustomers, scope });
@@ -79,7 +85,7 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
   return {
     metrics,
     workflowMetrics,
-    attendanceRows: buildAttendanceRows(),
+    attendanceRows: buildAttendanceRows(data.attendance),
     alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, data.dprRecords),
   };
 }
@@ -129,6 +135,7 @@ function buildAdminMetrics({
   payments,
   materials,
   dprRecords,
+  workProgress,
   scope,
 }: {
   projectsCount: number;
@@ -138,12 +145,12 @@ function buildAdminMetrics({
   payments: Payment[];
   materials: Material[];
   dprRecords: DprRecord[];
+  workProgress: WorkProgressUpdate[];
   scope: DashboardScope;
 }): DashboardMetric[] {
   const range = getPeriodRange(scope.period);
   const scopeQuery = `projectId=${encodeURIComponent(scope.projectId)}&city=${encodeURIComponent(scope.city)}`;
   const periodQuery = `${scopeQuery}&period=${encodeURIComponent(scope.period)}`;
-  const totalCustomers = customers.length;
   const lowStockItems = materials.filter((material) =>
     ["Low Stock", "Out of Stock"].includes(material.status),
   ).length;
@@ -164,6 +171,9 @@ function buildAdminMetrics({
   const dprPending = dprRecords.filter(
     (record) => record.status !== "Approved" && withinRange(record.date, range),
   ).length;
+  // Overdue is a current-state snapshot (like project/site counts), not scaled by period.
+  const overdueBills = bills.filter((bill) => bill.status === "Overdue").length;
+  const fieldUpdates = workProgress.filter((update) => withinRange(update.createdAt, range)).length;
 
   return [
     {
@@ -181,11 +191,11 @@ function buildAdminMetrics({
       href: `/dashboard/summary/active-sites?${scopeQuery}`,
     },
     {
-      label: "Total Customers",
-      value: String(totalCustomers),
-      helperText: "Master records",
-      icon: UsersThreeIcon,
-      href: `/dashboard/stats/total-customers?${scopeQuery}`,
+      label: "Overdue Bills",
+      value: String(overdueBills),
+      helperText: "Past due date",
+      icon: InvoiceIcon,
+      href: `/dashboard/summary/overdue-bills?${scopeQuery}`,
     },
     {
       label: "Stock Alerts",
@@ -221,6 +231,13 @@ function buildAdminMetrics({
       helperText: "Supervisor submissions",
       icon: CalendarCheckIcon,
       href: `/dashboard/summary/dpr-pending?${periodQuery}`,
+    },
+    {
+      label: "Field Updates",
+      value: String(fieldUpdates),
+      helperText: "Site progress logged",
+      icon: UsersThreeIcon,
+      href: `/dashboard/summary/field-updates?${periodQuery}`,
     },
   ];
 }
@@ -295,15 +312,15 @@ function buildWorkflowMetrics({
   }));
 }
 
-function buildAttendanceRows(): AttendanceSummaryRow[] {
-  // Attendance is now backed by a real API (see features/management/services/attendance.service.ts);
-  // this dashboard tile isn't wired to a live fetch yet, so it shows zeros here rather than
-  // fabricating counts. Wiring it to a live fetch is a separate change.
+function buildAttendanceRows(records: AttendanceRecord[]): AttendanceSummaryRow[] {
+  const countByStatus = (status: AttendanceRecord["status"]) =>
+    records.filter((record) => record.status === status).length;
+
   return [
-    { id: "present", label: "Present", value: 0, helper: "Marked on site" },
-    { id: "late", label: "Late", value: 0, helper: "Late check-in" },
-    { id: "absent", label: "Absent", value: 0, helper: "Needs review" },
-    { id: "leave", label: "Leave", value: 0, helper: "Approved leave" },
+    { id: "present", label: "Present", value: countByStatus("Present"), helper: "Marked on site" },
+    { id: "late", label: "Late", value: countByStatus("Late"), helper: "Late check-in" },
+    { id: "absent", label: "Absent", value: countByStatus("Absent"), helper: "Needs review" },
+    { id: "leave", label: "Leave", value: countByStatus("Leave"), helper: "Approved leave" },
   ];
 }
 

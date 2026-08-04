@@ -284,4 +284,10 @@ export const projectsApi = {
     });
     return mapProjectDocument(raw);
   },
+
+  async deleteDocument(projectId: string, documentId: string): Promise<void> {
+    await apiRequest<null>(`/projects/${projectId}/documents/${documentId}`, {
+      method: "DELETE",
+    });
+  },
 };

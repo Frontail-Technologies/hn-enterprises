@@ -29,7 +29,6 @@ import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useAllProjectSitesQuery } from "../../hooks/useAllProjectSites";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
 import type { MaterialTransactionFormValues, MaterialTransactionType } from "../../types/material.types";
-import { flushImageUploads, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { ImageProofField } from "../shared/ImageProofField";
 
 const TYPE_LABELS: Record<MaterialTransactionType, string> = {
@@ -126,8 +125,7 @@ export function MaterialDrawer({
     }
     setSaveError("");
     try {
-      const evidence = await flushImageUploads(values.evidence as ImagePreviewItem[], "inventory");
-      await createTransaction.mutateAsync({ ...values, evidence: evidence as MaterialTransactionFormValues["evidence"] });
+      await createTransaction.mutateAsync(values);
       setOpen(false);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save transaction");

@@ -70,3 +70,14 @@ export function useCreateCustomerDocument(customerId: string) {
     },
   });
 }
+
+export function useDeleteCustomerDocument(customerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => customersApi.deleteDocument(customerId, documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentsKey(customerId) });
+      queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
+    },
+  });
+}

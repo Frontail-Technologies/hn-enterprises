@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { ArrowClockwiseIcon, ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Attachment,
@@ -64,6 +65,42 @@ export async function flushImageUploads(
   return next;
 }
 
+/**
+ * Appends an array-shaped evidence field to a save request's FormData: items
+ * that are already uploaded (real fileUrl, no local file) go in as a
+ * JSON-stringified array under `fieldKey`; not-yet-uploaded local files go in
+ * as repeated "files" fields, to be uploaded server-side in the same request.
+ * Use this instead of `flushImageUploads` when the target endpoint embeds the
+ * upload in the save request itself (one round-trip instead of two).
+ */
+export function appendEvidenceArray(formData: FormData, fieldKey: string, items: ImagePreviewItem[]) {
+  const alreadyUploaded = items.filter((item) => item.fileUrl && !item.file);
+  formData.append(
+    fieldKey,
+    JSON.stringify(
+      alreadyUploaded.map((item) => ({ id: item.id, label: item.label, fileName: item.fileName, fileUrl: item.fileUrl })),
+    ),
+  );
+  items
+    .filter((item) => item.file)
+    .forEach((item) => {
+      formData.append("files", item.file!, item.fileName);
+    });
+}
+
+/**
+ * Appends a single not-yet-uploaded image to a save request's FormData under
+ * `fieldKey` (e.g. "file"), to be uploaded server-side in the same request.
+ * A no-op if the item is already uploaded or absent - the caller is
+ * responsible for sending the existing url/fileName as plain fields in that
+ * case, since there's nothing new to embed.
+ */
+export function appendSingleImage(formData: FormData, fieldKey: string, item: ImagePreviewItem | undefined) {
+  if (item?.file) {
+    formData.append(fieldKey, item.file, item.fileName);
+  }
+}
+
 interface ImageUploadPreviewProps {
   images: ImagePreviewItem[];
   onChange?: (images: ImagePreviewItem[]) => void;
@@ -81,6 +118,7 @@ export function ImageUploadPreview({
 }: ImageUploadPreviewProps) {
   const [localItems, setLocalItems] = useState<ImagePreviewItem[]>(images);
   const [isDragging, setIsDragging] = useState(false);
+  const [previewItem, setPreviewItem] = useState<ImagePreviewItem | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isControlled = Boolean(onChange);
   const items = isControlled ? images : localItems;
@@ -200,7 +238,8 @@ export function ImageUploadPreview({
             >
               <AttachmentMedia
                 variant={thumbSrc ? "image" : "icon"}
-                className="h-14 w-14 rounded-sm"
+                className={cn("h-14 w-14 rounded-sm", thumbSrc && "cursor-pointer")}
+                onClick={thumbSrc ? () => setPreviewItem(item) : undefined}
               >
                 {thumbSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -258,6 +297,20 @@ export function ImageUploadPreview({
           );
         })}
       </AttachmentGroup>
+
+      <Dialog open={Boolean(previewItem)} onOpenChange={(open) => !open && setPreviewItem(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogTitle className="truncate">{previewItem?.label || previewItem?.fileName}</DialogTitle>
+          {previewItem ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewItem.previewUrl || resolveFileUrl(previewItem.fileUrl)}
+              alt={previewItem.label}
+              className="max-h-[70vh] w-full rounded-md object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

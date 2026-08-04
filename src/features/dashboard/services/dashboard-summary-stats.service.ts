@@ -1,11 +1,13 @@
 export type AdminSummaryStatKey =
   | "total-projects"
   | "active-sites"
+  | "overdue-bills"
   | "stock-alerts"
   | "pending-approvals"
   | "billing-pending"
   | "monthly-expenses"
-  | "dpr-pending";
+  | "dpr-pending"
+  | "field-updates";
 
 export type AdminSummaryStatDefinition = {
   key: AdminSummaryStatKey;
@@ -23,6 +25,11 @@ export const adminSummaryStatDefinitions: AdminSummaryStatDefinition[] = [
     key: "active-sites",
     title: "Active Sites",
     helperText: "Field locations in progress",
+  },
+  {
+    key: "overdue-bills",
+    title: "Overdue Bills",
+    helperText: "Bills past their due date",
   },
   {
     key: "stock-alerts",
@@ -48,6 +55,11 @@ export const adminSummaryStatDefinitions: AdminSummaryStatDefinition[] = [
     key: "dpr-pending",
     title: "DPR Pending",
     helperText: "DPR records not yet approved in the selected period",
+  },
+  {
+    key: "field-updates",
+    title: "Field Updates",
+    helperText: "Work progress updates logged in the selected period",
   },
 ];
 

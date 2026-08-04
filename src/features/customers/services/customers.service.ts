@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/features/management/types/masters.types";
 import type {
   BillingCompletionStatus,
@@ -957,41 +958,84 @@ function mapFormValuesToBody(values: CustomerFormValues) {
   };
 }
 
-function mapPipeRecordToBody(record: LmcPipeSizeRecord) {
-  return {
-    pipeSize: LMC_SIZE_TO_BACKEND[record.pipeSize] ?? "other",
-    lengthMetres: record.lengthMetres || undefined,
-    layingDate: record.layingDate || undefined,
-    testingDate: record.testingDate || undefined,
-    purgingDate: record.purgingDate || undefined,
-    layingStatus: LMC_STATUS_TO_BACKEND[record.layingStatus] ?? "not_started",
-    testingStatus: LMC_STATUS_TO_BACKEND[record.testingStatus] ?? "not_started",
-    purgingStatus: LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started",
-    jointFittingDetails: record.jointFittingDetails || undefined,
-    remarks: record.remarks || undefined,
-    evidence: record.evidence.length
-      ? record.evidence.map((file) => ({
-          id: file.id,
-          label: file.label,
-          fileName: file.fileName,
-          fileUrl: file.fileUrl,
-        }))
-      : undefined,
-  };
+// Evidence is embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all.
+function buildLmcPipeRecordFormData(record: LmcPipeSizeRecord): FormData {
+  const formData = new FormData();
+  formData.append("pipeSize", LMC_SIZE_TO_BACKEND[record.pipeSize] ?? "other");
+  if (record.lengthMetres) formData.append("lengthMetres", record.lengthMetres);
+  if (record.layingDate) formData.append("layingDate", record.layingDate);
+  if (record.testingDate) formData.append("testingDate", record.testingDate);
+  if (record.purgingDate) formData.append("purgingDate", record.purgingDate);
+  formData.append("layingStatus", LMC_STATUS_TO_BACKEND[record.layingStatus] ?? "not_started");
+  formData.append("testingStatus", LMC_STATUS_TO_BACKEND[record.testingStatus] ?? "not_started");
+  formData.append("purgingStatus", LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started");
+  if (record.jointFittingDetails) formData.append("jointFittingDetails", record.jointFittingDetails);
+  if (record.remarks) formData.append("remarks", record.remarks);
+  appendEvidenceArray(formData, "evidence", record.evidence as unknown as ImagePreviewItem[]);
+  return formData;
 }
 
-function mapDocumentToBody(doc: CustomerDocument) {
-  return {
-    documentType: doc.type || doc.category,
-    category: doc.category || undefined,
-    referenceNumber: doc.referenceNumber || undefined,
-    issueDate: doc.issueDate || undefined,
-    expiryDate: doc.expiryDate || undefined,
-    amount: doc.amount ? Number(doc.amount.replace(/[^0-9.]/g, "")) || undefined : undefined,
-    fileUrl: doc.fileUrl || (doc.fileName ? `uploads/${doc.fileName}` : "uploads/document"),
-    fileName: doc.fileName || "document",
-    remarks: doc.remarks || undefined,
-  };
+// Survey Photos are embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all. Every other field goes through unchanged (JSON-stringified
+// per nested section, same shape `mapFormValuesToBody` always produced).
+function buildCustomerFormData(values: CustomerFormValues): FormData {
+  const body = mapFormValuesToBody(values);
+  const formData = new FormData();
+  const surveyEvidence = (values.survey?.evidence ?? []) as unknown as ImagePreviewItem[];
+
+  Object.entries(body).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    if (key === "survey" && typeof value === "object") {
+      formData.append(
+        "survey",
+        JSON.stringify({
+          ...value,
+          evidence: surveyEvidence
+            .filter((item) => item.fileUrl && !item.file)
+            .map((item) => ({ id: item.id, label: item.label, fileName: item.fileName, fileUrl: item.fileUrl })),
+        }),
+      );
+      return;
+    }
+
+    formData.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  });
+
+  surveyEvidence
+    .filter((item) => item.file)
+    .forEach((item) => {
+      formData.append("files", item.file!, item.fileName);
+    });
+
+  return formData;
+}
+
+// The file is embedded directly in this request instead of uploaded
+// separately beforehand - a photo picked but never saved never reaches
+// storage at all.
+function buildDocumentFormData(doc: CustomerDocument): FormData {
+  const formData = new FormData();
+  formData.append("documentType", doc.type || doc.category);
+  if (doc.category) formData.append("category", doc.category);
+  if (doc.referenceNumber) formData.append("referenceNumber", doc.referenceNumber);
+  if (doc.issueDate) formData.append("issueDate", doc.issueDate);
+  if (doc.expiryDate) formData.append("expiryDate", doc.expiryDate);
+  const amount = doc.amount ? Number(doc.amount.replace(/[^0-9.]/g, "")) : undefined;
+  if (amount) formData.append("amount", String(amount));
+  if (doc.remarks) formData.append("remarks", doc.remarks);
+
+  if (doc.file) {
+    formData.append("file", doc.file, doc.fileName || doc.file.name);
+  } else {
+    formData.append("fileUrl", doc.fileUrl || "");
+    formData.append("fileName", doc.fileName || "document");
+  }
+
+  return formData;
 }
 
 export const customersApi = {
@@ -1013,7 +1057,7 @@ export const customersApi = {
   async create(values: CustomerFormValues): Promise<Customer> {
     const raw = await apiRequest<BackendCustomer>("/customers", {
       method: "POST",
-      body: JSON.stringify(mapFormValuesToBody(values)),
+      body: buildCustomerFormData(values),
     });
     return mapCustomer(raw);
   },
@@ -1021,7 +1065,7 @@ export const customersApi = {
   async update(id: string, values: CustomerFormValues): Promise<Customer> {
     const raw = await apiRequest<BackendCustomer>(`/customers/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(mapFormValuesToBody(values)),
+      body: buildCustomerFormData(values),
     });
     return mapCustomer(raw);
   },
@@ -1029,7 +1073,7 @@ export const customersApi = {
   async upsertLmcPipeRecord(customerId: string, record: LmcPipeSizeRecord): Promise<LmcPipeSizeRecord> {
     const raw = await apiRequest<BackendLmcPipeRecord>(`/customers/${customerId}/lmc-pipes`, {
       method: "PUT",
-      body: JSON.stringify(mapPipeRecordToBody(record)),
+      body: buildLmcPipeRecordFormData(record),
     });
     return mapPipeRecord(raw);
   },
@@ -1042,8 +1086,14 @@ export const customersApi = {
   async createDocument(customerId: string, doc: CustomerDocument): Promise<CustomerDocument> {
     const raw = await apiRequest<BackendCustomerDocument>(`/customers/${customerId}/documents`, {
       method: "POST",
-      body: JSON.stringify(mapDocumentToBody(doc)),
+      body: buildDocumentFormData(doc),
     });
     return mapDocument(raw);
+  },
+
+  async deleteDocument(customerId: string, documentId: string): Promise<void> {
+    await apiRequest<null>(`/customers/${customerId}/documents/${documentId}`, {
+      method: "DELETE",
+    });
   },
 };

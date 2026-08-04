@@ -5,6 +5,7 @@ import { DownloadSimpleIcon, FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -35,10 +36,9 @@ import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { paymentTabs } from "../data/payments.data";
 import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
-import { useCreatePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
+import { useCreatePayment, useDeletePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentMode, PaymentStatus } from "../types/payment.types";
 import { formatDate, money, sum } from "../utils/format";
-import { flushImageUploads, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { ImageProofField } from "./shared/ImageProofField";
 import { StatCardRow, SummaryValue } from "./shared/StatCards";
 
@@ -154,10 +154,15 @@ export function PaymentsExpensesPage() {
 
 function PaymentActions({ payment }: { payment: Payment }) {
   const href = resolveFileUrl(payment.evidence[0]?.fileUrl);
+  const deletePayment = useDeletePayment();
   return (
     <div className="flex items-center gap-1">
       <ActionButton label="View" icon={<EyeIcon size={15} />} href={href} disabled={!href} />
       <PaymentDrawer payment={payment} iconOnly />
+      <DeleteConfirmDialog
+        itemName={payment.paidTo || payment.purpose || "this entry"}
+        onConfirm={() => deletePayment.mutate(payment.id)}
+      />
     </div>
   );
 }
@@ -237,12 +242,10 @@ function PaymentDrawer({
     }
     setSaveError("");
     try {
-      const evidence = await flushImageUploads(values.evidence as ImagePreviewItem[], "expenses");
-      const payload = { ...values, evidence: evidence as PaymentFormValues["evidence"] };
       if (payment) {
-        await updatePayment.mutateAsync(payload);
+        await updatePayment.mutateAsync(values);
       } else {
-        await createPayment.mutateAsync(payload);
+        await createPayment.mutateAsync(values);
       }
       setOpen(false);
     } catch (error) {

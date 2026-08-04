@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FormField } from "@/components/shared/FormField";
-import { flushImageUploads, ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
+import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
@@ -73,21 +73,17 @@ export function AnnouncementsPage() {
     setSaveError("");
   };
 
-  const resolveDraftFormValues = async () => {
-    const image = draft.image ? (await flushImageUploads([draft.image], "announcements"))[0] : undefined;
-    return {
-      title: draft.title,
-      message: draft.message,
-      imageUrl: image?.fileUrl,
-      imageFileName: image?.fileName,
-    };
-  };
+  const draftFormValues = () => ({
+    title: draft.title,
+    message: draft.message,
+    image: draft.image,
+  });
 
   const saveDraft = async () => {
     if (!draft.title.trim() || !draft.message.trim()) return;
     setSaveError("");
     try {
-      const values = await resolveDraftFormValues();
+      const values = draftFormValues();
       if (editingId) {
         await updateMutation.mutateAsync(values);
       } else {
@@ -103,7 +99,7 @@ export function AnnouncementsPage() {
     if (!draft.title.trim() || !draft.message.trim()) return;
     setSaveError("");
     try {
-      const values = await resolveDraftFormValues();
+      const values = draftFormValues();
       const saved = editingId
         ? await updateMutation.mutateAsync(values)
         : await createMutation.mutateAsync(values);

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { WarningIcon } from "@phosphor-icons/react";
 import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
 import { MetricCard } from "@/components/shared/MetricCard";
@@ -28,6 +28,7 @@ import { useBillsQuery } from "@/features/commercial/hooks/useBills";
 import { useMaterialsQuery } from "@/features/commercial/hooks/useMaterials";
 import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useAttendanceQuery } from "@/features/management/hooks/useAttendance";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
@@ -51,15 +52,29 @@ export function DashboardContent() {
   const { data: payments = [] } = usePaymentsQuery();
   const { data: materials = [] } = useMaterialsQuery();
   const { data: dprRecords = [] } = useDprRecordsQuery({});
-  const { data: workProgress = [] } = useWorkProgressListQuery({ limit: 20 });
+  const { data: workProgress = [] } = useWorkProgressListQuery({ limit: 200 });
+
+  const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const { data: attendance = [] } = useAttendanceQuery({ from: today, to: today });
 
   const dashboard = useMemo(
     () =>
       getAdminDashboardData(
         { projectId: "all", city: "all", period: metricPeriod },
-        { customers, projects, projectSites, bills, payments, materials, dprRecords },
+        { customers, projects, projectSites, bills, payments, materials, dprRecords, workProgress, attendance },
       ),
-    [customers, dprRecords, materials, metricPeriod, payments, bills, projectSites, projects],
+    [
+      customers,
+      dprRecords,
+      materials,
+      metricPeriod,
+      payments,
+      bills,
+      projectSites,
+      projects,
+      workProgress,
+      attendance,
+    ],
   );
 
   const activityItems = useMemo(() => {

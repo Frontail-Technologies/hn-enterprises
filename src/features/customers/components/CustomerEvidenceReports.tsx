@@ -7,6 +7,7 @@ import {
   EyeIcon,
   FilePdfIcon,
   ImageSquareIcon,
+  TrashIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -32,10 +33,11 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { FormField } from "@/components/shared/FormField";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { resolveFileUrl } from "@/lib/upload";
+import { useDeleteCustomerDocument } from "../hooks/useCustomers";
 import {
-  flushImageUploads,
   ImageUploadPreview,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
@@ -71,6 +73,10 @@ export function CustomerEvidencePanel({
   customerId?: string;
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
+  const deleteDocumentMutation = useDeleteCustomerDocument(customerId ?? "");
+  const handleDeleteDocument = customerId
+    ? (documentId: string) => deleteDocumentMutation.mutate(documentId)
+    : undefined;
 
   const surveyPhotos = (survey?.evidence ?? []).map((photo) => ({
     id: photo.id,
@@ -122,11 +128,11 @@ export function CustomerEvidencePanel({
           customerId={customerId}
         />
       ) : null}
-      <MediaSection title="Survey Photos" items={surveyPhotos} />
-      <MediaSection title="LMC Evidence" items={lmcEvidence} />
-      <MediaSection title="Meter Photo" items={meterPhotos} />
-      <MediaSection title="Customer Photos" items={customerPhotos} />
-      <UploadedPdfSection items={pdfDocuments} />
+      <MediaSection title="Survey Photos" items={surveyPhotos} onDelete={handleDeleteDocument} />
+      <MediaSection title="LMC Evidence" items={lmcEvidence} onDelete={handleDeleteDocument} />
+      <MediaSection title="Meter Photo" items={meterPhotos} onDelete={handleDeleteDocument} />
+      <MediaSection title="Customer Photos" items={customerPhotos} onDelete={handleDeleteDocument} />
+      <UploadedPdfSection items={pdfDocuments} onDelete={handleDeleteDocument} />
     </div>
   );
 }
@@ -177,9 +183,11 @@ function CustomerEvidenceUpload({
     setSaveError("");
     setIsSaving(true);
     try {
-      const uploaded = await flushImageUploads(images, "customers", customerId);
+      // Files are embedded directly in the record-save request (see
+      // CustomerForm.handleSave) instead of uploaded here - this just stages
+      // the picked files locally.
       const today = new Date().toISOString().slice(0, 10);
-      const newDocuments: CustomerDocument[] = uploaded.map((image, index) => ({
+      const newDocuments: CustomerDocument[] = images.map((image, index) => ({
         id: `cust-evidence-${Date.now()}-${index}`,
         type: category,
         referenceNumber,
@@ -188,7 +196,8 @@ function CustomerEvidenceUpload({
         expiryDate: "",
         amount: "",
         fileName: image.fileName,
-        fileUrl: image.fileUrl ?? "",
+        fileUrl: image.fileUrl,
+        file: image.file,
         remarks,
         uploadedOn: evidenceDate || today,
         uploadedBy: "Demo Admin",
@@ -411,46 +420,72 @@ type EvidenceItem = {
   caption: string;
   fileName: string;
   fileUrl?: string;
+  // Only present for items backed by a real customer_documents row - that's
+  // the only evidence source with a delete endpoint today. Survey Photos and
+  // native LMC pipe evidence live in jsonb columns instead and are removed
+  // via their own edit tabs (Survey / LMC Pipe editor), not from here.
+  documentId?: string;
   status: string;
   uploadedOn: string;
 };
 
-function MediaSection({ title, items }: { title: string; items: EvidenceItem[] }) {
-  const visibleItems = items.slice(0, 4);
-  const hiddenCount = Math.max(items.length - visibleItems.length, 0);
+function MediaSection({
+  title,
+  items,
+  onDelete,
+}: {
+  title: string;
+  items: EvidenceItem[];
+  onDelete?: (documentId: string) => void;
+}) {
   const uploadedOn = items.find((item) => item.uploadedOn)?.uploadedOn;
+  const [previewItem, setPreviewItem] = useState<EvidenceItem | null>(null);
 
   return (
-    <SectionCard
-      title={`${title} (${items.length})`}
-      action={items.length > 4 ? <span className="text-xs font-medium text-primary">View All</span> : null}
-      className="p-3"
-    >
+    <SectionCard title={`${title} (${items.length})`} className="p-3">
       {!items.length ? (
         <p className="text-sm text-muted-foreground">No files uploaded.</p>
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {visibleItems.map((item, index) => {
+            {items.map((item) => {
               const href = resolveFileUrl(item.fileUrl);
+              const isImage = href && isImageFile(item.fileName);
               return (
-                <div
-                  key={item.id}
-                  className="relative flex h-24 w-32 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted/25 text-primary"
-                  title={item.fileName}
-                >
-                  {href && isImageFile(item.fileName) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={href} alt={item.fileName} className="h-full w-full object-cover" />
-                  ) : isImageFile(item.fileName) ? (
-                    <ImageSquareIcon size={30} />
-                  ) : (
-                    <FilePdfIcon size={30} />
-                  )}
-                  {index === visibleItems.length - 1 && hiddenCount ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/75 text-base font-semibold text-foreground">
-                      +{hiddenCount}
-                    </div>
+                <div key={item.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={isImage ? () => setPreviewItem(item) : undefined}
+                    disabled={!isImage}
+                    className={cn(
+                      "flex h-24 w-32 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted/25 text-primary",
+                      isImage && "cursor-pointer",
+                    )}
+                    title={item.fileName}
+                  >
+                    {isImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={href} alt={item.fileName} className="h-full w-full object-cover" />
+                    ) : isImageFile(item.fileName) ? (
+                      <ImageSquareIcon size={30} />
+                    ) : (
+                      <FilePdfIcon size={30} />
+                    )}
+                  </button>
+                  {item.documentId && onDelete ? (
+                    <ActionTooltip label="Delete">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDelete(item.documentId!);
+                        }}
+                        aria-label={`Delete ${item.fileName}`}
+                        className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <TrashIcon size={13} />
+                      </button>
+                    </ActionTooltip>
                   ) : null}
                 </div>
               );
@@ -464,11 +499,31 @@ function MediaSection({ title, items }: { title: string; items: EvidenceItem[] }
           </div>
         </div>
       )}
+
+      <Dialog open={Boolean(previewItem)} onOpenChange={(open) => !open && setPreviewItem(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogTitle className="truncate">{previewItem?.fileName}</DialogTitle>
+          {previewItem ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={resolveFileUrl(previewItem.fileUrl)}
+              alt={previewItem.fileName}
+              className="max-h-[70vh] w-full rounded-md object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </SectionCard>
   );
 }
 
-function UploadedPdfSection({ items }: { items: EvidenceItem[] }) {
+function UploadedPdfSection({
+  items,
+  onDelete,
+}: {
+  items: EvidenceItem[];
+  onDelete?: (documentId: string) => void;
+}) {
   return (
     <SectionCard title={`Uploaded PDFs (${items.length})`}>
       {!items.length ? (
@@ -512,6 +567,18 @@ function UploadedPdfSection({ items }: { items: EvidenceItem[] }) {
                       <DownloadSimpleIcon size={15} />
                     </a>
                   </ActionTooltip>
+                  {item.documentId && onDelete ? (
+                    <ActionTooltip label="Delete">
+                      <button
+                        type="button"
+                        onClick={() => onDelete(item.documentId!)}
+                        aria-label={`Delete ${item.title}`}
+                        className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "text-destructive hover:text-destructive" })}
+                      >
+                        <TrashIcon size={15} />
+                      </button>
+                    </ActionTooltip>
+                  ) : null}
                 </div>
               </div>
             );
@@ -529,6 +596,7 @@ function documentToEvidence(document: CustomerDocument): EvidenceItem {
     caption: document.remarks || `Uploaded on ${document.uploadedOn || "-"}`,
     fileName: document.fileName,
     fileUrl: document.fileUrl,
+    documentId: document.id,
     status: document.status,
     uploadedOn: document.uploadedOn || document.issueDate,
   };

@@ -30,3 +30,13 @@ export function useUpdatePayment(id: string) {
     },
   });
 }
+
+export function useDeletePayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => paymentsApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: paymentsKey });
+    },
+  });
+}

@@ -9,13 +9,6 @@ interface RecentActivityCardProps {
   items: ActivityItem[];
 }
 
-const TYPE_CLASSES: Record<ActivityType, string> = {
-  Work: "bg-status-info-bg ring-status-info/20",
-  Survey: "bg-status-purple-bg ring-status-purple/20",
-  DPR: "bg-status-warning-bg ring-status-warning/20",
-  Billing: "bg-status-success-bg ring-status-success/20",
-};
-
 const TYPE_ICON_CLASSES: Record<ActivityType, string> = {
   Work: "text-status-info-fg",
   Survey: "text-status-purple-fg",
@@ -37,7 +30,7 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
       <CardContent>
         {items.length ? (
           <div className="space-y-2">
-            {items.map((activity) => {
+            {items.map((activity, index) => {
               const Icon = activity.icon;
 
               return (
@@ -45,7 +38,7 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
                   key={`${activity.title}-${activity.time}`}
                   className={cn(
                     "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-3 py-2.5",
-                    TYPE_CLASSES[activity.type],
+                    index % 2 === 0 ? "bg-muted/40" : "bg-transparent",
                   )}
                 >
                   <div
