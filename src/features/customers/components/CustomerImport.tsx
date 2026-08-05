@@ -38,6 +38,7 @@ export function CustomerImport() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [view, setView] = useState<"upload" | "preview">("upload");
   const { data: activeCustomFields = [] } = useCustomFieldsQuery("Active");
+  const [isDragging, setIsDragging] = useState(false);
 
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
@@ -123,6 +124,34 @@ export function CustomerImport() {
     setSelectedFile(file);
   }
 
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+    const allowed = [".xlsx", ".xls", ".csv"];
+    const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+    if (!allowed.includes(ext)) {
+      setPreviewError("Unsupported file type. Please upload an .xlsx, .xls, or .csv file.");
+      return;
+    }
+    setPreviewError("");
+    setSelectedFile(file);
+  }
+
   function handleDownloadTemplate() {
     void exportColumnTemplate(
       "customer-import-template.xlsx",
@@ -192,8 +221,15 @@ export function CustomerImport() {
         <div className="space-y-4">
           <section className="rounded-lg border border-border/70 bg-card p-4">
             <div
-              className="flex min-h-[60vh] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border/80 bg-muted/10 px-4 text-center transition-colors hover:bg-muted/30"
+              className={`flex min-h-[60vh] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 text-center transition-colors ${
+                isDragging
+                  ? "border-primary bg-primary/10"
+                  : "border-border/80 bg-muted/10 hover:bg-muted/30"
+              }`}
               onClick={() => inputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
               <div className="text-muted-foreground/40 mb-2">
                 <svg
@@ -272,6 +308,18 @@ export function CustomerImport() {
           </div>
 
           {confirmError ? <p className="text-sm text-destructive">{confirmError}</p> : null}
+
+          {preview ? (
+            <>
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground px-1">
+                <span><b className="text-foreground">{preview.totals.rows}</b> rows</span>
+                <span><b className="text-status-success-fg">{preview.totals.validRows}</b> valid</span>
+                {preview.totals.warningRows > 0 && <span><b className="text-status-warning-fg">{preview.totals.warningRows}</b> warnings</span>}
+                {preview.totals.invalidRows > 0 && <span><b className="text-destructive">{preview.totals.invalidRows}</b> errors</span>}
+              </div>
+              <ExcelDataGrid columns={previewColumns} rows={preview.rows} />
+            </>
+          ) : null}
 
         </section>
       )}
