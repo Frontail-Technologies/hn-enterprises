@@ -22,6 +22,7 @@ import {
 import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
+import { useAuditLogsQuery } from "@/features/management/hooks/useAuditLogs";
 import { exportRowsToExcel } from "@/lib/export-excel";
 
 const initialFilters: ActivityFilters = {
@@ -34,10 +35,11 @@ export function RecentActivityPage() {
   const { data: workProgress = [], isLoading: workProgressLoading } = useWorkProgressListQuery({ limit: 100 });
   const { data: dprRecords = [], isLoading: dprLoading } = useDprRecordsQuery({});
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-  const isLoading = workProgressLoading || dprLoading || paymentsLoading;
+  const { data: auditLogs = [], isLoading: auditLogsLoading } = useAuditLogsQuery();
+  const isLoading = workProgressLoading || dprLoading || paymentsLoading || auditLogsLoading;
   const activities = useMemo(
-    () => buildActivities({ workProgress, dprRecords, payments }),
-    [workProgress, dprRecords, payments],
+    () => buildActivities({ workProgress, dprRecords, payments, auditLogs }),
+    [workProgress, dprRecords, payments, auditLogs],
   );
   const rows = useMemo(() => getActivityRows(activities, filters), [activities, filters]);
 
@@ -95,6 +97,14 @@ export function RecentActivityPage() {
           rows={rows}
           emptyTitle="No activity found"
           isLoading={isLoading}
+          getRowClassName={(row) => {
+            if (row.type === "Work") return "bg-status-info/10 hover:bg-status-info/20";
+            if (row.type === "Survey") return "bg-status-purple/10 hover:bg-status-purple/20";
+            if (row.type === "DPR") return "bg-status-warning/10 hover:bg-status-warning/20";
+            if (row.type === "Billing") return "bg-status-success/10 hover:bg-status-success/20";
+            return undefined;
+          }}
+          maxHeightClassName="h-[calc(100vh-170px)]"
         />
       </div>
     </PageShell>

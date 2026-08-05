@@ -9,6 +9,7 @@ import {
   TrashIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +36,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { DatePicker } from "./DatePicker";
 import { SectionCard } from "./SectionCard";
 import { StatusBadge, type StatusValue } from "./StatusBadge";
+import { resolveFileUrl, uploadFile } from "@/lib/upload";
 
 export type DocumentUploadRecord = {
   id: string;
@@ -45,6 +47,8 @@ export type DocumentUploadRecord = {
   expiryDate: string;
   amount: string;
   fileName: string;
+  fileUrl?: string;
+  file?: File;
   remarks: string;
   uploadedOn: string;
   uploadedBy: string;
@@ -102,9 +106,11 @@ export function DocumentCategoryUploadPanel<T extends DocumentUploadRecord>({
       ...draft,
       type: draft.type || draft.category,
       fileName: draft.fileName || "-",
+      fileUrl: draft.fileUrl,
       uploadedOn: draft.uploadedOn || new Date().toISOString().slice(0, 10),
       uploadedBy: draft.uploadedBy || "Demo Admin",
     };
+    delete nextDraft.file;
 
     if (editingId) {
       onChange(documents.map((document) => (document.id === editingId ? nextDraft as T : document)));
@@ -143,12 +149,37 @@ export function DocumentCategoryUploadPanel<T extends DocumentUploadRecord>({
       render: (document) => (
         <div className="flex items-center gap-1">
           <ActionTooltip label="Preview">
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="Preview document">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Preview document"
+              disabled={!document.fileUrl}
+              onClick={() => {
+                if (document.fileUrl) window.open(resolveFileUrl(document.fileUrl), "_blank");
+              }}
+            >
               <EyeIcon size={13} />
             </Button>
           </ActionTooltip>
           <ActionTooltip label="Download">
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="Download document">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Download document"
+              disabled={!document.fileUrl}
+              onClick={() => {
+                if (document.fileUrl) {
+                  const link = window.document.createElement("a");
+                  link.href = resolveFileUrl(document.fileUrl) || "";
+                  link.download = document.fileName || "document";
+                  window.document.body.appendChild(link);
+                  link.click();
+                  window.document.body.removeChild(link);
+                }
+              }}
+            >
               <DownloadSimpleIcon size={13} />
             </Button>
           </ActionTooltip>
@@ -285,6 +316,32 @@ function DocumentUploadDialog({
   onOpenChange: (open: boolean) => void;
   onSave: () => void;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleSave = async () => {
+    if (draft.file) {
+      setIsUploading(true);
+      try {
+        const result = await uploadFile(draft.file, "documents");
+        onDraftChange((current) => ({
+          ...current,
+          fileUrl: result.url,
+          fileName: result.fileName || current.fileName,
+        }));
+        // We defer the actual save call slightly so state settles
+        setTimeout(() => {
+          onSave();
+          setIsUploading(false);
+        }, 100);
+      } catch (error) {
+        toast.error("Failed to upload document");
+        setIsUploading(false);
+      }
+    } else {
+      onSave();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -378,7 +435,7 @@ function DocumentUploadDialog({
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (!file) return;
-                onDraftChange((current) => ({ ...current, fileName: file.name }));
+                onDraftChange((current) => ({ ...current, fileName: file.name, file: file }));
               }}
             />
             {draft.fileName ? (
@@ -395,11 +452,11 @@ function DocumentUploadDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
             Cancel
           </Button>
-          <Button type="button" onClick={onSave}>
-            Save Document
+          <Button type="button" onClick={handleSave} disabled={isUploading}>
+            {isUploading ? "Uploading..." : "Save Document"}
           </Button>
         </DialogFooter>
       </DialogContent>

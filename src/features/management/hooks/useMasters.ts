@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { customFieldsApi, holidaysApi, masterValuesApi } from "../services/masters.service";
 import type {
   CustomFieldFormValues,
@@ -25,7 +26,9 @@ export function useCreateMasterValue(category: MasterValueCategory) {
     mutationFn: (values: MasterValueFormValues) => masterValuesApi.create(category, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
+      toast.success("Master value created successfully");
     },
+    onError: () => toast.error("Failed to create master value"),
   });
 }
 
@@ -35,7 +38,9 @@ export function useUpdateMasterValue(category: MasterValueCategory, id: string) 
     mutationFn: (values: MasterValueFormValues) => masterValuesApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
+      toast.success("Master value updated successfully");
     },
+    onError: () => toast.error("Failed to update master value"),
   });
 }
 
@@ -52,7 +57,9 @@ export function useCreateCustomField() {
     mutationFn: (values: CustomFieldFormValues) => customFieldsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customFieldsKey });
+      toast.success("Custom field created successfully");
     },
+    onError: () => toast.error("Failed to create custom field"),
   });
 }
 
@@ -62,7 +69,9 @@ export function useUpdateCustomField(id: string) {
     mutationFn: (values: CustomFieldFormValues) => customFieldsApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customFieldsKey });
+      toast.success("Custom field updated successfully");
     },
+    onError: () => toast.error("Failed to update custom field"),
   });
 }
 
@@ -79,7 +88,9 @@ export function useCreateHoliday() {
     mutationFn: (values: HolidayFormValues) => holidaysApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
+      toast.success("Holiday created successfully");
     },
+    onError: () => toast.error("Failed to create holiday"),
   });
 }
 
@@ -89,6 +100,8 @@ export function useUpdateHoliday(id: string) {
     mutationFn: (values: HolidayFormValues) => holidaysApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
+      toast.success("Holiday updated successfully");
     },
+    onError: () => toast.error("Failed to update holiday"),
   });
 }

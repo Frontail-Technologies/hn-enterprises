@@ -4,6 +4,7 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -24,8 +25,9 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
-import { useCreateBill, useUpdateBill } from "../../hooks/useBills";
+import { useCreateBill, useUpdateBill, useDeleteBill } from "../../hooks/useBills";
 import type { Bill, BillFormValues, BillStage } from "../../types/bill.types";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const billStages: BillStage[] = ["GI", "GC", "Commissioning", "Conversion", "Other"];
 
@@ -72,6 +74,7 @@ export function BillDrawer({
   const { data: customers = [] } = useCustomersQuery();
   const createBill = useCreateBill();
   const updateBill = useUpdateBill(bill?.id ?? "");
+  const deleteBill = useDeleteBill();
   const isSaving = createBill.isPending || updateBill.isPending;
 
   function handleOpenChange(nextOpen: boolean) {
@@ -131,23 +134,15 @@ export function BillDrawer({
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Customer</span>
-            <Select
+            <SearchableSelect
               value={values.customerId || undefined}
               onValueChange={(customerId) =>
                 setValues((current) => ({ ...current, customerId: customerId ?? "" }))
               }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.customerConnection.customerName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select customer"
+              options={customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName }))}
+              className="w-full"
+            />
           </label>
 
           <label className="block space-y-1.5">
@@ -227,8 +222,19 @@ export function BillDrawer({
           {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
         </div>
 
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
+        <SheetFooter className="border-t border-border/70 flex w-full flex-row justify-between sm:justify-between items-center mt-auto">
+          {bill?.id ? (
+            <DeleteConfirmDialog
+              itemName="this bill"
+              onConfirm={async () => {
+                await deleteBill.mutateAsync(bill.id);
+                setOpen(false);
+              }}
+            />
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
             <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
             <Button type="button" onClick={handleSave} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Bill"}

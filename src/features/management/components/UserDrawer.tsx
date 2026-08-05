@@ -20,8 +20,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useCreateUser, useResetUserPassword, useUpdateUser } from "../hooks/useUsers";
+import { useCreateUser, useResetUserPassword, useUpdateUser, useDeleteUser } from "../hooks/useUsers";
 import type { User, UserRole, UserStatus } from "../services/users.service";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const roles: UserRole[] = ["Super Admin", "Admin", "Supervisor", "Field Executive", "Viewer"];
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
@@ -66,6 +67,7 @@ export function UserDrawer({
   const createUser = useCreateUser();
   const updateUser = useUpdateUser(user?.id ?? "");
   const resetPassword = useResetUserPassword(user?.id ?? "");
+  const deleteUser = useDeleteUser();
   const isSaving = createUser.isPending || updateUser.isPending || resetPassword.isPending;
   const label = user ? "Edit User" : "Add User";
 
@@ -203,8 +205,19 @@ export function UserDrawer({
           {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
         </div>
 
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
+        <SheetFooter className="border-t border-border/70 flex w-full flex-row justify-between sm:justify-between items-center mt-auto">
+          {user?.id ? (
+            <DeleteConfirmDialog
+              itemName={user.name}
+              onConfirm={async () => {
+                await deleteUser.mutateAsync(user.id);
+                setOpen(false);
+              }}
+            />
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
             <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
             <Button type="button" onClick={handleSave} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save"}

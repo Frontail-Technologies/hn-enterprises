@@ -108,7 +108,21 @@ export function resolveReportTemplateDataFromCustomer(
     pipeSummaryRows: buildPipeSummaryRows(customer),
     pressureRows: buildPressureRows(),
     gcChecklistRows: gcChecklistItems.map((item, index) => [index + 1, item.label, item.required ? "Required" : "Optional", "-", "-"]),
-    gcEvidenceRows: gcEvidenceItems.map((item, index) => [index + 1, item.title, item.type, "-", "Pending"]),
+    gcEvidenceRows:
+      customer.documents.filter((doc) => doc.category === "GC Evidence").length > 0
+        ? customer.documents
+            .filter((doc) => doc.category === "GC Evidence")
+            .map((doc, index) => [
+              index + 1,
+              doc.remarks || doc.fileName || "Evidence",
+              doc.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? "Photo" : "Document",
+              doc.fileName,
+              doc.status,
+            ])
+        : gcEvidenceItems.map((item, index) => [index + 1, item.title, item.type, "-", "Pending"]),
+    gcEvidenceImages: customer.documents
+      .filter((doc) => doc.category === "GC Evidence" && doc.fileUrl && doc.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+      .map((doc) => doc.fileUrl as string),
   };
 }
 

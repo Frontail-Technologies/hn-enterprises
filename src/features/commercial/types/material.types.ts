@@ -49,6 +49,7 @@ export type MaterialTransaction = {
   siteId: string;
   storeLabel: string;
   customerId: string;
+  paymentId: string;
   reportNo: string;
   condition: string;
   adjustmentType: string;
@@ -72,6 +73,7 @@ export type MaterialTransactionFormValues = {
   siteId: string;
   storeLabel: string;
   customerId: string;
+  paymentId: string;
   reportNo: string;
   condition: string;
   adjustmentType: string;

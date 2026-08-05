@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { useCreateMaterial } from "../../hooks/useMaterials";
 import type { MaterialFormValues } from "../../types/material.types";
+import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 
 const unitOptions = ["Meter", "Nos", "Roll", "Set", "Kg", "Litre"];
 
@@ -50,6 +51,7 @@ export function MaterialItemDrawer() {
   const [values, setValues] = useState<MaterialFormValues>(emptyValues());
   const [error, setError] = useState("");
   const createMaterial = useCreateMaterial();
+  const { data: categories = [] } = useMasterValuesQuery("Material Categories");
 
   function set<K extends keyof MaterialFormValues>(key: K, value: MaterialFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -105,11 +107,18 @@ export function MaterialItemDrawer() {
             />
           </Field>
           <Field label="Category" helper="Grouping only. Example: GI Pipe, MDPE Pipe, Valve, Tools.">
-            <Input
-              value={values.category}
-              onChange={(event) => set("category", event.target.value)}
-              placeholder="Enter category"
-            />
+            <Select value={values.category || ""} onValueChange={(category) => set("category", category ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.value}>
+                    {cat.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Unit">
             <Select value={values.unit} onValueChange={(unit) => set("unit", unit ?? "Nos")}>

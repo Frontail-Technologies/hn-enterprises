@@ -19,9 +19,15 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import {
   projectStatusOptions,
 } from "@/features/projects/services/projects.service";
-import { useCreateProject, useProjectQuery, useUpdateProject } from "@/features/projects/hooks/useProjects";
+import {
+  useCreateProject,
+  useProjectQuery,
+  useUpdateProject,
+  useDeleteProject,
+} from "@/features/projects/hooks/useProjects";
 import type { ProjectFormValues } from "../types/project.types";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const defaultValues: ProjectFormValues = {
   name: "",
@@ -77,13 +83,14 @@ function ProjectFormFields({
   const [values, setValues] = useState<ProjectFormValues>(initialValues);
   const createProject = useCreateProject();
   const updateProject = useUpdateProject(projectId ?? "");
+  const deleteProject = useDeleteProject();
   const mutation = isEdit ? updateProject : createProject;
 
   const setField = <K extends keyof ProjectFormValues>(key: K, value: ProjectFormValues[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
 
   const handleSave = async () => {
-    if (!values.name.trim()) return;
+    if (!(values.name || "").trim()) return;
     const saved = await mutation.mutateAsync(values);
     router.push(`/projects/${isEdit && projectId ? projectId : saved.id}`);
   };
@@ -103,62 +110,62 @@ function ProjectFormFields({
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <FormField label="Project Name">
                 <Input
-                  value={values.name}
+                  value={values.name || ""}
                   onChange={(event) => setField("name", event.target.value)}
-                  placeholder="Shyam Nagar CGD Project"
+                  placeholder="Project name"
                 />
               </FormField>
-              <FormField label="Project Code / Contract ID">
+              <FormField label="Project Code">
                 <Input
-                  value={values.code}
+                  value={values.code || ""}
                   onChange={(event) => setField("code", event.target.value)}
                   placeholder="CGD-SN-2025"
                 />
               </FormField>
               <FormField label="Client">
                 <Input
-                  value={values.client}
+                  value={values.client || ""}
                   onChange={(event) => setField("client", event.target.value)}
                   placeholder="Client name"
                 />
               </FormField>
               <FormField label="Consultant">
                 <Input
-                  value={values.consultant}
+                  value={values.consultant || ""}
                   onChange={(event) => setField("consultant", event.target.value)}
                   placeholder="Consultant name"
                 />
               </FormField>
               <FormField label="Contractor">
                 <Input
-                  value={values.contractor}
+                  value={values.contractor || ""}
                   onChange={(event) => setField("contractor", event.target.value)}
-                  placeholder="Contractor name"
+                  placeholder="Contractor"
                 />
               </FormField>
               <FormField label="Project Type">
                 <Input
-                  value={values.projectType}
+                  value={values.projectType || ""}
                   onChange={(event) => setField("projectType", event.target.value)}
                   placeholder="CGD Network"
                 />
               </FormField>
               <FormField label="City">
                 <Input
-                  value={values.city}
+                  value={values.city || ""}
                   onChange={(event) => setField("city", event.target.value)}
                   placeholder="Enter city"
                 />
               </FormField>
               <FormField label="Area / Location">
                 <Input
-                  value={values.area}
+                  value={values.area || ""}
                   onChange={(event) => setField("area", event.target.value)}
                   placeholder="Area or site location"
                 />
               </FormField>
               <FormField label="Status">
-                <Select value={values.status} onValueChange={(value) => setField("status", (value ?? "Draft") as ProjectFormValues["status"])}>
+                <Select value={values.status ?? "Draft"} onValueChange={(value) => setField("status", (value ?? "Draft") as ProjectFormValues["status"])}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -182,21 +189,21 @@ function ProjectFormFields({
               </FormField>
               <FormField label="Contract Value">
                 <Input
-                  value={values.contractValue}
+                  value={values.contractValue || ""}
                   onChange={(event) => setField("contractValue", event.target.value)}
                   placeholder="Rs 12.50 Cr"
                 />
               </FormField>
               <FormField label="Assigned Supervisor / Project Manager">
                 <Input
-                  value={values.assignedManager}
+                  value={values.assignedManager || ""}
                   onChange={(event) => setField("assignedManager", event.target.value)}
                   placeholder="Manager name"
                 />
               </FormField>
               <FormField label="Description" className="md:col-span-2 xl:col-span-3">
                 <Textarea
-                  value={values.description}
+                  value={values.description || ""}
                   onChange={(event) => setField("description", event.target.value)}
                   placeholder="Brief project scope and notes"
                   className="min-h-28"
@@ -212,6 +219,15 @@ function ProjectFormFields({
         ) : null}
 
         <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-sm border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
+          {isEdit && projectId && (
+            <DeleteConfirmDialog
+              itemName={initialValues.name}
+              onConfirm={async () => {
+                await deleteProject.mutateAsync(projectId);
+                router.push("/projects");
+              }}
+            />
+          )}
           <Link
             href={isEdit && projectId ? `/projects/${projectId}` : "/projects"}
             className={buttonVariants({ variant: "outline", size: "default" })}

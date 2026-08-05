@@ -3,8 +3,10 @@ import type { ElementType } from "react";
 import type { Payment } from "@/features/commercial/types/payment.types";
 import type { DprRecord } from "@/features/planning/types/planning.types";
 import type { WorkProgressUpdate } from "@/features/work-progress/types/work-progress.types";
+import type { AuditLog } from "@/features/management/services/audit-logs.service";
+import { InfoIcon } from "lucide-react";
 
-export type ActivityType = "Work" | "Survey" | "DPR" | "Billing";
+export type ActivityType = "Work" | "Survey" | "DPR" | "Billing" | "System";
 
 export type DashboardActivity = {
   id: string;
@@ -29,6 +31,7 @@ export function buildActivities(data: {
   workProgress: WorkProgressUpdate[];
   dprRecords: DprRecord[];
   payments: Payment[];
+  auditLogs?: AuditLog[];
 }): DashboardActivity[] {
   const workRows = data.workProgress.map<DashboardActivity>((update) => ({
     id: `work-${update.id}`,
@@ -72,7 +75,21 @@ export function buildActivities(data: {
     icon: CurrencyInrIcon,
   }));
 
-  return [...workRows, ...dprRows, ...paymentRows];
+  const auditRows = (data.auditLogs || []).map<DashboardActivity>((log) => ({
+    id: `audit-${log.id}`,
+    title: `${log.module} - ${log.action}`,
+    description: log.description || "-",
+    type: "System",
+    actor: log.user,
+    supervisor: log.user,
+    project: "-",
+    site: "-",
+    relatedRecord: log.id.slice(0, 8).toUpperCase(),
+    dateTime: log.dateTime,
+    icon: InfoIcon as ElementType,
+  }));
+
+  return [...workRows, ...dprRows, ...paymentRows, ...auditRows];
 }
 
 export function getActivityRows(activities: DashboardActivity[], filters: ActivityFilters) {

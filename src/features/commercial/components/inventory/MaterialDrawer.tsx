@@ -4,6 +4,7 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -62,6 +63,7 @@ function emptyValues(): MaterialTransactionFormValues {
     billAmount: "",
     plumberId: "",
     supervisorId: "",
+    paymentId: "",
     siteId: "",
     storeLabel: "",
     customerId: "",
@@ -194,38 +196,25 @@ export function MaterialDrawer({
 
   const siteField = (
     <Field label="Site">
-      <Select value={values.siteId || undefined} onValueChange={(siteId) => set("siteId", siteId ?? "")}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select site" />
-        </SelectTrigger>
-        <SelectContent>
-          {sites.map((site) => (
-            <SelectItem key={site.id} value={site.id}>
-              {site.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SearchableSelect
+        value={values.siteId || undefined}
+        onValueChange={(siteId) => set("siteId", siteId ?? "")}
+        placeholder="Select site"
+        options={sites.map(s => ({ value: s.id, label: s.name }))}
+        className="w-full"
+      />
     </Field>
   );
 
   const customerField = (
     <Field label="Customer / BP No.">
-      <Select
+      <SearchableSelect
         value={values.customerId || undefined}
         onValueChange={(customerId) => set("customerId", customerId ?? "")}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select customer" />
-        </SelectTrigger>
-        <SelectContent>
-          {customers.map((customer) => (
-            <SelectItem key={customer.id} value={customer.id}>
-              {customer.customerConnection.customerName} ({customer.customerConnection.trBpNo})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Select customer"
+        options={customers.map(c => ({ value: c.id, label: `${c.customerConnection.customerName} (${c.customerConnection.trBpNo})` }))}
+        className="w-full"
+      />
     </Field>
   );
 

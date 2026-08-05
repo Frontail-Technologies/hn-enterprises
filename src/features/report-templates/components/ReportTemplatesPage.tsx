@@ -4,13 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { EditIcon, EyeIcon, FileTextIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { reportTemplates } from "../services/report-templates.service";
 
@@ -37,18 +31,16 @@ export function ReportTemplatesPage() {
           Pick a customer to generate reports for. Fields with no real data source (e.g. pressure
           test readings, JMR/GC remarks) print blank rather than fabricated.
         </p>
-        <Select value={customerId} onValueChange={(value) => setCustomerId(value ?? "")}>
-          <SelectTrigger className="mt-3 h-9 w-full max-w-sm bg-card text-sm">
-            <SelectValue placeholder={isLoading ? "Loading customers..." : "Select a customer"} />
-          </SelectTrigger>
-          <SelectContent>
-            {customers.map((customer) => (
-              <SelectItem key={customer.id} value={customer.id}>
-                {customer.customerConnection.customerName} : {customer.customerConnection.trBpNo}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={customerId}
+          onValueChange={setCustomerId}
+          placeholder={isLoading ? "Loading customers..." : "Select a customer"}
+          options={customers.map(c => ({
+            value: c.id,
+            label: `${c.customerConnection.customerName} : ${c.customerConnection.trBpNo}`
+          }))}
+          className="mt-3 h-9 w-full max-w-sm bg-card text-sm"
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

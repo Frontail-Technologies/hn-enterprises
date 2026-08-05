@@ -105,6 +105,7 @@ export function CustomersList() {
         <ExcelDataGrid
           columns={masterSheetColumns}
           rows={filteredMasterSheetRows}
+          maxHeightClassName="h-[calc(100vh-240px)]"
           emptyTitle="No customer master records found"
           isLoading={isLoading}
           onRowClick={(row) => {

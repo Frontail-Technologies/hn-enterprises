@@ -1,6 +1,6 @@
 'use client'
 
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { SearchableSelect } from '@/components/shared/SearchableSelect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MagnifyingGlassIcon as MagnifyingGlass } from '@phosphor-icons/react'
@@ -42,32 +42,18 @@ export function FilterBar({ filters, values, onChange, onReset, searchKey, searc
         </div>
       )}
       {filters.map((f) => (
-        <Select key={f.key} value={values[f.key] ?? 'all'} onValueChange={(v) => onChange(f.key, v ?? 'all')}>
-          <SelectTrigger className="h-9 w-48" title={getFilterLabel(f, values[f.key] ?? 'all')}>
-            <span className="min-w-0 truncate text-left">
-              {getFilterLabel(f, values[f.key] ?? 'all')}
-            </span>
-          </SelectTrigger>
-          <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
-            <SelectItem value="all" title={f.placeholder}>
-              <span className="block min-w-0 truncate">{f.placeholder}</span>
-            </SelectItem>
-            {f.options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} title={opt.label}>
-                <span className="block min-w-0 truncate">{opt.label}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          key={f.key}
+          value={values[f.key] ?? 'all'}
+          onValueChange={(v) => onChange(f.key, v)}
+          placeholder={f.placeholder}
+          options={[{ value: 'all', label: f.placeholder }, ...f.options]}
+          className="h-9 w-48"
+        />
       ))}
       <Button variant="outline" size="sm" onClick={onReset} className="h-9">
         Reset
       </Button>
     </div>
   )
-}
-
-function getFilterLabel(filter: FilterConfig, value: string) {
-  if (value === 'all') return filter.placeholder
-  return filter.options.find((option) => option.value === value)?.label ?? filter.placeholder
 }

@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PlusIcon } from "@phosphor-icons/react";
+import { DatePicker } from "@/components/shared/DatePicker";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -182,21 +184,13 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Assigned Project">
-              <Select
+              <SearchableSelect
                 value={values.assignedProjectId || undefined}
                 onValueChange={(assignedProjectId) => set("assignedProjectId", assignedProjectId ?? "")}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select project"
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                className="w-full"
+              />
             </Field>
             <Field label="Salary Type">
               <Select value={values.salaryType} onValueChange={(salaryType) => { if (salaryType) set("salaryType", salaryType as CreateStaffFormValues["salaryType"]); }}>

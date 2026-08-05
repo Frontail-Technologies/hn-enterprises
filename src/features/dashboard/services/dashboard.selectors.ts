@@ -7,6 +7,7 @@ import {
   InvoiceIcon,
   UsersThreeIcon,
   WarningIcon,
+  ListChecksIcon,
 } from "@phosphor-icons/react";
 import type { Bill } from "@/features/commercial/types/bill.types";
 import type { Material } from "@/features/commercial/types/material.types";
@@ -25,9 +26,7 @@ import {
   getDashboardStatValue,
 } from "@/features/dashboard/services/dashboard-stats.service";
 
-export type DashboardWorkflowMetric = DashboardMetric & {
-  key: DashboardStatKey;
-};
+
 
 export type DashboardScope = {
   projectId: string;
@@ -61,7 +60,11 @@ export type DashboardAlert = {
   tone: "warning" | "danger" | "info";
 };
 
-export function getAdminDashboardData(scope: DashboardScope, data: DashboardData) {
+export function getAdminDashboardData(
+  scope: DashboardScope,
+  data: DashboardData,
+  adminStats?: Record<string, number>,
+) {
   const scopedProjects = getScopedProjects(data.projects, scope);
   const scopedCustomers = getScopedCustomers(data.customers, scope);
   const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
@@ -69,7 +72,7 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
   const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
   const scopedWorkProgress = data.workProgress.filter((update) => scopedCustomerIds.has(update.customerId));
 
-  const metrics = buildAdminMetrics({
+  const adminMetrics = buildAdminMetrics({
     projectsCount: scopedProjects.length,
     activeSites: getActiveSiteCount(data.projectSites, scope),
     customers: scopedCustomers,
@@ -80,11 +83,10 @@ export function getAdminDashboardData(scope: DashboardScope, data: DashboardData
     workProgress: scopedWorkProgress,
     scope,
   });
-  const workflowMetrics = buildWorkflowMetrics({ customers: scopedCustomers, scope });
+  const workflowMetrics = buildCustomerMetrics(scope, adminStats);
 
   return {
-    metrics,
-    workflowMetrics,
+    allMetrics: [...adminMetrics, ...workflowMetrics],
     attendanceRows: buildAttendanceRows(data.attendance),
     alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, data.dprRecords),
   };
@@ -177,6 +179,7 @@ function buildAdminMetrics({
 
   return [
     {
+      id: "total-projects",
       label: "Total Projects",
       value: String(projectsCount),
       helperText: "Across selected scope",
@@ -184,6 +187,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/total-projects?${scopeQuery}`,
     },
     {
+      id: "active-sites",
       label: "Active Sites",
       value: String(activeSites),
       helperText: "Field locations",
@@ -191,6 +195,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/active-sites?${scopeQuery}`,
     },
     {
+      id: "overdue-bills",
       label: "Overdue Bills",
       value: String(overdueBills),
       helperText: "Past due date",
@@ -198,6 +203,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/overdue-bills?${scopeQuery}`,
     },
     {
+      id: "stock-alerts",
       label: "Stock Alerts",
       value: String(lowStockItems),
       helperText: "Low / out of stock",
@@ -205,6 +211,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/stock-alerts?${scopeQuery}`,
     },
     {
+      id: "pending-approvals",
       label: "Pending Approvals",
       value: String(pendingApprovals),
       helperText: "Submitted / sent back",
@@ -212,6 +219,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/pending-approvals?${scopeQuery}`,
     },
     {
+      id: "billing-pending",
       label: "Billing Pending",
       value: money(billingPending),
       helperText: "Receivable amount",
@@ -219,6 +227,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/billing-pending?${periodQuery}`,
     },
     {
+      id: "monthly-expenses",
       label: "Monthly Expenses",
       value: money(monthlyExpenses),
       helperText: "Approved expenses",
@@ -226,6 +235,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/monthly-expenses?${periodQuery}`,
     },
     {
+      id: "dpr-pending",
       label: "DPR Pending",
       value: String(dprPending),
       helperText: "Supervisor submissions",
@@ -233,6 +243,7 @@ function buildAdminMetrics({
       href: `/dashboard/summary/dpr-pending?${periodQuery}`,
     },
     {
+      id: "field-updates",
       label: "Field Updates",
       value: String(fieldUpdates),
       helperText: "Site progress logged",
@@ -242,13 +253,10 @@ function buildAdminMetrics({
   ];
 }
 
-function buildWorkflowMetrics({
-  customers,
-  scope,
-}: {
-  customers: Customer[];
-  scope: DashboardScope;
-}): DashboardWorkflowMetric[] {
+function buildCustomerMetrics(
+  scope: DashboardScope,
+  adminStats: Record<string, number> | undefined,
+): DashboardMetric[] {
   const metricItems: Array<{
     key: DashboardStatKey;
     label: string;
@@ -292,24 +300,49 @@ function buildWorkflowMetrics({
       icon: ClipboardTextIcon,
     },
     {
-      key: "billing-done",
-      label: "Billing Done",
-      helperText: "GI / GC / conversion",
+      key: "gi-bill-done",
+      label: "GI Bill Done",
+      helperText: "GI invoice completed",
       icon: InvoiceIcon,
     },
     {
-      key: "pending-rework",
-      label: "Pending Rework",
+      key: "gc-bill-done",
+      label: "GC Bill Done",
+      helperText: "GC invoice completed",
+      icon: InvoiceIcon,
+    },
+    {
+      key: "conversion-bill-done",
+      label: "Conversion Bill Done",
+      helperText: "Conversion invoice completed",
+      icon: InvoiceIcon,
+    },
+    {
+      key: "connection-remark",
+      label: "Total Connection Remark",
       helperText: "Sent back / on hold",
       icon: WarningIcon,
     },
+    {
+      key: "total-pbg-assignment",
+      label: "Total PBG Assignment",
+      helperText: "JMR submitted in PBG",
+      icon: ListChecksIcon,
+    },
   ];
 
-  return metricItems.map((metric) => ({
-    ...metric,
-    value: getDashboardStatValue(metric.key, customers),
-    href: `/dashboard/stats/${metric.key}?projectId=${scope.projectId}&city=${encodeURIComponent(scope.city)}`,
-  }));
+  return metricItems.map(({ key, ...metric }) => {
+    const statValue = adminStats ? adminStats[key] ?? 0 : 0;
+    const totalCustomers = adminStats ? adminStats["total-customers"] ?? 0 : 0;
+    const displayValue = key === "total-customers" ? String(statValue) : `${statValue}/${totalCustomers}`;
+    
+    return {
+      ...metric,
+      id: key,
+      value: displayValue,
+      href: `/dashboard/stats/${key}?projectId=${scope.projectId}&city=${encodeURIComponent(scope.city)}`,
+    };
+  });
 }
 
 function buildAttendanceRows(records: AttendanceRecord[]): AttendanceSummaryRow[] {

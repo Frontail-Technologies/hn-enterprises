@@ -30,55 +30,6 @@ import {
   type NormalizedImportRow,
 } from "../services/master-import.service";
 
-const sampleRows: CustomerMasterSheetRow[] = [
-  {
-    id: "sample-1",
-    customerId: "sample-1",
-    values: {
-      reportNoGi: "GI-100245",
-      reportNoGc: "GC-100245",
-      reportNoConversion: "CONV-100245",
-      trBpNo: "BP-100245",
-      customerName: "Rajesh Kumar",
-      mobileNo: "9876543210",
-      fullAddress: "42, Shyam Nagar Block A, Jaipur",
-      projectName: "Shyam Nagar CGD Project",
-      siteArea: "Shyam Nagar Block A",
-      city: "Jaipur",
-    },
-  },
-  {
-    id: "sample-2",
-    customerId: "sample-2",
-    values: {
-      reportNoGi: "GI-553901",
-      reportNoGc: "GC-553901",
-      trBpNo: "TR-553901",
-      customerName: "Meena Sharma",
-      mobileNo: "9823411122",
-      fullAddress: "11, New Sanganer Road, Shyam Nagar, Jaipur",
-      projectName: "Shyam Nagar CGD Project",
-      siteArea: "Shyam Nagar Block B",
-      city: "Jaipur",
-    },
-  },
-  {
-    id: "sample-3",
-    customerId: "sample-3",
-    values: {
-      reportNoGi: "GI-220118",
-      reportNoGc: "GC-220118",
-      reportNoConversion: "CONV-220118",
-      trBpNo: "BP-220118",
-      customerName: "Green Mart Store",
-      mobileNo: "9810012200",
-      fullAddress: "Shop 8, Green City Phase 1, Indore",
-      projectName: "Green City Phase 1",
-      siteArea: "Commercial Block",
-      city: "Indore",
-    },
-  },
-];
 
 const importStages = ["Processing", "Extracting", "Saving"] as const;
 
@@ -102,10 +53,6 @@ export function CustomerImport() {
     [activeCustomFields],
   );
 
-  const sampleColumns: ExcelColumn<CustomerMasterSheetRow>[] = useMemo(
-    () => masterColumns.map((column) => ({ ...column, getValue: (row) => row.values[column.key] })),
-    [masterColumns],
-  );
 
   const previewColumns: ExcelColumn<NormalizedImportRow>[] = useMemo(
     () => [
@@ -244,12 +191,30 @@ export function CustomerImport() {
       {view === "upload" ? (
         <div className="space-y-4">
           <section className="rounded-lg border border-border/70 bg-card p-4">
-            <div className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border bg-muted/20 px-4 text-center">
-              <div className="grid size-11 place-items-center rounded-md bg-primary/10 text-primary">
-                <FileArrowUpIcon size={22} />
+            <div
+              className="flex min-h-[60vh] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border/80 bg-muted/10 px-4 text-center transition-colors hover:bg-muted/30"
+              onClick={() => inputRef.current?.click()}
+            >
+              <div className="text-muted-foreground/40 mb-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="64"
+                  height="64"
+                  viewBox="0 0 256 256"
+                  fill="currentColor"
+                >
+                  <path d="M216,72H130.67L102.93,51.2a16.12,16.12,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72Z" />
+                </svg>
               </div>
-              <p className="text-sm font-medium text-foreground">
-                {selectedFile?.name || "Choose customer master file"}
+              <p className="text-base font-semibold text-foreground">
+                Drag & drop your file or <span className="underline cursor-pointer">choose a file</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {selectedFile ? (
+                  <span className="font-medium text-foreground">{selectedFile.name}</span>
+                ) : (
+                  "Supported formats: .xlsx, .xls, .csv · Max 50 MB"
+                )}
               </p>
               <input
                 ref={inputRef}
@@ -258,10 +223,6 @@ export function CustomerImport() {
                 className="hidden"
                 onChange={handleFileChange}
               />
-              <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
-                <UploadSimpleIcon size={15} />
-                Choose File
-              </Button>
             </div>
             {previewError ? <p className="mt-2 text-sm text-destructive">{previewError}</p> : null}
             <div className="mt-3 flex items-center justify-end">
@@ -271,15 +232,6 @@ export function CustomerImport() {
                 <CaretRightIcon size={15} />
               </Button>
             </div>
-          </section>
-
-          <section className="min-w-0">
-            <ExcelDataGrid
-              columns={sampleColumns}
-              rows={sampleRows}
-              emptyTitle="No sample rows"
-              maxHeightClassName="max-h-[420px]"
-            />
           </section>
         </div>
       ) : (
@@ -321,12 +273,6 @@ export function CustomerImport() {
 
           {confirmError ? <p className="text-sm text-destructive">{confirmError}</p> : null}
 
-          <ExcelDataGrid
-            columns={previewColumns}
-            rows={preview?.rows ?? []}
-            emptyTitle="No rows extracted"
-            maxHeightClassName="max-h-[62vh]"
-          />
         </section>
       )}
     </PageShell>

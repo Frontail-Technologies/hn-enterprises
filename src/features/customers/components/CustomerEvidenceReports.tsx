@@ -113,6 +113,22 @@ export function CustomerEvidencePanel({
     .filter((document) => document.category === "Customer Photo")
     .map(documentToEvidence);
 
+  const giEvidence = documents
+    .filter((document) => document.category === "GI Evidence")
+    .map(documentToEvidence);
+
+  const gcEvidence = documents
+    .filter((document) => document.category === "GC Evidence")
+    .map(documentToEvidence);
+
+  const paymentReceipts = documents
+    .filter((document) => document.category === "Payment Receipt")
+    .map(documentToEvidence);
+
+  const otherPhotos = documents
+    .filter((document) => document.category === "Other")
+    .map(documentToEvidence);
+
   const pdfDocuments = documents
     .filter((document) => !isImageFile(document.fileName))
     .map(documentToEvidence);
@@ -130,8 +146,12 @@ export function CustomerEvidencePanel({
       ) : null}
       <MediaSection title="Survey Photos" items={surveyPhotos} onDelete={handleDeleteDocument} />
       <MediaSection title="LMC Evidence" items={lmcEvidence} onDelete={handleDeleteDocument} />
+      <MediaSection title="GI Evidence" items={giEvidence} onDelete={handleDeleteDocument} />
+      <MediaSection title="GC Evidence" items={gcEvidence} onDelete={handleDeleteDocument} />
       <MediaSection title="Meter Photo" items={meterPhotos} onDelete={handleDeleteDocument} />
       <MediaSection title="Customer Photos" items={customerPhotos} onDelete={handleDeleteDocument} />
+      <MediaSection title="Payment Receipts" items={paymentReceipts} onDelete={handleDeleteDocument} />
+      <MediaSection title="Other Photos" items={otherPhotos} onDelete={handleDeleteDocument} />
       <UploadedPdfSection items={pdfDocuments} onDelete={handleDeleteDocument} />
     </div>
   );

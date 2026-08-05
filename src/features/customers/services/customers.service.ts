@@ -1,5 +1,8 @@
 import { apiRequest } from "@/lib/api-client";
-import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
+import {
+  appendEvidenceArray,
+  type ImagePreviewItem,
+} from "@/components/shared/ImageUploadPreview";
 import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/features/management/types/masters.types";
 import type {
   BillingCompletionStatus,
@@ -60,9 +63,15 @@ export type LmcCivilWork = Pick<
   | "paverBlocks"
   | "malua"
   | "hardRock"
+  | "approvalStatus"
+  | "approvalComments"
 >;
 
-export const connectionTypeOptions = ["Domestic", "Commercial", "Industrial"] as const;
+export const connectionTypeOptions = [
+  "Domestic",
+  "Commercial",
+  "Industrial",
+] as const;
 export const customerStatusOptions = [
   "Draft",
   "Pending",
@@ -72,10 +81,34 @@ export const customerStatusOptions = [
   "Completed",
   "Archived",
 ] as const satisfies readonly CustomerStatus[];
-export const paymentStatusOptions = ["Pending", "In Review", "Approved", "Rejected", "Completed"] as const;
-export const surveyWorkableStatusOptions = ["Workable", "Partially Workable", "Not Workable"] as const satisfies readonly CustomerSurveyWorkableStatus[];
-export const surveyApprovalStatusOptions = ["Draft", "Submitted", "In Review", "Approved", "Sent Back", "Rejected"] as const satisfies readonly CustomerSurveyApprovalStatus[];
-export const surveyConditionStatusOptions = ["Workable", "Partially Workable", "Not Workable", "Approved", "Rejected", "Pending"] as const;
+export const paymentStatusOptions = [
+  "Pending",
+  "In Review",
+  "Approved",
+  "Rejected",
+  "Completed",
+] as const;
+export const surveyWorkableStatusOptions = [
+  "Workable",
+  "Partially Workable",
+  "Not Workable",
+] as const satisfies readonly CustomerSurveyWorkableStatus[];
+export const surveyApprovalStatusOptions = [
+  "Draft",
+  "Submitted",
+  "In Review",
+  "Approved",
+  "Sent Back",
+  "Rejected",
+] as const satisfies readonly CustomerSurveyApprovalStatus[];
+export const surveyConditionStatusOptions = [
+  "Workable",
+  "Partially Workable",
+  "Not Workable",
+  "Approved",
+  "Rejected",
+  "Pending",
+] as const;
 export const customerDocumentCategories = [
   "Customer Photo",
   "ID / Address Proof",
@@ -88,7 +121,14 @@ export const customerDocumentCategories = [
   "Other",
 ];
 export const yesNoOptions = ["Yes", "No"] as const;
-export const lmcPipeSizeOptions = ["20 mm", "32 mm", "63 mm", "90 mm", "125 mm", "Other"] as const;
+export const lmcPipeSizeOptions = [
+  "20 mm",
+  "32 mm",
+  "63 mm",
+  "90 mm",
+  "125 mm",
+  "Other",
+] as const;
 export const lmcPipeStatusOptions = [
   "Not Started",
   "In Progress",
@@ -100,47 +140,117 @@ export const lmcPipeStatusOptions = [
   "On Hold",
 ] as const satisfies readonly LmcPipeStatus[];
 
-export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails>[] = [
-  { key: "customerName", label: "Customer Name" },
-  { key: "mobileNo", label: "Mobile Number" },
-  { key: "trBpNo", label: "BP / TR Number" },
-  { key: "fullAddress", label: "Address", input: "textarea" },
-  { key: "connectionType", label: "Connection Type", input: "select", options: connectionTypeOptions },
-  { key: "houseType", label: "House Type" },
-  { key: "scheme", label: "Scheme" },
-  { key: "jobCardDone", label: "Job Card Done", input: "select", options: yesNoOptions },
-  { key: "reportNoGi", label: "GI Report Number" },
-  { key: "reportNoGc", label: "GC Report Number" },
-  { key: "reportNoConversion", label: "Conversion Report Number" },
-];
+export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails>[] =
+  [
+    { key: "customerName", label: "Customer Name" },
+    { key: "mobileNo", label: "Mobile Number" },
+    { key: "trBpNo", label: "BP / TR Number" },
+    { key: "fullAddress", label: "Address", input: "textarea" },
+    {
+      key: "connectionType",
+      label: "Connection Type",
+      input: "select",
+      options: connectionTypeOptions,
+    },
+    { key: "houseType", label: "House Type" },
+    { key: "scheme", label: "Scheme" },
+    {
+      key: "jobCardDone",
+      label: "Job Card Done",
+      input: "select",
+      options: yesNoOptions,
+    },
+    { key: "reportNoGi", label: "GI Report Number" },
+    { key: "reportNoGc", label: "GC Report Number" },
+    { key: "reportNoConversion", label: "Conversion Report Number" },
+  ];
 
 export const giMeasurementFields: FieldDefinition<GiMeasurements>[] = [
   { key: "tfToRegulator", label: "TF to Regulator", input: "number" },
   { key: "inlet", label: "Inlet", input: "number" },
   { key: "outlet", label: "Outlet", input: "number" },
-  { key: "totalGiPipeHalfInch", label: "Total GI Pipe 1/2 inch", input: "number" },
+  {
+    key: "totalGiPipeHalfInch",
+    label: "Total GI Pipe 1/2 inch",
+    input: "number",
+  },
   { key: "giPipeThreeQuarterInch", label: "GI Pipe 3/4 inch", input: "number" },
   { key: "giPipeOneInch", label: "GI Pipe 1 inch", input: "number" },
-  { key: "giPipeOneAndHalfInch", label: "1.5 inch GI Pipe Measurement", input: "number" },
-  { key: "giPipeTwoInch", label: "2 inch GI Pipe Measurement", input: "number" },
+  {
+    key: "giPipeOneAndHalfInch",
+    label: "1.5 inch GI Pipe Measurement",
+    input: "number",
+  },
+  {
+    key: "giPipeTwoInch",
+    label: "2 inch GI Pipe Measurement",
+    input: "number",
+  },
+  {
+    key: "approvalStatus",
+    label: "Approval Status",
+    input: "select",
+    options: ["draft", "submitted", "approved", "rejected"],
+  },
+  { key: "approvalComments", label: "Approval Comments", input: "textarea" },
 ];
 
 export const isolationValveFields: FieldDefinition<ValvesRegulators>[] = [
-  { key: "isolationValveHalfInch", label: "Isolation Valve 1/2 inch", input: "number" },
-  { key: "isolationValveThreeQuarterInch", label: "Isolation Valve 3/4 inch", input: "number" },
-  { key: "isolationValveOneInch", label: "Isolation Valve 1 inch", input: "number" },
-  { key: "isolationValveOneAndHalfInch", label: "Isolation Valve 1.5 inch", input: "number" },
-  { key: "isolationValveTwoInch", label: "Isolation Valve 2 inch", input: "number" },
-  { key: "applianceValveHalfInch", label: "Appliance Valve 1/2 inch", input: "number" },
-  { key: "regulator6BarTo100Mbar", label: "Regulator 6 Bar-100 mBar", input: "number" },
-  { key: "regulator6BarTo21Mbar", label: "Regulator 6 Bar-21 mBar", input: "number" },
-  { key: "regulator100MbarTo21Mbar", label: "Regulator 100 mBar-21 mBar", input: "number" },
+  {
+    key: "isolationValveHalfInch",
+    label: "Isolation Valve 1/2 inch",
+    input: "number",
+  },
+  {
+    key: "isolationValveThreeQuarterInch",
+    label: "Isolation Valve 3/4 inch",
+    input: "number",
+  },
+  {
+    key: "isolationValveOneInch",
+    label: "Isolation Valve 1 inch",
+    input: "number",
+  },
+  {
+    key: "isolationValveOneAndHalfInch",
+    label: "Isolation Valve 1.5 inch",
+    input: "number",
+  },
+  {
+    key: "isolationValveTwoInch",
+    label: "Isolation Valve 2 inch",
+    input: "number",
+  },
+  {
+    key: "applianceValveHalfInch",
+    label: "Appliance Valve 1/2 inch",
+    input: "number",
+  },
+  {
+    key: "regulator6BarTo100Mbar",
+    label: "Regulator 6 Bar-100 mBar",
+    input: "number",
+  },
+  {
+    key: "regulator6BarTo21Mbar",
+    label: "Regulator 6 Bar-21 mBar",
+    input: "number",
+  },
+  {
+    key: "regulator100MbarTo21Mbar",
+    label: "Regulator 100 mBar-21 mBar",
+    input: "number",
+  },
   { key: "warningPlate", label: "Warning Plate", input: "number" },
 ];
 
 export const fittingAccessoryFields: FieldDefinition<FittingsAccessories>[] = [
   { key: "clampHalfInch", label: "Clamp 1/2 inch", input: "number" },
-  { key: "clamp3InchToHalfInch", label: "Clamp 3 inch-1/2 inch", input: "number" },
+  {
+    key: "clamp3InchToHalfInch",
+    label: "Clamp 3 inch-1/2 inch",
+    input: "number",
+  },
   { key: "elbowHalfInch", label: "Elbow 1/2 inch", input: "number" },
   { key: "mfElbowHalfInch", label: "M/F Elbow 1/2 inch", input: "number" },
   { key: "socketHalfInch", label: "Socket 1/2 inch", input: "number" },
@@ -148,13 +258,29 @@ export const fittingAccessoryFields: FieldDefinition<FittingsAccessories>[] = [
   { key: "nipple2Inch", label: "Nipple 2 inch", input: "number" },
   { key: "nipple3Inch", label: "Nipple 3 inch", input: "number" },
   { key: "nipple4Inch", label: "Nipple 4 inch", input: "number" },
-  { key: "reducerElbowThreeQuarterToHalfInch", label: "Reducer Elbow 3/4 inch-1/2 inch", input: "number" },
+  {
+    key: "reducerElbowThreeQuarterToHalfInch",
+    label: "Reducer Elbow 3/4 inch-1/2 inch",
+    input: "number",
+  },
   { key: "threeQuarterInchTo3Inch", label: "3/4 inch-3 inch", input: "number" },
   { key: "unionHalfInch", label: "Union 1/2 inch", input: "number" },
   { key: "plugHalfInch", label: "Plug 1/2 inch", input: "number" },
-  { key: "fittingsOneAndHalfInchQuantity", label: "1.5 inch Fittings Quantity", input: "number" },
-  { key: "fittingsTwoInchQuantity", label: "2 inch Fittings Quantity", input: "number" },
-  { key: "extraGiAbove10Metres", label: "Extra GI Above 10 Metres", input: "number" },
+  {
+    key: "fittingsOneAndHalfInchQuantity",
+    label: "1.5 inch Fittings Quantity",
+    input: "number",
+  },
+  {
+    key: "fittingsTwoInchQuantity",
+    label: "2 inch Fittings Quantity",
+    input: "number",
+  },
+  {
+    key: "extraGiAbove10Metres",
+    label: "Extra GI Above 10 Metres",
+    input: "number",
+  },
 ];
 
 export const lmcPipelineFields: FieldDefinition<LmcCivilWork>[] = [
@@ -167,6 +293,13 @@ export const lmcPipelineFields: FieldDefinition<LmcCivilWork>[] = [
   { key: "paverBlocks", label: "Paver Blocks", input: "number" },
   { key: "malua", label: "Malua", input: "number" },
   { key: "hardRock", label: "Hard Rock", input: "number" },
+  {
+    key: "approvalStatus",
+    label: "Approval Status",
+    input: "select",
+    options: ["draft", "submitted", "approved", "rejected"],
+  },
+  { key: "approvalComments", label: "Approval Comments", input: "textarea" },
 ];
 
 export type LmcPipeEditableFields = Omit<LmcPipeSizeRecord, "id" | "pipeSize">;
@@ -176,10 +309,29 @@ export const lmcPipeRecordFields: FieldDefinition<LmcPipeEditableFields>[] = [
   { key: "layingDate", label: "Laying Date", input: "date" },
   { key: "testingDate", label: "Testing Date", input: "date" },
   { key: "purgingDate", label: "Purging Date", input: "date" },
-  { key: "layingStatus", label: "Laying Status", input: "select", options: lmcPipeStatusOptions },
-  { key: "testingStatus", label: "Testing Status", input: "select", options: lmcPipeStatusOptions },
-  { key: "purgingStatus", label: "Purging Status", input: "select", options: lmcPipeStatusOptions },
-  { key: "jointFittingDetails", label: "Joint / Fitting Details", input: "textarea" },
+  {
+    key: "layingStatus",
+    label: "Laying Status",
+    input: "select",
+    options: lmcPipeStatusOptions,
+  },
+  {
+    key: "testingStatus",
+    label: "Testing Status",
+    input: "select",
+    options: lmcPipeStatusOptions,
+  },
+  {
+    key: "purgingStatus",
+    label: "Purging Status",
+    input: "select",
+    options: lmcPipeStatusOptions,
+  },
+  {
+    key: "jointFittingDetails",
+    label: "Joint / Fitting Details",
+    input: "textarea",
+  },
   { key: "remarks", label: "Remarks", input: "textarea" },
   { key: "evidence", label: "Evidence Files" },
 ];
@@ -192,143 +344,488 @@ export const mdpeFittingFields: FieldDefinition<MdpeFittings>[] = [
   { key: "tee90Mm", label: "90 mm Tee", input: "number" },
   { key: "tee32Mm", label: "Tee 32 mm", input: "number" },
   { key: "tee20Mm", label: "Tee 20 mm", input: "number" },
-  { key: "reducerCoupler90To63Mm", label: "90-63 mm Reducer Coupler", input: "number" },
-  { key: "reducerCoupler63To32Mm", label: "Reducer Coupler 63-32 mm", input: "number" },
-  { key: "reducerCoupler32To20Mm", label: "Reducer Coupler 32-20 mm", input: "number" },
+  {
+    key: "reducerCoupler90To63Mm",
+    label: "90-63 mm Reducer Coupler",
+    input: "number",
+  },
+  {
+    key: "reducerCoupler63To32Mm",
+    label: "Reducer Coupler 63-32 mm",
+    input: "number",
+  },
+  {
+    key: "reducerCoupler32To20Mm",
+    label: "Reducer Coupler 32-20 mm",
+    input: "number",
+  },
   { key: "coupler90Mm", label: "90 mm Coupler", input: "number" },
   { key: "coupler32Mm", label: "Coupler 32 mm", input: "number" },
   { key: "coupler20Mm", label: "Coupler 20 mm", input: "number" },
   { key: "endCap90Mm", label: "90 mm End Cap", input: "number" },
 ];
 
-export const commissioningConversionFields: FieldDefinition<CommissioningConversionDetails>[] = [
-  { key: "meterNo", label: "Meter No." },
-  { key: "installationDate", label: "Installation Date", input: "date" },
-  { key: "commissioningDate", label: "Commissioning Date", input: "date" },
-  { key: "conversionDate", label: "Conversion Date", input: "date" },
-  { key: "regulatorPressure", label: "Regulator Pressure" },
-  { key: "regulatorNo", label: "Regulator No." },
-  { key: "meterType", label: "Meter Type" },
-  { key: "meterReading", label: "Meter Reading" },
-  { key: "nonConversionRemark", label: "Non-Conversion Remark", input: "textarea" },
-];
+export const commissioningConversionFields: FieldDefinition<CommissioningConversionDetails>[] =
+  [
+    { key: "meterNo", label: "Meter No." },
+    { key: "installationDate", label: "Installation Date", input: "date" },
+    { key: "commissioningDate", label: "Commissioning Date", input: "date" },
+    { key: "conversionDate", label: "Conversion Date", input: "date" },
+    { key: "regulatorPressure", label: "Regulator Pressure" },
+    { key: "regulatorNo", label: "Regulator No." },
+    { key: "meterType", label: "Meter Type" },
+    { key: "meterReading", label: "Meter Reading" },
+    {
+      key: "nonConversionRemark",
+      label: "Non-Conversion Remark",
+      input: "textarea",
+    },
+    {
+      key: "approvalStatus",
+      label: "Approval Status",
+      input: "select",
+      options: ["draft", "submitted", "approved", "rejected"],
+    },
+    { key: "approvalComments", label: "Approval Comments", input: "textarea" },
+  ];
 
-export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[] = [
-  { key: "paymentStatus", label: "Payment Status", input: "select", options: paymentStatusOptions },
-  { key: "paymentMode", label: "Payment Mode" },
-  { key: "initialAmount", label: "Initial Amount", input: "number" },
-  { key: "jmrDone", label: "JMR Done", input: "boolean" },
-  { key: "jmrSubmittedInPbg", label: "JMR Submitted in PBG", input: "boolean" },
-  { key: "giBillDone", label: "GI Bill Done", input: "boolean" },
-  { key: "gcBillDone", label: "GC Bill Done", input: "boolean" },
-  { key: "conversionBillDone", label: "Conversion Bill Done", input: "boolean" },
-  { key: "remark", label: "Remark", input: "textarea" },
-];
+export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[] =
+  [
+    {
+      key: "paymentStatus",
+      label: "Payment Status",
+      input: "select",
+      options: paymentStatusOptions,
+    },
+    { key: "paymentMode", label: "Payment Mode" },
+    { key: "initialAmount", label: "Initial Amount", input: "number" },
+    { key: "jmrDone", label: "JMR Done", input: "boolean" },
+    {
+      key: "jmrSubmittedInPbg",
+      label: "JMR Submitted in PBG",
+      input: "boolean",
+    },
+    { key: "giBillDone", label: "GI Bill Done", input: "boolean" },
+    { key: "gcBillDone", label: "GC Bill Done", input: "boolean" },
+    {
+      key: "conversionBillDone",
+      label: "Conversion Bill Done",
+      input: "boolean",
+    },
+    { key: "remark", label: "Remark", input: "textarea" },
+  ];
 
 export const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
-  { key: "reportNoGi", label: "Report No-GI", group: "Reports", width: 150, sticky: true },
-  { key: "reportNoGc", label: "Report No-GC", group: "Reports", width: 150, sticky: true },
-  { key: "reportNoConversion", label: "Report No-Conversion", group: "Reports", width: 180, sticky: true },
-  { key: "trBpNo", label: "TR No.", group: "Customer", width: 150, sticky: true },
-  { key: "customerName", label: "Customer Name", group: "Customer", width: 190 },
+  {
+    key: "reportNoGi",
+    label: "Report No-GI",
+    group: "Reports",
+    width: 150,
+    sticky: true,
+  },
+  {
+    key: "reportNoGc",
+    label: "Report No-GC",
+    group: "Reports",
+    width: 150,
+    sticky: true,
+  },
+  {
+    key: "reportNoConversion",
+    label: "Report No-Conversion",
+    group: "Reports",
+    width: 180,
+    sticky: true,
+  },
+  {
+    key: "trBpNo",
+    label: "TR No.",
+    group: "Customer",
+    width: 150,
+    sticky: true,
+  },
+  {
+    key: "customerName",
+    label: "Customer Name",
+    group: "Customer",
+    width: 190,
+  },
   { key: "mobileNo", label: "Mobile No.", group: "Customer", width: 130 },
   { key: "fullAddress", label: "Full Address", group: "Customer", width: 260 },
   { key: "projectName", label: "Project", group: "Project", width: 190 },
   { key: "siteArea", label: "Site / Area", group: "Project", width: 170 },
   { key: "city", label: "City", group: "Project", width: 120 },
   { key: "scheme", label: "Scheme", group: "Customer", width: 130 },
-  { key: "paymentStatus", label: "Payment Status", group: "Payment", width: 140 },
+  {
+    key: "paymentStatus",
+    label: "Payment Status",
+    group: "Payment",
+    width: 140,
+  },
   { key: "paymentMode", label: "Payment Mode", group: "Payment", width: 130 },
-  { key: "initialAmount", label: "Initial Amount", group: "Payment", width: 140 },
+  {
+    key: "initialAmount",
+    label: "Initial Amount",
+    group: "Payment",
+    width: 140,
+  },
   { key: "surveyDate", label: "Survey Date", group: "Survey", width: 130 },
-  { key: "workableStatus", label: "Workable Status", group: "Survey", width: 150 },
-  { key: "surveyRemarks", label: "Survey Remarks", group: "Survey", width: 220 },
-  { key: "plumberName", label: "Plumber Name", group: "Assignment", width: 150 },
-  { key: "supervisorName", label: "Supervisor Name", group: "Assignment", width: 160 },
+  {
+    key: "workableStatus",
+    label: "Workable Status",
+    group: "Survey",
+    width: 150,
+  },
+  {
+    key: "surveyRemarks",
+    label: "Survey Remarks",
+    group: "Survey",
+    width: 220,
+  },
+  {
+    key: "plumberName",
+    label: "Plumber Name",
+    group: "Assignment",
+    width: 150,
+  },
+  {
+    key: "supervisorName",
+    label: "Supervisor Name",
+    group: "Assignment",
+    width: 160,
+  },
   { key: "meterNo", label: "Meter No.", group: "Meter", width: 140 },
-  { key: "installationDate", label: "Installation Date", group: "Meter", width: 150 },
+  {
+    key: "installationDate",
+    label: "Installation Date",
+    group: "Meter",
+    width: 150,
+  },
   { key: "jobCardDone", label: "Job Card Done", group: "Customer", width: 140 },
-  { key: "connectionType", label: "Connection Type", group: "Customer", width: 150 },
+  {
+    key: "connectionType",
+    label: "Connection Type",
+    group: "Customer",
+    width: 150,
+  },
   { key: "houseType", label: "House Type", group: "Customer", width: 140 },
-  { key: "tfToRegulator", label: "TF to Regulator GI Measurement", group: "GI", width: 210 },
+  {
+    key: "tfToRegulator",
+    label: "TF to Regulator GI Measurement",
+    group: "GI",
+    width: 210,
+  },
   { key: "inlet", label: "Inlet GI Measurement", group: "GI", width: 180 },
   { key: "outlet", label: "Outlet GI Measurement", group: "GI", width: 180 },
-  { key: "totalGiPipeHalfInch", label: "Total GI Pipe 1/2 inch", group: "GI", width: 180 },
-  { key: "giPipeThreeQuarterInch", label: "GI Pipe 3/4 inch", group: "GI", width: 160 },
+  {
+    key: "totalGiPipeHalfInch",
+    label: "Total GI Pipe 1/2 inch",
+    group: "GI",
+    width: 180,
+  },
+  {
+    key: "giPipeThreeQuarterInch",
+    label: "GI Pipe 3/4 inch",
+    group: "GI",
+    width: 160,
+  },
   { key: "giPipeOneInch", label: "GI Pipe 1 inch", group: "GI", width: 140 },
-  { key: "giPipeOneAndHalfInch", label: "GI Pipe 1.5 inch Welded", group: "GI", width: 190 },
-  { key: "giPipeTwoInch", label: "GI Pipe 2 inch Welded", group: "GI", width: 180 },
-  { key: "isolationValveHalfInch", label: "Isolation Valve 1/2 inch", group: "Valves", width: 190 },
-  { key: "isolationValveThreeQuarterInch", label: "Isolation Valve 3/4 inch", group: "Valves", width: 190 },
-  { key: "isolationValveOneInch", label: "Isolation Valve 1 inch", group: "Valves", width: 170 },
-  { key: "isolationValveOneAndHalfInch", label: "Isolation Valve 1.5 inch", group: "Valves", width: 180 },
-  { key: "isolationValveTwoInch", label: "Isolation Valve 2 inch", group: "Valves", width: 170 },
-  { key: "applianceValveHalfInch", label: "Appliance Valve 1/2 inch", group: "Valves", width: 190 },
-  { key: "regulator6BarTo100Mbar", label: "Regulator 6Bar-100mBar", group: "Regulators", width: 190 },
-  { key: "regulator6BarTo21Mbar", label: "Regulator 6Bar-21mBar", group: "Regulators", width: 180 },
-  { key: "regulator100MbarTo21Mbar", label: "Regulator 100mBar-21mBar", group: "Regulators", width: 200 },
-  { key: "warningPlate", label: "Warning Plate", group: "Regulators", width: 140 },
-  { key: "clampHalfInch", label: "Clamp 1/2 inch", group: "Fittings", width: 140 },
-  { key: "clamp3InchToHalfInch", label: "Clamp 3 inch-1/2 inch", group: "Fittings", width: 180 },
-  { key: "elbowHalfInch", label: "Elbow 1/2 inch", group: "Fittings", width: 140 },
-  { key: "mfElbowHalfInch", label: "M/F Elbow 1/2 inch", group: "Fittings", width: 160 },
-  { key: "socketHalfInch", label: "Socket 1/2 inch", group: "Fittings", width: 150 },
+  {
+    key: "giPipeOneAndHalfInch",
+    label: "GI Pipe 1.5 inch Welded",
+    group: "GI",
+    width: 190,
+  },
+  {
+    key: "giPipeTwoInch",
+    label: "GI Pipe 2 inch Welded",
+    group: "GI",
+    width: 180,
+  },
+  {
+    key: "isolationValveHalfInch",
+    label: "Isolation Valve 1/2 inch",
+    group: "Valves",
+    width: 190,
+  },
+  {
+    key: "isolationValveThreeQuarterInch",
+    label: "Isolation Valve 3/4 inch",
+    group: "Valves",
+    width: 190,
+  },
+  {
+    key: "isolationValveOneInch",
+    label: "Isolation Valve 1 inch",
+    group: "Valves",
+    width: 170,
+  },
+  {
+    key: "isolationValveOneAndHalfInch",
+    label: "Isolation Valve 1.5 inch",
+    group: "Valves",
+    width: 180,
+  },
+  {
+    key: "isolationValveTwoInch",
+    label: "Isolation Valve 2 inch",
+    group: "Valves",
+    width: 170,
+  },
+  {
+    key: "applianceValveHalfInch",
+    label: "Appliance Valve 1/2 inch",
+    group: "Valves",
+    width: 190,
+  },
+  {
+    key: "regulator6BarTo100Mbar",
+    label: "Regulator 6Bar-100mBar",
+    group: "Regulators",
+    width: 190,
+  },
+  {
+    key: "regulator6BarTo21Mbar",
+    label: "Regulator 6Bar-21mBar",
+    group: "Regulators",
+    width: 180,
+  },
+  {
+    key: "regulator100MbarTo21Mbar",
+    label: "Regulator 100mBar-21mBar",
+    group: "Regulators",
+    width: 200,
+  },
+  {
+    key: "warningPlate",
+    label: "Warning Plate",
+    group: "Regulators",
+    width: 140,
+  },
+  {
+    key: "clampHalfInch",
+    label: "Clamp 1/2 inch",
+    group: "Fittings",
+    width: 140,
+  },
+  {
+    key: "clamp3InchToHalfInch",
+    label: "Clamp 3 inch-1/2 inch",
+    group: "Fittings",
+    width: 180,
+  },
+  {
+    key: "elbowHalfInch",
+    label: "Elbow 1/2 inch",
+    group: "Fittings",
+    width: 140,
+  },
+  {
+    key: "mfElbowHalfInch",
+    label: "M/F Elbow 1/2 inch",
+    group: "Fittings",
+    width: 160,
+  },
+  {
+    key: "socketHalfInch",
+    label: "Socket 1/2 inch",
+    group: "Fittings",
+    width: 150,
+  },
   { key: "teeHalfInch", label: "Tee 1/2 inch", group: "Fittings", width: 130 },
   { key: "nipple2Inch", label: "Nipple 2 inch", group: "Fittings", width: 130 },
   { key: "nipple3Inch", label: "Nipple 3 inch", group: "Fittings", width: 130 },
   { key: "nipple4Inch", label: "Nipple 4 inch", group: "Fittings", width: 130 },
-  { key: "reducerElbowThreeQuarterToHalfInch", label: "Reducer Elbow 3/4-1/2 inch", group: "Fittings", width: 210 },
-  { key: "threeQuarterInchTo3Inch", label: "3/4 inch-3 inch", group: "Fittings", width: 150 },
-  { key: "unionHalfInch", label: "Union 1/2 inch", group: "Fittings", width: 140 },
-  { key: "plugHalfInch", label: "Plug 1/2 inch", group: "Fittings", width: 130 },
-  { key: "extraGiAbove10Metres", label: "Extra GI Above 10 Metres", group: "Fittings", width: 200 },
+  {
+    key: "reducerElbowThreeQuarterToHalfInch",
+    label: "Reducer Elbow 3/4-1/2 inch",
+    group: "Fittings",
+    width: 210,
+  },
+  {
+    key: "threeQuarterInchTo3Inch",
+    label: "3/4 inch-3 inch",
+    group: "Fittings",
+    width: 150,
+  },
+  {
+    key: "unionHalfInch",
+    label: "Union 1/2 inch",
+    group: "Fittings",
+    width: 140,
+  },
+  {
+    key: "plugHalfInch",
+    label: "Plug 1/2 inch",
+    group: "Fittings",
+    width: 130,
+  },
+  {
+    key: "extraGiAbove10Metres",
+    label: "Extra GI Above 10 Metres",
+    group: "Fittings",
+    width: 200,
+  },
   { key: "pipe20Length", label: "20 mm Pipe Length", group: "LMC", width: 160 },
-  { key: "pipe20LayingDate", label: "20 mm Laying Date", group: "LMC", width: 160 },
-  { key: "pipe20TestingDate", label: "20 mm Testing Date", group: "LMC", width: 160 },
-  { key: "pipe20PurgingDate", label: "20 mm Purging Date", group: "LMC", width: 160 },
+  {
+    key: "pipe20LayingDate",
+    label: "20 mm Laying Date",
+    group: "LMC",
+    width: 160,
+  },
+  {
+    key: "pipe20TestingDate",
+    label: "20 mm Testing Date",
+    group: "LMC",
+    width: 160,
+  },
+  {
+    key: "pipe20PurgingDate",
+    label: "20 mm Purging Date",
+    group: "LMC",
+    width: 160,
+  },
   { key: "pipe32Length", label: "32 mm Pipe Length", group: "LMC", width: 160 },
   { key: "pipe63Length", label: "63 mm Pipe Length", group: "LMC", width: 160 },
   { key: "pipe90Length", label: "90 mm Pipe Length", group: "LMC", width: 160 },
-  { key: "pipe125Length", label: "125 mm Pipe Length", group: "LMC", width: 170 },
-  { key: "fourMetresUnderGc", label: "4 Metres Under GC", group: "LMC", width: 160 },
-  { key: "fourMetresAboveGc", label: "4 Metres Above GC", group: "LMC", width: 160 },
+  {
+    key: "pipe125Length",
+    label: "125 mm Pipe Length",
+    group: "LMC",
+    width: 170,
+  },
+  {
+    key: "fourMetresUnderGc",
+    label: "4 Metres Under GC",
+    group: "LMC",
+    width: 160,
+  },
+  {
+    key: "fourMetresAboveGc",
+    label: "4 Metres Above GC",
+    group: "LMC",
+    width: 160,
+  },
   { key: "tfHalfInch", label: "TF 1/2 inch", group: "LMC", width: 130 },
   { key: "tfOneInch", label: "TF 1 inch", group: "LMC", width: 120 },
   { key: "pcc", label: "PCC", group: "Civil", width: 100 },
-  { key: "rccNalaCrossing", label: "RCC / Nala Crossing", group: "Civil", width: 170 },
+  {
+    key: "rccNalaCrossing",
+    label: "RCC / Nala Crossing",
+    group: "Civil",
+    width: 170,
+  },
   { key: "paverBlocks", label: "Paver Blocks", group: "Civil", width: 140 },
   { key: "malua", label: "Malua", group: "Civil", width: 110 },
   { key: "hardRock", label: "Hard Rock", group: "Civil", width: 120 },
-  { key: "saddle90To32Mm", label: "Saddle 90-32 mm", group: "MDPE", width: 150 },
-  { key: "saddle63To32Mm", label: "Saddle 63-32 mm", group: "MDPE", width: 150 },
-  { key: "saddle32To20Mm", label: "Saddle 32-20 mm", group: "MDPE", width: 150 },
+  {
+    key: "saddle90To32Mm",
+    label: "Saddle 90-32 mm",
+    group: "MDPE",
+    width: 150,
+  },
+  {
+    key: "saddle63To32Mm",
+    label: "Saddle 63-32 mm",
+    group: "MDPE",
+    width: 150,
+  },
+  {
+    key: "saddle32To20Mm",
+    label: "Saddle 32-20 mm",
+    group: "MDPE",
+    width: 150,
+  },
   { key: "tee32Mm", label: "Tee 32 mm", group: "MDPE", width: 120 },
   { key: "tee20Mm", label: "Tee 20 mm", group: "MDPE", width: 120 },
-  { key: "reducerCoupler63To32Mm", label: "Reducer Coupler 63-32 mm", group: "MDPE", width: 210 },
-  { key: "reducerCoupler32To20Mm", label: "Reducer Coupler 32-20 mm", group: "MDPE", width: 210 },
+  {
+    key: "reducerCoupler63To32Mm",
+    label: "Reducer Coupler 63-32 mm",
+    group: "MDPE",
+    width: 210,
+  },
+  {
+    key: "reducerCoupler32To20Mm",
+    label: "Reducer Coupler 32-20 mm",
+    group: "MDPE",
+    width: 210,
+  },
   { key: "coupler32Mm", label: "Coupler 32 mm", group: "MDPE", width: 140 },
   { key: "coupler20Mm", label: "Coupler 20 mm", group: "MDPE", width: 140 },
   { key: "coupler90Mm", label: "90 mm Coupler", group: "MDPE", width: 140 },
-  { key: "reducerCoupler90To63Mm", label: "90-63 mm Reducer Coupler", group: "MDPE", width: 210 },
+  {
+    key: "reducerCoupler90To63Mm",
+    label: "90-63 mm Reducer Coupler",
+    group: "MDPE",
+    width: 210,
+  },
   { key: "tee90Mm", label: "90 mm Tee", group: "MDPE", width: 120 },
   { key: "endCap90Mm", label: "90 mm End Cap", group: "MDPE", width: 140 },
-  { key: "commissioningDate", label: "Commissioning Date", group: "Commissioning", width: 160 },
-  { key: "conversionDate", label: "Conversion Date", group: "Commissioning", width: 150 },
-  { key: "regulatorPressure", label: "Regulator Pressure", group: "Commissioning", width: 160 },
-  { key: "regulatorNo", label: "Regulator No.", group: "Commissioning", width: 140 },
+  {
+    key: "commissioningDate",
+    label: "Commissioning Date",
+    group: "Commissioning",
+    width: 160,
+  },
+  {
+    key: "conversionDate",
+    label: "Conversion Date",
+    group: "Commissioning",
+    width: 150,
+  },
+  {
+    key: "regulatorPressure",
+    label: "Regulator Pressure",
+    group: "Commissioning",
+    width: 160,
+  },
+  {
+    key: "regulatorNo",
+    label: "Regulator No.",
+    group: "Commissioning",
+    width: 140,
+  },
   { key: "meterType", label: "Meter Type", group: "Commissioning", width: 130 },
-  { key: "meterReading", label: "Meter Reading", group: "Commissioning", width: 140 },
-  { key: "nonConversionRemark", label: "Non Conversion Remark", group: "Commissioning", width: 220 },
+  {
+    key: "meterReading",
+    label: "Meter Reading",
+    group: "Commissioning",
+    width: 140,
+  },
+  {
+    key: "nonConversionRemark",
+    label: "Non Conversion Remark",
+    group: "Commissioning",
+    width: 220,
+  },
   { key: "jmrDone", label: "JMR Done", group: "Billing", width: 120 },
-  { key: "jmrSubmittedInPbg", label: "JMR Submitted in PBG", group: "Billing", width: 180 },
+  {
+    key: "jmrSubmittedInPbg",
+    label: "JMR Submitted in PBG",
+    group: "Billing",
+    width: 180,
+  },
   { key: "giBillDone", label: "GI Bill Done", group: "Billing", width: 130 },
   { key: "gcBillDone", label: "GC Bill Done", group: "Billing", width: 130 },
-  { key: "conversionBillDone", label: "Conversion Bill Done", group: "Billing", width: 170 },
+  {
+    key: "conversionBillDone",
+    label: "Conversion Bill Done",
+    group: "Billing",
+    width: 170,
+  },
   { key: "billingRemark", label: "Remark", group: "Billing", width: 220 },
 ];
 
 export function buildCustomerMasterSheetColumns(
-  activeCustomFields: { key: string; label: string; group: string; width: number; valueType: MasterSheetColumnValueType; required: boolean; dropdownOptions: string[] }[],
+  activeCustomFields: {
+    key: string;
+    label: string;
+    group: string;
+    width: number;
+    valueType: MasterSheetColumnValueType;
+    required: boolean;
+    dropdownOptions: string[];
+  }[],
 ): CustomerMasterSheetColumn[] {
   return [
     ...baseCustomerMasterSheetColumns,
@@ -353,6 +850,8 @@ export const emptyGiMeasurements: GiMeasurements = {
   giPipeOneInch: "",
   giPipeOneAndHalfInch: "",
   giPipeTwoInch: "",
+  approvalStatus: "draft",
+  approvalComments: "",
 };
 
 export const emptyValvesRegulators: ValvesRegulators = {
@@ -460,6 +959,8 @@ export const emptyLmcPipelineWork: LmcPipelineWork = {
   paverBlocks: "",
   malua: "",
   hardRock: "",
+  approvalStatus: "draft",
+  approvalComments: "",
 };
 
 export const emptyMdpeFittings: MdpeFittings = {
@@ -489,6 +990,8 @@ export const emptyCommissioningConversion: CommissioningConversionDetails = {
   meterType: "",
   meterReading: "",
   nonConversionRemark: "",
+  approvalStatus: "draft",
+  approvalComments: "",
 };
 
 export const emptyBillingCompletion: BillingCompletionStatus = {
@@ -523,18 +1026,39 @@ export const defaultCustomerFormValues: CustomerFormValues = {
   documents: [],
 };
 
-export function deriveLmcOverallStatus(records: LmcPipeSizeRecord[]): LmcOverallStatus {
-  const applicableRecords = records.filter((record) => deriveLmcPipeCurrentStage(record) !== "Not Required");
+export function deriveLmcOverallStatus(
+  records: LmcPipeSizeRecord[],
+): LmcOverallStatus {
+  const applicableRecords = records.filter(
+    (record) => deriveLmcPipeCurrentStage(record) !== "Not Required",
+  );
 
   if (!applicableRecords.length) return "Not Started";
-  if (applicableRecords.some((record) => deriveLmcPipeCurrentStage(record) === "On Hold")) return "On Hold";
-  if (applicableRecords.every((record) => deriveLmcPipeCurrentStage(record) === "Purging Completed")) return "Completed";
-  if (applicableRecords.every((record) => deriveLmcPipeCurrentStage(record) === "Not Started")) return "Not Started";
+  if (
+    applicableRecords.some(
+      (record) => deriveLmcPipeCurrentStage(record) === "On Hold",
+    )
+  )
+    return "On Hold";
+  if (
+    applicableRecords.every(
+      (record) => deriveLmcPipeCurrentStage(record) === "Purging Completed",
+    )
+  )
+    return "Completed";
+  if (
+    applicableRecords.every(
+      (record) => deriveLmcPipeCurrentStage(record) === "Not Started",
+    )
+  )
+    return "Not Started";
 
   return "In Progress";
 }
 
-export function deriveLmcPipeCurrentStage(record: LmcPipeSizeRecord): LmcPipeStatus {
+export function deriveLmcPipeCurrentStage(
+  record: LmcPipeSizeRecord,
+): LmcPipeStatus {
   if (
     record.layingStatus === "Not Required" &&
     record.testingStatus === "Not Required" &&
@@ -566,7 +1090,9 @@ export function deriveLmcPipeCurrentStage(record: LmcPipeSizeRecord): LmcPipeSta
   return "Not Started";
 }
 
-export function getCustomerMasterSheetRows(sourceCustomers: Customer[]): CustomerMasterSheetRow[] {
+export function getCustomerMasterSheetRows(
+  sourceCustomers: Customer[],
+): CustomerMasterSheetRow[] {
   return sourceCustomers.map((customer) => {
     const connection = customer.customerConnection;
     const gi = customer.giMeasurements;
@@ -600,12 +1126,22 @@ export function getCustomerMasterSheetRows(sourceCustomers: Customer[]): Custome
         paymentMode: billing.paymentMode,
         initialAmount: billing.initialAmount,
         preferredPaymentType: billing.paymentMode,
-        kycVerified: customer.documents?.some((document) => document.category === "ID / Address Proof" && document.status === "Approved") ? "Yes" : "No",
-        lastPaymentDate: billing.paymentStatus === "Completed" ? commissioning.conversionDate : "",
+        kycVerified: customer.documents?.some(
+          (document) =>
+            document.category === "ID / Address Proof" &&
+            document.status === "Approved",
+        )
+          ? "Yes"
+          : "No",
+        lastPaymentDate:
+          billing.paymentStatus === "Completed"
+            ? commissioning.conversionDate
+            : "",
         scheme: connection.scheme,
         surveyDate: customer.survey?.surveyDate ?? "",
         workableStatus: customer.survey?.workableStatus ?? "",
-        surveyRemarks: customer.survey?.obstaclesRemarks ?? customer.survey?.notes ?? "",
+        surveyRemarks:
+          customer.survey?.obstaclesRemarks ?? customer.survey?.notes ?? "",
         plumberName: connection.plumberName,
         supervisorName: connection.supervisorName,
         meterNo: commissioning.meterNo,
@@ -640,7 +1176,8 @@ export function getCustomerMasterSheetRows(sourceCustomers: Customer[]): Custome
         nipple2Inch: fittings.nipple2Inch,
         nipple3Inch: fittings.nipple3Inch,
         nipple4Inch: fittings.nipple4Inch,
-        reducerElbowThreeQuarterToHalfInch: fittings.reducerElbowThreeQuarterToHalfInch,
+        reducerElbowThreeQuarterToHalfInch:
+          fittings.reducerElbowThreeQuarterToHalfInch,
         threeQuarterInchTo3Inch: fittings.threeQuarterInchTo3Inch,
         unionHalfInch: fittings.unionHalfInch,
         plugHalfInch: fittings.plugHalfInch,
@@ -714,7 +1251,10 @@ const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
 };
 
 const STATUS_TO_FRONTEND: Record<string, CustomerStatus> = Object.fromEntries(
-  Object.entries(STATUS_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as CustomerStatus]),
+  Object.entries(STATUS_TO_BACKEND).map(([frontend, backend]) => [
+    backend,
+    frontend as CustomerStatus,
+  ]),
 );
 
 const LMC_SIZE_TO_BACKEND: Record<LmcPipeSize, string> = {
@@ -727,7 +1267,10 @@ const LMC_SIZE_TO_BACKEND: Record<LmcPipeSize, string> = {
 };
 
 const LMC_SIZE_TO_FRONTEND: Record<string, LmcPipeSize> = Object.fromEntries(
-  Object.entries(LMC_SIZE_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as LmcPipeSize]),
+  Object.entries(LMC_SIZE_TO_BACKEND).map(([frontend, backend]) => [
+    backend,
+    frontend as LmcPipeSize,
+  ]),
 );
 
 const LMC_STATUS_TO_BACKEND: Record<LmcPipeStatus, string> = {
@@ -741,9 +1284,13 @@ const LMC_STATUS_TO_BACKEND: Record<LmcPipeStatus, string> = {
   "On Hold": "on_hold",
 };
 
-const LMC_STATUS_TO_FRONTEND: Record<string, LmcPipeStatus> = Object.fromEntries(
-  Object.entries(LMC_STATUS_TO_BACKEND).map(([frontend, backend]) => [backend, frontend as LmcPipeStatus]),
-);
+const LMC_STATUS_TO_FRONTEND: Record<string, LmcPipeStatus> =
+  Object.fromEntries(
+    Object.entries(LMC_STATUS_TO_BACKEND).map(([frontend, backend]) => [
+      backend,
+      frontend as LmcPipeStatus,
+    ]),
+  );
 
 function toDateOnly(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
@@ -818,11 +1365,20 @@ type BackendCustomerDocument = {
   uploadedAt: string;
 };
 
-function mapEvidenceFile(item: Record<string, unknown>, index: number): LmcEvidenceFile {
+function mapEvidenceFile(
+  item: Record<string, unknown>,
+  index: number,
+): LmcEvidenceFile {
   const fileName = String(item.fileName ?? item.label ?? "");
   return {
-    id: typeof item.id === "string" && item.id ? item.id : `evidence-${index}-${fileName}`,
-    label: typeof item.label === "string" && item.label ? item.label : fileName.replace(/\.[^.]+$/, ""),
+    id:
+      typeof item.id === "string" && item.id
+        ? item.id
+        : `evidence-${index}-${fileName}`,
+    label:
+      typeof item.label === "string" && item.label
+        ? item.label
+        : fileName.replace(/\.[^.]+$/, ""),
     fileName,
     fileUrl: typeof item.fileUrl === "string" ? item.fileUrl : undefined,
   };
@@ -845,9 +1401,20 @@ function mapPipeRecord(raw: BackendLmcPipeRecord): LmcPipeSizeRecord {
   };
 }
 
-function mapPipeRecords(records: BackendLmcPipeRecord[] | undefined): LmcPipeSizeRecord[] {
-  const bySize = new Map((records ?? []).map((record) => [LMC_SIZE_TO_FRONTEND[record.pipeSize] ?? "Other", record]));
-  return lmcPipeSizeOptions.map((size) => (bySize.has(size) ? mapPipeRecord(bySize.get(size)!) : emptyPipeSizeRecord(size)));
+function mapPipeRecords(
+  records: BackendLmcPipeRecord[] | undefined,
+): LmcPipeSizeRecord[] {
+  const bySize = new Map(
+    (records ?? []).map((record) => [
+      LMC_SIZE_TO_FRONTEND[record.pipeSize] ?? "Other",
+      record,
+    ]),
+  );
+  return lmcPipeSizeOptions.map((size) =>
+    bySize.has(size)
+      ? mapPipeRecord(bySize.get(size)!)
+      : emptyPipeSizeRecord(size),
+  );
 }
 
 function mapDocument(raw: BackendCustomerDocument): CustomerDocument {
@@ -884,7 +1451,9 @@ function mapCustomer(raw: BackendCustomer): Customer {
       mobileNo: raw.mobileNumber ?? "",
       customerName: raw.customerName,
       fullAddress: raw.fullAddress ?? "",
-      connectionType: (raw.connectionType as CustomerConnectionDetails["connectionType"]) || "Domestic",
+      connectionType:
+        (raw.connectionType as CustomerConnectionDetails["connectionType"]) ||
+        "Domestic",
       houseType: raw.houseType ?? "",
       scheme: raw.scheme ?? "",
       plumberId: raw.plumberId ?? "",
@@ -895,23 +1464,43 @@ function mapCustomer(raw: BackendCustomer): Customer {
       reportNoGc: raw.gcReportNumber ?? "",
       reportNoConversion: raw.conversionReportNumber ?? "",
       // master-import writes this into billingCompletion.jobCardDone, not a top-level column
-      jobCardDone: String((raw.billingCompletion as Record<string, unknown> | null)?.jobCardDone ?? ""),
+      jobCardDone: String(
+        (raw.billingCompletion as Record<string, unknown> | null)
+          ?.jobCardDone ?? "",
+      ),
     },
-    giMeasurements: { ...emptyGiMeasurements, ...(raw.giMeasurements as Partial<GiMeasurements> | null) },
-    valvesRegulators: { ...emptyValvesRegulators, ...(raw.valvesRegulators as Partial<ValvesRegulators> | null) },
-    fittingsAccessories: { ...emptyFittingsAccessories, ...(raw.fittingsAccessories as Partial<FittingsAccessories> | null) },
+    giMeasurements: {
+      ...emptyGiMeasurements,
+      ...(raw.giMeasurements as Partial<GiMeasurements> | null),
+    },
+    valvesRegulators: {
+      ...emptyValvesRegulators,
+      ...(raw.valvesRegulators as Partial<ValvesRegulators> | null),
+    },
+    fittingsAccessories: {
+      ...emptyFittingsAccessories,
+      ...(raw.fittingsAccessories as Partial<FittingsAccessories> | null),
+    },
     lmcPipelineWork: {
       ...emptyLmcPipelineWork,
       ...(raw.lmcPipelineWork as Partial<LmcPipelineWork> | null),
       pipeRecords: mapPipeRecords(raw.lmcPipeRecords),
     },
-    mdpeFittings: { ...emptyMdpeFittings, ...(raw.mdpeFittings as Partial<MdpeFittings> | null) },
+    mdpeFittings: {
+      ...emptyMdpeFittings,
+      ...(raw.mdpeFittings as Partial<MdpeFittings> | null),
+    },
     commissioningConversion: {
       ...emptyCommissioningConversion,
       ...(raw.commissioningConversion as Partial<CommissioningConversionDetails> | null),
     },
-    billingCompletion: { ...emptyBillingCompletion, ...(raw.billingCompletion as Partial<BillingCompletionStatus> | null) },
-    survey: raw.survey ? { ...emptyCustomerSurvey, ...(raw.survey as Partial<CustomerSurvey>) } : undefined,
+    billingCompletion: {
+      ...emptyBillingCompletion,
+      ...(raw.billingCompletion as Partial<BillingCompletionStatus> | null),
+    },
+    survey: raw.survey
+      ? { ...emptyCustomerSurvey, ...(raw.survey as Partial<CustomerSurvey>) }
+      : undefined,
     media: [],
     documents: (raw.documents ?? []).map(mapDocument),
   };
@@ -933,7 +1522,8 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     supervisorId: values.customerConnection.supervisorId || undefined,
     giReportNumber: values.customerConnection.reportNoGi || undefined,
     gcReportNumber: values.customerConnection.reportNoGc || undefined,
-    conversionReportNumber: values.customerConnection.reportNoConversion || undefined,
+    conversionReportNumber:
+      values.customerConnection.reportNoConversion || undefined,
     status: STATUS_TO_BACKEND[values.status],
     survey: values.survey,
     giMeasurements: values.giMeasurements,
@@ -949,12 +1539,17 @@ function mapFormValuesToBody(values: CustomerFormValues) {
       paverBlocks: values.lmcPipelineWork.paverBlocks,
       malua: values.lmcPipelineWork.malua,
       hardRock: values.lmcPipelineWork.hardRock,
+      approvalStatus: values.lmcPipelineWork.approvalStatus,
+      approvalComments: values.lmcPipelineWork.approvalComments,
     },
     mdpeFittings: values.mdpeFittings,
     commissioningConversion: values.commissioningConversion,
     // jobCardDone lives in the customerConnection tab in the UI, but master-import (and this
     // adapter's read side) stores it in billingCompletion - no top-level column for it.
-    billingCompletion: { ...values.billingCompletion, jobCardDone: values.customerConnection.jobCardDone },
+    billingCompletion: {
+      ...values.billingCompletion,
+      jobCardDone: values.customerConnection.jobCardDone,
+    },
   };
 }
 
@@ -968,12 +1563,26 @@ function buildLmcPipeRecordFormData(record: LmcPipeSizeRecord): FormData {
   if (record.layingDate) formData.append("layingDate", record.layingDate);
   if (record.testingDate) formData.append("testingDate", record.testingDate);
   if (record.purgingDate) formData.append("purgingDate", record.purgingDate);
-  formData.append("layingStatus", LMC_STATUS_TO_BACKEND[record.layingStatus] ?? "not_started");
-  formData.append("testingStatus", LMC_STATUS_TO_BACKEND[record.testingStatus] ?? "not_started");
-  formData.append("purgingStatus", LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started");
-  if (record.jointFittingDetails) formData.append("jointFittingDetails", record.jointFittingDetails);
+  formData.append(
+    "layingStatus",
+    LMC_STATUS_TO_BACKEND[record.layingStatus] ?? "not_started",
+  );
+  formData.append(
+    "testingStatus",
+    LMC_STATUS_TO_BACKEND[record.testingStatus] ?? "not_started",
+  );
+  formData.append(
+    "purgingStatus",
+    LMC_STATUS_TO_BACKEND[record.purgingStatus] ?? "not_started",
+  );
+  if (record.jointFittingDetails)
+    formData.append("jointFittingDetails", record.jointFittingDetails);
   if (record.remarks) formData.append("remarks", record.remarks);
-  appendEvidenceArray(formData, "evidence", record.evidence as unknown as ImagePreviewItem[]);
+  appendEvidenceArray(
+    formData,
+    "evidence",
+    record.evidence as unknown as ImagePreviewItem[],
+  );
   return formData;
 }
 
@@ -984,7 +1593,8 @@ function buildLmcPipeRecordFormData(record: LmcPipeSizeRecord): FormData {
 function buildCustomerFormData(values: CustomerFormValues): FormData {
   const body = mapFormValuesToBody(values);
   const formData = new FormData();
-  const surveyEvidence = (values.survey?.evidence ?? []) as unknown as ImagePreviewItem[];
+  const surveyEvidence = (values.survey?.evidence ??
+    []) as unknown as ImagePreviewItem[];
 
   Object.entries(body).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
@@ -996,13 +1606,21 @@ function buildCustomerFormData(values: CustomerFormValues): FormData {
           ...value,
           evidence: surveyEvidence
             .filter((item) => item.fileUrl && !item.file)
-            .map((item) => ({ id: item.id, label: item.label, fileName: item.fileName, fileUrl: item.fileUrl })),
+            .map((item) => ({
+              id: item.id,
+              label: item.label,
+              fileName: item.fileName,
+              fileUrl: item.fileUrl,
+            })),
         }),
       );
       return;
     }
 
-    formData.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+    formData.append(
+      key,
+      typeof value === "object" ? JSON.stringify(value) : String(value),
+    );
   });
 
   surveyEvidence
@@ -1021,10 +1639,13 @@ function buildDocumentFormData(doc: CustomerDocument): FormData {
   const formData = new FormData();
   formData.append("documentType", doc.type || doc.category);
   if (doc.category) formData.append("category", doc.category);
-  if (doc.referenceNumber) formData.append("referenceNumber", doc.referenceNumber);
+  if (doc.referenceNumber)
+    formData.append("referenceNumber", doc.referenceNumber);
   if (doc.issueDate) formData.append("issueDate", doc.issueDate);
   if (doc.expiryDate) formData.append("expiryDate", doc.expiryDate);
-  const amount = doc.amount ? Number(doc.amount.replace(/[^0-9.]/g, "")) : undefined;
+  const amount = doc.amount
+    ? Number(doc.amount.replace(/[^0-9.]/g, ""))
+    : undefined;
   if (amount) formData.append("amount", String(amount));
   if (doc.remarks) formData.append("remarks", doc.remarks);
 
@@ -1039,13 +1660,26 @@ function buildDocumentFormData(doc: CustomerDocument): FormData {
 }
 
 export const customersApi = {
-  async list(params: { search?: string; projectId?: string; siteId?: string; status?: CustomerStatus } = {}): Promise<Customer[]> {
+  async list(
+    params: {
+      search?: string;
+      projectId?: string;
+      siteId?: string;
+      status?: CustomerStatus;
+      statKey?: string;
+      city?: string;
+    } = {},
+  ): Promise<Customer[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.search) query.set("search", params.search);
     if (params.projectId) query.set("projectId", params.projectId);
     if (params.siteId) query.set("siteId", params.siteId);
     if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
-    const rows = await apiRequest<BackendCustomer[]>(`/customers?${query.toString()}`);
+    if (params.statKey) query.set("statKey", params.statKey);
+    if (params.city) query.set("city", params.city);
+    const rows = await apiRequest<BackendCustomer[]>(
+      `/customers?${query.toString()}`,
+    );
     return rows.map((row) => mapCustomer(row));
   },
 
@@ -1070,24 +1704,42 @@ export const customersApi = {
     return mapCustomer(raw);
   },
 
-  async upsertLmcPipeRecord(customerId: string, record: LmcPipeSizeRecord): Promise<LmcPipeSizeRecord> {
-    const raw = await apiRequest<BackendLmcPipeRecord>(`/customers/${customerId}/lmc-pipes`, {
-      method: "PUT",
-      body: buildLmcPipeRecordFormData(record),
-    });
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/customers/${id}`, { method: "DELETE" });
+  },
+
+  async upsertLmcPipeRecord(
+    customerId: string,
+    record: LmcPipeSizeRecord,
+  ): Promise<LmcPipeSizeRecord> {
+    const raw = await apiRequest<BackendLmcPipeRecord>(
+      `/customers/${customerId}/lmc-pipes`,
+      {
+        method: "PUT",
+        body: buildLmcPipeRecordFormData(record),
+      },
+    );
     return mapPipeRecord(raw);
   },
 
   async listDocuments(customerId: string): Promise<CustomerDocument[]> {
-    const rows = await apiRequest<BackendCustomerDocument[]>(`/customers/${customerId}/documents`);
+    const rows = await apiRequest<BackendCustomerDocument[]>(
+      `/customers/${customerId}/documents`,
+    );
     return rows.map(mapDocument);
   },
 
-  async createDocument(customerId: string, doc: CustomerDocument): Promise<CustomerDocument> {
-    const raw = await apiRequest<BackendCustomerDocument>(`/customers/${customerId}/documents`, {
-      method: "POST",
-      body: buildDocumentFormData(doc),
-    });
+  async createDocument(
+    customerId: string,
+    doc: CustomerDocument,
+  ): Promise<CustomerDocument> {
+    const raw = await apiRequest<BackendCustomerDocument>(
+      `/customers/${customerId}/documents`,
+      {
+        method: "POST",
+        body: buildDocumentFormData(doc),
+      },
+    );
     return mapDocument(raw);
   },
 

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { billsApi } from "../services/bills.service";
 import type { BillFormValues, BillPaymentFormValues, BillStage, BillStatus } from "../types/bill.types";
 
@@ -27,7 +28,9 @@ export function useCreateBill() {
     mutationFn: (values: BillFormValues) => billsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: billsKey });
+      toast.success("Bill created successfully");
     },
+    onError: () => toast.error("Failed to create bill"),
   });
 }
 
@@ -38,7 +41,21 @@ export function useUpdateBill(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: billsKey });
       queryClient.invalidateQueries({ queryKey: billKey(id) });
+      toast.success("Bill updated successfully");
     },
+    onError: () => toast.error("Failed to update bill"),
+  });
+}
+
+export function useDeleteBill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => billsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billsKey });
+      toast.success("Bill deleted successfully");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete bill"),
   });
 }
 
@@ -58,6 +75,8 @@ export function useCreateBillPayment(billId: string) {
       queryClient.invalidateQueries({ queryKey: paymentsKey(billId) });
       queryClient.invalidateQueries({ queryKey: billKey(billId) });
       queryClient.invalidateQueries({ queryKey: billsKey });
+      toast.success("Payment recorded successfully");
     },
+    onError: () => toast.error("Failed to record payment"),
   });
 }

@@ -43,6 +43,7 @@ type BackendMaterialTransaction = {
   siteId: string | null;
   storeLabel: string | null;
   customerId: string | null;
+  paymentId: string | null;
   reportNo: string | null;
   condition: string | null;
   adjustmentType: string | null;
@@ -100,6 +101,7 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     siteId: raw.siteId ?? "",
     storeLabel: raw.storeLabel ?? "",
     customerId: raw.customerId ?? "",
+    paymentId: raw.paymentId ?? "",
     reportNo: raw.reportNo ?? "",
     condition: raw.condition ?? "",
     adjustmentType: raw.adjustmentType ?? "",
@@ -171,6 +173,10 @@ export const materialsApi = {
       }),
     });
     return mapMaterial(raw);
+  },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/materials/${id}`, { method: "DELETE" });
   },
 
   async listTransactions(

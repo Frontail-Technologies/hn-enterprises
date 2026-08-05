@@ -18,8 +18,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreatePlumber, useUpdatePlumber } from "../hooks/usePlumbers";
+import { useCreatePlumber, useUpdatePlumber, useDeletePlumber } from "../hooks/usePlumbers";
 import type { Plumber, PlumberFormValues } from "../types/plumber.types";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const emptyValues: PlumberFormValues = {
   name: "",
@@ -52,6 +53,7 @@ export function PlumberDrawer({
   const [saveError, setSaveError] = useState("");
   const createPlumber = useCreatePlumber();
   const updatePlumber = useUpdatePlumber(plumber?.id ?? "");
+  const deletePlumber = useDeletePlumber();
   const isSaving = createPlumber.isPending || updatePlumber.isPending;
 
   function handleOpenChange(nextOpen: boolean) {
@@ -169,8 +171,19 @@ export function PlumberDrawer({
           {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
         </div>
 
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
+        <SheetFooter className="border-t border-border/70 flex w-full flex-row justify-between sm:justify-between items-center mt-auto">
+          {plumber?.id ? (
+            <DeleteConfirmDialog
+              itemName={plumber.name}
+              onConfirm={async () => {
+                await deletePlumber.mutateAsync(plumber.id);
+                onOpenChange(false);
+              }}
+            />
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
             <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
             <Button type="button" onClick={handleSave} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Plumber"}

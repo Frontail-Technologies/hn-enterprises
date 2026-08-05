@@ -1,6 +1,6 @@
 "use client";
 
-import { Document, Text, View } from "@react-pdf/renderer";
+import { Document, Text, View, Image } from "@react-pdf/renderer";
 import type { ReportTemplateData, ReportTemplateId } from "../../types/report-template.types";
 import {
   PdfHeader,
@@ -608,9 +608,17 @@ function GcReport({ data }: { data: ReportTemplateData }) {
         />
         <View style={[pdfStyles.cell, { minHeight: 130 }]}>
           <Text style={pdfStyles.label}>Photo / Document Preview Area</Text>
-          <Text style={{ marginTop: 8, color: "#555555" }}>
-            Attached GC evidence thumbnails and signed document references are listed above.
-          </Text>
+          {data.gcEvidenceImages && data.gcEvidenceImages.length > 0 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+              {data.gcEvidenceImages.map((src, index) => (
+                <Image key={index} src={src} style={{ width: 140, height: 140, objectFit: "contain" }} />
+              ))}
+            </View>
+          ) : (
+            <Text style={{ marginTop: 8, color: "#555555" }}>
+              Attached GC evidence thumbnails and signed document references are listed above.
+            </Text>
+          )}
         </View>
         <PdfRemarks value={data.remarks} minHeight={72} />
         <PdfSignatureGrid labels={["Submitted By", "Reviewer", "Client / Consultant"]} />

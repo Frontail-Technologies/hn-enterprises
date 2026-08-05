@@ -32,12 +32,11 @@ export function DashboardStatDetailPage({
   const definition = getDashboardStatDefinition(statKey);
   const { data: customers = [], isLoading } = useCustomersQuery({
     projectId: projectId === "all" ? undefined : projectId,
+    city: city === "all" ? undefined : city,
+    statKey,
   });
-  const scopedCustomers = useMemo(
-    () => customers.filter((customer) => city === "all" || customer.city === city),
-    [city, customers],
-  );
-  const rows = useMemo(() => getDashboardStatRows(statKey, scopedCustomers), [scopedCustomers, statKey]);
+
+  const rows = useMemo(() => getDashboardStatRows(statKey, customers), [customers, statKey]);
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rows;
@@ -221,7 +220,7 @@ function getColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] 
     ];
   }
 
-  if (statKey === "billing-done") {
+  if (statKey === "gi-bill-done" || statKey === "gc-bill-done" || statKey === "conversion-bill-done") {
     return [
       ...identityColumns,
       { key: "giBillDone", label: "GI Bill", width: 120, getValue: (row) => row.giBillDone },
@@ -238,7 +237,7 @@ function getColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] 
     ];
   }
 
-  if (statKey === "pending-rework") {
+  if (statKey === "connection-remark") {
     return [
       ...identityColumns,
       { key: "reworkModule", label: "Module", width: 130, getValue: (row) => row.reworkModule },

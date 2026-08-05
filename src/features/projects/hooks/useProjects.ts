@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { projectsApi } from "../services/projects.service";
 import type { ProjectFormValues, ProjectSite, ProjectDocument } from "../types/project.types";
 
@@ -28,7 +29,9 @@ export function useCreateProject() {
     mutationFn: (values: ProjectFormValues) => projectsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectsKey });
+      toast.success("Project created successfully");
     },
+    onError: () => toast.error("Failed to create project"),
   });
 }
 
@@ -39,7 +42,21 @@ export function useUpdateProject(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectsKey });
       queryClient.invalidateQueries({ queryKey: projectKey(id) });
+      toast.success("Project updated successfully");
     },
+    onError: () => toast.error("Failed to update project"),
+  });
+}
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => projectsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectsKey });
+      toast.success("Project deleted successfully");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete project"),
   });
 }
 
@@ -60,7 +77,9 @@ export function useSaveProjectSite(projectId: string) {
         : projectsApi.createSite(projectId, site),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sitesKey(projectId) });
+      toast.success("Site saved successfully");
     },
+    onError: () => toast.error("Failed to save site"),
   });
 }
 
@@ -78,7 +97,9 @@ export function useCreateProjectDocument(projectId: string) {
     mutationFn: (doc: ProjectDocument) => projectsApi.createDocument(projectId, doc),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentsKey(projectId) });
+      toast.success("Document uploaded successfully");
     },
+    onError: () => toast.error("Failed to upload document"),
   });
 }
 
@@ -88,6 +109,8 @@ export function useDeleteProjectDocument(projectId: string) {
     mutationFn: (documentId: string) => projectsApi.deleteDocument(projectId, documentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentsKey(projectId) });
+      toast.success("Document deleted");
     },
+    onError: () => toast.error("Failed to delete document"),
   });
 }

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { materialsApi } from "../services/materials.service";
 import type {
   MaterialFormValues,
@@ -32,7 +33,9 @@ export function useCreateMaterial() {
     mutationFn: (values: MaterialFormValues) => materialsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialsKey });
+      toast.success("Material created successfully");
     },
+    onError: () => toast.error("Failed to create material"),
   });
 }
 
@@ -43,7 +46,21 @@ export function useUpdateMaterial(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialsKey });
       queryClient.invalidateQueries({ queryKey: materialKey(id) });
+      toast.success("Material updated successfully");
     },
+    onError: () => toast.error("Failed to update material"),
+  });
+}
+
+export function useDeleteMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => materialsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: materialsKey });
+      toast.success("Material deleted successfully");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete material"),
   });
 }
 
@@ -64,7 +81,9 @@ export function useCreateMaterialTransaction(type: MaterialTransactionType) {
       queryClient.invalidateQueries({ queryKey: materialsKey });
       queryClient.invalidateQueries({ queryKey: ["materials", "transactions"] });
       queryClient.invalidateQueries({ queryKey: ["materials", "plumber-balances"] });
+      toast.success(`${type === "purchase" ? "Purchase" : type === "issue" ? "Issue" : "Transaction"} recorded`);
     },
+    onError: () => toast.error("Failed to record transaction"),
   });
 }
 

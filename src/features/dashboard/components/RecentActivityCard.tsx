@@ -14,6 +14,7 @@ const TYPE_ICON_CLASSES: Record<ActivityType, string> = {
   Survey: "text-status-purple-fg",
   DPR: "text-status-warning-fg",
   Billing: "text-status-success-fg",
+  System: "text-status-neutral-fg",
 };
 
 export function RecentActivityCard({ items }: RecentActivityCardProps) {
@@ -35,7 +36,7 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
 
               return (
                 <div
-                  key={`${activity.title}-${activity.time}`}
+                  key={("id" in activity ? String(activity.id) : "") || `${activity.title}-${activity.time}-${index}`}
                   className={cn(
                     "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-3 py-2.5",
                     index % 2 === 0 ? "bg-muted/40" : "bg-transparent",

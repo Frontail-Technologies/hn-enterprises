@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { format } from "date-fns";
 import { ArrowSquareOutIcon, DownloadSimpleIcon, FunnelSimpleIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,7 @@ const columns: Array<{ key: FilterKey; label: string; width: string }> = [
 ];
 
 export function PlanningEntryPage() {
-  const [date, setDate] = useState("2026-07-22");
+  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [filters, setFilters] = useState<ActiveFilters>({});
 
   const { data: sitePlans = [] } = useSitePlansQuery({ date });

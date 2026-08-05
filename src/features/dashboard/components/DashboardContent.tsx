@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { WarningIcon } from "@phosphor-icons/react";
@@ -9,6 +9,7 @@ import { MetricCard } from "@/components/shared/MetricCard";
 import { PageShell } from "@/components/shared/PageShell";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
+import { DashboardMetricFilter } from "@/features/dashboard/components/DashboardMetricFilter";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
 import {
   type ActivityItem,
@@ -32,11 +33,26 @@ import { useAttendanceQuery } from "@/features/management/hooks/useAttendance";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
+import { useDashboardStatsQuery } from "@/features/dashboard/hooks/useDashboardStats";
+import { useAuditLogsQuery } from "@/features/management/hooks/useAuditLogs";
 
 export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
   const [month, setMonth] = useState("07");
   const [year, setYear] = useState("2026");
+
+  const [selectedMetricIds, setSelectedMetricIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    const saved = localStorage.getItem("dashboard_metrics");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
 
   const metricPeriod: DashboardMetricPeriod =
     period === "custom-year"
@@ -53,15 +69,19 @@ export function DashboardContent() {
   const { data: materials = [] } = useMaterialsQuery();
   const { data: dprRecords = [] } = useDprRecordsQuery({});
   const { data: workProgress = [] } = useWorkProgressListQuery({ limit: 200 });
+  const { data: auditLogs = [] } = useAuditLogsQuery();
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
   const { data: attendance = [] } = useAttendanceQuery({ from: today, to: today });
+
+  const { data: adminStats } = useDashboardStatsQuery({ projectId: "all", city: "all" });
 
   const dashboard = useMemo(
     () =>
       getAdminDashboardData(
         { projectId: "all", city: "all", period: metricPeriod },
         { customers, projects, projectSites, bills, payments, materials, dprRecords, workProgress, attendance },
+        adminStats,
       ),
     [
       customers,
@@ -74,11 +94,12 @@ export function DashboardContent() {
       projects,
       workProgress,
       attendance,
+      adminStats,
     ],
   );
 
   const activityItems = useMemo(() => {
-    return buildActivities({ workProgress, dprRecords, payments })
+    return buildActivities({ workProgress, dprRecords, payments, auditLogs })
       .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
       .slice(0, 6)
       .map((activity) => ({
@@ -87,63 +108,66 @@ export function DashboardContent() {
         icon: activity.icon,
         type: activity.type,
       }));
-  }, [dprRecords, payments, workProgress]);
+  }, [dprRecords, payments, workProgress, auditLogs]);
+
+  useEffect(() => {
+    if (selectedMetricIds.length === 0 && !localStorage.getItem("dashboard_metrics")) {
+      setSelectedMetricIds(dashboard.allMetrics.map((m) => m.id));
+    }
+  }, [dashboard.allMetrics, selectedMetricIds.length]);
+
+  const handleMetricChange = (ids: string[]) => {
+    setSelectedMetricIds(ids);
+    localStorage.setItem("dashboard_metrics", JSON.stringify(ids));
+  };
+
+  const visibleMetrics = dashboard.allMetrics.filter((m) => selectedMetricIds.includes(m.id));
 
   return (
     <PageShell
       title="Dashboard"
       subtitle="Admin control overview for projects, customers, finance and field operations."
       actions={
-        <DashboardPeriodFilter
-          value={period}
-          onChange={setPeriod}
-          month={month}
-          year={year}
-          onMonthChange={setMonth}
-          onYearChange={setYear}
-        />
+        <div className="flex items-center gap-2">
+          <DashboardMetricFilter
+            metrics={dashboard.allMetrics}
+            selectedIds={selectedMetricIds}
+            onChange={handleMetricChange}
+          />
+          <DashboardPeriodFilter
+            value={period}
+            onChange={setPeriod}
+            month={month}
+            year={year}
+            onMonthChange={setMonth}
+            onYearChange={setYear}
+          />
+        </div>
       }
       contentClassName="space-y-5"
     >
-      <CompactStatGrid dashboard>
-        {dashboard.metrics.map((metric) => (
-          <Link
-            key={metric.label}
-            href={metric.href ?? "/dashboard"}
-            className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <MetricCard
-              {...metric}
-              className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
-            />
-          </Link>
-        ))}
-      </CompactStatGrid>
-
-      <section className="space-y-2">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Customer Workflow</h2>
-          <p className="text-xs text-muted-foreground">
-            Master-sheet progress counts. Click any stat to open the filtered records.
-          </p>
-        </div>
+      {visibleMetrics.length > 0 ? (
         <CompactStatGrid dashboard>
-          {dashboard.workflowMetrics.map(({ key: metricKey, ...metric }) => (
-              <Link
-                key={metricKey}
-                href={metric.href ?? "/dashboard"}
-                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <MetricCard
-                  {...metric}
-                  className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
-                />
-              </Link>
-            ))}
+          {visibleMetrics.map((metric) => (
+            <Link
+              key={metric.id}
+              href={metric.href ?? "/dashboard"}
+              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <MetricCard
+                {...metric}
+                className="h-28 max-w-none p-4 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:w-full"
+              />
+            </Link>
+          ))}
         </CompactStatGrid>
-      </section>
+      ) : (
+        <div className="flex items-center justify-center rounded-lg border border-dashed border-border/70 py-12 text-muted-foreground">
+          No stats selected. Click "Customize Stats" to add some.
+        </div>
+      )}
 
-      <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
+      <section className="grid items-start gap-5 xl:grid-cols-[0.75fr_1.25fr]">
         <AttendanceSummary rows={dashboard.attendanceRows} />
         <AlertsAndActivity alerts={dashboard.alerts} activityItems={activityItems} />
       </section>
@@ -160,19 +184,30 @@ function formatRelativeTime(value: string) {
 function AttendanceSummary({ rows }: { rows: AttendanceSummaryRow[] }) {
   return (
     <SectionCard title="Attendance Summary" className="flex h-full flex-col">
-      <div className="grid flex-1 grid-cols-2 gap-2">
-        {rows.map((row) => (
-          <div
-            key={row.id}
-            className="flex min-h-24 flex-col justify-between rounded-md border border-border/70 bg-muted/25 p-3"
-          >
-            <p className="text-xs font-medium text-muted-foreground">{row.label}</p>
-            <p className="mt-1 text-xl font-semibold leading-none text-foreground">
-              {row.value}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">{row.helper}</p>
-          </div>
-        ))}
+      <div className="flex flex-1 flex-col gap-2">
+        {rows.map((row) => {
+          let dotColor = "bg-muted-foreground";
+          if (row.id === "present") dotColor = "bg-emerald-500";
+          if (row.id === "late") dotColor = "bg-amber-500";
+          if (row.id === "absent") dotColor = "bg-rose-500";
+          if (row.id === "leave") dotColor = "bg-blue-500";
+
+          return (
+            <div
+              key={row.id}
+              className="flex items-center justify-between rounded-md border border-border/70 bg-muted/20 px-3 py-2.5 transition-colors hover:bg-muted/40"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${dotColor}`} />
+                  <p className="text-sm font-medium text-foreground">{row.label}</p>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground pl-4">{row.helper}</p>
+              </div>
+              <p className="text-lg font-semibold text-foreground">{row.value}</p>
+            </div>
+          );
+        })}
       </div>
     </SectionCard>
   );

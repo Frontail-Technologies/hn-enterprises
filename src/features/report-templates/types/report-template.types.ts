@@ -54,6 +54,7 @@ export type ReportTemplateData = {
   pressureRows: PdfTableRow[];
   gcChecklistRows: PdfTableRow[];
   gcEvidenceRows: PdfTableRow[];
+  gcEvidenceImages?: string[];
 };
 
 export type PdfTableRow = Array<string | number | boolean | null | undefined>;

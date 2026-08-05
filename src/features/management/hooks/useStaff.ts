@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { staffApi } from "../services/staff.service";
 import type { CreateStaffFormValues, StaffPayrollFormValues, StaffUserPatchValues } from "../types/staff.types";
 
@@ -26,7 +27,9 @@ export function useCreateStaff() {
     mutationFn: (values: CreateStaffFormValues) => staffApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffKey });
+      toast.success("Staff member created successfully");
     },
+    onError: () => toast.error("Failed to create staff member"),
   });
 }
 
@@ -38,6 +41,8 @@ export function useUpdateStaff(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffKey });
       queryClient.invalidateQueries({ queryKey: staffMemberKey(id) });
+      toast.success("Staff member updated successfully");
     },
+    onError: () => toast.error("Failed to update staff member"),
   });
 }

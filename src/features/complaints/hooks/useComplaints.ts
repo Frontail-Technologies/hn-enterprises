@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { complaintsApi } from "../services/complaints.service";
 import type { ComplaintFormValues, ComplaintStatus } from "../types/complaint.types";
 
@@ -17,7 +18,9 @@ export function useCreateComplaint() {
     mutationFn: (values: ComplaintFormValues) => complaintsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
+      toast.success("Complaint recorded successfully");
     },
+    onError: () => toast.error("Failed to record complaint"),
   });
 }
 
@@ -27,6 +30,8 @@ export function useUpdateComplaint(id: string) {
     mutationFn: (values: Partial<ComplaintFormValues>) => complaintsApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
+      toast.success("Complaint updated successfully");
     },
+    onError: () => toast.error("Failed to update complaint"),
   });
 }

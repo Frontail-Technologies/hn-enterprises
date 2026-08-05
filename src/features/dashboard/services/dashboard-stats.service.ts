@@ -8,8 +8,11 @@ export type DashboardStatKey =
   | "gc-done"
   | "conversion-done"
   | "jmr-done"
-  | "billing-done"
-  | "pending-rework";
+  | "gi-bill-done"
+  | "gc-bill-done"
+  | "conversion-bill-done"
+  | "total-pbg-assignment"
+  | "connection-remark";
 
 export type DashboardStatRow = {
   id: string;
@@ -62,13 +65,29 @@ export const dashboardStatDefinitions: DashboardStatDefinition[] = [
     helperText: "JMR marked as done",
   },
   {
-    key: "billing-done",
-    title: "Billing Done",
-    helperText: "GI / GC / conversion billing progress",
+    key: "gi-bill-done",
+    title: "GI Bill Done",
+    helperText: "GI invoice completed",
   },
   {
-    key: "pending-rework",
-    title: "Pending Rework",
+    key: "gc-bill-done",
+    title: "GC Bill Done",
+    helperText: "GC invoice completed",
+  },
+  {
+    key: "conversion-bill-done",
+    title: "Conversion Bill Done",
+    helperText: "Conversion invoice completed",
+  },
+
+  {
+    key: "total-pbg-assignment",
+    title: "Total PBG Assignment",
+    helperText: "JMR submitted in PBG",
+  },
+  {
+    key: "connection-remark",
+    title: "Total Connection Remark",
     helperText: "Sent back, rejected or on hold",
   },
 ];
@@ -82,25 +101,14 @@ export function getDashboardStatDefinition(key: DashboardStatKey) {
 }
 
 export function getDashboardStatRows(key: DashboardStatKey, source: Customer[]): DashboardStatRow[] {
-  return source.filter((customer) => matchesStat(customer, key)).map((customer) => buildRow(customer, key));
+  return source.map((customer) => buildRow(customer, key));
 }
 
 export function getDashboardStatValue(key: DashboardStatKey, source: Customer[]) {
   const total = source.length;
   const rows = getDashboardStatRows(key, source);
 
-  if (key === "billing-done") {
-    const done = source.reduce((count, customer) => {
-      const billing = customer.billingCompletion;
-      return (
-        count +
-        Number(Boolean(billing.giBillDone)) +
-        Number(Boolean(billing.gcBillDone)) +
-        Number(Boolean(billing.conversionBillDone))
-      );
-    }, 0);
-    return `${done}/${total * 3}`;
-  }
+
 
   if (key === "total-customers") return String(total);
   return `${rows.length}/${total}`;
@@ -113,14 +121,18 @@ function matchesStat(customer: Customer, key: DashboardStatKey) {
 
   if (key === "total-customers") return true;
   if (key === "survey-done") return Boolean(customer.survey?.surveyDate);
-  if (key === "gi-done") return Boolean(connection.reportNoGi || commissioning.installationDate);
-  if (key === "gc-done") return Boolean(connection.reportNoGc || hasDocument(customer, "GC Report"));
+  if (key === "gi-done") return Boolean(commissioning.installationDate);
+  if (key === "gc-done") return Boolean(commissioning.commissioningDate || commissioning.meterNo);
   if (key === "conversion-done") return Boolean(commissioning.conversionDate);
   if (key === "jmr-done") return Boolean(billing.jmrDone);
-  if (key === "billing-done") {
-    return Boolean(billing.giBillDone || billing.gcBillDone || billing.conversionBillDone);
+  if (key === "gi-bill-done") return Boolean(billing.giBillDone);
+  if (key === "gc-bill-done") return Boolean(billing.gcBillDone);
+  if (key === "conversion-bill-done") return Boolean(billing.conversionBillDone);
+
+  if (key === "total-pbg-assignment") {
+    return Boolean(billing.jmrSubmittedInPbg);
   }
-  if (key === "pending-rework") {
+  if (key === "connection-remark") {
     return (
       customer.status === "On Hold" ||
       customer.survey?.approvalStatus === "Sent Back" ||
@@ -206,7 +218,7 @@ function getBillingStatus(customer: Customer) {
 }
 
 function getReworkModule(customer: Customer, key: DashboardStatKey) {
-  if (key !== "pending-rework") return "-";
+  if (key !== "connection-remark") return "-";
   if (customer.survey?.approvalStatus === "Sent Back") return "Survey";
   if (customer.survey?.approvalStatus === "Rejected") return "Survey";
   if (customer.lmcPipelineWork.pipeRecords.some((pipe) => deriveLmcPipeCurrentStage(pipe) === "On Hold")) {

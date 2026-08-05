@@ -20,6 +20,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { DatePicker } from "@/components/shared/DatePicker";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { useCreateComplaint, useUpdateComplaint } from "../../hooks/useComplaints";
@@ -121,23 +123,15 @@ export function ComplaintDrawer({
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Customer</span>
-            <Select
+            <SearchableSelect
               value={values.customerId || undefined}
               onValueChange={(customerId) =>
                 setValues((current) => ({ ...current, customerId: customerId ?? "" }))
               }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.customerConnection.customerName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select customer"
+              options={customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName }))}
+              className="w-full"
+            />
           </label>
 
           <label className="block space-y-1.5">

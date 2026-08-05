@@ -167,6 +167,10 @@ export const billsApi = {
     return mapBill(raw);
   },
 
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/bills/${id}`, { method: "DELETE" });
+  },
+
   async listPayments(billId: string): Promise<BillPayment[]> {
     const rows = await apiRequest<BackendBillPayment[]>(`/bills/${billId}/payments`);
     return rows.map(mapPayment);

@@ -58,7 +58,6 @@ export function ExcelDataGrid<T extends { id: string }>({
 }: ExcelDataGridProps<T>) {
   const [filters, setFilters] = useState<ActiveFilters>({});
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const bottomScrollRef = useRef<HTMLDivElement | null>(null);
   const holdFrameRef = useRef<number | null>(null);
   const syncingRef = useRef(false);
   const [scrollMetrics, setScrollMetrics] = useState({
@@ -133,26 +132,11 @@ export function ExcelDataGrid<T extends { id: string }>({
     return () => observer.disconnect();
   }, [columns.length, filteredRows.length, updateScrollMetrics]);
 
-  function syncBottomScrollbar(scrollLeft: number) {
-    const bottom = bottomScrollRef.current;
-    if (!bottom || syncingRef.current) return;
-
-    syncingRef.current = true;
-    bottom.scrollLeft = scrollLeft;
-    requestAnimationFrame(() => {
-      syncingRef.current = false;
-    });
-  }
-
   function syncMainScrollbar(scrollLeft: number) {
     const scrollArea = scrollAreaRef.current;
-    if (!scrollArea || syncingRef.current) return;
+    if (!scrollArea) return;
 
-    syncingRef.current = true;
     scrollArea.scrollLeft = scrollLeft;
-    requestAnimationFrame(() => {
-      syncingRef.current = false;
-    });
   }
 
   function stopHoldScroll() {
@@ -172,7 +156,6 @@ export function ExcelDataGrid<T extends { id: string }>({
         left: direction === "left" ? -18 : 18,
         behavior: "auto",
       });
-      syncBottomScrollbar(scrollArea.scrollLeft);
       holdFrameRef.current = requestAnimationFrame(step);
     };
 
@@ -180,15 +163,14 @@ export function ExcelDataGrid<T extends { id: string }>({
   }
 
   return (
-    <div className="rounded-lg border border-border/70 bg-white">
-      <div className="border-b border-border/70 px-3 py-2 text-xs text-muted-foreground">
+    <div className="rounded-lg border border-border/70 bg-white flex flex-col">
+      <div className="border-b border-border/70 px-3 py-2 text-xs text-muted-foreground shrink-0">
         Showing {filteredRows.length} of {rows.length} records
       </div>
-      <div className={cn("group/excel-grid relative overflow-y-auto", maxHeightClassName)}>
+      <div className={cn("group/excel-grid relative flex flex-col", maxHeightClassName)}>
         <div
           ref={scrollAreaRef}
-          className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          onScroll={(event) => syncBottomScrollbar(event.currentTarget.scrollLeft)}
+          className="min-w-0 flex-1 overflow-auto"
         >
           <ExcelTable
             columns={columns}
@@ -220,21 +202,6 @@ export function ExcelDataGrid<T extends { id: string }>({
           </>
         ) : null}
       </div>
-      {canScrollHorizontally ? (
-        <div className="border-t border-border/70 bg-white py-1">
-          <div
-            ref={bottomScrollRef}
-            className="h-4 overflow-x-auto overflow-y-hidden"
-            style={{ marginLeft: fixedWidth || undefined }}
-            onScroll={(event) => syncMainScrollbar(event.currentTarget.scrollLeft)}
-          >
-            <div
-              aria-hidden="true"
-              style={{ width: scrollMetrics.scrollWidth, height: 1 }}
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -358,7 +325,7 @@ function ExcelTable<T extends { id: string }>({
                     key={column.key}
                     style={{ minWidth: width, left: stickyOffset }}
                     className={cn(
-                      "h-10 border-b border-r border-border/55 bg-white px-2 py-2 text-sm font-normal text-foreground group-hover/excel-row:bg-muted/30",
+                      "h-10 border-b border-r border-border/55 px-2 py-2 text-sm font-normal text-foreground",
                       isSticky && "sticky z-10 border-r-primary/25 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                     )}
                     title={value}

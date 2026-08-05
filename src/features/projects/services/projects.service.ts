@@ -251,6 +251,10 @@ export const projectsApi = {
     return mapProject(raw);
   },
 
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/projects/${id}`, { method: "DELETE" });
+  },
+
   async listSites(projectId: string): Promise<ProjectSite[]> {
     const rows = await apiRequest<BackendProjectSite[]>(`/projects/${projectId}/sites`);
     return rows.map(mapProjectSite);

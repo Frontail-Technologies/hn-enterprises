@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from 'sonner'
 import './globals.css'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
 import { QueryProvider } from '@/components/providers/QueryProvider'
@@ -27,12 +28,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={inter.variable}>
-      <body className="font-sans antialiased">
+    <html lang="en" data-scroll-behavior="smooth" className={inter.variable} suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
             <TooltipProvider>
               {children}
+              <Toaster position="top-right" richColors closeButton duration={3500} />
             </TooltipProvider>
           </AuthProvider>
         </QueryProvider>

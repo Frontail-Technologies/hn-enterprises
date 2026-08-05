@@ -18,6 +18,7 @@ import { useMaterialsQuery, useMaterialTransactionsQuery, usePlumberBalancesQuer
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
 import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
+import { MaterialCategoryDrawer } from "./inventory/MaterialCategoryDrawer";
 
 const TAB_TO_TRANSACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = {
   purchase: "purchase",
@@ -281,6 +282,7 @@ export function InventoryPage() {
               <DownloadSimpleIcon size={15} />
               Export Excel
             </button>
+            <MaterialCategoryDrawer />
             <MaterialItemDrawer />
             <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
           </div>

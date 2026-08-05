@@ -67,7 +67,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "announcements", label: "Announcements", icon: "Megaphone", href: "/announcements", allowedRoles: ["super_admin", "admin"] },
       { id: "complaints", label: "Complaints", icon: "Warning", href: "/complaints", allowedRoles: ["super_admin", "admin"] },
       { id: "masters", label: "Masters", icon: "Database", href: "/masters", allowedRoles: ["super_admin", "admin"] },
-      { id: "audit-logs", label: "Audit Logs", icon: "ClockCounterClockwise", href: "/audit-logs", allowedRoles: ["super_admin"] },
     ],
   },
 ];

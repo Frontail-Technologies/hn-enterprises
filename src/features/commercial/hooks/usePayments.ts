@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { paymentsApi } from "../services/payments.service";
 import type { PaymentCategory, PaymentFormValues, PaymentStatus } from "../types/payment.types";
 
@@ -17,7 +18,9 @@ export function useCreatePayment() {
     mutationFn: (values: PaymentFormValues) => paymentsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
+      toast.success("Payment recorded successfully");
     },
+    onError: () => toast.error("Failed to record payment"),
   });
 }
 
@@ -27,7 +30,9 @@ export function useUpdatePayment(id: string) {
     mutationFn: (values: PaymentFormValues) => paymentsApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
+      toast.success("Payment updated successfully");
     },
+    onError: () => toast.error("Failed to update payment"),
   });
 }
 
@@ -37,6 +42,8 @@ export function useDeletePayment() {
     mutationFn: (id: string) => paymentsApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
+      toast.success("Payment deleted");
     },
+    onError: () => toast.error("Failed to delete payment"),
   });
 }

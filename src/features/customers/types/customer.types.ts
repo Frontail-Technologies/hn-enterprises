@@ -102,6 +102,8 @@ export type GiMeasurements = {
   giPipeOneInch: string;
   giPipeOneAndHalfInch: string;
   giPipeTwoInch: string;
+  approvalStatus?: string;
+  approvalComments?: string;
 };
 
 export type ValvesRegulators = {
@@ -147,6 +149,8 @@ export type LmcPipelineWork = {
   paverBlocks: string;
   malua: string;
   hardRock: string;
+  approvalStatus?: string;
+  approvalComments?: string;
 };
 
 export type LmcPipeSize = "20 mm" | "32 mm" | "63 mm" | "90 mm" | "125 mm" | "Other";
@@ -216,6 +220,8 @@ export type CommissioningConversionDetails = {
   meterType: string;
   meterReading: string;
   nonConversionRemark: string;
+  approvalStatus?: string;
+  approvalComments?: string;
 };
 
 export type BillingCompletionStatus = {

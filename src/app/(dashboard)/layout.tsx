@@ -11,11 +11,7 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login')
-      return
-    }
-
+    // Role based auth check (middleware handles the token check)
     if (!isLoading && isAuthenticated && user) {
       const allowed = user.role === 'super_admin' || user.role === 'admin'
       if (!allowed) {

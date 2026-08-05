@@ -38,6 +38,7 @@ import {
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectSitesQuery, useProjectsQuery } from "@/features/projects/hooks/useProjects";
@@ -65,10 +66,11 @@ import {
   type LmcCivilWork,
   type LmcPipeEditableFields,
 } from "../services/customers.service";
-import { useCreateCustomer, useCustomerQuery, useUpdateCustomer } from "../hooks/useCustomers";
+import { useCreateCustomer, useCustomerQuery, useUpdateCustomer, useDeleteCustomer } from "../hooks/useCustomers";
 import { customersApi } from "../services/customers.service";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import type {
   CustomerFormValues,
   CustomerSurvey,
@@ -113,13 +115,14 @@ function CustomerFormFields({
   const router = useRouter();
   const isEdit = mode === "edit";
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
-  const [uploadError, setUploadError] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: projects = [] } = useProjectsQuery();
   const { data: sites = [] } = useProjectSitesQuery(values.projectId);
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer(customerId ?? "");
+  const deleteCustomer = useDeleteCustomer();
   const mutation = isEdit ? updateCustomer : createCustomer;
 
   const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
@@ -194,7 +197,7 @@ function CustomerFormFields({
             <SectionCard title="Customer & Connection Details">
               <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <FormField label="Project">
-                  <Select
+                  <SearchableSelect
                     value={values.projectId || undefined}
                     onValueChange={(projectId) => {
                       const project = projectOptions.find((item) => item.value === projectId);
@@ -206,39 +209,23 @@ function CustomerFormFields({
                         siteArea: "",
                       }));
                     }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projectOptions.map((project) => (
-                        <SelectItem key={project.value} value={project.value}>
-                          {project.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select project"
+                    options={projectOptions}
+                    className="w-full"
+                  />
                 </FormField>
                 <FormField label="Site / Area">
-                  <Select
+                  <SearchableSelect
                     value={values.siteId || undefined}
                     onValueChange={(siteId) => {
                       const site = sites.find((item) => item.id === siteId);
                       setValues((current) => ({ ...current, siteId: siteId ?? "", siteArea: site?.name ?? "" }));
                     }}
                     disabled={!values.projectId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select site / area" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sites.map((site) => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select site / area"
+                    options={sites.map(s => ({ value: s.id, label: s.name }))}
+                    className="w-full"
+                  />
                 </FormField>
                 <FormField label="Assigned Plumber">
                   <Select
@@ -431,6 +418,15 @@ function CustomerFormFields({
         ) : null}
 
         <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
+          {isEdit && customerId && (
+            <DeleteConfirmDialog
+              itemName={initialValues?.customerConnection?.customerName || "this customer"}
+              onConfirm={async () => {
+                await deleteCustomer.mutateAsync(customerId);
+                router.push("/customers");
+              }}
+            />
+          )}
           <Link
             href={isEdit && customerId ? `/customers/${customerId}` : "/customers"}
             className={buttonVariants({ variant: "outline", size: "default" })}

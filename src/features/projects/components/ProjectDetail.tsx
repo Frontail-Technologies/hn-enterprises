@@ -12,8 +12,14 @@ import {
   PlusIcon,
   TrashIcon,
   UserPlusIcon,
+  BuildingsIcon,
+  ChartLineUpIcon,
+  FilesIcon,
+  UsersIcon,
+  CheckCircleIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { MetricCard } from "@/components/shared/MetricCard";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
@@ -120,6 +126,8 @@ const projectSectionLinks = [
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
   const { data: project, isLoading, isError } = useProjectQuery(projectId);
+  const { data: sites = [] } = useProjectSitesQuery(projectId);
+  const { data: documents = [] } = useProjectDocumentsQuery(projectId);
 
   if (isLoading) {
     return <PageLoading />;
@@ -152,6 +160,14 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
           <NotePencilIcon size={15} />
           Edit
         </Link>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <MetricCard label="Total Sites" value={sites.length} icon={MapPinIcon} className="h-20 min-w-32 flex-1" />
+        <MetricCard label="Active Sites" value={sites.filter(s => s.status === "Active" || s.status === "In Progress").length} icon={CheckCircleIcon} className="h-20 min-w-32 flex-1" />
+        <MetricCard label="Documents" value={documents.length} icon={FilesIcon} className="h-20 min-w-32 flex-1" />
+        <MetricCard label="Team Members" value={assignedUsers.length} icon={UsersIcon} className="h-20 min-w-32 flex-1" />
+        <MetricCard label="Progress" value="0%" icon={ChartLineUpIcon} className="h-20 min-w-32 flex-1" />
       </div>
 
       <Tabs defaultValue="overview" className="gap-4">

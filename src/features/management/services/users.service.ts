@@ -140,4 +140,8 @@ export const usersApi = {
     });
     return mapUser(raw);
   },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/users/${id}`, { method: "DELETE" });
+  },
 };

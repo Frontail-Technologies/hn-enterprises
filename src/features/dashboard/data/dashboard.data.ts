@@ -2,6 +2,7 @@ import type { ElementType } from "react";
 import type { ActivityType } from "@/features/dashboard/services/activity.service";
 
 export type DashboardMetric = {
+  id: string;
   label: string;
   value: string;
   helperText: string;

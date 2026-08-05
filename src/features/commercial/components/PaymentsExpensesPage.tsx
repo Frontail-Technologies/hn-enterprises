@@ -5,6 +5,7 @@ import { DownloadSimpleIcon, FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -328,18 +329,13 @@ function PaymentDrawer({
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Project / Site</span>
-            <Select value={values.siteId || undefined} onValueChange={(siteId) => set("siteId", siteId ?? "")}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select site (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {sites.map((site) => (
-                  <SelectItem key={site.id} value={site.id}>
-                    {site.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={values.siteId || undefined}
+              onValueChange={(siteId) => set("siteId", siteId ?? "")}
+              placeholder="Select site (optional)"
+              options={sites.map((s) => ({ value: s.id, label: s.name }))}
+              className="w-full"
+            />
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
