@@ -21,6 +21,10 @@ import { money } from "../../utils/format";
 import type { WageRecord } from "../../types/wage.types";
 import { WageDrawer } from "./WageDrawer";
 
+import { FileTextIcon, ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
+import { StatCardRow, SummaryValue } from "../shared/StatCards";
+import { sum } from "../../utils/format";
+
 function monthOptions() {
   const now = new Date();
   return Array.from({ length: 12 }, (_, index) => {
@@ -36,6 +40,13 @@ export function WageRegister() {
   const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
   const isLoading = wagesLoading || plumbersLoading;
+
+  const wageTotals = {
+    gross: sum(wages.map((row) => row.total)),
+    deductions: sum(wages.map((row) => row.totalDeduction)),
+    net: sum(wages.map((row) => row.netPayment)),
+    pending: wages.filter((row) => row.status === "Pending").length,
+  };
 
   const exportColumns: ExportColumn<WageRecord>[] = useMemo(
     () => [
@@ -56,8 +67,28 @@ export function WageRegister() {
   );
 
   return (
-    <section className="rounded-lg border border-border/70 bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
+    <>
+      <StatCardRow>
+        <SummaryValue label="Gross Wages" value={money(wageTotals.gross)} />
+        <SummaryValue
+          label="Deductions"
+          value={money(wageTotals.deductions)}
+          icon={<FileTextIcon size={17} />}
+        />
+        <SummaryValue
+          label="Net Payable"
+          value={money(wageTotals.net)}
+          icon={<ReceiptIcon size={17} />}
+        />
+        <SummaryValue
+          label="Pending Payments"
+          value={String(wageTotals.pending)}
+          icon={<WarningIcon size={17} />}
+          warn
+        />
+      </StatCardRow>
+      <section className="rounded-lg border border-border/70 bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
         <div>
           <p className="text-sm font-semibold text-foreground">Wage Register</p>
           <p className="text-xs text-muted-foreground">
@@ -170,6 +201,7 @@ export function WageRegister() {
         </div>
       </div>
     </section>
+    </>
   );
 }
 

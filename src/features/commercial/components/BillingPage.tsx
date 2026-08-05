@@ -12,7 +12,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { billingTabs } from "../data/bills.data";
-import { wageRegisterRows } from "../data/wages.data";
 import type { BillingView } from "../types/commercial.types";
 import type { Bill } from "../types/bill.types";
 import { useBillsQuery } from "../hooks/useBills";
@@ -38,12 +37,6 @@ export function BillingPage() {
         .filter((bill) => bill.status === "Overdue")
         .map((bill) => bill.pendingAmount),
     ),
-  };
-  const wageTotals = {
-    gross: sum(wageRegisterRows.map((row) => row.total)),
-    deductions: sum(wageRegisterRows.map((row) => row.totalDeduction)),
-    net: sum(wageRegisterRows.map((row) => row.netPayment)),
-    pending: wageRegisterRows.filter((row) => row.status === "Pending").length,
   };
   const [filters, setFilters] = useState({
     search: "",
@@ -246,28 +239,7 @@ export function BillingPage() {
           </TableSection>
         </>
       ) : (
-        <>
-          <StatCardRow>
-            <SummaryValue label="Gross Wages" value={money(wageTotals.gross)} />
-            <SummaryValue
-              label="Deductions"
-              value={money(wageTotals.deductions)}
-              icon={<FileTextIcon size={17} />}
-            />
-            <SummaryValue
-              label="Net Payable"
-              value={money(wageTotals.net)}
-              icon={<ReceiptIcon size={17} />}
-            />
-            <SummaryValue
-              label="Pending Payments"
-              value={String(wageTotals.pending)}
-              icon={<WarningIcon size={17} />}
-              warn
-            />
-          </StatCardRow>
-          <WageRegister />
-        </>
+        <WageRegister />
       )}
     </div>
   );
