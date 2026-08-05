@@ -57,27 +57,9 @@ export function CustomerImport() {
 
   const previewColumns: ExcelColumn<NormalizedImportRow>[] = useMemo(
     () => [
-      {
-        key: "giReportNumber",
-        label: "Report No-GI",
-        width: 150,
-        sticky: true,
-        getValue: (row) => row.giReportNumber,
-      },
-      {
-        key: "gcReportNumber",
-        label: "Report No-GC",
-        width: 150,
-        sticky: true,
-        getValue: (row) => row.gcReportNumber,
-      },
-      {
-        key: "conversionReportNumber",
-        label: "Report No-Conversion",
-        width: 180,
-        sticky: true,
-        getValue: (row) => row.conversionReportNumber,
-      },
+      { key: "giReportNumber", label: "Report No-GI", width: 150, sticky: true, getValue: (row) => row.giReportNumber },
+      { key: "gcReportNumber", label: "Report No-GC", width: 150, sticky: true, getValue: (row) => row.gcReportNumber },
+      { key: "conversionReportNumber", label: "Report No-Conversion", width: 180, sticky: true, getValue: (row) => row.conversionReportNumber },
       { key: "trBpNumber", label: "TR No. / BP No.", width: 150, sticky: true, getValue: (row) => row.trBpNumber },
       { key: "customerName", label: "Customer Name", width: 180, getValue: (row) => row.customerName },
       { key: "mobileNumber", label: "Mobile No.", width: 140, getValue: (row) => row.mobileNumber },
@@ -85,6 +67,14 @@ export function CustomerImport() {
       { key: "projectName", label: "Project", width: 200, getValue: (row) => row.projectName },
       { key: "siteName", label: "Site / Area", width: 170, getValue: (row) => row.siteName },
       { key: "city", label: "City", width: 120, getValue: (row) => row.city },
+      { key: "connectionType", label: "Connection Type", width: 160, getValue: (row) => row.connectionType },
+      { key: "houseType", label: "House Type", width: 140, getValue: (row) => row.houseType },
+      { key: "scheme", label: "Scheme", width: 150, getValue: (row) => row.scheme },
+      { key: "plumberName", label: "Plumber", width: 160, getValue: (row) => row.plumberName },
+      { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
+      { key: "customerStatus", label: "Customer Status", width: 150, getValue: (row) => row.customerStatus },
+      { key: "siteCode", label: "Site Code", width: 120, getValue: (row) => row.siteCode },
+      { key: "siteAddress", label: "Site Address", width: 220, getValue: (row) => row.siteAddress },
       {
         key: "validation",
         label: "Validation",
