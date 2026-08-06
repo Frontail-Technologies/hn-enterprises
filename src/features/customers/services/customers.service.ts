@@ -451,7 +451,7 @@ export const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
     width: 190,
   },
   { key: "mobileNo", label: "Mobile No.", group: "Customer", width: 130 },
-  { key: "fullAddress", label: "Full Address", group: "Customer", width: 260 },
+  { key: "fullAddress", label: "Address", group: "Customer", width: 260 },
   { key: "projectName", label: "Project", group: "Project", width: 190 },
   { key: "siteArea", label: "Site / Area", group: "Project", width: 170 },
   { key: "city", label: "City", group: "Project", width: 120 },

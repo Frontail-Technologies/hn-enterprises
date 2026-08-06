@@ -63,7 +63,7 @@ export function CustomerImport() {
       { key: "trBpNumber", label: "TR No. / BP No.", width: 150, sticky: true, getValue: (row) => row.trBpNumber },
       { key: "customerName", label: "Customer Name", width: 180, getValue: (row) => row.customerName },
       { key: "mobileNumber", label: "Mobile No.", width: 140, getValue: (row) => row.mobileNumber },
-      { key: "fullAddress", label: "Full Address", width: 280, getValue: (row) => row.fullAddress },
+      { key: "fullAddress", label: "Address", width: 280, getValue: (row) => row.fullAddress },
       { key: "projectName", label: "Project", width: 200, getValue: (row) => row.projectName },
       { key: "siteName", label: "Site / Area", width: 170, getValue: (row) => row.siteName },
       { key: "city", label: "City", width: 120, getValue: (row) => row.city },
@@ -74,7 +74,6 @@ export function CustomerImport() {
       { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
       { key: "customerStatus", label: "Customer Status", width: 150, getValue: (row) => row.customerStatus },
       { key: "siteCode", label: "Site Code", width: 120, getValue: (row) => row.siteCode },
-      { key: "siteAddress", label: "Site Address", width: 220, getValue: (row) => row.siteAddress },
       {
         key: "validation",
         label: "Validation",
