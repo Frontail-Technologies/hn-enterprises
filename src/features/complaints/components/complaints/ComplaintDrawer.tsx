@@ -49,17 +49,21 @@ function valuesFromComplaint(complaint: Complaint): ComplaintFormValues {
 
 export function ComplaintDrawer({
   complaint,
+  preselectedCustomerId,
   triggerLabel,
   icon,
   iconOnly = false,
 }: {
   complaint?: Complaint;
+  preselectedCustomerId?: string;
   triggerLabel: string;
   icon?: ReactNode;
   iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<ComplaintFormValues>(complaint ? valuesFromComplaint(complaint) : emptyValues());
+  const [values, setValues] = useState<ComplaintFormValues>(
+    complaint ? valuesFromComplaint(complaint) : { ...emptyValues(), customerId: preselectedCustomerId ?? "" }
+  );
   const [saveError, setSaveError] = useState("");
   const { data: customers = [] } = useCustomersQuery();
   const createComplaint = useCreateComplaint();
@@ -68,7 +72,7 @@ export function ComplaintDrawer({
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setValues(complaint ? valuesFromComplaint(complaint) : emptyValues());
+      setValues(complaint ? valuesFromComplaint(complaint) : { ...emptyValues(), customerId: preselectedCustomerId ?? "" });
       setSaveError("");
     }
     setOpen(nextOpen);
@@ -121,18 +125,20 @@ export function ComplaintDrawer({
         </SheetHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Customer</span>
-            <SearchableSelect
-              value={values.customerId || undefined}
-              onValueChange={(customerId) =>
-                setValues((current) => ({ ...current, customerId: customerId ?? "" }))
-              }
-              placeholder="Select customer"
-              options={customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName }))}
-              className="w-full"
-            />
-          </label>
+          {!preselectedCustomerId && (
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Customer</span>
+              <SearchableSelect
+                value={values.customerId || undefined}
+                onValueChange={(customerId) =>
+                  setValues((current) => ({ ...current, customerId: customerId ?? "" }))
+                }
+                placeholder="Select customer"
+                options={customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName }))}
+                className="w-full"
+              />
+            </label>
+          )}
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Title</span>

@@ -35,7 +35,7 @@ export function useCreateMaterial() {
       queryClient.invalidateQueries({ queryKey: materialsKey });
       toast.success("Material created successfully");
     },
-    onError: () => toast.error("Failed to create material"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create material"),
   });
 }
 
@@ -48,7 +48,7 @@ export function useUpdateMaterial(id: string) {
       queryClient.invalidateQueries({ queryKey: materialKey(id) });
       toast.success("Material updated successfully");
     },
-    onError: () => toast.error("Failed to update material"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update material"),
   });
 }
 
@@ -83,7 +83,7 @@ export function useCreateMaterialTransaction(type: MaterialTransactionType) {
       queryClient.invalidateQueries({ queryKey: ["materials", "plumber-balances"] });
       toast.success(`${type === "purchase" ? "Purchase" : type === "issue" ? "Issue" : "Transaction"} recorded`);
     },
-    onError: () => toast.error("Failed to record transaction"),
+    onError: (error: any) => toast.error(error?.message || "Failed to record transaction"),
   });
 }
 

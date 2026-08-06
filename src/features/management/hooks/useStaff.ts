@@ -29,7 +29,7 @@ export function useCreateStaff() {
       queryClient.invalidateQueries({ queryKey: staffKey });
       toast.success("Staff member created successfully");
     },
-    onError: () => toast.error("Failed to create staff member"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create staff member"),
   });
 }
 
@@ -43,6 +43,6 @@ export function useUpdateStaff(id: string) {
       queryClient.invalidateQueries({ queryKey: staffMemberKey(id) });
       toast.success("Staff member updated successfully");
     },
-    onError: () => toast.error("Failed to update staff member"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update staff member"),
   });
 }

@@ -19,7 +19,7 @@ export function useCreateUser() {
       queryClient.invalidateQueries({ queryKey: usersKey });
       toast.success("User created successfully");
     },
-    onError: () => toast.error("Failed to create user"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create user"),
   });
 }
 
@@ -31,7 +31,7 @@ export function useUpdateUser(id: string) {
       queryClient.invalidateQueries({ queryKey: usersKey });
       toast.success("User updated successfully");
     },
-    onError: () => toast.error("Failed to update user"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update user"),
   });
 }
 
@@ -43,7 +43,7 @@ export function useResetUserPassword(id: string) {
       queryClient.invalidateQueries({ queryKey: usersKey });
       toast.success("Password reset successfully");
     },
-    onError: () => toast.error("Failed to reset password"),
+    onError: (error: any) => toast.error(error?.message || "Failed to reset password"),
   });
 }
 

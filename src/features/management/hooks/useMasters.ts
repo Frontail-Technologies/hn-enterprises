@@ -28,7 +28,7 @@ export function useCreateMasterValue(category: MasterValueCategory) {
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
       toast.success("Master value created successfully");
     },
-    onError: () => toast.error("Failed to create master value"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create master value"),
   });
 }
 
@@ -40,7 +40,7 @@ export function useUpdateMasterValue(category: MasterValueCategory, id: string) 
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
       toast.success("Master value updated successfully");
     },
-    onError: () => toast.error("Failed to update master value"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update master value"),
   });
 }
 
@@ -59,7 +59,7 @@ export function useCreateCustomField() {
       queryClient.invalidateQueries({ queryKey: customFieldsKey });
       toast.success("Custom field created successfully");
     },
-    onError: () => toast.error("Failed to create custom field"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create custom field"),
   });
 }
 
@@ -71,7 +71,7 @@ export function useUpdateCustomField(id: string) {
       queryClient.invalidateQueries({ queryKey: customFieldsKey });
       toast.success("Custom field updated successfully");
     },
-    onError: () => toast.error("Failed to update custom field"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update custom field"),
   });
 }
 
@@ -90,7 +90,7 @@ export function useCreateHoliday() {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
       toast.success("Holiday created successfully");
     },
-    onError: () => toast.error("Failed to create holiday"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create holiday"),
   });
 }
 
@@ -102,6 +102,6 @@ export function useUpdateHoliday(id: string) {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
       toast.success("Holiday updated successfully");
     },
-    onError: () => toast.error("Failed to update holiday"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update holiday"),
   });
 }

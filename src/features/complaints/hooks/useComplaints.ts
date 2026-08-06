@@ -20,7 +20,7 @@ export function useCreateComplaint() {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
       toast.success("Complaint recorded successfully");
     },
-    onError: () => toast.error("Failed to record complaint"),
+    onError: (error: any) => toast.error(error?.message || "Failed to record complaint"),
   });
 }
 
@@ -32,6 +32,6 @@ export function useUpdateComplaint(id: string) {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
       toast.success("Complaint updated successfully");
     },
-    onError: () => toast.error("Failed to update complaint"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update complaint"),
   });
 }

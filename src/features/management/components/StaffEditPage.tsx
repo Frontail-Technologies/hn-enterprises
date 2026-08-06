@@ -27,7 +27,7 @@ import type { UserRole, UserStatus } from "../services/users.service";
 import { PageShell } from "./shared/PageShell";
 import { PageLoading } from "@/components/shared/PageLoading";
 
-const roles: UserRole[] = ["Super Admin", "Admin", "Supervisor", "Field Executive", "Viewer"];
+const roles: UserRole[] = ["Super Admin", "Supervisor"];
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
 const salaryTypes: StaffSalaryType[] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
 const paymentAccountTypes: StaffPaymentAccountType[] = ["Bank Account", "UPI", "Cash", "Other"];

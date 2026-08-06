@@ -30,7 +30,7 @@ export function useCreateBill() {
       queryClient.invalidateQueries({ queryKey: billsKey });
       toast.success("Bill created successfully");
     },
-    onError: () => toast.error("Failed to create bill"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create bill"),
   });
 }
 
@@ -43,7 +43,7 @@ export function useUpdateBill(id: string) {
       queryClient.invalidateQueries({ queryKey: billKey(id) });
       toast.success("Bill updated successfully");
     },
-    onError: () => toast.error("Failed to update bill"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update bill"),
   });
 }
 
@@ -77,6 +77,6 @@ export function useCreateBillPayment(billId: string) {
       queryClient.invalidateQueries({ queryKey: billsKey });
       toast.success("Payment recorded successfully");
     },
-    onError: () => toast.error("Failed to record payment"),
+    onError: (error: any) => toast.error(error?.message || "Failed to record payment"),
   });
 }

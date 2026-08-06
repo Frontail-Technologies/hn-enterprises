@@ -15,7 +15,7 @@ import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
 const exportColumns: ExportColumn<User>[] = [
-  { label: "User Name", getValue: (row) => row.name },
+  { label: "Name", getValue: (row) => row.name },
   { label: "Username", getValue: (row) => row.username },
   { label: "Mobile", getValue: (row) => row.mobile },
   { label: "Role", getValue: (row) => row.role },
@@ -43,7 +43,7 @@ export function UsersRolesPage() {
     );
   }, [users, filters]);
   const columns: ColumnDef<User>[] = [
-    { key: "name", header: "User Name", render: (row) => <b>{row.name}</b> },
+    { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
     {
       key: "username",
       header: "Username",

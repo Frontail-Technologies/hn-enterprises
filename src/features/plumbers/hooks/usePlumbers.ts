@@ -20,7 +20,7 @@ export function useCreatePlumber() {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
       toast.success("Plumber created successfully");
     },
-    onError: () => toast.error("Failed to create plumber"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create plumber"),
   });
 }
 
@@ -32,7 +32,7 @@ export function useUpdatePlumber(id: string) {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
       toast.success("Plumber updated successfully");
     },
-    onError: () => toast.error("Failed to update plumber"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update plumber"),
   });
 }
 

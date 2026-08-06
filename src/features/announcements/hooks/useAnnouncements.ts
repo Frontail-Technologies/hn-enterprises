@@ -19,7 +19,7 @@ export function useCreateAnnouncement() {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement created successfully");
     },
-    onError: () => toast.error("Failed to create announcement"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create announcement"),
   });
 }
 
@@ -31,7 +31,7 @@ export function useUpdateAnnouncement(id: string) {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement updated successfully");
     },
-    onError: () => toast.error("Failed to update announcement"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update announcement"),
   });
 }
 
@@ -43,6 +43,6 @@ export function usePublishAnnouncement() {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement published successfully");
     },
-    onError: () => toast.error("Failed to publish announcement"),
+    onError: (error: any) => toast.error(error?.message || "Failed to publish announcement"),
   });
 }

@@ -31,7 +31,7 @@ export function useCreateProject() {
       queryClient.invalidateQueries({ queryKey: projectsKey });
       toast.success("Project created successfully");
     },
-    onError: () => toast.error("Failed to create project"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create project"),
   });
 }
 
@@ -44,7 +44,7 @@ export function useUpdateProject(id: string) {
       queryClient.invalidateQueries({ queryKey: projectKey(id) });
       toast.success("Project updated successfully");
     },
-    onError: () => toast.error("Failed to update project"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update project"),
   });
 }
 
@@ -79,7 +79,7 @@ export function useSaveProjectSite(projectId: string) {
       queryClient.invalidateQueries({ queryKey: sitesKey(projectId) });
       toast.success("Site saved successfully");
     },
-    onError: () => toast.error("Failed to save site"),
+    onError: (error: any) => toast.error(error?.message || "Failed to save site"),
   });
 }
 
@@ -99,7 +99,7 @@ export function useCreateProjectDocument(projectId: string) {
       queryClient.invalidateQueries({ queryKey: documentsKey(projectId) });
       toast.success("Document uploaded successfully");
     },
-    onError: () => toast.error("Failed to upload document"),
+    onError: (error: any) => toast.error(error?.message || "Failed to upload document"),
   });
 }
 
@@ -111,6 +111,6 @@ export function useDeleteProjectDocument(projectId: string) {
       queryClient.invalidateQueries({ queryKey: documentsKey(projectId) });
       toast.success("Document deleted");
     },
-    onError: () => toast.error("Failed to delete document"),
+    onError: (error: any) => toast.error(error?.message || "Failed to delete document"),
   });
 }

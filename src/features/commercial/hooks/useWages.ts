@@ -20,6 +20,6 @@ export function useUpsertWage() {
       queryClient.invalidateQueries({ queryKey: wagesKey });
       toast.success("Wage updated successfully");
     },
-    onError: () => toast.error("Failed to update wage"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update wage"),
   });
 }

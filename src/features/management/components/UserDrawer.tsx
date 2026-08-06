@@ -24,7 +24,7 @@ import { useCreateUser, useResetUserPassword, useUpdateUser, useDeleteUser } fro
 import type { User, UserRole, UserStatus } from "../services/users.service";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
-const roles: UserRole[] = ["Super Admin", "Admin", "Supervisor", "Field Executive", "Viewer"];
+const roles: UserRole[] = ["Super Admin", "Supervisor"];
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
 
 type Draft = {

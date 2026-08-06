@@ -26,7 +26,7 @@ import { useCreateStaff } from "../hooks/useStaff";
 import type { CreateStaffFormValues } from "../types/staff.types";
 import type { User, UserRole } from "../services/users.service";
 
-const roles: UserRole[] = ["Super Admin", "Admin", "Supervisor", "Field Executive", "Viewer"];
+const roles: UserRole[] = ["Super Admin", "Supervisor"];
 const salaryTypes: CreateStaffFormValues["salaryType"][] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
 const paymentAccountTypes: CreateStaffFormValues["paymentAccountType"][] = ["Bank Account", "UPI", "Cash", "Other"];
 

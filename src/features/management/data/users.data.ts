@@ -30,8 +30,5 @@ export const users = [
 
 export const roles = [
   "Super Admin",
-  "Admin",
   "Supervisor",
-  "Field Executive",
-  "Viewer",
 ];

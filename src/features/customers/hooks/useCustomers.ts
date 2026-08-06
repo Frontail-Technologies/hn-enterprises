@@ -30,7 +30,7 @@ export function useCreateCustomer() {
       queryClient.invalidateQueries({ queryKey: customersKey });
       toast.success("Customer created successfully");
     },
-    onError: () => toast.error("Failed to create customer"),
+    onError: (error: any) => toast.error(error?.message || "Failed to create customer"),
   });
 }
 
@@ -43,7 +43,7 @@ export function useUpdateCustomer(id: string) {
       queryClient.setQueryData(customerKey(id), updated);
       toast.success("Customer updated successfully");
     },
-    onError: () => toast.error("Failed to update customer"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update customer"),
   });
 }
 
@@ -67,7 +67,7 @@ export function useUpsertLmcPipeRecord(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("LMC record saved");
     },
-    onError: () => toast.error("Failed to save LMC record"),
+    onError: (error: any) => toast.error(error?.message || "Failed to save LMC record"),
   });
 }
 
@@ -88,7 +88,7 @@ export function useCreateCustomerDocument(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("Document uploaded successfully");
     },
-    onError: () => toast.error("Failed to upload document"),
+    onError: (error: any) => toast.error(error?.message || "Failed to upload document"),
   });
 }
 
@@ -101,6 +101,6 @@ export function useDeleteCustomerDocument(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("Document deleted");
     },
-    onError: () => toast.error("Failed to delete document"),
+    onError: (error: any) => toast.error(error?.message || "Failed to delete document"),
   });
 }

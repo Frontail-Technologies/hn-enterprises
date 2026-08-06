@@ -20,7 +20,7 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
       toast.success("Payment recorded successfully");
     },
-    onError: () => toast.error("Failed to record payment"),
+    onError: (error: any) => toast.error(error?.message || "Failed to record payment"),
   });
 }
 
@@ -32,7 +32,7 @@ export function useUpdatePayment(id: string) {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
       toast.success("Payment updated successfully");
     },
-    onError: () => toast.error("Failed to update payment"),
+    onError: (error: any) => toast.error(error?.message || "Failed to update payment"),
   });
 }
 
@@ -44,6 +44,6 @@ export function useDeletePayment() {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
       toast.success("Payment deleted");
     },
-    onError: () => toast.error("Failed to delete payment"),
+    onError: (error: any) => toast.error(error?.message || "Failed to delete payment"),
   });
 }

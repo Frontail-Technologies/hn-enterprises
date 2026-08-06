@@ -63,6 +63,7 @@ import {
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
 import { useCustomerQuery, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
+import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
 import { PageLoading } from "@/components/shared/PageLoading";
 import type {
   Customer,
@@ -94,6 +95,7 @@ const customerSectionLinks = [
   { href: "#billing", label: "Billing & Remarks" },
   { href: "#documents", label: "Images / Evidence" },
   { href: "#reports", label: "Reports" },
+  { href: "#complaints", label: "Complaints" },
   { href: "#approvals", label: "Approvals / History" },
 ];
 
@@ -223,6 +225,10 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
 
         <section id="reports" className="scroll-mt-16">
           <CustomerReportsPanel customerId={customer.id} customer={customer} />
+        </section>
+
+        <section id="complaints" className="scroll-mt-16">
+          <CustomerComplaintsPanel customerId={customer.id} />
         </section>
 
         <section id="approvals" className="scroll-mt-16">
