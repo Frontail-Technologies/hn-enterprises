@@ -69,6 +69,7 @@ import {
 import { useCreateCustomer, useCustomerQuery, useUpdateCustomer, useDeleteCustomer } from "../hooks/useCustomers";
 import { customersApi } from "../services/customers.service";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
+import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import type {
@@ -190,6 +191,7 @@ function CustomerFormFields({
               <FormTab value="billing">Billing & Remarks</FormTab>
               <FormTab value="images">Images / Evidence</FormTab>
               <FormTab value="reports">Reports</FormTab>
+              {isEdit && <FormTab value="complaints">Complaints</FormTab>}
             </TabsList>
           </div>
 
@@ -408,6 +410,12 @@ function CustomerFormFields({
           <TabsContent value="reports">
             <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "" } : undefined} />
           </TabsContent>
+
+          {isEdit && customerId && (
+            <TabsContent value="complaints">
+              <CustomerComplaintsPanel customerId={customerId} />
+            </TabsContent>
+          )}
         </Tabs>
 
         {uploadError ? <p className="mt-3 text-sm text-destructive">{uploadError}</p> : null}
