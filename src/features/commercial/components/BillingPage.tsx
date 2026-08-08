@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DownloadSimpleIcon, FileTextIcon, ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -21,7 +21,6 @@ import { BillDrawer } from "./billing/BillDrawer";
 import { BillingActions } from "./billing/BillingActions";
 import { WageRegister } from "./billing/WageRegister";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
-import { StatCardRow, SummaryValue } from "./shared/StatCards";
 import { TableSection } from "./shared/TableSection";
 
 export function BillingPage() {
@@ -105,7 +104,6 @@ export function BillingPage() {
       header: "Supervisor",
       render: (row) => getBillCustomer(row)?.customerConnection.supervisorName || "-",
     },
-    { key: "stage", header: "Billing Stage" },
     {
       key: "billDate",
       header: "Bill Date",
@@ -120,11 +118,6 @@ export function BillingPage() {
       key: "paidAmount",
       header: "Paid Amount",
       render: (row) => money(row.paidAmount),
-    },
-    {
-      key: "pendingAmount",
-      header: "Pending Amount",
-      render: (row) => <b>{money(row.pendingAmount)}</b>,
     },
     {
       key: "status",
@@ -144,11 +137,9 @@ export function BillingPage() {
     { label: "Customer", getValue: (row) => getBillCustomer(row)?.customerConnection.customerName ?? "-" },
     { label: "Site", getValue: (row) => getBillCustomer(row)?.siteArea ?? "-" },
     { label: "Supervisor", getValue: (row) => getBillCustomer(row)?.customerConnection.supervisorName || "-" },
-    { label: "Billing Stage", getValue: (row) => row.stage },
     { label: "Bill Date", getValue: (row) => formatDate(row.billDate) },
     { label: "Total Amount", getValue: (row) => row.totalAmount },
     { label: "Paid Amount", getValue: (row) => row.paidAmount },
-    { label: "Pending Amount", getValue: (row) => row.pendingAmount },
     { label: "Status", getValue: (row) => row.status },
   ];
 
@@ -182,25 +173,20 @@ export function BillingPage() {
       />
       {activeView === "bills" ? (
         <>
-          <StatCardRow>
-            <SummaryValue label="Total Billed" value={money(totals.billed)} />
-            <SummaryValue
-              label="Received"
-              value={money(totals.received)}
-              icon={<ReceiptIcon size={17} />}
-            />
-            <SummaryValue
-              label="Pending"
-              value={money(totals.pending)}
-              icon={<FileTextIcon size={17} />}
-            />
-            <SummaryValue
-              label="Overdue"
-              value={money(totals.overdue)}
-              icon={<WarningIcon size={17} />}
-              warn
-            />
-          </StatCardRow>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            <span>
+              Total billed: <span className="font-semibold text-foreground">{money(totals.billed)}</span>
+            </span>
+            <span>
+              Received: <span className="font-semibold text-foreground">{money(totals.received)}</span>
+            </span>
+            <span>
+              Pending: <span className="font-semibold text-foreground">{money(totals.pending)}</span>
+            </span>
+            <span>
+              Overdue: <span className="font-semibold text-destructive">{money(totals.overdue)}</span>
+            </span>
+          </div>
           <TableSection>
             <FilterSheetButton
               searchKey="search"

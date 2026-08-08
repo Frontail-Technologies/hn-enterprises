@@ -24,11 +24,13 @@ import { FormField } from "@/components/shared/FormField";
 import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import {
   useAnnouncementsQuery,
   useCreateAnnouncement,
   usePublishAnnouncement,
   useUpdateAnnouncement,
+  useDeleteAnnouncement,
 } from "../hooks/useAnnouncements";
 import type { Announcement } from "../types/announcement.types";
 
@@ -51,6 +53,7 @@ export function AnnouncementsPage() {
   const createMutation = useCreateAnnouncement();
   const updateMutation = useUpdateAnnouncement(editingId ?? "");
   const publishMutation = usePublishAnnouncement();
+  const deleteMutation = useDeleteAnnouncement();
 
   const openCreate = () => {
     setEditingId(null);
@@ -190,6 +193,10 @@ export function AnnouncementsPage() {
               </Button>
             </ActionTooltip>
           ) : null}
+          <DeleteConfirmDialog
+            itemName={announcement.title}
+            onConfirm={() => deleteMutation.mutateAsync(announcement.id)}
+          />
         </div>
       ),
     },

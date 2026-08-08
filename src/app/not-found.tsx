@@ -1,22 +1,33 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background px-6 py-16 text-foreground">
-      <section className="flex w-full max-w-lg flex-col items-center rounded-lg border border-border/70 bg-card p-8 text-center">
-        <p className="text-sm font-semibold text-primary">404</p>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">
-          Page Not Found
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you are looking for is unavailable or may have been moved.
-        </p>
-        <Link href="/dashboard" className={buttonVariants({ className: "mt-6" })}>
-          Back to Dashboard
-          <ArrowRight className="size-4" />
-        </Link>
+    <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-10 text-foreground">
+      <section className="relative flex w-full max-w-3xl flex-col items-center text-center">
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-[58%] select-none text-[8rem] font-black leading-none tracking-tight text-primary/20 sm:text-[13rem] md:text-[17rem]"
+        >
+          404
+        </div>
+
+        <div className="relative z-10 mt-8 flex flex-col items-center">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Page Not Found!
+          </h1>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Content unavailable due to error or deletion by owner
+          </p>
+
+          <Link
+            href="/dashboard"
+            className="mt-6 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border bg-primary px-4 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+          >
+            Back to Home
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       </section>
     </main>
   );

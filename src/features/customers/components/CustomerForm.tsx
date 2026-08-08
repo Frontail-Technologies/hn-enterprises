@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImageSquareIcon } from "@phosphor-icons/react";
@@ -40,15 +40,18 @@ import {
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { SegmentedDigitInput } from "@/components/shared/SegmentedDigitInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { useProjectSitesQuery, useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
+import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   billingCompletionFields,
   deriveLmcPipeCurrentStage,
-  commissioningConversionFields,
-  customerConnectionFields,
+  useCommissioningConversionFields,
+  useCustomerConnectionFields,
   customerStatusOptions,
   defaultCustomerFormValues,
   deriveLmcOverallStatus,
@@ -115,16 +118,37 @@ function CustomerFormFields({
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
+  const customerConnectionFields = useCustomerConnectionFields();
+  const commissioningConversionFields = useCommissioningConversionFields();
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: projects = [] } = useProjectsQuery();
-  const { data: sites = [] } = useProjectSitesQuery(values.projectId);
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer(customerId ?? "");
   const deleteCustomer = useDeleteCustomer();
   const mutation = isEdit ? updateCustomer : createCustomer;
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const { data: customFields = [] } = useDynamicFieldsQuery("Active");
+
+  const customFieldGroups = useMemo(() => {
+    const visible = customFields.filter((f) => {
+      if (isAdmin) return true;
+      if (f.supervisorAccess === "Admin Only") return false;
+      return true;
+    });
+    const groups: Record<string, typeof visible> = {};
+    for (const field of visible) {
+      if (!groups[field.group]) groups[field.group] = [];
+      groups[field.group].push(field);
+    }
+    for (const group of Object.values(groups)) {
+      group.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
+    return groups;
+  }, [customFields, isAdmin]);
 
   const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
 
@@ -132,7 +156,6 @@ function CustomerFormFields({
     if (
       !values.customerConnection.customerName.trim() ||
       !values.projectId ||
-      !values.siteId ||
       (!isEdit && !values.customerConnection.plumberId)
     )
       return;
@@ -191,6 +214,9 @@ function CustomerFormFields({
               <FormTab value="billing">Billing & Remarks</FormTab>
               <FormTab value="images">Images / Evidence</FormTab>
               <FormTab value="reports">Reports</FormTab>
+              {Object.keys(customFieldGroups).sort().map((group) => (
+                <FormTab key={`tab-custom-${group}`} value={`custom-${group}`}>{group}</FormTab>
+              ))}
               {isEdit && <FormTab value="complaints">Complaints</FormTab>}
             </TabsList>
           </div>
@@ -207,8 +233,6 @@ function CustomerFormFields({
                         ...current,
                         projectId: projectId ?? "",
                         projectName: project?.label ?? "",
-                        siteId: "",
-                        siteArea: "",
                       }));
                     }}
                     placeholder="Select project"
@@ -216,21 +240,8 @@ function CustomerFormFields({
                     className="w-full"
                   />
                 </FormField>
-                <FormField label="Site / Area">
-                  <SearchableSelect
-                    value={values.siteId || undefined}
-                    onValueChange={(siteId) => {
-                      const site = sites.find((item) => item.id === siteId);
-                      setValues((current) => ({ ...current, siteId: siteId ?? "", siteArea: site?.name ?? "" }));
-                    }}
-                    disabled={!values.projectId}
-                    placeholder="Select site / area"
-                    options={sites.map(s => ({ value: s.id, label: s.name }))}
-                    className="w-full"
-                  />
-                </FormField>
                 <FormField label="Assigned Plumber">
-                  <Select
+                  <SearchableSelect
                     value={values.customerConnection.plumberId || undefined}
                     onValueChange={(plumberId) => {
                       const plumber = plumbers.find((item) => item.id === plumberId);
@@ -243,21 +254,13 @@ function CustomerFormFields({
                         },
                       }));
                     }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select plumber" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plumbers.map((plumber) => (
-                        <SelectItem key={plumber.id} value={plumber.id}>
-                          {plumber.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select plumber"
+                    options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+                    className="w-full"
+                  />
                 </FormField>
                 <FormField label="Assigned Supervisor">
-                  <Select
+                  <SearchableSelect
                     value={values.customerConnection.supervisorId || undefined}
                     onValueChange={(supervisorId) => {
                       const supervisor = supervisors.find((item) => item.id === supervisorId);
@@ -270,20 +273,11 @@ function CustomerFormFields({
                         },
                       }));
                     }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select supervisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {supervisors.map((supervisor) => (
-                        <SelectItem key={supervisor.id} value={supervisor.id}>
-                          {supervisor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select supervisor"
+                    options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
+                    className="w-full"
+                  />
                 </FormField>
-                <TextField label="City" value={values.city} onChange={(city) => setValues((current) => ({ ...current, city }))} />
                 <FormField label="Customer Status">
                   <Select value={values.status} onValueChange={(status) => setValues((current) => ({ ...current, status: (status ?? "Draft") as CustomerFormValues["status"] }))}>
                     <SelectTrigger className="w-full">
@@ -410,6 +404,31 @@ function CustomerFormFields({
           <TabsContent value="reports">
             <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "" } : undefined} />
           </TabsContent>
+
+          {Object.entries(customFieldGroups).map(([group, fields]) => {
+            const fieldDefinitions: FieldDefinition<Record<string, string | boolean>>[] = fields.map((f: any) => ({
+              key: f.key,
+              label: f.label,
+              input: f.valueType === "Text" ? "text" :
+                     f.valueType === "Number" ? "number" :
+                     f.valueType === "Date" ? "date" :
+                     f.valueType === "Dropdown" ? "select" : "text",
+              options: f.valueType === "Dropdown" ? f.dropdownOptions : undefined,
+              readOnly: !isAdmin && f.supervisorAccess === "Supervisor Can View",
+            }));
+
+            return (
+              <TabsContent key={`content-custom-${group}`} value={`custom-${group}`}>
+                <SectionCard title={group}>
+                  <SectionFields
+                    fields={fieldDefinitions}
+                    values={(values.customFields ?? {}) as Record<string, string | boolean>}
+                    onChange={(next) => setValues((current) => ({ ...current, customFields: next }))}
+                  />
+                </SectionCard>
+              </TabsContent>
+            );
+          })}
 
           {isEdit && customerId && (
             <TabsContent value="complaints">
@@ -830,6 +849,9 @@ function FormTab({ value, children }: { value: string; children: React.ReactNode
   return (
     <TabsTrigger
       value={value}
+      onClick={(event) => {
+        event.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      }}
       className="h-10 flex-none cursor-pointer justify-start rounded-none px-0.5 py-0 font-medium"
     >
       {children}
@@ -892,21 +914,23 @@ function MasterField<T extends Record<string, string | boolean>>({
     );
   }
 
+  if (field.input === "meter") {
+    return (
+      <FormField label={field.label}>
+        <SegmentedDigitInput value={String(value ?? "")} onChange={onChange} digits={field.digits} />
+      </FormField>
+    );
+  }
+
   if (field.input === "select") {
     return (
       <FormField label={field.label}>
-        <Select value={String(value || "") || undefined} onValueChange={(next) => onChange(next ?? "")}>
-          <SelectTrigger className="w-full min-w-0">
-            <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {(field.options ?? []).map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={String(value || "")}
+          options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
+          placeholder={`Select ${field.label.toLowerCase()}`}
+          onValueChange={(next) => onChange(next ?? "")}
+        />
       </FormField>
     );
   }

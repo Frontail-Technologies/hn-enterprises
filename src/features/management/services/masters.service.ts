@@ -1,8 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
 import type {
-  CustomField,
-  CustomFieldFormValues,
-  CustomFieldValueType,
   Holiday,
   HolidayFormValues,
   HolidayType,
@@ -18,13 +15,10 @@ type BackendCategory =
   | "house_types"
   | "schemes"
   | "document_categories"
-  | "staff_roles"
-  | "bank_types"
-  | "upi_types"
-  | "material_categories";
+  | "material_categories"
+  | "meter_types";
 
 type BackendStatus = "active" | "inactive";
-type BackendValueType = "text" | "number" | "date" | "amount" | "yes_no" | "dropdown";
 type BackendHolidayType = "national" | "restricted" | "company";
 
 const CATEGORY_TO_FRONTEND: Record<BackendCategory, MasterValueCategory> = {
@@ -33,10 +27,8 @@ const CATEGORY_TO_FRONTEND: Record<BackendCategory, MasterValueCategory> = {
   house_types: "House Types",
   schemes: "Schemes",
   document_categories: "Document Categories",
-  staff_roles: "Staff Roles",
-  bank_types: "Bank Types",
-  upi_types: "UPI Types",
   material_categories: "Material Categories",
+  meter_types: "Meter Types",
 };
 
 const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> = {
@@ -45,10 +37,8 @@ const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> = {
   "House Types": "house_types",
   Schemes: "schemes",
   "Document Categories": "document_categories",
-  "Staff Roles": "staff_roles",
-  "Bank Types": "bank_types",
-  "UPI Types": "upi_types",
   "Material Categories": "material_categories",
+  "Meter Types": "meter_types",
 };
 
 const STATUS_TO_FRONTEND: Record<BackendStatus, MasterValueStatus> = {
@@ -59,24 +49,6 @@ const STATUS_TO_FRONTEND: Record<BackendStatus, MasterValueStatus> = {
 const STATUS_TO_BACKEND: Record<MasterValueStatus, BackendStatus> = {
   Active: "active",
   Inactive: "inactive",
-};
-
-const VALUE_TYPE_TO_FRONTEND: Record<BackendValueType, CustomFieldValueType> = {
-  text: "Text",
-  number: "Number",
-  date: "Date",
-  amount: "Amount",
-  yes_no: "Yes / No",
-  dropdown: "Dropdown",
-};
-
-const VALUE_TYPE_TO_BACKEND: Record<CustomFieldValueType, BackendValueType> = {
-  Text: "text",
-  Number: "number",
-  Date: "date",
-  Amount: "amount",
-  "Yes / No": "yes_no",
-  Dropdown: "dropdown",
 };
 
 const HOLIDAY_TYPE_TO_FRONTEND: Record<BackendHolidayType, HolidayType> = {
@@ -145,74 +117,11 @@ export const masterValuesApi = {
     });
     return mapMasterValue(raw);
   },
-};
 
-type BackendCustomField = {
-  id: string;
-  key: string;
-  label: string;
-  groupName: string;
-  width: number;
-  valueType: BackendValueType;
-  dropdownOptions: string[] | null;
-  required: boolean;
-  status: BackendStatus;
-};
-
-function mapCustomField(raw: BackendCustomField): CustomField {
-  return {
-    id: raw.id,
-    key: raw.key,
-    label: raw.label,
-    group: raw.groupName,
-    width: raw.width,
-    valueType: VALUE_TYPE_TO_FRONTEND[raw.valueType] ?? "Text",
-    dropdownOptions: raw.dropdownOptions ?? [],
-    required: raw.required,
-    status: STATUS_TO_FRONTEND[raw.status] ?? "Active",
-  };
-}
-
-export const customFieldsApi = {
-  async list(status?: MasterValueStatus): Promise<CustomField[]> {
-    const query = new URLSearchParams();
-    if (status) query.set("status", STATUS_TO_BACKEND[status]);
-    const qs = query.toString();
-    const rows = await apiRequest<BackendCustomField[]>(`/masters/custom-fields${qs ? `?${qs}` : ""}`);
-    return rows.map(mapCustomField);
-  },
-
-  async create(values: CustomFieldFormValues): Promise<CustomField> {
-    const raw = await apiRequest<BackendCustomField>("/masters/custom-fields", {
-      method: "POST",
-      body: JSON.stringify({
-        key: values.key,
-        label: values.label,
-        groupName: values.group,
-        width: Number(values.width) || undefined,
-        valueType: VALUE_TYPE_TO_BACKEND[values.valueType],
-        dropdownOptions: values.valueType === "Dropdown" ? values.dropdownOptions : undefined,
-        required: values.required,
-        status: STATUS_TO_BACKEND[values.status],
-      }),
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/masters/values/${id}`, {
+      method: "DELETE",
     });
-    return mapCustomField(raw);
-  },
-
-  async update(id: string, values: CustomFieldFormValues): Promise<CustomField> {
-    const raw = await apiRequest<BackendCustomField>(`/masters/custom-fields/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        label: values.label,
-        groupName: values.group,
-        width: Number(values.width) || undefined,
-        valueType: VALUE_TYPE_TO_BACKEND[values.valueType],
-        dropdownOptions: values.valueType === "Dropdown" ? values.dropdownOptions : undefined,
-        required: values.required,
-        status: STATUS_TO_BACKEND[values.status],
-      }),
-    });
-    return mapCustomField(raw);
   },
 };
 
@@ -267,5 +176,11 @@ export const holidaysApi = {
       }),
     });
     return mapHoliday(raw);
+  },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/masters/holidays/${id}`, {
+      method: "DELETE",
+    });
   },
 };

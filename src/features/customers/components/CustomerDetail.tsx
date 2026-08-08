@@ -44,11 +44,14 @@ import { KeyValueGrid, type KeyValueItem } from "@/components/shared/KeyValueGri
 import { SectionCard } from "@/components/shared/SectionCard";
 import { SectionAnchorTabs } from "@/components/shared/SectionAnchorTabs";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
+import type { CustomField, CustomFieldValueType } from "@/features/dynamic-fields/types";
 import {
   billingCompletionFields,
-  commissioningConversionFields,
+  useCommissioningConversionFields,
   deriveLmcPipeCurrentStage,
-  customerConnectionFields,
+  useCustomerConnectionFields,
   deriveLmcOverallStatus,
   fittingAccessoryFields,
   giMeasurementFields,
@@ -84,7 +87,10 @@ type CustomerApprovalRow = {
   status: string;
 };
 
-const customerSectionLinks = [
+// Dynamic field groups are inserted between these two lists - after
+// Complaints, before Approvals / History - since group names (and how many
+// there are) come from live data, not a fixed set.
+const customerSectionLinksBeforeGroups = [
   { href: "#customer-details", label: "Customer Details" },
   { href: "#survey", label: "Survey" },
   { href: "#gi", label: "GI Measurements" },
@@ -96,13 +102,23 @@ const customerSectionLinks = [
   { href: "#documents", label: "Images / Evidence" },
   { href: "#reports", label: "Reports" },
   { href: "#complaints", label: "Complaints" },
-  { href: "#approvals", label: "Approvals / History" },
 ];
+
+const customerSectionLinksAfterGroups = [{ href: "#approvals", label: "Approvals / History" }];
+
+function groupAnchorId(group: string) {
+  return `custom-${group.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+}
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
   const { data: customer, isLoading, isError } = useCustomerQuery(customerId);
   const searchParams = useSearchParams();
   const initialPipeId = searchParams.get("pipe");
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const { data: dynamicFields = [] } = useDynamicFieldsQuery("Active");
+  const customerConnectionFields = useCustomerConnectionFields();
+  const commissioningConversionFields = useCommissioningConversionFields();
 
   if (isLoading) {
     return <PageLoading />;
@@ -113,6 +129,13 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   }
 
   const connection = customer.customerConnection;
+
+  const visibleFieldGroups = groupVisibleDynamicFields(dynamicFields, isAdmin);
+  const sectionLinks = [
+    ...customerSectionLinksBeforeGroups,
+    ...Object.keys(visibleFieldGroups).map((group) => ({ href: `#${groupAnchorId(group)}`, label: group })),
+    ...customerSectionLinksAfterGroups,
+  ];
 
   return (
     <div className="space-y-4">
@@ -142,7 +165,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         }
       />
 
-      <CustomerSectionNav />
+      <CustomerSectionNav items={sectionLinks} />
 
       <div className="space-y-4">
         <section id="customer-details" className="scroll-mt-16">
@@ -151,7 +174,6 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               items={[
                 { label: "Project", value: customer.projectName },
                 { label: "Site / Area", value: customer.siteArea },
-                { label: "City", value: customer.city },
                 { label: "Created", value: formatDate(customer.createdDate) },
                 ...itemsFromFields(customerConnectionFields, connection),
               ]}
@@ -231,6 +253,20 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           <CustomerComplaintsPanel customerId={customer.id} />
         </section>
 
+        {Object.entries(visibleFieldGroups).map(([group, fields]) => (
+          <section key={group} id={groupAnchorId(group)} className="scroll-mt-16">
+            <SectionCard title={group}>
+              <KeyValueGrid
+                items={fields.map((field) => ({
+                  label: field.label,
+                  value: formatDynamicFieldValue(customer.customFields?.[field.key], field.valueType),
+                }))}
+                columns={3}
+              />
+            </SectionCard>
+          </section>
+        ))}
+
         <section id="approvals" className="scroll-mt-16">
           <CustomerApprovalsHistory customer={customer} />
         </section>
@@ -239,8 +275,29 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   );
 }
 
-function CustomerSectionNav() {
-  return <SectionAnchorTabs items={customerSectionLinks} />;
+function CustomerSectionNav({ items }: { items: { href: string; label: string }[] }) {
+  return <SectionAnchorTabs items={items} />;
+}
+
+function groupVisibleDynamicFields(fields: CustomField[], isAdmin: boolean) {
+  const groups: Record<string, CustomField[]> = {};
+  for (const field of fields) {
+    if (!isAdmin && field.supervisorAccess === "Admin Only") continue;
+    (groups[field.group] ??= []).push(field);
+  }
+  for (const key of Object.keys(groups)) {
+    groups[key] = [...groups[key]].sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  return groups;
+}
+
+function formatDynamicFieldValue(value: string | boolean | undefined, valueType: CustomFieldValueType) {
+  if (value === undefined || value === null || value === "") return "-";
+  if (valueType === "Yes / No" || typeof value === "boolean") {
+    return value === true || value === "true" ? "Yes" : "No";
+  }
+  if (valueType === "Date") return formatDate(String(value));
+  return String(value);
 }
 
 function CustomerApprovalsHistory({ customer }: { customer: Customer }) {

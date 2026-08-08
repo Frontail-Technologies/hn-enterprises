@@ -9,8 +9,3 @@ export type InventoryTab =
   | "plumberConsumption";
 
 export type BillingView = "bills" | "wages";
-
-export type BreadcrumbItem = {
-  label: string;
-  href?: string;
-};

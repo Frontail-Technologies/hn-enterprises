@@ -41,6 +41,7 @@ type BackendMaterialTransaction = {
   supervisorId: string | null;
   supervisorName: string | null;
   siteId: string | null;
+  address: string | null;
   storeLabel: string | null;
   customerId: string | null;
   paymentId: string | null;
@@ -99,6 +100,7 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     supervisorId: raw.supervisorId ?? "",
     supervisorName: raw.supervisorName ?? "",
     siteId: raw.siteId ?? "",
+    address: raw.address ?? "",
     storeLabel: raw.storeLabel ?? "",
     customerId: raw.customerId ?? "",
     paymentId: raw.paymentId ?? "",
@@ -129,6 +131,7 @@ function buildTransactionFormData(type: MaterialTransactionType, values: Materia
   if (values.plumberId) formData.append("plumberId", values.plumberId);
   if (values.supervisorId) formData.append("supervisorId", values.supervisorId);
   if (values.siteId) formData.append("siteId", values.siteId);
+  if (values.address) formData.append("address", values.address);
   if (values.storeLabel) formData.append("storeLabel", values.storeLabel);
   if (values.customerId) formData.append("customerId", values.customerId);
   if (values.reportNo) formData.append("reportNo", values.reportNo);

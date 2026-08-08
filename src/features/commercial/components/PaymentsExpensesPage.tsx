@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, FileTextIcon, NotePencilIcon, PlusIcon, ReceiptIcon, WarningIcon, EyeIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, EyeIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { ImportDialog } from "@/components/shared/ImportDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -36,26 +37,44 @@ import { cn } from "@/lib/utils";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { paymentTabs } from "../data/payments.data";
-import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
 import { useCreatePayment, useDeletePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
+import { usePaymentsImportPreview, usePaymentsImportConfirm } from "../hooks/usePaymentsImport";
+import type { PaymentImportRow } from "../services/payments-import.service";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentMode, PaymentStatus } from "../types/payment.types";
 import { formatDate, money, sum } from "../utils/format";
 import { ImageProofField } from "./shared/ImageProofField";
-import { StatCardRow, SummaryValue } from "./shared/StatCards";
+
+import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 
 const categories = paymentTabs as PaymentCategory[];
-const paymentModes: PaymentMode[] = ["Cash", "UPI", "Bank Transfer", "NEFT", "Cheque", "Other"];
 const statuses: PaymentStatus[] = ["Draft", "Submitted", "Approved", "Rejected"];
+
+const importPreviewColumns: ExcelColumn<PaymentImportRow & { id: string }>[] = [
+  { key: "category", label: "Category", width: 170, getValue: (r) => r.category },
+  { key: "paidTo", label: "Paid To", width: 160, getValue: (r) => r.paidTo },
+  { key: "plumberName", label: "Plumber Name", width: 160, getValue: (r) => r.plumberName },
+  { key: "amount", label: "Amount", width: 110, getValue: (r) => r.amount },
+  { key: "paymentDate", label: "Payment Date", width: 130, getValue: (r) => r.paymentDate },
+  { key: "mode", label: "Mode", width: 120, getValue: (r) => r.mode },
+  {
+    key: "status",
+    label: "Status",
+    width: 120,
+    getValue: (r) => (r.error ? "invalid" : "valid"),
+    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
+  },
+  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
+];
 
 export function PaymentsExpensesPage() {
   const [active, setActive] = useState<PaymentCategory>(categories[0]);
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
-  const { data: sites = [] } = useAllProjectSitesQuery();
+  const importPreview = usePaymentsImportPreview();
+  const importConfirm = usePaymentsImportConfirm();
   const { data: customers = [] } = useCustomersQuery();
 
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
-  const siteNameById = useMemo(() => new Map(sites.map((s) => [s.id, s.name])), [sites]);
   const customerNameById = useMemo(
     () => new Map(customers.map((c) => [c.id, c.customerConnection.customerName])),
     [customers],
@@ -63,6 +82,16 @@ export function PaymentsExpensesPage() {
 
   const monthlyTotal = sum(payments.filter((row) => row.status === "Approved").map((row) => row.amount));
   const data = payments.filter((row) => row.category === active);
+  const submittedCount = payments.filter((row) => row.status === "Submitted").length;
+  const draftOrRejectedCount = payments.filter((row) => row.status === "Draft" || row.status === "Rejected").length;
+
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<PaymentCategory, number>> = {};
+    for (const row of payments) {
+      counts[row.category] = (counts[row.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [payments]);
 
   const columns: ExcelColumn<Payment>[] = [
     {
@@ -80,7 +109,7 @@ export function PaymentsExpensesPage() {
       width: 180,
       getValue: (row) => row.paidTo || plumberNameById.get(row.plumberId) || "-",
     },
-    { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) || "-" },
+    { key: "address", label: "Address", width: 190, getValue: (row) => row.address || "-" },
     { key: "customer", label: "Customer", width: 170, getValue: (row) => customerNameById.get(row.customerId) || "-" },
     { key: "amount", label: "Amount", width: 130, getValue: (row) => money(row.amount) },
     { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.paymentDate) },
@@ -129,25 +158,50 @@ export function PaymentsExpensesPage() {
               <DownloadSimpleIcon size={15} />
               Export Excel
             </button>
+            <ImportDialog
+              trigger={
+                <Button type="button" variant="outline">
+                  <UploadSimpleIcon size={15} />
+                  Import
+                </Button>
+              }
+              title="Import Payments"
+              description="Upload an Excel file to bulk import payment/expense records."
+              templateFileName="payments_template.xlsx"
+              templateHeaders={[
+                "Category",
+                "Paid To",
+                "Plumber Name",
+                "Amount",
+                "Payment Date",
+                "Mode",
+                "Purpose",
+                "Remarks",
+                "Address",
+              ]}
+              previewColumns={importPreviewColumns}
+              isPreviewPending={importPreview.isPending}
+              isConfirmPending={importConfirm.isPending}
+              entityLabelPlural="Payments"
+              onPreview={(file) => importPreview.mutateAsync(file)}
+              onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
+            />
             <PaymentDrawer defaultCategory={active} />
           </>
         }
       />
-      <StatCardRow>
-        <SummaryValue label="Approved This Month" value={money(monthlyTotal)} icon={<ReceiptIcon size={17} />} />
-        <SummaryValue
-          label="Submitted"
-          value={String(payments.filter((row) => row.status === "Submitted").length)}
-          icon={<FileTextIcon size={17} />}
-        />
-        <SummaryValue
-          label="Draft / Rejected"
-          value={String(payments.filter((row) => row.status === "Draft" || row.status === "Rejected").length)}
-          icon={<WarningIcon size={17} />}
-          warn
-        />
-      </StatCardRow>
-      <PaymentTabNav active={active} onChange={setActive} />
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
+        <span>
+          Approved this month: <span className="font-semibold text-foreground">{money(monthlyTotal)}</span>
+        </span>
+        <span>
+          Submitted: <span className="font-semibold text-foreground">{submittedCount}</span>
+        </span>
+        <span>
+          Draft / Rejected: <span className="font-semibold text-destructive">{draftOrRejectedCount}</span>
+        </span>
+      </div>
+      <PaymentTabNav active={active} onChange={setActive} counts={categoryCounts} />
       <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" isLoading={paymentsLoading} />
     </div>
   );
@@ -174,6 +228,7 @@ function emptyValues(defaultCategory: PaymentCategory): PaymentFormValues {
     plumberId: "",
     paidTo: "",
     siteId: "",
+    address: "",
     customerId: "",
     amount: "",
     paymentDate: new Date().toISOString().slice(0, 10),
@@ -191,6 +246,7 @@ function valuesFromPayment(payment: Payment): PaymentFormValues {
     plumberId: payment.plumberId,
     paidTo: payment.paidTo,
     siteId: payment.siteId,
+    address: payment.address,
     customerId: payment.customerId,
     amount: String(payment.amount),
     paymentDate: payment.paymentDate,
@@ -216,8 +272,8 @@ function PaymentDrawer({
     payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0]),
   );
   const [saveError, setSaveError] = useState("");
+  const { data: paymentModes = [] } = useMasterValuesQuery("Payment Types");
   const { data: plumbers = [] } = usePlumbersQuery();
-  const { data: sites = [] } = useAllProjectSitesQuery();
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment(payment?.id ?? "");
   const isSaving = createPayment.isPending || updatePayment.isPending;
@@ -304,6 +360,11 @@ function PaymentDrawer({
             </Select>
           </label>
 
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Purpose / What Bought</span>
+            <Input value={values.purpose} onChange={(event) => set("purpose", event.target.value)} placeholder="E.g. Pipe clamp purchase" />
+          </label>
+
           {isPlumberCategory ? (
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Plumber / Team</span>
@@ -328,14 +389,8 @@ function PaymentDrawer({
           )}
 
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Project / Site</span>
-            <SearchableSelect
-              value={values.siteId || undefined}
-              onValueChange={(siteId) => set("siteId", siteId ?? "")}
-              placeholder="Select site (optional)"
-              options={sites.map((s) => ({ value: s.id, label: s.name }))}
-              className="w-full"
-            />
+            <span className="text-xs font-medium text-muted-foreground">Address</span>
+            <Input value={values.address} onChange={(event) => set("address", event.target.value)} placeholder="Site / work address (optional)" />
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -351,18 +406,12 @@ function PaymentDrawer({
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Payment Mode</span>
-            <Select value={values.mode} onValueChange={(mode) => { if (mode) set("mode", mode as PaymentMode); }}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentModes.map((mode) => (
-                  <SelectItem key={mode} value={mode}>
-                    {mode}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={values.mode}
+              onValueChange={(mode) => set("mode", mode)}
+              options={paymentModes.map((mode) => ({ value: mode.value, label: mode.value }))}
+              placeholder="Select payment mode"
+            />
           </label>
 
           <ImageProofField
@@ -413,9 +462,11 @@ function PaymentDrawer({
 function PaymentTabNav({
   active,
   onChange,
+  counts,
 }: {
   active: PaymentCategory;
   onChange: (tab: PaymentCategory) => void;
+  counts: Partial<Record<PaymentCategory, number>>;
 }) {
   return (
     <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
@@ -425,13 +476,21 @@ function PaymentTabNav({
           type="button"
           onClick={() => onChange(tab)}
           className={cn(
-            "inline-flex h-10 shrink-0 items-center border-b-2 px-0.5 text-sm font-medium transition-colors",
+            "inline-flex h-10 w-fit shrink-0 cursor-pointer items-center gap-2 border-b-2 px-0.5 text-sm font-medium transition-colors",
             active === tab
               ? "border-b-primary text-primary font-semibold"
               : "border-b-transparent text-muted-foreground hover:text-foreground",
           )}
         >
-          {tab}
+          <span>{tab}</span>
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+              active === tab ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+            )}
+          >
+            {counts[tab] ?? 0}
+          </span>
         </button>
       ))}
     </div>

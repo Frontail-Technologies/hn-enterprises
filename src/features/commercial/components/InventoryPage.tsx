@@ -2,19 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { ImportDialog } from "@/components/shared/ImportDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { exportRowsToExcel } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import type { InventoryTab } from "../types/commercial.types";
 import type { Material, MaterialTransaction, MaterialTransactionType, PlumberBalance } from "../types/material.types";
 import { formatDate } from "../utils/format";
-import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
 import { useMaterialsQuery, useMaterialTransactionsQuery, usePlumberBalancesQuery } from "../hooks/useMaterials";
+import { useMaterialsImportPreview, useMaterialsImportConfirm } from "../hooks/useMaterialsImport";
+import type { MaterialImportRow } from "../services/materials-import.service";
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
 import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
@@ -52,23 +54,56 @@ type TotalIssueRow = {
 
 type PlumberBalanceRow = PlumberBalance & { id: string; plumberName: string; materialName: string };
 
+const importPreviewColumns: ExcelColumn<MaterialImportRow & { id: string }>[] = [
+  { key: "name", label: "Name", width: 220, getValue: (r) => r.name },
+  { key: "category", label: "Category", width: 160, getValue: (r) => r.category },
+  { key: "unit", label: "Unit", width: 100, getValue: (r) => r.unit },
+  { key: "reorderLevel", label: "Reorder Level", width: 140, getValue: (r) => r.reorderLevel },
+  {
+    key: "status",
+    label: "Status",
+    width: 120,
+    getValue: (r) => (r.error ? "invalid" : "valid"),
+    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
+  },
+  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
+];
+
 export function InventoryPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
   const { data: materials = [], isLoading: materialsLoading } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
+  const importPreview = useMaterialsImportPreview();
+  const importConfirm = useMaterialsImportConfirm();
   const { data: customers = [] } = useCustomersQuery();
-  const { data: sites = [] } = useAllProjectSitesQuery();
   const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery();
 
   const transactionType = TAB_TO_TRANSACTION_TYPE[activeTab];
-  const { data: transactions = [], isLoading: transactionsLoading } = useMaterialTransactionsQuery(
-    transactionType ? { type: transactionType } : { type: "purchase" },
-  );
-  const activeTransactions = useMemo(
-    () => (transactionType ? transactions : []),
-    [transactionType, transactions],
-  );
+
+  // Fetched unconditionally (not gated to the active tab) so every tab's
+  // count badge is right from the first render instead of only appearing
+  // once that tab has been clicked.
+  const { data: purchaseTransactions = [], isLoading: purchaseLoading } = useMaterialTransactionsQuery({ type: "purchase" });
+  const { data: pbgIssueTransactions = [], isLoading: pbgIssueLoading } = useMaterialTransactionsQuery({ type: "pbg_issue" });
+  const { data: pbgConsumptionTransactions = [], isLoading: pbgConsumptionLoading } = useMaterialTransactionsQuery({
+    type: "pbg_consumption",
+  });
+  const { data: issueTransactions = [], isLoading: issueLoading } = useMaterialTransactionsQuery({ type: "issue" });
+  const { data: consumptionTransactions = [], isLoading: consumptionLoading } = useMaterialTransactionsQuery({
+    type: "consumption",
+  });
+
+  const transactionsByType: Partial<Record<MaterialTransactionType, { data: MaterialTransaction[]; isLoading: boolean }>> = {
+    purchase: { data: purchaseTransactions, isLoading: purchaseLoading },
+    pbg_issue: { data: pbgIssueTransactions, isLoading: pbgIssueLoading },
+    pbg_consumption: { data: pbgConsumptionTransactions, isLoading: pbgConsumptionLoading },
+    issue: { data: issueTransactions, isLoading: issueLoading },
+    consumption: { data: consumptionTransactions, isLoading: consumptionLoading },
+  };
+
+  const activeTransactions = transactionType ? transactionsByType[transactionType]?.data ?? [] : [];
+  const transactionsLoading = transactionType ? transactionsByType[transactionType]?.isLoading ?? false : false;
 
   const materialNameById = useMemo(() => new Map(materials.map((m) => [m.id, m])), [materials]);
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
@@ -76,12 +111,9 @@ export function InventoryPage() {
     () => new Map(customers.map((c) => [c.id, { name: c.customerConnection.customerName, bpNo: c.customerConnection.trBpNo }])),
     [customers],
   );
-  const siteNameById = useMemo(() => new Map(sites.map((s) => [s.id, s.name])), [sites]);
-
   const totalIssueRows = useMemo<TotalIssueRow[]>(() => {
-    if (activeTab !== "totalIssue") return [];
     const grouped = new Map<string, TotalIssueRow>();
-    for (const row of activeTransactions) {
+    for (const row of issueTransactions) {
       const material = materialNameById.get(row.materialId);
       const existing = grouped.get(row.materialId);
       if (existing) {
@@ -101,7 +133,7 @@ export function InventoryPage() {
       }
     }
     return Array.from(grouped.values()).sort((a, b) => b.totalIssued - a.totalIssued);
-  }, [activeTab, activeTransactions, materialNameById]);
+  }, [issueTransactions, materialNameById]);
 
   const plumberBalanceRows = useMemo<PlumberBalanceRow[]>(
     () =>
@@ -116,13 +148,13 @@ export function InventoryPage() {
 
   const counts: Partial<Record<InventoryTab, number>> = {
     stock: materials.length,
-    purchase: activeTab === "purchase" ? activeTransactions.length : undefined,
-    pbgIssue: activeTab === "pbgIssue" ? activeTransactions.length : undefined,
-    pbgConsumption: activeTab === "pbgConsumption" ? activeTransactions.length : undefined,
-    storeIssue: activeTab === "storeIssue" ? activeTransactions.length : undefined,
-    totalIssue: activeTab === "totalIssue" ? totalIssueRows.length : undefined,
+    purchase: purchaseTransactions.length,
+    pbgIssue: pbgIssueTransactions.length,
+    pbgConsumption: pbgConsumptionTransactions.length,
+    storeIssue: issueTransactions.length,
+    totalIssue: totalIssueRows.length,
     plumberBalance: plumberBalanceRows.length,
-    plumberConsumption: activeTab === "plumberConsumption" ? activeTransactions.length : undefined,
+    plumberConsumption: consumptionTransactions.length,
   };
 
   const stockColumns: ExcelColumn<Material>[] = [
@@ -195,7 +227,7 @@ export function InventoryPage() {
         ...base,
         { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
         { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-        { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+        { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
       ];
     }
     if (kind === "consumption") {
@@ -210,7 +242,7 @@ export function InventoryPage() {
         { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
         { key: "plumber", label: "Plumber", width: 150, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
         { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-        { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+        { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
       ];
     }
     return base;
@@ -283,6 +315,26 @@ export function InventoryPage() {
               Export Excel
             </button>
             <MaterialCategoryDrawer />
+            {activeTab === "stock" ? (
+              <ImportDialog
+                trigger={
+                  <Button type="button" variant="outline">
+                    <UploadSimpleIcon size={15} />
+                    Import
+                  </Button>
+                }
+                title="Import Materials"
+                description="Upload an Excel file to bulk import catalog items."
+                templateFileName="materials_template.xlsx"
+                templateHeaders={["Name", "Category", "Unit", "Reorder Level"]}
+                previewColumns={importPreviewColumns}
+                isPreviewPending={importPreview.isPending}
+                isConfirmPending={importConfirm.isPending}
+                entityLabelPlural="Materials"
+                onPreview={(file) => importPreview.mutateAsync(file)}
+                onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
+              />
+            ) : null}
             <MaterialItemDrawer />
             <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
           </div>

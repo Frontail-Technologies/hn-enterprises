@@ -1,15 +1,50 @@
 {
   "name": "build-pro",
+  "productName": "HN Enterprises",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:standalone": "next build && node scripts/copy-standalone-assets.js",
+    "electron": "electron .",
+    "electron:start": "npm run build:standalone && npm run electron",
+    "dist": "npm run build:standalone && electron-builder --win"
+  },
+  "build": {
+    "appId": "org.hnenterprises.desktop",
+    "productName": "HN Enterprises",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "electron-assets/icon.png", "to": "icon.png" }
+    ],
+    "afterPack": "scripts/after-pack.js",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "electron-assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.4.0",
     "@phosphor-icons/react": "^2.1.10",
     "@react-pdf/renderer": "^4.5.1",
@@ -40,6 +75,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",

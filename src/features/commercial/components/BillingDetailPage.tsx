@@ -1,26 +1,42 @@
 "use client";
 
-import { CalendarBlankIcon, CurrencyInrIcon, DownloadSimpleIcon, FileTextIcon, UserIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { DownloadSimpleIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { exportGridToExcel, type GridCell } from "@/lib/export-excel";
 import { useCustomerQuery } from "@/features/customers/hooks/useCustomers";
-import { useBillPaymentsQuery, useBillQuery } from "../hooks/useBills";
-import type { BillPayment } from "../types/bill.types";
+import { useBillPaymentsQuery, useBillQuery, useDeleteBill, useUpdateBillPaymentStatus } from "../hooks/useBills";
+import type { BillPayment, BillPaymentStatus } from "../types/bill.types";
 import { formatDate, money } from "../utils/format";
-import { BillingActions } from "./billing/BillingActions";
+import { BillDrawer } from "./billing/BillDrawer";
 import { PaymentDrawer } from "./billing/PaymentDrawer";
-import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
-import { DetailSummaryCard } from "./shared/DetailSummaryCard";
 import { Panel } from "./shared/Panel";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
+
+const paymentStatuses: BillPaymentStatus[] = ["Cleared", "Pending", "Bounced"];
 
 export function BillingDetailPage({ id }: { id: string }) {
+  const router = useRouter();
   const { data: bill, isLoading, isError } = useBillQuery(id);
   const { data: payments = [] } = useBillPaymentsQuery(id);
   const { data: customer } = useCustomerQuery(bill?.customerId ?? "");
+  const deleteMutation = useDeleteBill();
+  const updatePaymentStatus = useUpdateBillPaymentStatus(id);
+  // Replaces the layout's generic (raw-UUID) breadcrumb segment with the
+  // bill number instead of rendering a second breadcrumb on this page.
+  useBreadcrumbLabel(bill?.billNumber);
 
   if (isLoading) {
     return <PageLoading />;
@@ -38,6 +54,31 @@ export function BillingDetailPage({ id }: { id: string }) {
       render: (row) => <b>{money(row.amount)}</b>,
     },
     { key: "mode", header: "Mode" },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => (
+        <Select
+          value={row.status}
+          onValueChange={(status) => {
+            if (status && status !== row.status) {
+              updatePaymentStatus.mutate({ paymentId: row.id, status: status as BillPaymentStatus });
+            }
+          }}
+        >
+          <SelectTrigger className="h-8 w-28 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {paymentStatuses.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
     { key: "remarks", header: "Remarks" },
   ];
 
@@ -52,11 +93,12 @@ export function BillingDetailPage({ id }: { id: string }) {
       [bold("Total Amount"), money(bill.totalAmount), bold("Tax"), money(bill.tax)],
       [bold("Paid Amount"), money(bill.paidAmount), bold("Pending Amount"), money(bill.pendingAmount)],
       [],
-      [bold("Date"), bold("Amount"), bold("Mode"), bold("Remarks")],
+      [bold("Date"), bold("Amount"), bold("Mode"), bold("Status"), bold("Remarks")],
       ...payments.map((payment) => [
         formatDate(payment.paymentDate),
         money(payment.amount),
         payment.mode,
+        payment.status,
         payment.remarks || "-",
       ]),
     ];
@@ -65,71 +107,39 @@ export function BillingDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-5">
-      <CommercialBreadcrumb
-        items={[
-          { label: "Billing", href: "/billing" },
-          { label: bill.billNumber },
-        ]}
-      />
       <PageHeader
         title={bill.billNumber}
         subtitle={`${bill.stage} billing for ${customer?.customerConnection.customerName ?? "customer"}`}
-        actions={<BillingActions bill={bill} labels />}
+        actions={
+          <div className="flex items-center gap-2">
+            <BillDrawer bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />
+            <DeleteConfirmDialog
+              itemName={`Bill ${bill.billNumber}`}
+              variant="full"
+              onConfirm={() =>
+                deleteMutation.mutate(bill.id, {
+                  onSuccess: () => router.push("/billing"),
+                })
+              }
+            />
+          </div>
+        }
       />
-      <DetailSummaryCard
-        title="Bill Overview"
-        status={<StatusBadge status={bill.status} />}
-        leftItems={[
-          {
-            icon: <FileTextIcon size={15} />,
-            label: "Bill Number",
-            value: bill.billNumber,
-          },
-          {
-            icon: <CalendarBlankIcon size={15} />,
-            label: "Bill Date",
-            value: formatDate(bill.billDate),
-          },
-          {
-            icon: <CalendarBlankIcon size={15} />,
-            label: "Due Date",
-            value: formatDate(bill.dueDate),
-          },
-          {
-            icon: <CurrencyInrIcon size={15} />,
-            label: "Amount",
-            value: money(bill.totalAmount),
-          },
-          {
-            icon: <CurrencyInrIcon size={15} />,
-            label: "Tax",
-            value: money(bill.tax),
-          },
-        ]}
-        rightTitle="Collection"
-        rightItems={[
-          {
-            icon: <UserIcon size={15} />,
-            label: "Customer",
-            value: customer?.customerConnection.customerName ?? "-",
-          },
-          {
-            icon: <FileTextIcon size={15} />,
-            label: "Billing Stage",
-            value: bill.stage,
-          },
-          {
-            icon: <CurrencyInrIcon size={15} />,
-            label: "Paid Amount",
-            value: money(bill.paidAmount),
-          },
-          {
-            icon: <CurrencyInrIcon size={15} />,
-            label: "Pending Amount",
-            value: money(bill.pendingAmount),
-          },
-        ]}
-      />
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <StatusBadge status={bill.status} />
+        <span>
+          Bill date: <span className="font-semibold text-foreground">{formatDate(bill.billDate)}</span>
+        </span>
+        <span>
+          Total: <span className="font-semibold text-foreground">{money(bill.totalAmount)}</span>
+        </span>
+        <span>
+          Paid: <span className="font-semibold text-foreground">{money(bill.paidAmount)}</span>
+        </span>
+        <span>
+          Pending: <span className="font-semibold text-destructive">{money(bill.pendingAmount)}</span>
+        </span>
+      </div>
       <Panel
         title="Payment History"
         actions={

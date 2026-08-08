@@ -47,6 +47,7 @@ export type MaterialTransaction = {
   supervisorId: string;
   supervisorName: string;
   siteId: string;
+  address: string;
   storeLabel: string;
   customerId: string;
   paymentId: string;
@@ -71,6 +72,7 @@ export type MaterialTransactionFormValues = {
   plumberId: string;
   supervisorId: string;
   siteId: string;
+  address: string;
   storeLabel: string;
   customerId: string;
   paymentId: string;

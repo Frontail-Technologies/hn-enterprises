@@ -4,10 +4,8 @@ export type MasterValueCategory =
   | "House Types"
   | "Schemes"
   | "Document Categories"
-  | "Staff Roles"
-  | "Bank Types"
-  | "UPI Types"
-  | "Material Categories";
+  | "Material Categories"
+  | "Meter Types";
 
 export type MasterValueStatus = "Active" | "Inactive";
 
@@ -22,31 +20,6 @@ export type MasterValue = {
 export type MasterValueFormValues = {
   value: string;
   description: string;
-  status: MasterValueStatus;
-};
-
-export type CustomFieldValueType = "Text" | "Number" | "Date" | "Amount" | "Yes / No" | "Dropdown";
-
-export type CustomField = {
-  id: string;
-  key: string;
-  label: string;
-  group: string;
-  width: number;
-  valueType: CustomFieldValueType;
-  dropdownOptions: string[];
-  required: boolean;
-  status: MasterValueStatus;
-};
-
-export type CustomFieldFormValues = {
-  key: string;
-  label: string;
-  group: string;
-  width: string;
-  valueType: CustomFieldValueType;
-  dropdownOptions: string[];
-  required: boolean;
   status: MasterValueStatus;
 };
 
@@ -67,7 +40,7 @@ export type HolidayFormValues = {
   status: MasterValueStatus;
 };
 
-export type MasterTabId = MasterValueCategory | "Holidays" | "Master Sheet Columns";
+export type MasterTabId = MasterValueCategory | "Holidays";
 
 export const masterValueCategories: MasterValueCategory[] = [
   "Payment Types",
@@ -75,14 +48,11 @@ export const masterValueCategories: MasterValueCategory[] = [
   "House Types",
   "Schemes",
   "Document Categories",
-  "Staff Roles",
-  "Bank Types",
-  "UPI Types",
   "Material Categories",
+  "Meter Types",
 ];
 
 export const masterTabs: Array<{ id: MasterTabId; label: string }> = [
   ...masterValueCategories.map((category) => ({ id: category, label: category })),
   { id: "Holidays", label: "Holidays" },
-  { id: "Master Sheet Columns", label: "Master Sheet Columns" },
 ];

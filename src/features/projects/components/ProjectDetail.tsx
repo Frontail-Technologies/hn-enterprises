@@ -7,22 +7,11 @@ import {
   DownloadSimpleIcon,
   EyeIcon,
   FileArrowUpIcon,
-  MapPinIcon,
   NotePencilIcon,
-  PlusIcon,
   TrashIcon,
-  UserPlusIcon,
-  BuildingsIcon,
-  ChartLineUpIcon,
-  FilesIcon,
-  UsersIcon,
-  CheckCircleIcon,
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { MetricCard } from "@/components/shared/MetricCard";
-import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { ActionButton } from "@/components/shared/ActionButton";
-import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { resolveFileUrl, uploadFile } from "@/lib/upload";
 import {
   Dialog,
@@ -51,32 +40,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
-import { LocationPicker } from "@/components/shared/LocationPicker";
-import { LocationPreview } from "@/components/shared/LocationPreview";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   useProjectDocumentsQuery,
   useProjectQuery,
-  useProjectSitesQuery,
-  useSaveProjectSite,
   useCreateProjectDocument,
   useDeleteProjectDocument,
 } from "@/features/projects/hooks/useProjects";
 import { PageLoading } from "@/components/shared/PageLoading";
 import type {
   ActivityItem,
-  AssignedUser,
   Project,
   ProjectDocument,
-  ProjectSite,
 } from "../types/project.types";
-
-const assignedUsers: AssignedUser[] = [];
 
 type TargetValues = Record<string, string>;
 type ChangeHistoryItem = {
@@ -100,34 +80,14 @@ const documentCategories = [
   { type: "Other", label: "Other", numberLabel: "Reference No.", amountLabel: "Amount" },
 ];
 
-const statusOptions = [
-  "Active",
-  "In Progress",
-  "Not Started",
-  "On Hold",
-  "Completed",
-];
-const teamRoleOptions = [
-  "Project Manager",
-  "Site Supervisor",
-  "Survey Lead",
-  "Billing Executive",
-  "Document Controller",
-  "Safety Officer",
-];
-
 const projectSectionLinks = [
   { value: "overview", label: "Overview" },
   { value: "contract", label: "Contract & Targets" },
-  { value: "sites", label: "Sites" },
   { value: "documents", label: "Documents" },
-  { value: "team", label: "Team" },
 ];
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
   const { data: project, isLoading, isError } = useProjectQuery(projectId);
-  const { data: sites = [] } = useProjectSitesQuery(projectId);
-  const { data: documents = [] } = useProjectDocumentsQuery(projectId);
 
   if (isLoading) {
     return <PageLoading />;
@@ -140,18 +100,11 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-foreground">
-              {project.name}
-            </h1>
-            <StatusBadge status={project.status} />
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
-            <span>{project.code}</span>
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
-            <span>{project.city}</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-lg font-bold text-foreground">
+            {project.name}
+          </h1>
+          <StatusBadge status={project.status} />
         </div>
         <Link
           href={`/projects/${project.id}/edit`}
@@ -162,14 +115,6 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <MetricCard label="Total Sites" value={sites.length} icon={MapPinIcon} className="h-20 min-w-32 flex-1" />
-        <MetricCard label="Active Sites" value={sites.filter(s => s.status === "Active" || s.status === "In Progress").length} icon={CheckCircleIcon} className="h-20 min-w-32 flex-1" />
-        <MetricCard label="Documents" value={documents.length} icon={FilesIcon} className="h-20 min-w-32 flex-1" />
-        <MetricCard label="Team Members" value={assignedUsers.length} icon={UsersIcon} className="h-20 min-w-32 flex-1" />
-        <MetricCard label="Progress" value="0%" icon={ChartLineUpIcon} className="h-20 min-w-32 flex-1" />
-      </div>
-
       <Tabs defaultValue="overview" className="gap-4">
         <ProjectSectionNav />
         <TabsContent value="overview">
@@ -178,14 +123,8 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         <TabsContent value="contract">
           <ContractTargets project={project} />
         </TabsContent>
-        <TabsContent value="sites">
-          <ProjectSites projectId={project.id} />
-        </TabsContent>
         <TabsContent value="documents">
           <ProjectDocuments projectId={project.id} />
-        </TabsContent>
-        <TabsContent value="team">
-          <ProjectTeam />
         </TabsContent>
       </Tabs>
     </div>
@@ -217,7 +156,6 @@ function ProjectOverview({ project }: { project: Project }) {
     ["Contractor", project.contractor],
     ["Project Type", project.projectType],
     ["City", project.city],
-    ["Area / Location", project.area],
     ["Start Date", formatDate(project.startDate)],
     ["End Date", formatDate(project.plannedEndDate)],
     ["Contract Value", project.contractValue],
@@ -228,113 +166,6 @@ function ProjectOverview({ project }: { project: Project }) {
   return (
     <SectionCard title="Project Information">
       <InfoGrid items={summary} />
-    </SectionCard>
-  );
-}
-
-function ProjectSites({ projectId }: { projectId: string }) {
-  const { data: sites = [], isLoading } = useProjectSitesQuery(projectId);
-  const saveSiteMutation = useSaveProjectSite(projectId);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedSite, setSelectedSite] = useState<ProjectSite | null>(null);
-  const [draft, setDraft] = useState<ProjectSite>(emptySite);
-
-  const columns: ColumnDef<ProjectSite>[] = [
-    { key: "name", header: "Site Name" },
-    { key: "code", header: "Site Code" },
-    { key: "city", header: "City" },
-    { key: "fullAddress", header: "Address" },
-    { key: "plannedConnections", header: "Planned Connections" },
-    { key: "supervisor", header: "Supervisor" },
-    {
-      key: "status",
-      header: "Status",
-      render: (site) => <StatusBadge status={site.status} />,
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (site) => (
-        <div className="flex items-center gap-1">
-          <ActionTooltip label="View Map">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="View site map"
-              onClick={() => {
-                setSelectedSite(site);
-                setMapOpen(true);
-              }}
-            >
-              <MapPinIcon size={14} />
-            </Button>
-          </ActionTooltip>
-          <ActionTooltip label="Edit">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Edit site"
-              onClick={() => {
-                setEditingId(site.id);
-                setDraft(site);
-                setDialogOpen(true);
-              }}
-            >
-              <NotePencilIcon size={14} />
-            </Button>
-          </ActionTooltip>
-        </div>
-      ),
-    },
-  ];
-
-  const saveSite = async () => {
-    if (!draft.name || !draft.code) return;
-    await saveSiteMutation.mutateAsync(editingId ? draft : { ...draft, id: "new" });
-    setDialogOpen(false);
-    setEditingId(null);
-    setDraft(emptySite);
-  };
-
-  return (
-    <SectionCard
-      title="Sites"
-      action={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditingId(null);
-            setDraft(emptySite);
-            setDialogOpen(true);
-          }}
-        >
-          <PlusIcon size={14} />
-          Add Site
-        </Button>
-      }
-    >
-      <DataTable
-        columns={columns}
-        data={sites}
-        variant="striped"
-        isLoading={isLoading}
-        emptyTitle="No sites added yet"
-      />
-      <SiteDialog
-        open={dialogOpen}
-        title={editingId ? "Edit Site" : "Add Site"}
-        draft={draft}
-        setDraft={setDraft}
-        onOpenChange={setDialogOpen}
-        onSave={saveSite}
-      />
-      <SiteMapDialog
-        open={mapOpen}
-        site={selectedSite}
-        onOpenChange={setMapOpen}
-      />
     </SectionCard>
   );
 }
@@ -608,118 +439,6 @@ function ProjectDocuments({ projectId }: { projectId: string }) {
   );
 }
 
-function ProjectTeam() {
-  const [users, setUsers] = useState<AssignedUser[]>(assignedUsers);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<AssignedUser>(emptyAssignment);
-
-  const columns: ColumnDef<AssignedUser>[] = [
-    { key: "name", header: "Assigned User" },
-    { key: "role", header: "Role" },
-    { key: "siteArea", header: "Site / Area" },
-    {
-      key: "assignmentDate",
-      header: "Assignment Date",
-      render: (user) => formatDate(user.assignmentDate),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (user) => <StatusBadge status={user.status} />,
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (user) => (
-        <div className="flex items-center gap-1">
-          <ActionTooltip label="Edit">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Edit assignment"
-              onClick={() => {
-                setEditingId(user.id);
-                setDraft(user);
-                setDialogOpen(true);
-              }}
-            >
-              <NotePencilIcon size={14} />
-            </Button>
-          </ActionTooltip>
-          <ActionTooltip label="Remove">
-            <DeleteConfirmDialog
-              itemName={`${user.name} assignment`}
-              onConfirm={() =>
-                setUsers((current) =>
-                  current.filter((item) => item.id !== user.id),
-                )
-              }
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Remove assignment"
-                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <TrashIcon size={14} />
-                </Button>
-              }
-            />
-          </ActionTooltip>
-        </div>
-      ),
-    },
-  ];
-
-  const saveAssignment = () => {
-    if (!draft.name || !draft.role) return;
-    if (editingId) {
-      setUsers((current) =>
-        current.map((user) => (user.id === editingId ? draft : user)),
-      );
-    } else {
-      setUsers((current) => [
-        ...current,
-        { ...draft, id: `user-${current.length + 1}` },
-      ]);
-    }
-    setDialogOpen(false);
-    setEditingId(null);
-    setDraft(emptyAssignment);
-  };
-
-  return (
-    <SectionCard
-      title="Team"
-      action={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditingId(null);
-            setDraft(emptyAssignment);
-            setDialogOpen(true);
-          }}
-        >
-          <UserPlusIcon size={14} />
-          Assign User
-        </Button>
-      }
-    >
-      <DataTable columns={columns} data={users} variant="striped" />
-      <TeamDialog
-        open={dialogOpen}
-        title={editingId ? "Edit Assignment" : "Assign User"}
-        draft={draft}
-        setDraft={setDraft}
-        onOpenChange={setDialogOpen}
-        onSave={saveAssignment}
-      />
-    </SectionCard>
-  );
-}
-
 export function ActivityTimeline({ items }: { items: ActivityItem[] }) {
   return (
     <SectionCard title="Activity">
@@ -821,252 +540,6 @@ function TargetsDialog({
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function SiteDialog({
-  open,
-  title,
-  draft,
-  setDraft,
-  onOpenChange,
-  onSave,
-}: {
-  open: boolean;
-  title: string;
-  draft: ProjectSite;
-  setDraft: React.Dispatch<React.SetStateAction<ProjectSite>>;
-  onOpenChange: (open: boolean) => void;
-  onSave: () => void;
-}) {
-  const { data: supervisors = [] } = useRosterQuery("supervisor");
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Maintain compact project site details.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="min-h-0 overflow-y-auto pr-1">
-          <div className="grid gap-3 md:grid-cols-2">
-            <CompactInput
-              label="Site Name"
-              value={draft.name}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, name: value }))
-              }
-            />
-            <CompactInput
-              label="Site Code"
-              value={draft.code}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, code: value }))
-              }
-            />
-            <CompactInput
-              label="City"
-              value={draft.city}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, city: value }))
-              }
-            />
-            <CompactInput
-              label="Latitude"
-              type="number"
-              value={String(draft.latitude)}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, latitude: Number(value) }))
-              }
-            />
-            <CompactInput
-              label="Longitude"
-              type="number"
-              value={String(draft.longitude)}
-              onChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  longitude: Number(value),
-                }))
-              }
-            />
-            <FormField label="Supervisor">
-              <Select
-                value={draft.supervisorId || undefined}
-                onValueChange={(supervisorId) => {
-                  const supervisor = supervisors.find((item) => item.id === supervisorId);
-                  setDraft((current) => ({
-                    ...current,
-                    supervisorId: supervisorId ?? "",
-                    supervisor: supervisor?.name ?? "",
-                  }));
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select supervisor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {supervisors.map((supervisor) => (
-                    <SelectItem key={supervisor.id} value={supervisor.id}>
-                      {supervisor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-            <CompactInput
-              label="Planned Connections"
-              type="number"
-              value={String(draft.plannedConnections)}
-              onChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  plannedConnections: Number(value),
-                }))
-              }
-            />
-            <CompactInput
-              label="Start Date"
-              type="date"
-              value={draft.startDate}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, startDate: value }))
-              }
-            />
-            <CompactInput
-              label="End Date"
-              type="date"
-              value={draft.endDate}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, endDate: value }))
-              }
-            />
-            <FormField label="Status">
-              <Select
-                value={draft.status}
-                onValueChange={(value) =>
-                  setDraft((current) => ({
-                    ...current,
-                    status: (value ?? "Active") as StatusValue,
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-            <FormField label="Full Address">
-              <Textarea
-                value={draft.fullAddress}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    fullAddress: event.target.value,
-                  }))
-                }
-              />
-            </FormField>
-            <FormField label="Remarks">
-              <Textarea
-                value={draft.remarks}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    remarks: event.target.value,
-                  }))
-                }
-              />
-            </FormField>
-            <div className="md:col-span-2">
-              <FormField label="Pick on Map">
-                <LocationPicker
-                  latitude={draft.latitude}
-                  longitude={draft.longitude}
-                  heightClassName="h-40"
-                  onChange={(coordinates) =>
-                    setDraft((current) => ({
-                      ...current,
-                      latitude: coordinates.latitude,
-                      longitude: coordinates.longitude,
-                    }))
-                  }
-                />
-              </FormField>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onSave}>Save Site</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SiteMapDialog({
-  open,
-  site,
-  onOpenChange,
-}: {
-  open: boolean;
-  site: ProjectSite | null;
-  onOpenChange: (open: boolean) => void;
-}) {
-  if (!site) return null;
-  const mapsHref = `https://www.google.com/maps?q=${site.latitude},${site.longitude}`;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{site.name}</DialogTitle>
-          <DialogDescription>{site.code}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <LocationPreview
-            latitude={site.latitude}
-            longitude={site.longitude}
-          />
-          <InfoGrid
-            items={[
-              ["Address", site.fullAddress],
-              [
-                "Coordinates",
-                `${site.latitude.toFixed(6)}, ${site.longitude.toFixed(6)}`,
-              ],
-              ["City", site.city],
-              ["Supervisor", site.supervisor],
-            ]}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-          <Link
-            href={mapsHref}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ variant: "default", size: "default" })}
-          >
-            Open in Google Maps
-          </Link>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -1227,106 +700,6 @@ function DocumentDialog({
   );
 }
 
-function TeamDialog({
-  open,
-  title,
-  draft,
-  setDraft,
-  onOpenChange,
-  onSave,
-}: {
-  open: boolean;
-  title: string;
-  draft: AssignedUser;
-  setDraft: React.Dispatch<React.SetStateAction<AssignedUser>>;
-  onOpenChange: (open: boolean) => void;
-  onSave: () => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Assign a user to a project role and site or area.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-3 md:grid-cols-2">
-          <CompactInput
-            label="Assigned User"
-            value={draft.name}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, name: value }))
-            }
-          />
-          <FormField label="Role">
-            <Select
-              value={draft.role || undefined}
-              onValueChange={(value) =>
-                setDraft((current) => ({ ...current, role: value ?? "" }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                {teamRoleOptions.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <CompactInput
-            label="Site / Area"
-            value={draft.siteArea}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, siteArea: value }))
-            }
-          />
-          <CompactInput
-            label="Assignment Date"
-            type="date"
-            value={draft.assignmentDate}
-            onChange={(value) =>
-              setDraft((current) => ({ ...current, assignmentDate: value }))
-            }
-          />
-          <FormField label="Status">
-            <Select
-              value={draft.status}
-              onValueChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  status: (value ?? "Active") as StatusValue,
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onSave}>Save Assignment</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function InfoGrid({ items }: { items: string[][] }) {
   return (
     <KeyValueGrid
@@ -1378,23 +751,6 @@ function formatDateTime(value: string) {
   return format(parseISO(value.replace(" ", "T")), "dd MMM yyyy, hh:mm a");
 }
 
-const emptySite: ProjectSite = {
-  id: "new",
-  name: "",
-  code: "",
-  city: "",
-  fullAddress: "",
-  latitude: 26.8951,
-  longitude: 75.7684,
-  supervisorId: "",
-  supervisor: "",
-  plannedConnections: 0,
-  startDate: "",
-  endDate: "",
-  status: "Active",
-  remarks: "",
-};
-
 const emptyDocument: ProjectDocument = {
   id: "new",
   type: "Other",
@@ -1410,13 +766,4 @@ const emptyDocument: ProjectDocument = {
   remarks: "",
   uploadedOn: format(new Date(), "yyyy-MM-dd"),
   uploadedBy: "Demo Admin",
-};
-
-const emptyAssignment: AssignedUser = {
-  id: "new",
-  name: "",
-  role: "",
-  siteArea: "",
-  assignmentDate: "",
-  status: "Active",
 };

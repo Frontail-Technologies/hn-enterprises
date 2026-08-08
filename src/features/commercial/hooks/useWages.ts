@@ -23,3 +23,15 @@ export function useUpsertWage() {
     onError: (error: any) => toast.error(error?.message || "Failed to update wage"),
   });
 }
+
+export function useDeleteWage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => wagesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: wagesKey });
+      toast.success("Wage record deleted");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete wage record"),
+  });
+}

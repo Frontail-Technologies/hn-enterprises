@@ -26,10 +26,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { useCreateBill, useUpdateBill, useDeleteBill } from "../../hooks/useBills";
-import type { Bill, BillFormValues, BillStage } from "../../types/bill.types";
+import type { Bill, BillFormValues, BillStage, BillStatus } from "../../types/bill.types";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const billStages: BillStage[] = ["GI", "GC", "Commissioning", "Conversion", "Other"];
+const billStatuses: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
 
 function emptyValues(): BillFormValues {
   return {
@@ -40,6 +41,7 @@ function emptyValues(): BillFormValues {
     dueDate: "",
     totalAmount: "",
     tax: "",
+    status: "Draft",
     remarks: "",
   };
 }
@@ -53,6 +55,7 @@ function valuesFromBill(bill: Bill): BillFormValues {
     dueDate: bill.dueDate,
     totalAmount: String(bill.totalAmount),
     tax: String(bill.tax),
+    status: bill.status,
     remarks: bill.remarks,
   };
 }
@@ -202,13 +205,35 @@ export function BillDrawer({
             </label>
           </div>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Due Date</span>
-            <DatePicker
-              value={values.dueDate}
-              onChange={(dueDate) => setValues((current) => ({ ...current, dueDate }))}
-            />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Due Date</span>
+              <DatePicker
+                value={values.dueDate}
+                onChange={(dueDate) => setValues((current) => ({ ...current, dueDate }))}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Status</span>
+              <Select
+                value={values.status}
+                onValueChange={(status) => {
+                  if (status) setValues((current) => ({ ...current, status: status as BillStatus }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {billStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Remarks</span>

@@ -9,11 +9,12 @@ import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useStaffQuery } from "../hooks/useStaff";
+import { useStaffQuery, useDeleteStaff } from "../hooks/useStaff";
 import { useUsersQuery } from "../hooks/useUsers";
 import type { Staff } from "../types/staff.types";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { StaffDrawer } from "./StaffDrawer";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
@@ -32,12 +33,14 @@ export function StaffResourcesPage() {
     status: "all",
   });
   const { data: staff = [], isLoading: staffLoading } = useStaffQuery();
+  const deleteStaff = useDeleteStaff();
   const { data: users = [] } = useUsersQuery();
   const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return staff.filter(
       (row) =>
+        (row.role === "Super Admin" || row.role === "Supervisor") &&
         (!search ||
           row.name.toLowerCase().includes(search) ||
           row.contact.toLowerCase().includes(search)) &&
@@ -62,7 +65,7 @@ export function StaffResourcesPage() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-20",
+      className: "w-24",
       render: (row) => (
         <div className="flex items-center gap-1">
           <ActionTooltip label="View staff">
@@ -83,6 +86,10 @@ export function StaffResourcesPage() {
               <NotePencilIcon size={15} />
             </Link>
           </ActionTooltip>
+          <DeleteConfirmDialog
+            itemName={row.name}
+            onConfirm={() => deleteStaff.mutateAsync(row.id)}
+          />
         </div>
       ),
     },

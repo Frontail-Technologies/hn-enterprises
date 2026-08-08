@@ -11,18 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { cn } from "@/lib/utils";
-import { useWagesQuery } from "../../hooks/useWages";
+import { useDeleteWage, useWagesQuery } from "../../hooks/useWages";
 import { money } from "../../utils/format";
 import type { WageRecord } from "../../types/wage.types";
 import { WageDrawer } from "./WageDrawer";
 
-import { FileTextIcon, ReceiptIcon, WarningIcon } from "@phosphor-icons/react";
-import { StatCardRow, SummaryValue } from "../shared/StatCards";
 import { sum } from "../../utils/format";
 
 function monthOptions() {
@@ -40,6 +39,7 @@ export function WageRegister() {
   const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
   const isLoading = wagesLoading || plumbersLoading;
+  const deleteWage = useDeleteWage();
 
   const wageTotals = {
     gross: sum(wages.map((row) => row.total)),
@@ -68,25 +68,20 @@ export function WageRegister() {
 
   return (
     <>
-      <StatCardRow>
-        <SummaryValue label="Gross Wages" value={money(wageTotals.gross)} />
-        <SummaryValue
-          label="Deductions"
-          value={money(wageTotals.deductions)}
-          icon={<FileTextIcon size={17} />}
-        />
-        <SummaryValue
-          label="Net Payable"
-          value={money(wageTotals.net)}
-          icon={<ReceiptIcon size={17} />}
-        />
-        <SummaryValue
-          label="Pending Payments"
-          value={String(wageTotals.pending)}
-          icon={<WarningIcon size={17} />}
-          warn
-        />
-      </StatCardRow>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
+        <span>
+          Gross wages: <span className="font-semibold text-foreground">{money(wageTotals.gross)}</span>
+        </span>
+        <span>
+          Deductions: <span className="font-semibold text-foreground">{money(wageTotals.deductions)}</span>
+        </span>
+        <span>
+          Net payable: <span className="font-semibold text-foreground">{money(wageTotals.net)}</span>
+        </span>
+        <span>
+          Pending payments: <span className="font-semibold text-destructive">{wageTotals.pending}</span>
+        </span>
+      </div>
       <section className="rounded-lg border border-border/70 bg-card">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
         <div>
@@ -165,7 +160,7 @@ export function WageRegister() {
                   <RegisterHeaderCell className="w-36 min-w-36 text-right">Total Deduction</RegisterHeaderCell>
                   <RegisterHeaderCell className="w-36 min-w-36 text-right">Net Payment</RegisterHeaderCell>
                   <RegisterHeaderCell className="w-32 min-w-32 text-center">Status</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-20 min-w-20 text-center">Edit</RegisterHeaderCell>
+                  <RegisterHeaderCell className="w-24 min-w-24 text-center">Actions</RegisterHeaderCell>
                 </tr>
               </thead>
               <tbody>
@@ -191,7 +186,13 @@ export function WageRegister() {
                       <StatusBadge status={row.status} />
                     </RegisterBodyCell>
                     <RegisterBodyCell className="text-center">
-                      <WageDrawer month={month} wage={row} icon={<NotePencilIcon size={15} />} iconOnly />
+                      <div className="flex items-center justify-center gap-1">
+                        <WageDrawer month={month} wage={row} icon={<NotePencilIcon size={15} />} iconOnly />
+                        <DeleteConfirmDialog
+                          itemName={`${plumberNameById.get(row.plumberId) ?? "this"} wage entry`}
+                          onConfirm={() => deleteWage.mutate(row.id)}
+                        />
+                      </div>
                     </RegisterBodyCell>
                   </tr>
                 ))}

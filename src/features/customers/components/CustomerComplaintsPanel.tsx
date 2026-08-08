@@ -12,9 +12,12 @@ import { ComplaintPriorityBadge } from "@/features/complaints/components/complai
 import { PaginatedDataTable } from "@/features/complaints/components/shared/PaginatedDataTable";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Input } from "@/components/ui/input";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { useDeleteComplaint } from "@/features/complaints/hooks/useComplaints";
 
 export function CustomerComplaintsPanel({ customerId }: { customerId: string }) {
   const { data: allComplaints = [], isLoading } = useComplaintsQuery();
+  const deleteComplaint = useDeleteComplaint();
   const [search, setSearch] = useState("");
 
   const complaints = useMemo(() => {
@@ -47,15 +50,21 @@ export function CustomerComplaintsPanel({ customerId }: { customerId: string }) 
     {
       key: "actions",
       header: "Actions",
-      className: "w-16",
+      className: "w-24",
       render: (row) => (
-        <ComplaintDrawer
-          complaint={row}
-          preselectedCustomerId={customerId}
-          triggerLabel="Edit Complaint"
-          icon={<NotePencilIcon size={15} />}
-          iconOnly
-        />
+        <div className="flex items-center gap-1">
+          <ComplaintDrawer
+            complaint={row}
+            preselectedCustomerId={customerId}
+            triggerLabel="Edit Complaint"
+            icon={<NotePencilIcon size={15} />}
+            iconOnly
+          />
+          <DeleteConfirmDialog
+            itemName={row.title}
+            onConfirm={() => deleteComplaint.mutateAsync(row.id)}
+          />
+        </div>
       ),
     },
   ];

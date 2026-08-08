@@ -1,16 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ImportDialog } from "@/components/shared/ImportDialog";
+import { type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/features/management/components/shared/PageShell";
 import { PaginatedDataTable } from "@/features/management/components/shared/PaginatedDataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useDeletePlumber, usePlumbersQuery } from "../hooks/usePlumbers";
+import { usePlumbersImportPreview, usePlumbersImportConfirm } from "../hooks/usePlumbersImport";
+import type { PlumberImportRow } from "../services/plumbers-import.service";
 import { PlumberDrawer } from "./PlumberDrawer";
 import type { Plumber } from "../types/plumber.types";
 
@@ -22,11 +26,28 @@ const exportColumns: ExportColumn<Plumber>[] = [
   { label: "Remarks", getValue: (row) => row.remarks },
 ];
 
+const importPreviewColumns: ExcelColumn<PlumberImportRow & { id: string }>[] = [
+  { key: "name", label: "Name", width: 220, getValue: (r) => r.name },
+  { key: "type", label: "Type", width: 130, getValue: (r) => r.type },
+  { key: "contactNumber", label: "Contact Number", width: 160, getValue: (r) => r.contactNumber },
+  { key: "remarks", label: "Remarks", width: 240, getValue: (r) => r.remarks },
+  {
+    key: "status",
+    label: "Status",
+    width: 120,
+    getValue: (r) => (r.error ? "invalid" : "valid"),
+    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
+  },
+  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
+];
+
 export function PlumbersPage() {
   const [filters, setFilters] = useState({ search: "", type: "all", status: "all" });
   const { data: plumbers = [] } = usePlumbersQuery(filters.search || undefined);
   const deletePlumber = useDeletePlumber();
   const [drawerState, setDrawerState] = useState<{ open: boolean; plumber?: Plumber }>({ open: false });
+  const importPreview = usePlumbersImportPreview();
+  const importConfirm = usePlumbersImportConfirm();
 
   const filteredPlumbers = useMemo(
     () =>
@@ -89,6 +110,24 @@ export function PlumbersPage() {
             <DownloadSimpleIcon size={15} />
             Export Excel
           </button>
+          <ImportDialog
+            trigger={
+              <Button type="button" variant="outline">
+                <UploadSimpleIcon size={15} />
+                Import
+              </Button>
+            }
+            title="Import Plumbers"
+            description="Upload an Excel file to bulk import plumbers."
+            templateFileName="plumbers_template.xlsx"
+            templateHeaders={["Name", "Type", "Contact Number", "Remarks"]}
+            previewColumns={importPreviewColumns}
+            isPreviewPending={importPreview.isPending}
+            isConfirmPending={importConfirm.isPending}
+            entityLabelPlural="Plumbers"
+            onPreview={(file) => importPreview.mutateAsync(file)}
+            onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
+          />
           <Button type="button" onClick={() => setDrawerState({ open: true })}>
             <PlusIcon size={15} />
             Add Plumber

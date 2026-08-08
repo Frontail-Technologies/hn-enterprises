@@ -15,7 +15,7 @@ import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGr
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageShell } from "@/components/shared/PageShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { useCustomFieldsQuery } from "@/features/management/hooks/useMasters";
+import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
 import { ApiError } from "@/lib/api-client";
 import { exportColumnTemplate } from "@/lib/export-excel";
 import {
@@ -37,7 +37,7 @@ export function CustomerImport() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [view, setView] = useState<"upload" | "preview">("upload");
-  const { data: activeCustomFields = [] } = useCustomFieldsQuery("Active");
+  const { data: activeCustomFields = [] } = useDynamicFieldsQuery("Active");
   const [isDragging, setIsDragging] = useState(false);
 
   const [isPreviewing, setIsPreviewing] = useState(false);

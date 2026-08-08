@@ -7,7 +7,7 @@ export type PaymentCategory =
   | "Other Expenses";
 
 export type PaymentStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
-export type PaymentMode = "Cash" | "UPI" | "NEFT" | "Bank Transfer" | "Cheque" | "Other";
+export type PaymentMode = string;
 
 export type PaymentEvidence = {
   id: string;
@@ -22,6 +22,7 @@ export type Payment = {
   plumberId: string;
   paidTo: string;
   siteId: string;
+  address: string;
   customerId: string;
   amount: number;
   paymentDate: string;
@@ -37,6 +38,7 @@ export type PaymentFormValues = {
   plumberId: string;
   paidTo: string;
   siteId: string;
+  address: string;
   customerId: string;
   amount: string;
   paymentDate: string;

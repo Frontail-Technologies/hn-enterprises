@@ -1,16 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { customFieldsApi, holidaysApi, masterValuesApi } from "../services/masters.service";
+import { holidaysApi, masterValuesApi } from "../services/masters.service";
 import type {
-  CustomFieldFormValues,
   HolidayFormValues,
   MasterValueCategory,
   MasterValueFormValues,
-  MasterValueStatus,
 } from "../types/masters.types";
 
 const masterValuesKey = (category: MasterValueCategory) => ["masters", "values", category] as const;
-const customFieldsKey = ["masters", "custom-fields"] as const;
 const holidaysKey = ["masters", "holidays"] as const;
 
 export function useMasterValuesQuery(category: MasterValueCategory, search?: string) {
@@ -44,34 +41,15 @@ export function useUpdateMasterValue(category: MasterValueCategory, id: string) 
   });
 }
 
-export function useCustomFieldsQuery(status?: MasterValueStatus) {
-  return useQuery({
-    queryKey: [...customFieldsKey, status ?? "all"],
-    queryFn: () => customFieldsApi.list(status),
-  });
-}
-
-export function useCreateCustomField() {
+export function useDeleteMasterValue(category: MasterValueCategory) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (values: CustomFieldFormValues) => customFieldsApi.create(values),
+    mutationFn: (id: string) => masterValuesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: customFieldsKey });
-      toast.success("Custom field created successfully");
+      queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
+      toast.success("Master value deleted successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create custom field"),
-  });
-}
-
-export function useUpdateCustomField(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (values: CustomFieldFormValues) => customFieldsApi.update(id, values),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: customFieldsKey });
-      toast.success("Custom field updated successfully");
-    },
-    onError: (error: any) => toast.error(error?.message || "Failed to update custom field"),
+    onError: (error: any) => toast.error(error?.message || "Failed to delete master value"),
   });
 }
 
@@ -103,5 +81,17 @@ export function useUpdateHoliday(id: string) {
       toast.success("Holiday updated successfully");
     },
     onError: (error: any) => toast.error(error?.message || "Failed to update holiday"),
+  });
+}
+
+export function useDeleteHoliday() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => holidaysApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: holidaysKey });
+      toast.success("Holiday deleted successfully");
+    },
+    onError: (error: any) => toast.error(error?.message || "Failed to delete holiday"),
   });
 }

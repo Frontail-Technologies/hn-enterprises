@@ -99,4 +99,10 @@ export const announcementsApi = {
     });
     return mapAnnouncement(raw);
   },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/announcements/${id}`, {
+      method: "DELETE",
+    });
+  },
 };

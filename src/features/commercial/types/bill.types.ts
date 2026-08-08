@@ -1,6 +1,7 @@
 export type BillStage = "GI" | "GC" | "Commissioning" | "Conversion" | "Other";
 export type BillStatus = "Draft" | "Submitted" | "Completed" | "Overdue";
-export type PaymentMode = "Cash" | "UPI" | "NEFT" | "Bank Transfer" | "Cheque" | "Other";
+export type BillPaymentStatus = "Pending" | "Cleared" | "Bounced";
+export type PaymentMode = string;
 
 export type Bill = {
   id: string;
@@ -25,6 +26,7 @@ export type BillFormValues = {
   dueDate: string;
   totalAmount: string;
   tax: string;
+  status: BillStatus;
   remarks: string;
 };
 
@@ -34,6 +36,7 @@ export type BillPayment = {
   amount: number;
   paymentDate: string;
   mode: PaymentMode;
+  status: BillPaymentStatus;
   remarks: string;
 };
 
@@ -41,5 +44,6 @@ export type BillPaymentFormValues = {
   amount: string;
   paymentDate: string;
   mode: PaymentMode;
+  status: BillPaymentStatus;
   remarks: string;
 };

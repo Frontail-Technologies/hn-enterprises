@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 import {
   appendEvidenceArray,
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
-import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/features/management/types/masters.types";
+import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/features/dynamic-fields/types";
 import type {
   BillingCompletionStatus,
   CommissioningConversionDetails,
@@ -30,9 +32,10 @@ import type {
 export type FieldDefinition<T> = {
   key: keyof T;
   label: string;
-  input?: "text" | "number" | "date" | "textarea" | "select" | "boolean";
+  input?: "text" | "number" | "date" | "textarea" | "select" | "boolean" | "meter";
   options?: readonly string[];
   readOnly?: boolean;
+  digits?: number;
 };
 
 export type CustomerMasterSheetColumn = {
@@ -44,6 +47,7 @@ export type CustomerMasterSheetColumn = {
   valueType?: MasterSheetColumnValueType;
   required?: boolean;
   dropdownOptions?: string[];
+  getFilterGroups?: (row: CustomerMasterSheetRow) => string[];
 };
 
 export type CustomerMasterSheetRow = {
@@ -109,17 +113,10 @@ export const surveyConditionStatusOptions = [
   "Rejected",
   "Pending",
 ] as const;
-export const customerDocumentCategories = [
-  "Customer Photo",
-  "ID / Address Proof",
-  "Meter Photo",
-  "GI Report",
-  "GC Report",
-  "Conversion Report",
-  "LMC / Site Evidence",
-  "Payment Receipt",
-  "Other",
-];
+export function useCustomerDocumentCategories(): string[] {
+  const { data: categories = [] } = useMasterValuesQuery("Document Categories");
+  return useMemo(() => categories.map((c) => c.value), [categories]);
+}
 export const yesNoOptions = ["Yes", "No"] as const;
 export const lmcPipeSizeOptions = [
   "20 mm",
@@ -140,8 +137,12 @@ export const lmcPipeStatusOptions = [
   "On Hold",
 ] as const satisfies readonly LmcPipeStatus[];
 
-export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails>[] =
-  [
+export function useCustomerConnectionFields(): FieldDefinition<CustomerConnectionDetails>[] {
+  const { data: connectionTypes = [] } = useMasterValuesQuery("Connection Types");
+  const { data: houseTypes = [] } = useMasterValuesQuery("House Types");
+  const { data: schemes = [] } = useMasterValuesQuery("Schemes");
+
+  return useMemo(() => [
     { key: "customerName", label: "Customer Name" },
     { key: "mobileNo", label: "Mobile Number" },
     { key: "trBpNo", label: "BP / TR Number" },
@@ -150,10 +151,20 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
       key: "connectionType",
       label: "Connection Type",
       input: "select",
-      options: connectionTypeOptions,
+      options: connectionTypes.map((t) => t.value),
     },
-    { key: "houseType", label: "House Type" },
-    { key: "scheme", label: "Scheme" },
+    { 
+      key: "houseType", 
+      label: "House Type",
+      input: "select",
+      options: houseTypes.map((t) => t.value),
+    },
+    { 
+      key: "scheme", 
+      label: "Scheme",
+      input: "select",
+      options: schemes.map((t) => t.value),
+    },
     {
       key: "jobCardDone",
       label: "Job Card Done",
@@ -163,7 +174,8 @@ export const customerConnectionFields: FieldDefinition<CustomerConnectionDetails
     { key: "reportNoGi", label: "GI Report Number" },
     { key: "reportNoGc", label: "GC Report Number" },
     { key: "reportNoConversion", label: "Conversion Report Number" },
-  ];
+  ], [connectionTypes, houseTypes, schemes]);
+}
 
 export const giMeasurementFields: FieldDefinition<GiMeasurements>[] = [
   { key: "tfToRegulator", label: "TF to Regulator", input: "number" },
@@ -365,29 +377,40 @@ export const mdpeFittingFields: FieldDefinition<MdpeFittings>[] = [
   { key: "endCap90Mm", label: "90 mm End Cap", input: "number" },
 ];
 
-export const commissioningConversionFields: FieldDefinition<CommissioningConversionDetails>[] =
-  [
-    { key: "meterNo", label: "Meter No." },
-    { key: "installationDate", label: "Installation Date", input: "date" },
-    { key: "commissioningDate", label: "Commissioning Date", input: "date" },
-    { key: "conversionDate", label: "Conversion Date", input: "date" },
-    { key: "regulatorPressure", label: "Regulator Pressure" },
-    { key: "regulatorNo", label: "Regulator No." },
-    { key: "meterType", label: "Meter Type" },
-    { key: "meterReading", label: "Meter Reading" },
-    {
-      key: "nonConversionRemark",
-      label: "Non-Conversion Remark",
-      input: "textarea",
-    },
-    {
-      key: "approvalStatus",
-      label: "Approval Status",
-      input: "select",
-      options: ["draft", "submitted", "approved", "rejected"],
-    },
-    { key: "approvalComments", label: "Approval Comments", input: "textarea" },
-  ];
+export function useCommissioningConversionFields(): FieldDefinition<CommissioningConversionDetails>[] {
+  const { data: meterTypes = [] } = useMasterValuesQuery("Meter Types");
+
+  return useMemo(
+    () => [
+      { key: "meterNo", label: "Meter No.", input: "meter", digits: 10 },
+      { key: "installationDate", label: "Installation Date", input: "date" },
+      { key: "commissioningDate", label: "Commissioning Date", input: "date" },
+      { key: "conversionDate", label: "Conversion Date", input: "date" },
+      { key: "regulatorPressure", label: "Regulator Pressure" },
+      { key: "regulatorNo", label: "Regulator No." },
+      {
+        key: "meterType",
+        label: "Meter Type",
+        input: "select",
+        options: meterTypes.map((t) => t.value),
+      },
+      { key: "meterReading", label: "Meter Reading" },
+      {
+        key: "nonConversionRemark",
+        label: "Non-Conversion Remark",
+        input: "textarea",
+      },
+      {
+        key: "approvalStatus",
+        label: "Approval Status",
+        input: "select",
+        options: ["draft", "submitted", "approved", "rejected"],
+      },
+      { key: "approvalComments", label: "Approval Comments", input: "textarea" },
+    ],
+    [meterTypes],
+  );
+}
 
 export const billingCompletionFields: FieldDefinition<BillingCompletionStatus>[] =
   [
@@ -451,10 +474,24 @@ export const baseCustomerMasterSheetColumns: CustomerMasterSheetColumn[] = [
     width: 190,
   },
   { key: "mobileNo", label: "Mobile No.", group: "Customer", width: 130 },
-  { key: "fullAddress", label: "Address", group: "Customer", width: 260 },
+  { 
+    key: "fullAddress", 
+    label: "Address", 
+    group: "Customer", 
+    width: 260,
+    getFilterGroups: (row) => {
+      const address = row.values.fullAddress || "";
+      if (!address) return ["(Blank)"];
+      return Array.from(new Set(
+        address
+          .split(",")
+          .map(part => part.trim())
+          .filter(part => part.length >= 3 && !/^\d+$/.test(part))
+      ));
+    }
+  },
   { key: "projectName", label: "Project", group: "Project", width: 190 },
   { key: "siteArea", label: "Site / Area", group: "Project", width: 170 },
-  { key: "city", label: "City", group: "Project", width: 120 },
   { key: "scheme", label: "Scheme", group: "Customer", width: 130 },
   {
     key: "paymentStatus",
@@ -1024,6 +1061,7 @@ export const defaultCustomerFormValues: CustomerFormValues = {
   survey: undefined,
   media: [],
   documents: [],
+  customFields: {},
 };
 
 export function deriveLmcOverallStatus(
@@ -1225,6 +1263,7 @@ export function getCustomerMasterSheetRows(
         gcBillDone: formatBoolean(billing.gcBillDone),
         conversionBillDone: formatBoolean(billing.conversionBillDone),
         billingRemark: billing.remark,
+        ...customer.customFields,
       },
     };
   });
@@ -1328,6 +1367,7 @@ type BackendCustomer = {
   mdpeFittings: Record<string, unknown> | null;
   commissioningConversion: Record<string, unknown> | null;
   billingCompletion: Record<string, unknown> | null;
+  customFields: Record<string, unknown> | null;
   createdAt: string;
   lmcPipeRecords?: BackendLmcPipeRecord[];
   documents?: BackendCustomerDocument[];
@@ -1498,6 +1538,7 @@ function mapCustomer(raw: BackendCustomer): Customer {
       ...emptyBillingCompletion,
       ...(raw.billingCompletion as Partial<BillingCompletionStatus> | null),
     },
+    customFields: (raw.customFields as Record<string, string | boolean> | null) ?? {},
     survey: raw.survey
       ? { ...emptyCustomerSurvey, ...(raw.survey as Partial<CustomerSurvey>) }
       : undefined,
@@ -1509,7 +1550,7 @@ function mapCustomer(raw: BackendCustomer): Customer {
 function mapFormValuesToBody(values: CustomerFormValues) {
   return {
     projectId: values.projectId,
-    siteId: values.siteId,
+    siteId: values.siteId || undefined,
     trBpNumber: values.customerConnection.trBpNo,
     mobileNumber: values.customerConnection.mobileNo || undefined,
     customerName: values.customerConnection.customerName,
@@ -1544,6 +1585,7 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     },
     mdpeFittings: values.mdpeFittings,
     commissioningConversion: values.commissioningConversion,
+    customFields: values.customFields,
     // jobCardDone lives in the customerConnection tab in the UI, but master-import (and this
     // adapter's read side) stores it in billingCompletion - no top-level column for it.
     billingCompletion: {
@@ -1670,7 +1712,7 @@ export const customersApi = {
       city?: string;
     } = {},
   ): Promise<Customer[]> {
-    const query = new URLSearchParams({ limit: "200" });
+    const query = new URLSearchParams({ limit: "-1" });
     if (params.search) query.set("search", params.search);
     if (params.projectId) query.set("projectId", params.projectId);
     if (params.siteId) query.set("siteId", params.siteId);

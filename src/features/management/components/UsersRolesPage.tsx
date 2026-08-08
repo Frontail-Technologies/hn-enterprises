@@ -11,12 +11,14 @@ import { useUsersQuery } from "../hooks/useUsers";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import type { User } from "../services/users.service";
 import { UserDrawer } from "./UserDrawer";
+import { UserImportDrawer } from "./staff/UserImportDrawer";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { useDeleteUser } from "../hooks/useUsers";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
 const exportColumns: ExportColumn<User>[] = [
   { label: "Name", getValue: (row) => row.name },
-  { label: "Username", getValue: (row) => row.username },
   { label: "Mobile", getValue: (row) => row.mobile },
   { label: "Role", getValue: (row) => row.role },
   { label: "Status", getValue: (row) => row.status },
@@ -30,10 +32,12 @@ export function UsersRolesPage() {
     status: "all",
   });
   const { data: users = [], isLoading } = useUsersQuery();
+  const deleteUser = useDeleteUser();
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return users.filter(
       (row) =>
+        (row.role === "Super Admin" || row.role === "Supervisor") &&
         (!search ||
           row.name.toLowerCase().includes(search) ||
           row.username.toLowerCase().includes(search) ||
@@ -43,12 +47,14 @@ export function UsersRolesPage() {
     );
   }, [users, filters]);
   const columns: ColumnDef<User>[] = [
-    { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
     {
-      key: "username",
-      header: "Username",
+      key: "name",
+      header: "Name",
       render: (row) => (
-        <span className="font-medium text-foreground">{row.username}</span>
+        <div className="flex flex-col">
+          <b>{row.name}</b>
+          <span className="text-xs text-muted-foreground">{row.username}</span>
+        </div>
       ),
     },
     { key: "role", header: "Role" },
@@ -65,8 +71,16 @@ export function UsersRolesPage() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-20",
-      render: (row) => <UserDrawer user={row} iconOnly />,
+      className: "w-24",
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          <UserDrawer user={row} iconOnly />
+          <DeleteConfirmDialog
+            itemName={row.name}
+            onConfirm={() => deleteUser.mutateAsync(row.id)}
+          />
+        </div>
+      ),
     },
   ];
   return (
@@ -83,6 +97,7 @@ export function UsersRolesPage() {
             <DownloadSimpleIcon size={15} />
             Export Excel
           </button>
+          <UserImportDrawer />
           <UserDrawer />
         </>
       }

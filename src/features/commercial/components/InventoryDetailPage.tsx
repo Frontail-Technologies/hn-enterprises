@@ -1,39 +1,50 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DownloadSimpleIcon, PackageIcon, ReceiptIcon, UserIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { buttonVariants } from "@/components/ui/button";
 import { exportRowsToExcel } from "@/lib/export-excel";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { formatDate } from "../utils/format";
-import { useAllProjectSitesQuery } from "../hooks/useAllProjectSites";
 import { useMaterialQuery, useMaterialTransactionsQuery, usePlumberBalancesQuery } from "../hooks/useMaterials";
 import type { MaterialTransaction } from "../types/material.types";
 import { InventoryActions } from "./inventory/InventoryActions";
 import { StockStatus } from "./inventory/StockStatus";
-import { CommercialBreadcrumb } from "./shared/CommercialBreadcrumb";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
+
+type DetailTab = "purchase" | "storeIssue" | "consumption" | "plumberLedger" | "transactions";
+
+const detailTabs: { id: DetailTab; label: string }[] = [
+  { id: "purchase", label: "Purchase / PBG Received" },
+  { id: "storeIssue", label: "Store Issue Book" },
+  { id: "consumption", label: "Customer / BP Consumption" },
+  { id: "plumberLedger", label: "Plumber Ledger" },
+  { id: "transactions", label: "Transaction History" },
+];
 
 export function InventoryDetailPage({ id }: { id: string }) {
+  const [activeTab, setActiveTab] = useState<DetailTab>("purchase");
   const { data: material, isLoading, isError } = useMaterialQuery(id);
   const { data: transactions = [], isLoading: transactionsLoading } = useMaterialTransactionsQuery({ materialId: id });
   const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery({ materialId: id });
   const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
   const { data: customers = [], isLoading: customersLoading } = useCustomersQuery();
-  const { data: sites = [], isLoading: sitesLoading } = useAllProjectSitesQuery();
+  // Replaces the layout's generic (raw-UUID) breadcrumb segment with the
+  // material name instead of rendering a second breadcrumb on this page.
+  useBreadcrumbLabel(material?.name);
 
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
   const customerNameById = useMemo(
     () => new Map(customers.map((c) => [c.id, c.customerConnection.customerName])),
     [customers],
   );
-  const siteNameById = useMemo(() => new Map(sites.map((s) => [s.id, s.name])), [sites]);
-
   const purchases = useMemo(
     () => transactions.filter((row) => row.type === "purchase" || row.type === "pbg_issue"),
     [transactions],
@@ -58,7 +69,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
     [plumberBalances, plumberNameById],
   );
 
-  const transactionGridLoading = transactionsLoading || plumbersLoading || customersLoading || sitesLoading;
+  const transactionGridLoading = transactionsLoading || plumbersLoading || customersLoading;
 
   if (isLoading) {
     return <PageLoading />;
@@ -83,14 +94,14 @@ export function InventoryDetailPage({ id }: { id: string }) {
     { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
     { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
     { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
-    { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
   ];
 
   const transactionColumns: ExcelColumn<MaterialTransaction>[] = [
     { key: "type", label: "Type", width: 150, sticky: true, getValue: (row) => row.type },
     { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
     { key: "plumber", label: "Plumber", width: 160, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
-    { key: "site", label: "Site", width: 190, getValue: (row) => siteNameById.get(row.siteId) ?? "-" },
+    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
     { key: "customer", label: "Customer", width: 190, getValue: (row) => customerNameById.get(row.customerId) ?? "-" },
     { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
     { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
@@ -115,12 +126,6 @@ export function InventoryDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-5">
-      <CommercialBreadcrumb
-        items={[
-          { label: "Inventory & Material", href: "/inventory" },
-          { label: material.name },
-        ]}
-      />
       <PageHeader
         title={material.name}
         subtitle={`${material.category || "Uncategorised"} / ${material.unit}`}
@@ -168,56 +173,59 @@ export function InventoryDetailPage({ id }: { id: string }) {
         </SectionCard>
       </section>
 
-      <SectionCard title="Plumber Ledger">
-        <ExcelDataGrid
-          columns={plumberBalanceColumns}
-          rows={plumberLedgerRows}
-          maxHeightClassName="max-h-[34vh]"
-          emptyTitle="No plumber balance for this material"
-          isLoading={plumberBalancesLoading || plumbersLoading}
-        />
-      </SectionCard>
+      <div className="space-y-3">
+        <UnderlineTabs items={detailTabs} active={activeTab} onChange={(tab) => setActiveTab(tab as DetailTab)} />
 
-      <SectionCard title="Customer / BP Consumption">
-        <ExcelDataGrid
-          columns={consumptionColumns}
-          rows={consumption}
-          maxHeightClassName="max-h-[40vh]"
-          emptyTitle="No customer consumption found for this material"
-          isLoading={transactionGridLoading}
-        />
-      </SectionCard>
-
-      <section className="grid gap-5 xl:grid-cols-2">
-        <SectionCard title="Purchase / PBG Received">
+        {activeTab === "purchase" ? (
           <ExcelDataGrid
             columns={purchaseColumns}
             rows={purchases}
-            maxHeightClassName="max-h-[34vh]"
+            maxHeightClassName="max-h-[50vh]"
             emptyTitle="No purchase rows found"
             isLoading={transactionsLoading}
           />
-        </SectionCard>
-        <SectionCard title="Store Issue Book">
+        ) : null}
+
+        {activeTab === "storeIssue" ? (
           <ExcelDataGrid
             columns={storeIssueColumns}
             rows={storeIssues}
-            maxHeightClassName="max-h-[34vh]"
+            maxHeightClassName="max-h-[50vh]"
             emptyTitle="No issue rows found"
-            isLoading={transactionsLoading || plumbersLoading || sitesLoading}
+            isLoading={transactionsLoading || plumbersLoading}
           />
-        </SectionCard>
-      </section>
+        ) : null}
 
-      <SectionCard title="Transaction History">
-        <ExcelDataGrid
-          columns={transactionColumns}
-          rows={transactions}
-          maxHeightClassName="max-h-[34vh]"
-          emptyTitle="No transactions found"
-          isLoading={transactionGridLoading}
-        />
-      </SectionCard>
+        {activeTab === "consumption" ? (
+          <ExcelDataGrid
+            columns={consumptionColumns}
+            rows={consumption}
+            maxHeightClassName="max-h-[50vh]"
+            emptyTitle="No customer consumption found for this material"
+            isLoading={transactionGridLoading}
+          />
+        ) : null}
+
+        {activeTab === "plumberLedger" ? (
+          <ExcelDataGrid
+            columns={plumberBalanceColumns}
+            rows={plumberLedgerRows}
+            maxHeightClassName="max-h-[50vh]"
+            emptyTitle="No plumber balance for this material"
+            isLoading={plumberBalancesLoading || plumbersLoading}
+          />
+        ) : null}
+
+        {activeTab === "transactions" ? (
+          <ExcelDataGrid
+            columns={transactionColumns}
+            rows={transactions}
+            maxHeightClassName="max-h-[50vh]"
+            emptyTitle="No transactions found"
+            isLoading={transactionGridLoading}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

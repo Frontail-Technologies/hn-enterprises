@@ -5,6 +5,8 @@ import type { Bill } from "../../types/bill.types";
 import { ActionLink } from "../shared/ActionLink";
 import { BillDrawer } from "./BillDrawer";
 import { PaymentDrawer } from "./PaymentDrawer";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { useDeleteBill } from "../../hooks/useBills";
 
 export function BillingActions({
   bill,
@@ -13,6 +15,8 @@ export function BillingActions({
   bill: Bill;
   labels?: boolean;
 }) {
+  const deleteMutation = useDeleteBill();
+
   return (
     <div className="flex items-center gap-1">
       <ActionLink
@@ -36,6 +40,10 @@ export function BillingActions({
         billId={bill.id}
         icon={<ReceiptIcon size={15} />}
         iconOnly={!labels}
+      />
+      <DeleteConfirmDialog
+        itemName={`Bill ${bill.billNumber}`}
+        onConfirm={() => deleteMutation.mutateAsync(bill.id)}
       />
     </div>
   );

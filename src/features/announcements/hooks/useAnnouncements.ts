@@ -46,3 +46,15 @@ export function usePublishAnnouncement() {
     onError: (error: any) => toast.error(error?.message || "Failed to publish announcement"),
   });
 }
+
+export function useDeleteAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => announcementsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: announcementsKey });
+      toast.success("Announcement deleted successfully");
+    },
+    onError: (error: any) => toast.error(error?.message || "Failed to delete announcement"),
+  });
+}

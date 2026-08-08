@@ -32,6 +32,7 @@ export type ExcelColumn<T extends { id: string }> = {
   width?: number;
   sticky?: boolean;
   getValue: (row: T) => string | number | boolean | null | undefined;
+  getFilterGroups?: (row: T) => string[];
   render?: (row: T) => ReactNode;
 };
 
@@ -57,6 +58,9 @@ export function ExcelDataGrid<T extends { id: string }>({
   getRowClassName,
 }: ExcelDataGridProps<T>) {
   const [filters, setFilters] = useState<ActiveFilters>({});
+  const [page, setPage] = useState(1);
+  const pageSize = 100;
+  
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const holdFrameRef = useRef<number | null>(null);
   const syncingRef = useRef(false);
@@ -105,12 +109,29 @@ export function ExcelDataGrid<T extends { id: string }>({
   const filteredRows = useMemo(() => {
     return rows.filter((row) =>
       columns.every((column) => {
-        const selected = filters[column.key] ?? [];
-        if (!selected.length) return true;
-        return selected.includes(formatCellValue(column.getValue(row)));
-      }),
+        const filterValues = filters[column.key];
+        if (!filterValues?.length) return true;
+        
+        if (column.getFilterGroups) {
+          const groups = column.getFilterGroups(row);
+          return groups.some(g => filterValues.includes(g));
+        }
+
+        const cellValue = formatCellValue(column.getValue(row));
+        return filterValues.includes(cellValue);
+      })
     );
   }, [columns, filters, rows]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  const paginatedRows = useMemo(() => {
+    return filteredRows.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredRows, page, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
 
   const updateScrollMetrics = useCallback(() => {
     const scrollArea = scrollAreaRef.current;
@@ -164,8 +185,54 @@ export function ExcelDataGrid<T extends { id: string }>({
 
   return (
     <div className="rounded-lg border border-border/70 bg-white flex flex-col">
-      <div className="border-b border-border/70 px-3 py-2 text-xs text-muted-foreground shrink-0">
-        Showing {filteredRows.length} of {rows.length} records
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 px-3 py-2 shrink-0">
+        <div className="text-xs text-muted-foreground">
+          Showing {Math.min(filteredRows.length, (page - 1) * pageSize + 1)} to {Math.min(filteredRows.length, page * pageSize)} of {filteredRows.length} filtered records {filteredRows.length !== rows.length ? `(from ${rows.length} total)` : ""}
+        </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Prev
+            </Button>
+            <span className="text-xs text-muted-foreground px-2">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+            >
+              Last
+            </Button>
+          </div>
+        )}
       </div>
       <div className={cn("group/excel-grid relative flex flex-col", maxHeightClassName)}>
         <div
@@ -175,7 +242,7 @@ export function ExcelDataGrid<T extends { id: string }>({
           <ExcelTable
             columns={columns}
             stickyOffsets={stickyOffsets}
-            rows={filteredRows}
+            rows={paginatedRows}
             allRows={rows}
             filters={filters}
             setFilters={setFilters}
@@ -382,7 +449,14 @@ function ColumnFilter<T extends { id: string }>({
 
   const values = useMemo(() => {
     const unique = Array.from(
-      new Set(rows.map((row) => formatCellValue(column.getValue(row)))),
+      new Set(
+        rows.flatMap((row) => {
+          if (column.getFilterGroups) {
+            return column.getFilterGroups(row);
+          }
+          return [formatCellValue(column.getValue(row))];
+        }),
+      ),
     );
     return unique
       .filter((value) => value.toLowerCase().includes(search.toLowerCase()))

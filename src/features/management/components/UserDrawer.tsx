@@ -38,7 +38,7 @@ type Draft = {
 };
 
 function emptyDraft(): Draft {
-  return { name: "", username: "", email: "", mobile: "", role: "Viewer", status: "Active", password: "" };
+  return { name: "", username: "", email: "", mobile: "", role: "Supervisor", status: "Active", password: "" };
 }
 
 function draftFromUser(user: User): Draft {

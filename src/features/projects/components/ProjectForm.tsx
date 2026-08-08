@@ -157,13 +157,6 @@ function ProjectFormFields({
                   placeholder="Enter city"
                 />
               </FormField>
-              <FormField label="Area / Location">
-                <Input
-                  value={values.area || ""}
-                  onChange={(event) => setField("area", event.target.value)}
-                  placeholder="Area or site location"
-                />
-              </FormField>
               <FormField label="Status">
                 <Select value={values.status ?? "Draft"} onValueChange={(value) => setField("status", (value ?? "Draft") as ProjectFormValues["status"])}>
                   <SelectTrigger className="w-full">

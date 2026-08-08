@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import {
   Sheet,
   SheetContent,
@@ -157,16 +158,7 @@ export function CustomerEvidencePanel({
   );
 }
 
-const customerEvidenceCategories = [
-  "Survey Photo",
-  "Customer Photo",
-  "Meter Photo",
-  "GI Evidence",
-  "GC Evidence",
-  "LMC / Site Evidence",
-  "Payment Receipt",
-  "Other",
-] as const;
+import { useCustomerDocumentCategories } from "../services/customers.service";
 
 function CustomerEvidenceUpload({
   open,
@@ -188,6 +180,8 @@ function CustomerEvidenceUpload({
   const [remarks, setRemarks] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  
+  const customerEvidenceCategories = useCustomerDocumentCategories();
 
   const resetForm = () => {
     setCategory("LMC / Site Evidence");
@@ -259,18 +253,12 @@ function CustomerEvidenceUpload({
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <FormField label="Category">
-              <Select value={category} onValueChange={(value) => setCategory(value ?? "Other")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customerEvidenceCategories.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={category}
+                options={customerEvidenceCategories.map(c => ({ value: c, label: c }))}
+                placeholder="Select category"
+                onValueChange={(value) => setCategory(value ?? "Other")}
+              />
             </FormField>
             <FormField label="Report / Reference No.">
               <Input

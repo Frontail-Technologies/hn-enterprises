@@ -27,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
-import { useAllProjectSitesQuery } from "../../hooks/useAllProjectSites";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
 import type { MaterialTransactionFormValues, MaterialTransactionType } from "../../types/material.types";
 import { ImageProofField } from "../shared/ImageProofField";
@@ -65,6 +64,7 @@ function emptyValues(): MaterialTransactionFormValues {
     supervisorId: "",
     paymentId: "",
     siteId: "",
+    address: "",
     storeLabel: "",
     customerId: "",
     reportNo: "",
@@ -103,7 +103,6 @@ export function MaterialDrawer({
   const { data: materials = [] } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
-  const { data: sites = [] } = useAllProjectSitesQuery();
   const { data: customers = [] } = useCustomersQuery();
   const createTransaction = useCreateMaterialTransaction(type);
   const label = triggerLabel ?? TYPE_LABELS[type];
@@ -194,15 +193,9 @@ export function MaterialDrawer({
     </Field>
   );
 
-  const siteField = (
-    <Field label="Site">
-      <SearchableSelect
-        value={values.siteId || undefined}
-        onValueChange={(siteId) => set("siteId", siteId ?? "")}
-        placeholder="Select site"
-        options={sites.map(s => ({ value: s.id, label: s.name }))}
-        className="w-full"
-      />
+  const addressField = (
+    <Field label="Address">
+      <Input value={values.address} onChange={(event) => set("address", event.target.value)} placeholder="Site / delivery address" />
     </Field>
   );
 
@@ -333,7 +326,7 @@ export function MaterialDrawer({
               {dateField("Issue Date")}
               {plumberField}
               {supervisorField}
-              {siteField}
+              {addressField}
               {quantityField("Issued Quantity")}
             </>
           ) : null}
@@ -345,7 +338,7 @@ export function MaterialDrawer({
               </Field>
               {dateField("Return Date")}
               {plumberField}
-              {siteField}
+              {addressField}
               {quantityField("Return Quantity")}
               <Field label="Condition">
                 <Select value={values.condition} onValueChange={(condition) => set("condition", condition ?? "Reusable")}>
@@ -391,7 +384,7 @@ export function MaterialDrawer({
           {type === "consumption" ? (
             <>
               {customerField}
-              {siteField}
+              {addressField}
               {plumberField}
               {supervisorField}
               <Field label="Report No.">

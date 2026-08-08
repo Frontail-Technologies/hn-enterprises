@@ -25,6 +25,7 @@ import {
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   MegaphoneIcon as Megaphone,
   WarningIcon as Warning,
+  SlidersHorizontalIcon as SlidersHorizontal,
   SignOutIcon as SignOut,
   LockIcon as Lock,
   CaretUpDownIcon as CaretUpDown,
@@ -104,6 +105,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ClockCounterClockwise,
   Megaphone,
   Warning,
+  SlidersHorizontal,
 };
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {

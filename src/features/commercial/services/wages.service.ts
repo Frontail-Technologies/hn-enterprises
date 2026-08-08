@@ -95,4 +95,8 @@ export const wagesApi = {
     });
     return mapWage(raw);
   },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/wages/${id}`, { method: "DELETE" });
+  },
 };

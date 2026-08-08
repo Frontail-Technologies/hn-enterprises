@@ -46,3 +46,15 @@ export function useUpdateStaff(id: string) {
     onError: (error: any) => toast.error(error?.message || "Failed to update staff member"),
   });
 }
+
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffKey });
+      toast.success("Staff member deleted successfully");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete staff member"),
+  });
+}

@@ -4,14 +4,14 @@ import type {
   BillFormValues,
   BillPayment,
   BillPaymentFormValues,
+  BillPaymentStatus,
   BillStage,
   BillStatus,
-  PaymentMode,
 } from "../types/bill.types";
 
 type BackendBillStage = "gi" | "gc" | "commissioning" | "conversion" | "other";
 type BackendBillStatus = "draft" | "submitted" | "completed" | "overdue";
-type BackendPaymentMode = "cash" | "upi" | "neft" | "bank_transfer" | "cheque" | "other";
+type BackendBillPaymentStatus = "pending" | "cleared" | "bounced";
 
 const STAGE_TO_FRONTEND: Record<BackendBillStage, BillStage> = {
   gi: "GI",
@@ -36,22 +36,23 @@ const STATUS_TO_FRONTEND: Record<BackendBillStatus, BillStatus> = {
   overdue: "Overdue",
 };
 
-const MODE_TO_FRONTEND: Record<BackendPaymentMode, PaymentMode> = {
-  cash: "Cash",
-  upi: "UPI",
-  neft: "NEFT",
-  bank_transfer: "Bank Transfer",
-  cheque: "Cheque",
-  other: "Other",
+const STATUS_TO_BACKEND: Record<BillStatus, BackendBillStatus> = {
+  Draft: "draft",
+  Submitted: "submitted",
+  Completed: "completed",
+  Overdue: "overdue",
 };
 
-const MODE_TO_BACKEND: Record<PaymentMode, BackendPaymentMode> = {
-  Cash: "cash",
-  UPI: "upi",
-  NEFT: "neft",
-  "Bank Transfer": "bank_transfer",
-  Cheque: "cheque",
-  Other: "other",
+const PAYMENT_STATUS_TO_FRONTEND: Record<BackendBillPaymentStatus, BillPaymentStatus> = {
+  pending: "Pending",
+  cleared: "Cleared",
+  bounced: "Bounced",
+};
+
+const PAYMENT_STATUS_TO_BACKEND: Record<BillPaymentStatus, BackendBillPaymentStatus> = {
+  Pending: "pending",
+  Cleared: "cleared",
+  Bounced: "bounced",
 };
 
 function toDateOnly(value: string | null | undefined) {
@@ -78,7 +79,8 @@ type BackendBillPayment = {
   billId: string;
   amount: string;
   paymentDate: string;
-  mode: BackendPaymentMode;
+  mode: string;
+  status: BackendBillPaymentStatus;
   remarks: string | null;
 };
 
@@ -108,6 +110,7 @@ function mapBillFormToBody(values: BillFormValues) {
     dueDate: values.dueDate || undefined,
     totalAmount: Number(values.totalAmount) || 0,
     tax: Number(values.tax) || 0,
+    status: STATUS_TO_BACKEND[values.status],
     remarks: values.remarks || undefined,
   };
 }
@@ -118,7 +121,8 @@ function mapPayment(raw: BackendBillPayment): BillPayment {
     billId: raw.billId,
     amount: Number(raw.amount),
     paymentDate: toDateOnly(raw.paymentDate),
-    mode: MODE_TO_FRONTEND[raw.mode] ?? "Other",
+    mode: raw.mode,
+    status: PAYMENT_STATUS_TO_FRONTEND[raw.status] ?? "Cleared",
     remarks: raw.remarks ?? "",
   };
 }
@@ -159,6 +163,7 @@ export const billsApi = {
             dueDate: values.dueDate || undefined,
             totalAmount: values.totalAmount != null ? Number(values.totalAmount) : undefined,
             tax: values.tax != null ? Number(values.tax) : undefined,
+            status: values.status ? STATUS_TO_BACKEND[values.status] : undefined,
             remarks: values.remarks,
           }).filter(([, value]) => value !== undefined),
         ),
@@ -182,9 +187,18 @@ export const billsApi = {
       body: JSON.stringify({
         amount: Number(values.amount) || 0,
         paymentDate: values.paymentDate,
-        mode: MODE_TO_BACKEND[values.mode],
+        mode: values.mode,
+        status: PAYMENT_STATUS_TO_BACKEND[values.status],
         remarks: values.remarks || undefined,
       }),
+    });
+    return mapPayment(raw);
+  },
+
+  async updatePaymentStatus(billId: string, paymentId: string, status: BillPaymentStatus): Promise<BillPayment> {
+    const raw = await apiRequest<BackendBillPayment>(`/bills/${billId}/payments/${paymentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: PAYMENT_STATUS_TO_BACKEND[status] }),
     });
     return mapPayment(raw);
   },

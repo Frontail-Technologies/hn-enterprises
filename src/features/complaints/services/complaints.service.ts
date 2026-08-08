@@ -92,4 +92,10 @@ export const complaintsApi = {
     });
     return mapComplaint(raw);
   },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/complaints/${id}`, {
+      method: "DELETE",
+    });
+  },
 };

@@ -17,6 +17,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   activity: "Recent Activity",
   users: "Users & Roles",
   masters: "Masters",
+  "dynamic-fields": "Dynamic Fields",
   settings: "Settings",
   "audit-logs": "Audit Logs",
   announcements: "Announcements",
@@ -65,6 +66,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "users", label: "Users & Roles", icon: "UserGear", href: "/users", allowedRoles: ["super_admin", "admin"] },
       { id: "announcements", label: "Announcements", icon: "Megaphone", href: "/announcements", allowedRoles: ["super_admin", "admin"] },
       { id: "masters", label: "Masters", icon: "Database", href: "/masters", allowedRoles: ["super_admin", "admin"] },
+      {
+        id: "dynamic-fields",
+        label: "Dynamic Fields",
+        icon: "SlidersHorizontal",
+        href: "/dynamic-fields",
+        allowedRoles: ["super_admin", "admin"],
+      },
     ],
   },
 ];

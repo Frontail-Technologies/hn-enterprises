@@ -256,6 +256,7 @@ export type Customer = {
   survey?: CustomerSurvey;
   media: UploadedImage[];
   documents: CustomerDocument[];
+  customFields?: Record<string, string | boolean>;
 };
 
 export type CustomerFormValues = Omit<Customer, "id" | "createdDate">;

@@ -5,17 +5,26 @@ import Link from 'next/link'
 import { CaretRightIcon as CaretRight } from '@phosphor-icons/react'
 
 import { ROUTE_LABELS } from '@/constants/navigation'
+import { useBreadcrumbLastLabel } from './BreadcrumbLabelContext'
 
 export function Breadcrumb() {
   const pathname = usePathname()
+  const lastLabelOverride = useBreadcrumbLastLabel()
   const segments = pathname.split('/').filter(Boolean)
 
   if (segments.length <= 1) return null
 
   const crumbs = segments.map((seg, idx) => {
     const href = '/' + segments.slice(0, idx + 1).join('/')
-    const label = ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ')
     const isLast = idx === segments.length - 1
+    // Dynamic route segments (e.g. a bill's raw UUID) fall back to the
+    // segment text itself, which a detail page can override with something
+    // readable via useBreadcrumbLabel() instead of rendering its own
+    // duplicate breadcrumb.
+    const label =
+      isLast && lastLabelOverride
+        ? lastLabelOverride
+        : (ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '))
     return { href, label, isLast }
   })
 

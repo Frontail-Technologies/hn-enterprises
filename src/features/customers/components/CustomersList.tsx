@@ -21,13 +21,13 @@ import {
   type CustomerMasterSheetRow,
 } from "../services/customers.service";
 import { useCustomersQuery } from "../hooks/useCustomers";
-import { useCustomFieldsQuery } from "@/features/management/hooks/useMasters";
+import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
 
 export function CustomersList() {
   const router = useRouter();
   const [masterSheetSearch, setMasterSheetSearch] = useState("");
   const { data: customers = [], isLoading } = useCustomersQuery();
-  const { data: activeCustomFields = [] } = useCustomFieldsQuery("Active");
+  const { data: activeCustomFields = [] } = useDynamicFieldsQuery("Active");
   const realCustomerIds = useMemo(() => new Set(customers.map((customer) => customer.id)), [customers]);
 
   const masterSheetRows = useMemo(() => getCustomerMasterSheetRows(customers), [customers]);

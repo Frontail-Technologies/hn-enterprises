@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import {
   Sheet,
   SheetClose,
@@ -24,15 +25,17 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateBillPayment } from "../../hooks/useBills";
-import type { BillPaymentFormValues, PaymentMode } from "../../types/bill.types";
+import type { BillPaymentFormValues, BillPaymentStatus, PaymentMode } from "../../types/bill.types";
+import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 
-const paymentModes: PaymentMode[] = ["Cash", "UPI", "NEFT", "Bank Transfer", "Cheque", "Other"];
+const paymentStatuses: BillPaymentStatus[] = ["Cleared", "Pending", "Bounced"];
 
 function emptyValues(): BillPaymentFormValues {
   return {
     amount: "",
     paymentDate: format(new Date(), "yyyy-MM-dd"),
     mode: "Cash",
+    status: "Cleared",
     remarks: "",
   };
 }
@@ -52,6 +55,7 @@ export function PaymentDrawer({
   const [values, setValues] = useState<BillPaymentFormValues>(emptyValues());
   const [saveError, setSaveError] = useState("");
   const createPayment = useCreateBillPayment(billId);
+  const { data: paymentModes = [] } = useMasterValuesQuery("Payment Types");
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
@@ -121,27 +125,37 @@ export function PaymentDrawer({
                 onChange={(paymentDate) => setValues((current) => ({ ...current, paymentDate }))}
               />
             </label>
-            <label className="space-y-1.5">
+            <label className="space-y-1.5 min-w-0">
               <span className="text-xs font-medium text-muted-foreground">Mode</span>
-              <Select
+              <SearchableSelect
                 value={values.mode}
-                onValueChange={(mode) => {
-                  if (mode) setValues((current) => ({ ...current, mode: mode as PaymentMode }));
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentModes.map((mode) => (
-                    <SelectItem key={mode} value={mode}>
-                      {mode}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(mode) => setValues((current) => ({ ...current, mode: mode as PaymentMode }))}
+                options={paymentModes.map((mode) => ({ value: mode.value, label: mode.value }))}
+                placeholder="Select payment mode"
+              />
             </label>
           </div>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Status</span>
+            <Select
+              value={values.status}
+              onValueChange={(status) => {
+                if (status) setValues((current) => ({ ...current, status: status as BillPaymentStatus }));
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {paymentStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Remarks</span>

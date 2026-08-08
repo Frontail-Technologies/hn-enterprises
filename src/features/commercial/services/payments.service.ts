@@ -4,7 +4,6 @@ import type { Payment, PaymentCategory, PaymentFormValues, PaymentStatus } from 
 
 type BackendCategory = "worker_payment" | "supervisor_payment" | "plumber_payment" | "rent" | "material_expense" | "other_expense";
 type BackendStatus = "draft" | "submitted" | "approved" | "rejected";
-type BackendMode = "cash" | "upi" | "neft" | "bank_transfer" | "cheque" | "other";
 
 const CATEGORY_TO_FRONTEND: Record<BackendCategory, PaymentCategory> = {
   worker_payment: "Worker Payments",
@@ -38,24 +37,6 @@ const STATUS_TO_BACKEND: Record<PaymentStatus, BackendStatus> = {
   Rejected: "rejected",
 };
 
-const MODE_TO_FRONTEND: Record<BackendMode, Payment["mode"]> = {
-  cash: "Cash",
-  upi: "UPI",
-  neft: "NEFT",
-  bank_transfer: "Bank Transfer",
-  cheque: "Cheque",
-  other: "Other",
-};
-
-const MODE_TO_BACKEND: Record<Payment["mode"], BackendMode> = {
-  Cash: "cash",
-  UPI: "upi",
-  NEFT: "neft",
-  "Bank Transfer": "bank_transfer",
-  Cheque: "cheque",
-  Other: "other",
-};
-
 function toDateOnly(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
 }
@@ -66,10 +47,11 @@ type BackendPayment = {
   plumberId: string | null;
   paidTo: string | null;
   siteId: string | null;
+  address: string | null;
   customerId: string | null;
   amount: string;
   paymentDate: string;
-  mode: BackendMode;
+  mode: string;
   status: BackendStatus;
   purpose: string | null;
   remarks: string | null;
@@ -83,10 +65,11 @@ function mapPayment(raw: BackendPayment): Payment {
     plumberId: raw.plumberId ?? "",
     paidTo: raw.paidTo ?? "",
     siteId: raw.siteId ?? "",
+    address: raw.address ?? "",
     customerId: raw.customerId ?? "",
     amount: Number(raw.amount),
     paymentDate: toDateOnly(raw.paymentDate),
-    mode: MODE_TO_FRONTEND[raw.mode] ?? "Other",
+    mode: raw.mode,
     status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
     purpose: raw.purpose ?? "",
     remarks: raw.remarks ?? "",
@@ -103,10 +86,11 @@ function buildPaymentFormData(values: PaymentFormValues): FormData {
   if (values.plumberId) formData.append("plumberId", values.plumberId);
   if (values.paidTo) formData.append("paidTo", values.paidTo);
   if (values.siteId) formData.append("siteId", values.siteId);
+  if (values.address) formData.append("address", values.address);
   if (values.customerId) formData.append("customerId", values.customerId);
   formData.append("amount", String(Number(values.amount) || 0));
   formData.append("paymentDate", values.paymentDate);
-  formData.append("mode", MODE_TO_BACKEND[values.mode]);
+  formData.append("mode", values.mode);
   formData.append("status", STATUS_TO_BACKEND[values.status]);
   if (values.purpose) formData.append("purpose", values.purpose);
   if (values.remarks) formData.append("remarks", values.remarks);

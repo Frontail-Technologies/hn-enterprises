@@ -35,3 +35,15 @@ export function useUpdateComplaint(id: string) {
     onError: (error: any) => toast.error(error?.message || "Failed to update complaint"),
   });
 }
+
+export function useDeleteComplaint() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => complaintsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: complaintsKey });
+      toast.success("Complaint deleted successfully");
+    },
+    onError: (error: any) => toast.error(error?.message || "Failed to delete complaint"),
+  });
+}

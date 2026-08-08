@@ -186,4 +186,10 @@ export const staffApi = {
     });
     return mapStaff(raw);
   },
+
+  async delete(id: string): Promise<void> {
+    await apiRequest(`/staff/${id}`, {
+      method: "DELETE",
+    });
+  },
 };

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { billsApi } from "../services/bills.service";
-import type { BillFormValues, BillPaymentFormValues, BillStage, BillStatus } from "../types/bill.types";
+import type { BillFormValues, BillPaymentFormValues, BillPaymentStatus, BillStage, BillStatus } from "../types/bill.types";
 
 const billsKey = ["bills"] as const;
 const billKey = (id: string) => ["bills", id] as const;
@@ -78,5 +78,18 @@ export function useCreateBillPayment(billId: string) {
       toast.success("Payment recorded successfully");
     },
     onError: (error: any) => toast.error(error?.message || "Failed to record payment"),
+  });
+}
+
+export function useUpdateBillPaymentStatus(billId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paymentId, status }: { paymentId: string; status: BillPaymentStatus }) =>
+      billsApi.updatePaymentStatus(billId, paymentId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: paymentsKey(billId) });
+      toast.success("Payment status updated");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update payment status"),
   });
 }

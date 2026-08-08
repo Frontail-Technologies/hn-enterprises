@@ -1,11 +1,16 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { DownloadSimpleIcon, NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -28,21 +33,17 @@ import { type ColumnDef } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import {
-  useCreateCustomField,
   useCreateHoliday,
   useCreateMasterValue,
-  useCustomFieldsQuery,
   useHolidaysQuery,
   useMasterValuesQuery,
-  useUpdateCustomField,
   useUpdateHoliday,
   useUpdateMasterValue,
+  useDeleteMasterValue,
+  useDeleteHoliday,
 } from "../hooks/useMasters";
 import {
   masterTabs,
-  type CustomField,
-  type CustomFieldFormValues,
-  type CustomFieldValueType,
   type Holiday,
   type HolidayFormValues,
   type HolidayType,
@@ -54,20 +55,18 @@ import {
 } from "../types/masters.types";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
+import { MasterValueImportDrawer } from "./MasterValueImportDrawer";
 
-const valueTypes: CustomFieldValueType[] = ["Text", "Number", "Date", "Amount", "Yes / No", "Dropdown"];
 const statuses: MasterValueStatus[] = ["Active", "Inactive"];
 const holidayTypes: HolidayType[] = ["National", "Restricted", "Company"];
 
 export function MastersPage() {
   const [activeTab, setActiveTab] = useState<MasterTabId>("Payment Types");
   const [search, setSearch] = useState("");
-  const isColumnTab = activeTab === "Master Sheet Columns";
   const isHolidayTab = activeTab === "Holidays";
-  const category = !isColumnTab && !isHolidayTab ? (activeTab as MasterValueCategory) : undefined;
+  const category = !isHolidayTab ? (activeTab as MasterValueCategory) : undefined;
 
   const { data: values = [], isLoading: valuesLoading } = useMasterValuesQuery(category ?? "Payment Types", undefined);
-  const { data: customFields = [], isLoading: customFieldsLoading } = useCustomFieldsQuery();
   const { data: holidays = [], isLoading: holidaysLoading } = useHolidaysQuery();
 
   const valueData = useMemo(() => {
@@ -78,36 +77,16 @@ export function MastersPage() {
     );
   }, [values, category, search]);
 
-  const columnData = useMemo(() => {
-    const query = search.toLowerCase();
-    return customFields.filter(
-      (row) =>
-        !query ||
-        row.label.toLowerCase().includes(query) ||
-        row.key.toLowerCase().includes(query) ||
-        row.group.toLowerCase().includes(query),
-    );
-  }, [customFields, search]);
-
   const holidayData = useMemo(() => {
     const query = search.toLowerCase();
     return holidays.filter((row) => !query || row.name.toLowerCase().includes(query) || row.type.toLowerCase().includes(query));
   }, [holidays, search]);
 
-  const tableLoading = isColumnTab ? customFieldsLoading : isHolidayTab ? holidaysLoading : valuesLoading;
+  const tableLoading = isHolidayTab ? holidaysLoading : valuesLoading;
 
   const valueExportColumns: ExportColumn<MasterValue>[] = [
     { label: "Value", getValue: (row) => row.value },
     { label: "Description", getValue: (row) => row.description },
-    { label: "Status", getValue: (row) => row.status },
-  ];
-
-  const columnExportColumns: ExportColumn<CustomField>[] = [
-    { label: "Column Label", getValue: (row) => row.label },
-    { label: "Group", getValue: (row) => row.group },
-    { label: "Value Type", getValue: (row) => row.valueType },
-    { label: "Options", getValue: (row) => (row.valueType === "Dropdown" ? row.dropdownOptions.join(", ") : "-") },
-    { label: "Required", getValue: (row) => (row.required ? "Yes" : "No") },
     { label: "Status", getValue: (row) => row.status },
   ];
 
@@ -119,8 +98,7 @@ export function MastersPage() {
   ];
 
   function handleExport() {
-    if (isColumnTab) void exportRowsToExcel("master-sheet-columns.xlsx", columnExportColumns, columnData);
-    else if (isHolidayTab) void exportRowsToExcel("holidays.xlsx", holidayExportColumns, holidayData);
+    if (isHolidayTab) void exportRowsToExcel("holidays.xlsx", holidayExportColumns, holidayData);
     else void exportRowsToExcel(`${activeTab.toLowerCase().replace(/\s+/g, "-")}.xlsx`, valueExportColumns, valueData);
   }
 
@@ -131,23 +109,14 @@ export function MastersPage() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-20",
-      render: (row) => (category ? <MasterValueDrawer category={category} value={row} iconOnly /> : null),
-    },
-  ];
-
-  const columnColumns: ColumnDef<CustomField>[] = [
-    { key: "label", header: "Column Label", render: (row) => <span className="font-semibold text-foreground">{row.label}</span> },
-    { key: "group", header: "Group" },
-    { key: "valueType", header: "Value Type" },
-    { key: "dropdownOptions", header: "Options", render: (row) => (row.valueType === "Dropdown" ? row.dropdownOptions.join(", ") : "-") },
-    { key: "required", header: "Required", render: (row) => (row.required ? "Yes" : "No") },
-    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-20",
-      render: (row) => <CustomFieldDrawer field={row} iconOnly />,
+      className: "w-28",
+      render: (row) =>
+        category ? (
+          <div className="flex items-center gap-1">
+            <MasterValueDrawer category={category} value={row} iconOnly />
+            <MasterValueDeleteButton id={row.id} label={row.value} category={category} />
+          </div>
+        ) : null,
     },
   ];
 
@@ -159,8 +128,13 @@ export function MastersPage() {
     {
       key: "actions",
       header: "Actions",
-      className: "w-20",
-      render: (row) => <HolidayDrawer holiday={row} iconOnly />,
+      className: "w-28",
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          <HolidayDrawer holiday={row} iconOnly />
+          <DeleteButton id={row.id} label={row.name} hook={useDeleteHoliday} />
+        </div>
+      ),
     },
   ];
 
@@ -188,9 +162,8 @@ export function MastersPage() {
             <DownloadSimpleIcon size={15} />
             Export Excel
           </button>
-          {isColumnTab ? (
-            <CustomFieldDrawer />
-          ) : isHolidayTab ? (
+          {category && <MasterValueImportDrawer category={category} />}
+          {isHolidayTab ? (
             <HolidayDrawer />
           ) : category ? (
             <MasterValueDrawer category={category} />
@@ -207,14 +180,10 @@ export function MastersPage() {
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={
-            isColumnTab ? "Search columns..." : isHolidayTab ? "Search holidays..." : `Search ${activeTab.toLowerCase()}...`
-          }
+          placeholder={isHolidayTab ? "Search holidays..." : `Search ${activeTab.toLowerCase()}...`}
         />
       </div>
-      {isColumnTab ? (
-        <PaginatedDataTable data={columnData} columns={columnColumns} isLoading={tableLoading} />
-      ) : isHolidayTab ? (
+      {isHolidayTab ? (
         <PaginatedDataTable data={holidayData} columns={holidayColumns} isLoading={tableLoading} />
       ) : (
         <PaginatedDataTable data={valueData} columns={valueColumns} isLoading={tableLoading} />
@@ -229,6 +198,44 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
     </label>
+  );
+}
+
+function MasterValueDeleteButton({ id, label, category }: { id: string; label: string; category: MasterValueCategory }) {
+  const deleteMutation = useDeleteMasterValue(category);
+  return <DeleteButton id={id} label={label} hook={() => deleteMutation} />;
+}
+
+function DeleteButton({ id, label, hook }: { id: string; label: string; hook: () => { mutate: (id: string) => void; isPending: boolean } }) {
+  const [open, setOpen] = useState(false);
+  const { mutate, isPending } = hook();
+
+  function handleConfirm() {
+    mutate(id);
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <ActionTooltip label={`Delete "${label}"`}>
+        <PopoverTrigger
+          aria-label={`Delete ${label}`}
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        >
+          <TrashIcon size={15} className="text-destructive" />
+        </PopoverTrigger>
+      </ActionTooltip>
+      <PopoverContent className="w-64 p-3" side="left">
+        <p className="mb-3 text-sm font-medium">Delete &ldquo;{label}&rdquo;?</p>
+        <p className="mb-4 text-xs text-muted-foreground">This action cannot be undone.</p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button type="button" variant="destructive" size="sm" onClick={handleConfirm} disabled={isPending}>
+            {isPending ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -308,171 +315,6 @@ function MasterValueDrawer({
           </Field>
           <Field label="Description">
             <Input value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} />
-          </Field>
-          <Field label="Status">
-            <Select value={draft.status} onValueChange={(status) => { if (status) setDraft((current) => ({ ...current, status: status as MasterValueStatus })); }}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
-        </div>
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
-            <Button type="button" onClick={handleSave} disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function CustomFieldDrawer({ field, iconOnly = false }: { field?: CustomField; iconOnly?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<CustomFieldFormValues>(
-    field
-      ? { key: field.key, label: field.label, group: field.group, width: String(field.width), valueType: field.valueType, dropdownOptions: field.dropdownOptions, required: field.required, status: field.status }
-      : { key: "", label: "", group: "", width: "150", valueType: "Text", dropdownOptions: [], required: false, status: "Active" },
-  );
-  const [optionInput, setOptionInput] = useState("");
-  const [error, setError] = useState("");
-  const createField = useCreateCustomField();
-  const updateField = useUpdateCustomField(field?.id ?? "");
-  const isSaving = createField.isPending || updateField.isPending;
-  const label = field ? "Edit" : "Add Column";
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) {
-      setDraft(
-        field
-          ? { key: field.key, label: field.label, group: field.group, width: String(field.width), valueType: field.valueType, dropdownOptions: field.dropdownOptions, required: field.required, status: field.status }
-          : { key: "", label: "", group: "", width: "150", valueType: "Text", dropdownOptions: [], required: false, status: "Active" },
-      );
-      setOptionInput("");
-      setError("");
-    }
-    setOpen(nextOpen);
-  }
-
-  function addOption() {
-    const next = optionInput.trim();
-    if (!next || draft.dropdownOptions.includes(next)) return;
-    setDraft((current) => ({ ...current, dropdownOptions: [...current.dropdownOptions, next] }));
-    setOptionInput("");
-  }
-
-  async function handleSave() {
-    if (!field && !draft.key.trim()) {
-      setError("Key is required");
-      return;
-    }
-    if (!draft.label.trim() || !draft.group.trim()) {
-      setError("Label and group are required");
-      return;
-    }
-    setError("");
-    try {
-      if (field) await updateField.mutateAsync(draft);
-      else await createField.mutateAsync(draft);
-      setOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save");
-    }
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <DrawerTrigger label={label} iconOnly={iconOnly} />
-      <SheetContent className="w-full border-border bg-card sm:max-w-md">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>{field ? "Edit Column" : "Add Column"}</SheetTitle>
-          <SheetDescription>Configure an extra customer master-sheet column.</SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
-          {!field ? (
-            <Field label="Key (used to store the value, e.g. kycVerified)">
-              <Input value={draft.key} onChange={(event) => setDraft((current) => ({ ...current, key: event.target.value }))} />
-            </Field>
-          ) : null}
-          <Field label="Column Label">
-            <Input value={draft.label} onChange={(event) => setDraft((current) => ({ ...current, label: event.target.value }))} />
-          </Field>
-          <Field label="Group">
-            <Input value={draft.group} onChange={(event) => setDraft((current) => ({ ...current, group: event.target.value }))} />
-          </Field>
-          <Field label="Width">
-            <Input type="number" value={draft.width} onChange={(event) => setDraft((current) => ({ ...current, width: event.target.value }))} />
-          </Field>
-          <Field label="Value Type">
-            <Select value={draft.valueType} onValueChange={(valueType) => { if (valueType) setDraft((current) => ({ ...current, valueType: valueType as CustomFieldValueType })); }}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {valueTypes.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {draft.valueType === "Dropdown" ? (
-            <div className="space-y-2">
-              <span className="text-xs font-medium text-muted-foreground">Dropdown Options</span>
-              <div className="flex gap-2">
-                <Input
-                  value={optionInput}
-                  onChange={(event) => setOptionInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addOption();
-                    }
-                  }}
-                  placeholder="Enter option"
-                />
-                <Button type="button" size="icon" onClick={addOption} aria-label="Add option">
-                  <PlusIcon size={15} />
-                </Button>
-              </div>
-              {draft.dropdownOptions.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {draft.dropdownOptions.map((option) => (
-                    <span key={option} className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs font-medium text-foreground">
-                      {option}
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setDraft((current) => ({ ...current, dropdownOptions: current.dropdownOptions.filter((item) => item !== option) }))}
-                        aria-label={`Remove ${option}`}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          <Field label="Required">
-            <Select
-              value={draft.required ? "Yes" : "No"}
-              onValueChange={(value) => { if (value) setDraft((current) => ({ ...current, required: value === "Yes" })); }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="No">No</SelectItem>
-                <SelectItem value="Yes">Yes</SelectItem>
-              </SelectContent>
-            </Select>
           </Field>
           <Field label="Status">
             <Select value={draft.status} onValueChange={(status) => { if (status) setDraft((current) => ({ ...current, status: status as MasterValueStatus })); }}>
