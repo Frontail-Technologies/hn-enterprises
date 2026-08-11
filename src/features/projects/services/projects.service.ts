@@ -1,5 +1,12 @@
 import { apiRequest } from "@/lib/api-client";
-import type { Project, ProjectDocument, ProjectFormValues, ProjectSite } from "../types/project.types";
+import type {
+  Project,
+  ProjectDocument,
+  ProjectFormValues,
+  ProjectSite,
+  ProjectSummary,
+  ProjectTeam,
+} from "../types/project.types";
 import type { StatusValue } from "@/components/shared/StatusBadge";
 
 export const projectStatusOptions = [
@@ -293,5 +300,16 @@ export const projectsApi = {
     await apiRequest<null>(`/projects/${projectId}/documents/${documentId}`, {
       method: "DELETE",
     });
+  },
+
+  // Backend also returns the raw project record alongside these counts, but
+  // the Overview tab already has it via useProjectQuery - no need for a
+  // second project-mapping path here.
+  async getSummary(projectId: string): Promise<ProjectSummary> {
+    return apiRequest<ProjectSummary>(`/projects/${projectId}/summary`);
+  },
+
+  async getTeam(projectId: string): Promise<ProjectTeam> {
+    return apiRequest<ProjectTeam>(`/projects/${projectId}/team`);
   },
 };

@@ -54,7 +54,10 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
     projectId: projectId === "all" ? undefined : projectId,
   });
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-  const { data: bills = [], isLoading: billsLoading } = useBillsQuery();
+  // Bills are project-linked now - scoped server-side by project.
+  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
+    projectId: projectId === "all" ? undefined : projectId,
+  });
 
   const scopedCustomers = useMemo(
     () => customers.filter((customer) => city === "all" || customer.city === city),
@@ -93,7 +96,13 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
       }));
 
     const billRows: PendingApprovalRow[] = bills
-      .filter((bill) => scopedCustomerIds.has(bill.customerId) && bill.status === "Submitted")
+      // Project scope already applied server-side; a specific-city filter can
+      // only match customer-linked bills.
+      .filter(
+        (bill) =>
+          bill.status === "Submitted" &&
+          (city === "all" || (bill.customerId ? scopedCustomerIds.has(bill.customerId) : false)),
+      )
       .map((bill) => ({
         id: `bill-${bill.id}`,
         type: "Bill",
@@ -108,7 +117,7 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
     return [...surveyRows, ...paymentRows, ...billRows].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-  }, [scopedCustomers, payments, bills]);
+  }, [scopedCustomers, payments, bills, city]);
 
   return (
     <SummaryStatShell

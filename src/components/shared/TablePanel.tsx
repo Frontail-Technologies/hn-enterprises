@@ -23,9 +23,9 @@ export function TablePanel({
   const hasHeader = toolbar || pagination || actions;
 
   return (
-    <section className={cn("overflow-hidden rounded-lg border border-border/70 bg-card", className)}>
+    <section className={cn("overflow-hidden rounded-card border border-border bg-card", className)}>
       {hasHeader ? (
-        <div className="space-y-2.5 border-b border-border/70 bg-card px-3 py-2.5">
+        <div className="space-y-3 border-b border-border bg-card px-4 py-3">
           {actions ? (
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0" />

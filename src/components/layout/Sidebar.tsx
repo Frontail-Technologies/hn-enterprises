@@ -133,7 +133,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       >
         {IconComponent && (
           <IconComponent
-            size={19}
+            size={18}
             weight={active ? "fill" : "regular"}
             className={cn(
               "shrink-0",

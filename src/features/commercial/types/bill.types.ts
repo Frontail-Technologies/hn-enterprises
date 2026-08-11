@@ -5,6 +5,9 @@ export type PaymentMode = string;
 
 export type Bill = {
   id: string;
+  projectId: string;
+  // Optional now that billing is project-level - a bill may still note which
+  // customer's work it relates to, but it isn't required.
   customerId: string;
   billNumber: string;
   stage: BillStage;
@@ -19,6 +22,7 @@ export type Bill = {
 };
 
 export type BillFormValues = {
+  projectId: string;
   customerId: string;
   billNumber: string;
   stage: BillStage;

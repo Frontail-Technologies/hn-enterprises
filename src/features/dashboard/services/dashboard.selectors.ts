@@ -66,9 +66,12 @@ export function getAdminDashboardData(
   adminStats?: Record<string, number>,
 ) {
   const scopedProjects = getScopedProjects(data.projects, scope);
+  const scopedProjectIds = new Set(scopedProjects.map((project) => project.id));
   const scopedCustomers = getScopedCustomers(data.customers, scope);
   const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
-  const scopedBills = data.bills.filter((bill) => scopedCustomerIds.has(bill.customerId));
+  // Bills are project-linked now, so scope them by their project directly -
+  // this also correctly includes bills that aren't tied to any customer.
+  const scopedBills = data.bills.filter((bill) => scopedProjectIds.has(bill.projectId));
   const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
   const scopedWorkProgress = data.workProgress.filter((update) => scopedCustomerIds.has(update.customerId));
 

@@ -49,6 +49,7 @@ type BackendPayment = {
   siteId: string | null;
   address: string | null;
   customerId: string | null;
+  projectId: string | null;
   amount: string;
   paymentDate: string;
   mode: string;
@@ -67,6 +68,7 @@ function mapPayment(raw: BackendPayment): Payment {
     siteId: raw.siteId ?? "",
     address: raw.address ?? "",
     customerId: raw.customerId ?? "",
+    projectId: raw.projectId ?? "",
     amount: Number(raw.amount),
     paymentDate: toDateOnly(raw.paymentDate),
     mode: raw.mode,
@@ -88,6 +90,7 @@ function buildPaymentFormData(values: PaymentFormValues): FormData {
   if (values.siteId) formData.append("siteId", values.siteId);
   if (values.address) formData.append("address", values.address);
   if (values.customerId) formData.append("customerId", values.customerId);
+  if (values.projectId) formData.append("projectId", values.projectId);
   formData.append("amount", String(Number(values.amount) || 0));
   formData.append("paymentDate", values.paymentDate);
   formData.append("mode", values.mode);
@@ -100,12 +103,18 @@ function buildPaymentFormData(values: PaymentFormValues): FormData {
 
 export const paymentsApi = {
   async list(
-    params: { category?: PaymentCategory; status?: PaymentStatus; search?: string } = {},
+    params: {
+      category?: PaymentCategory;
+      status?: PaymentStatus;
+      search?: string;
+      projectId?: string;
+    } = {},
   ): Promise<Payment[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.category) query.set("category", CATEGORY_TO_BACKEND[params.category]);
     if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
     if (params.search) query.set("search", params.search);
+    if (params.projectId) query.set("projectId", params.projectId);
     const rows = await apiRequest<BackendPayment[]>(`/payments?${query.toString()}`);
     return rows.map(mapPayment);
   },

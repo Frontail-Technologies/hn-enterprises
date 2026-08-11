@@ -35,7 +35,7 @@ export function DashboardPeriodFilter({
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <Tabs value={value} onValueChange={(v) => v && onChange(v as DashboardPeriod)}>
-        <TabsList>
+        <TabsList className="h-9">
           {dashboardPeriods.map((period) => (
             <TabsTrigger
               key={period.value}
@@ -58,7 +58,7 @@ export function DashboardPeriodFilter({
       >
         <SelectTrigger
           className={cn(
-            "h-8 w-[132px] bg-card text-xs",
+            "h-9 w-[132px] bg-card text-xs",
             value === "custom-month" && "border-primary/60 text-primary ring-1 ring-primary/20",
           )}
         >
@@ -83,7 +83,7 @@ export function DashboardPeriodFilter({
       >
         <SelectTrigger
           className={cn(
-            "h-8 w-[104px] bg-card text-xs",
+            "h-9 w-[104px] bg-card text-xs",
             value === "custom-year" && "border-primary/60 text-primary ring-1 ring-primary/20",
           )}
         >

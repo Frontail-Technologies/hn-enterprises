@@ -16,6 +16,7 @@ import {
   FunnelSimpleIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -36,6 +37,18 @@ export type ExcelColumn<T extends { id: string }> = {
   render?: (row: T) => ReactNode;
 };
 
+// Opt-in row-selection support (bulk operations toolbar) - a caller passes
+// `selection` to get a leading checkbox column; grids that don't pass it are
+// completely unaffected (no column added, no behavior change). Kept as a
+// bundled object rather than loose props so it reads as one clearly-optional
+// feature rather than four easy-to-half-wire props.
+export interface ExcelDataGridSelection<T extends { id: string }> {
+  selectedIds: ReadonlySet<string>;
+  onToggleRow: (id: string) => void;
+  onTogglePage: (pageIds: string[]) => void;
+  getRowLabel?: (row: T) => string;
+}
+
 interface ExcelDataGridProps<T extends { id: string }> {
   columns: ExcelColumn<T>[];
   rows: T[];
@@ -44,9 +57,26 @@ interface ExcelDataGridProps<T extends { id: string }> {
   maxHeightClassName?: string;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
+  selection?: ExcelDataGridSelection<T>;
+  /**
+   * Fired whenever the filtered/paginated id sets change (filtering,
+   * pagination, or the underlying rows themselves) so a caller driving bulk
+   * selection can know "every id matching the current filters" (for a
+   * "select all N matching" banner) and "ids on the current page" (for the
+   * header checkbox's tri-state), plus a signature that changes only when
+   * the active filters change (not on pagination) for the "clear selection
+   * when filters change" rule.
+   */
+  onVisibleRowsChange?: (context: {
+    filteredIds: string[];
+    pageIds: string[];
+    filterSignature: string;
+  }) => void;
 }
 
 type ActiveFilters = Record<string, string[]>;
+
+const SELECT_COLUMN_WIDTH = 44;
 
 export function ExcelDataGrid<T extends { id: string }>({
   columns,
@@ -56,6 +86,8 @@ export function ExcelDataGrid<T extends { id: string }>({
   maxHeightClassName = "max-h-[68vh]",
   onRowClick,
   getRowClassName,
+  selection,
+  onVisibleRowsChange,
 }: ExcelDataGridProps<T>) {
   const [filters, setFilters] = useState<ActiveFilters>({});
   const [page, setPage] = useState(1);
@@ -91,18 +123,18 @@ export function ExcelDataGrid<T extends { id: string }>({
           offset: state.offset + (column.width ?? 140),
         };
       },
-      { offsets: [], offset: 0 },
+      { offsets: [], offset: selection ? SELECT_COLUMN_WIDTH : 0 },
     ).offsets;
-  }, [columns, isMobile]);
+  }, [columns, isMobile, selection]);
   const fixedWidth = useMemo(
     () =>
       isMobile
         ? 0
         : columns.reduce(
             (sum, column) => (column.sticky ? sum + (column.width ?? 140) : sum),
-            0,
+            selection ? SELECT_COLUMN_WIDTH : 0,
           ),
-    [columns, isMobile],
+    [columns, isMobile, selection],
   );
   const canScrollHorizontally = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 4;
 
@@ -132,6 +164,25 @@ export function ExcelDataGrid<T extends { id: string }>({
   }, [filteredRows, page, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+
+  // Sorted so the signature only changes when the *set* of active filter
+  // values changes, not key insertion order.
+  const filterSignature = useMemo(() => {
+    const entries = Object.entries(filters)
+      .filter(([, values]) => values.length > 0)
+      .map(([key, values]) => [key, [...values].sort()] as const)
+      .sort(([a], [b]) => a.localeCompare(b));
+    return JSON.stringify(entries);
+  }, [filters]);
+
+  useEffect(() => {
+    if (!onVisibleRowsChange) return;
+    onVisibleRowsChange({
+      filteredIds: filteredRows.map((row) => row.id),
+      pageIds: paginatedRows.map((row) => row.id),
+      filterSignature,
+    });
+  }, [filteredRows, paginatedRows, filterSignature, onVisibleRowsChange]);
 
   const updateScrollMetrics = useCallback(() => {
     const scrollArea = scrollAreaRef.current;
@@ -184,18 +235,18 @@ export function ExcelDataGrid<T extends { id: string }>({
   }
 
   return (
-    <div className="rounded-lg border border-border/70 bg-white flex flex-col">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 px-3 py-2 shrink-0">
-        <div className="text-xs text-muted-foreground">
+    <div className="rounded-card border border-border bg-card flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border px-4 py-3 shrink-0">
+        <div className="text-xs font-medium text-muted-foreground">
           Showing {Math.min(filteredRows.length, (page - 1) * pageSize + 1)} to {Math.min(filteredRows.length, page * pageSize)} of {filteredRows.length} filtered records {filteredRows.length !== rows.length ? `(from ${rows.length} total)` : ""}
         </div>
-        
+
         {totalPages > 1 && (
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-1.5 self-end sm:self-auto">
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 px-2.5 text-xs"
               onClick={() => setPage(1)}
               disabled={page === 1}
             >
@@ -204,19 +255,19 @@ export function ExcelDataGrid<T extends { id: string }>({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 px-2.5 text-xs"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Prev
             </Button>
-            <span className="text-xs text-muted-foreground px-2">
+            <span className="px-2 text-xs font-medium text-muted-foreground">
               Page {page} of {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 px-2.5 text-xs"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >
@@ -225,7 +276,7 @@ export function ExcelDataGrid<T extends { id: string }>({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-8 px-2.5 text-xs"
               onClick={() => setPage(totalPages)}
               disabled={page === totalPages}
             >
@@ -248,9 +299,10 @@ export function ExcelDataGrid<T extends { id: string }>({
             setFilters={setFilters}
             emptyTitle={emptyTitle}
             isLoading={isLoading}
-            emptyColSpan={columns.length}
+            emptyColSpan={columns.length + (selection ? 1 : 0)}
             onRowClick={onRowClick}
             getRowClassName={getRowClassName}
+            selection={selection}
           />
         </div>
 
@@ -318,6 +370,7 @@ function ExcelTable<T extends { id: string }>({
   emptyColSpan,
   onRowClick,
   getRowClassName,
+  selection,
 }: {
   columns: ExcelColumn<T>[];
   stickyOffsets: Array<number | undefined>;
@@ -330,11 +383,32 @@ function ExcelTable<T extends { id: string }>({
   emptyColSpan: number;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
+  selection?: ExcelDataGridSelection<T>;
 }) {
+  const pageIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const allOnPageSelected =
+    Boolean(selection) && pageIds.length > 0 && pageIds.every((id) => selection!.selectedIds.has(id));
+  const someOnPageSelected =
+    Boolean(selection) && !allOnPageSelected && pageIds.some((id) => selection!.selectedIds.has(id));
+
   return (
     <table className="min-w-full border-separate border-spacing-0 text-sm">
       <thead>
         <tr>
+          {selection && (
+            <th
+              style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
+              className="sticky top-0 left-0 z-30 h-10.5 border-b border-border bg-secondary px-0 py-2 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+            >
+              <Checkbox
+                checked={allOnPageSelected}
+                indeterminate={someOnPageSelected}
+                onCheckedChange={() => selection.onTogglePage(pageIds)}
+                aria-label={allOnPageSelected ? "Deselect all rows on this page" : "Select all rows on this page"}
+                disabled={pageIds.length === 0}
+              />
+            </th>
+          )}
           {columns.map((column, columnIndex) => {
             const width = column.width ?? 140;
             const isFiltered = Boolean(filters[column.key]?.length);
@@ -346,11 +420,11 @@ function ExcelTable<T extends { id: string }>({
                 key={column.key}
                 style={{ minWidth: width, left: stickyOffset }}
                 className={cn(
-                  "sticky top-0 z-20 h-12 border-b border-r border-border/70 bg-secondary px-2 py-2 text-left align-top text-xs font-semibold text-muted-foreground",
-                  isSticky && "z-30 border-r-primary/30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+                  "sticky top-0 z-20 h-10.5 border-b border-border bg-secondary px-3 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
+                  isSticky && "z-30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                 )}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <span className="leading-snug">{column.label}</span>
                   <ColumnFilter
                     column={column}
@@ -378,8 +452,23 @@ function ExcelTable<T extends { id: string }>({
             </td>
           </tr>
         ) : rows.length ? (
-          rows.map((row) => (
+          rows.map((row) => {
+            const isRowSelected = Boolean(selection?.selectedIds.has(row.id));
+            return (
             <tr key={row.id} className={cn("group/excel-row bg-white hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
+              {selection && (
+                <td
+                  style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
+                  className="sticky left-0 z-10 h-11 border-b border-border/60 bg-secondary px-0 py-2 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={isRowSelected}
+                    onCheckedChange={() => selection.onToggleRow(row.id)}
+                    aria-label={selection.getRowLabel?.(row) ?? (isRowSelected ? "Deselect row" : "Select row")}
+                  />
+                </td>
+              )}
               {columns.map((column, columnIndex) => {
                 const width = column.width ?? 140;
                 const value = formatCellValue(column.getValue(row));
@@ -392,21 +481,29 @@ function ExcelTable<T extends { id: string }>({
                     key={column.key}
                     style={{ minWidth: width, left: stickyOffset }}
                     className={cn(
-                      "h-10 border-b border-r border-border/55 px-2 py-2 text-sm font-normal text-foreground",
-                      isSticky && "sticky z-10 border-r-primary/25 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+                      "h-11 border-b border-border/60 px-3 py-2 text-sm font-normal text-foreground",
+                      isSticky && "sticky z-10 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                     )}
-                    title={value}
+                    title={value === EMPTY_VALUE ? undefined : value}
                   >
                     {rendered !== undefined && rendered !== null ? (
                       rendered
                     ) : (
-                      <span className="block max-w-full truncate">{value}</span>
+                      <span
+                        className={cn(
+                          "block max-w-full truncate",
+                          value === EMPTY_VALUE && "text-muted-foreground",
+                        )}
+                      >
+                        {value}
+                      </span>
                     )}
                   </td>
                 );
               })}
             </tr>
-          ))
+            );
+          })
         ) : (
           <tr>
             <td
@@ -545,10 +642,12 @@ function ColumnFilter<T extends { id: string }>({
   );
 }
 
+const EMPTY_VALUE = "—"; // em-dash, rendered muted
+
 function formatCellValue(value: string | number | boolean | null | undefined) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (value == null) return "-";
+  if (value == null) return EMPTY_VALUE;
   const text = String(value).trim();
-  return text || "-";
+  return text || EMPTY_VALUE;
 }
 

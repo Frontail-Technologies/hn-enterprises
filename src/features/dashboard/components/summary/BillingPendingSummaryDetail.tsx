@@ -45,29 +45,33 @@ export function BillingPendingSummaryDetail({
   const { data: customers = [], isLoading: customersLoading } = useCustomersQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });
-  const { data: bills = [], isLoading: billsLoading } = useBillsQuery();
-
-  const scopedCustomers = useMemo(
-    () => customers.filter((customer) => city === "all" || customer.city === city),
-    [customers, city],
-  );
+  // Bills are project-linked now - filtered server-side by project; customers
+  // are kept only to enrich rows and to support the city filter.
+  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
+    projectId: projectId === "all" ? undefined : projectId,
+  });
 
   const rows = useMemo(() => {
-    const customerById = new Map(scopedCustomers.map((customer) => [customer.id, customer]));
+    const customerById = new Map(customers.map((customer) => [customer.id, customer]));
     const range = getPeriodRange(period);
 
     return bills
-      .filter((bill) => customerById.has(bill.customerId) && withinRange(bill.billDate, range))
+      .filter((bill) => {
+        if (!withinRange(bill.billDate, range)) return false;
+        if (city === "all") return true;
+        const customer = bill.customerId ? customerById.get(bill.customerId) : undefined;
+        return customer?.city === city;
+      })
       .map((bill) => {
-        const customer = customerById.get(bill.customerId);
+        const customer = bill.customerId ? customerById.get(bill.customerId) : undefined;
         return {
           ...bill,
-          customerName: customer?.customerConnection.customerName ?? "-",
-          siteArea: customer?.siteArea ?? "-",
-          supervisorName: customer?.customerConnection.supervisorName ?? "-",
+          customerName: customer?.customerConnection.customerName ?? "—",
+          siteArea: customer?.siteArea ?? "—",
+          supervisorName: customer?.customerConnection.supervisorName ?? "—",
         };
       });
-  }, [bills, scopedCustomers, period]);
+  }, [bills, customers, city, period]);
 
   return (
     <SummaryStatShell

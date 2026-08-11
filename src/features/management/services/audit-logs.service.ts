@@ -42,9 +42,10 @@ function mapAuditLog(raw: BackendAuditLog): AuditLog {
 }
 
 export const auditLogsApi = {
-  async list(params: { module?: string } = {}): Promise<AuditLog[]> {
+  async list(params: { module?: string; projectId?: string } = {}): Promise<AuditLog[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.module) query.set("module", params.module);
+    if (params.projectId) query.set("projectId", params.projectId);
     const rows = await apiRequest<BackendAuditLog[]>(`/audit-logs?${query.toString()}`);
     return rows.map(mapAuditLog);
   },

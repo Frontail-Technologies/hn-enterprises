@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "./PageHeader";
 
 interface PageShellProps {
   title: string;
@@ -25,23 +26,10 @@ export function PageShell({
   contentClassName,
 }: PageShellProps) {
   return (
-    <div className={cn("space-y-3", className)}>
-      <header className="space-y-2">
-        {eyebrow ? <div className="text-xs text-muted-foreground">{eyebrow}</div> : null}
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">
-              {title}
-            </h1>
-            {subtitle ? (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            ) : null}
-          </div>
-          {actions ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
-          ) : null}
-        </div>
-        {tabs ? <div className="border-b border-border/70">{tabs}</div> : null}
+    <div className={cn("space-y-4", className)}>
+      <header className="space-y-3">
+        <PageHeader title={title} subtitle={subtitle} eyebrow={eyebrow} actions={actions} />
+        {tabs ? <div className="border-b border-border">{tabs}</div> : null}
         {toolbar ? <div>{toolbar}</div> : null}
       </header>
 

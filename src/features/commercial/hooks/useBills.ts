@@ -7,7 +7,9 @@ const billsKey = ["bills"] as const;
 const billKey = (id: string) => ["bills", id] as const;
 const paymentsKey = (billId: string) => ["bills", billId, "payments"] as const;
 
-export function useBillsQuery(params: { search?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {}) {
+export function useBillsQuery(
+  params: { search?: string; projectId?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {},
+) {
   return useQuery({
     queryKey: [...billsKey, params],
     queryFn: () => billsApi.list(params),

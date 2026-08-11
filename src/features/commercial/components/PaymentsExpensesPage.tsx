@@ -222,7 +222,7 @@ function PaymentActions({ payment }: { payment: Payment }) {
   );
 }
 
-function emptyValues(defaultCategory: PaymentCategory): PaymentFormValues {
+function emptyValues(defaultCategory: PaymentCategory, defaultProjectId = ""): PaymentFormValues {
   return {
     category: defaultCategory,
     plumberId: "",
@@ -230,6 +230,7 @@ function emptyValues(defaultCategory: PaymentCategory): PaymentFormValues {
     siteId: "",
     address: "",
     customerId: "",
+    projectId: defaultProjectId,
     amount: "",
     paymentDate: new Date().toISOString().slice(0, 10),
     mode: "Cash",
@@ -248,6 +249,7 @@ function valuesFromPayment(payment: Payment): PaymentFormValues {
     siteId: payment.siteId,
     address: payment.address,
     customerId: payment.customerId,
+    projectId: payment.projectId,
     amount: String(payment.amount),
     paymentDate: payment.paymentDate,
     mode: payment.mode,
@@ -258,18 +260,24 @@ function valuesFromPayment(payment: Payment): PaymentFormValues {
   };
 }
 
-function PaymentDrawer({
+export function PaymentDrawer({
   payment,
   defaultCategory,
+  defaultProjectId,
+  defaultProjectName,
   iconOnly = false,
 }: {
   payment?: Payment;
   defaultCategory?: PaymentCategory;
+  /** Locks the new expense to a project when opened from inside Project Details (§24). */
+  defaultProjectId?: string;
+  /** Human-readable name shown for the locked project - never shows the raw id. */
+  defaultProjectName?: string;
   iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<PaymentFormValues>(
-    payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0]),
+    payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0], defaultProjectId),
   );
   const [saveError, setSaveError] = useState("");
   const { data: paymentModes = [] } = useMasterValuesQuery("Payment Types");
@@ -286,7 +294,9 @@ function PaymentDrawer({
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setValues(payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0]));
+      setValues(
+        payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0], defaultProjectId),
+      );
       setSaveError("");
     }
     setOpen(nextOpen);
@@ -339,6 +349,12 @@ function PaymentDrawer({
         </SheetHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
+          {defaultProjectId && defaultProjectName ? (
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
+              <span className="text-muted-foreground">Project</span>
+              <span className="font-semibold text-foreground">{defaultProjectName}</span>
+            </div>
+          ) : null}
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Category</span>
             <Select

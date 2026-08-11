@@ -35,7 +35,6 @@ export function DataTable<T extends { id: string }>({
   isLoading,
   emptyTitle = 'No records found',
   emptyDescription,
-  variant = 'default',
   showSerialNumber = true,
   serialNumberStart = 1,
   tableClassName,
@@ -44,16 +43,15 @@ export function DataTable<T extends { id: string }>({
   stickyHeader,
   stickyLastColumn,
 }: DataTableProps<T>) {
-  const striped = variant === 'striped'
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0)
 
   return (
-    <div className={cn('w-full overflow-x-auto rounded-lg border border-border/70 bg-card [&_tbody_svg]:text-primary', containerClassName)}>
+    <div className={cn('w-full overflow-x-auto rounded-card border border-border bg-card [&_tbody_svg]:text-primary', containerClassName)}>
       <Table className={cn('min-w-full', tableClassName)}>
         <TableHeader className={cn(stickyHeader && 'sticky top-0 z-10')}>
-          <TableRow className="border-b border-border/70 bg-secondary/80 hover:bg-secondary/80">
+          <TableRow className="border-b border-border bg-secondary hover:bg-secondary">
             {showSerialNumber && (
-              <TableHead className={cn('w-12 border-r border-border/45 px-3 text-center text-xs font-semibold text-muted-foreground last:border-r-0', dense && 'h-8')}>
+              <TableHead className={cn('w-12 px-3 text-center text-xs font-semibold text-muted-foreground', dense && 'h-10.5')}>
                 No.
               </TableHead>
             )}
@@ -61,9 +59,9 @@ export function DataTable<T extends { id: string }>({
               <TableHead
                 key={col.key}
                 className={cn(
-                  'border-r border-border/45 px-3 text-xs font-semibold text-muted-foreground last:border-r-0',
-                  dense && 'h-8',
-                  stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-secondary/95 shadow-[-8px_0_12px_-12px_var(--foreground)]',
+                  'px-3 text-xs font-semibold text-muted-foreground',
+                  dense && 'h-10.5',
+                  stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-secondary shadow-[-8px_0_12px_-12px_var(--foreground)]',
                   col.headerClassName ?? col.className,
                 )}
               >
@@ -79,14 +77,11 @@ export function DataTable<T extends { id: string }>({
             <TableRow
               key={row.id}
               className={cn(
-                'border-b border-border/65 bg-card transition-colors last:border-0',
-                striped
-                  ? 'hover:bg-muted/35'
-                  : 'hover:bg-muted/35'
+                'border-b border-border/60 bg-card transition-colors last:border-0 hover:bg-muted/35',
                 )}
             >
               {showSerialNumber && (
-                <TableCell className={cn('w-12 border-r border-border/35 px-3 text-center text-xs font-medium text-muted-foreground last:border-r-0', dense && 'py-2')}>
+                <TableCell className={cn('w-12 px-3 text-center text-xs font-medium text-muted-foreground', dense && 'py-2.5')}>
                   {serialNumberStart + index}
                 </TableCell>
               )}
@@ -94,8 +89,8 @@ export function DataTable<T extends { id: string }>({
                 <TableCell
                   key={col.key}
                   className={cn(
-                    'border-r border-border/35 px-3 text-sm font-normal text-foreground last:border-r-0',
-                    dense && 'py-2',
+                    'px-3 text-sm font-normal text-foreground',
+                    dense && 'py-2.5',
                     stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-card shadow-[-8px_0_12px_-12px_var(--foreground)]',
                     col.className,
                   )}
@@ -119,7 +114,7 @@ export function DataTable<T extends { id: string }>({
 
 function renderCellValue<T extends { id: string }>(row: T, key: string) {
   const value = row[key as keyof T]
-  if (value == null) return '-'
-  const text = String(value).trim()
-  return text || '-'
+  const text = value == null ? '' : String(value).trim()
+  if (!text) return <span className="text-muted-foreground">—</span>
+  return text
 }

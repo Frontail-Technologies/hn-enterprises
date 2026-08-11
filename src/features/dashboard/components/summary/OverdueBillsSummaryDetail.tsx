@@ -31,33 +31,40 @@ const columns: ExcelColumn<OverdueBillRow>[] = [
 ];
 
 export function OverdueBillsSummaryDetail({ projectId, city }: { projectId: string; city: string }) {
+  // Bills are project-linked now, so this filters server-side by project
+  // directly. Customers are still fetched to enrich each row with an optional
+  // customer/site/supervisor and to support the city filter (city is a
+  // customer attribute, not a bill one).
   const { data: customers = [], isLoading: customersLoading } = useCustomersQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });
-  const { data: bills = [], isLoading: billsLoading } = useBillsQuery();
-
-  const scopedCustomers = useMemo(
-    () => customers.filter((customer) => city === "all" || customer.city === city),
-    [customers, city],
-  );
+  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
+    projectId: projectId === "all" ? undefined : projectId,
+  });
 
   const rows = useMemo(() => {
-    const customerById = new Map(scopedCustomers.map((customer) => [customer.id, customer]));
+    const customerById = new Map(customers.map((customer) => [customer.id, customer]));
     const now = new Date();
 
     return bills
-      .filter((bill) => customerById.has(bill.customerId) && bill.status === "Overdue")
+      .filter((bill) => {
+        if (bill.status !== "Overdue") return false;
+        if (city === "all") return true;
+        // A specific-city filter can only match customer-linked bills.
+        const customer = bill.customerId ? customerById.get(bill.customerId) : undefined;
+        return customer?.city === city;
+      })
       .map((bill) => {
-        const customer = customerById.get(bill.customerId);
+        const customer = bill.customerId ? customerById.get(bill.customerId) : undefined;
         return {
           ...bill,
-          customerName: customer?.customerConnection.customerName ?? "-",
-          siteArea: customer?.siteArea ?? "-",
-          supervisorName: customer?.customerConnection.supervisorName ?? "-",
+          customerName: customer?.customerConnection.customerName ?? "—",
+          siteArea: customer?.siteArea ?? "—",
+          supervisorName: customer?.customerConnection.supervisorName ?? "—",
           daysOverdue: Math.max(0, differenceInCalendarDays(now, new Date(bill.dueDate))),
         };
       });
-  }, [bills, scopedCustomers]);
+  }, [bills, customers, city]);
 
   return (
     <SummaryStatShell

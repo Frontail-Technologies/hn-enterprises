@@ -7,6 +7,8 @@ const projectsKey = ["projects"] as const;
 const projectKey = (id: string) => ["projects", id] as const;
 const sitesKey = (projectId: string) => ["projects", projectId, "sites"] as const;
 const documentsKey = (projectId: string) => ["projects", projectId, "documents"] as const;
+const summaryKey = (projectId: string) => ["projects", projectId, "summary"] as const;
+const teamKey = (projectId: string) => ["projects", projectId, "team"] as const;
 
 export function useProjectsQuery(search?: string) {
   return useQuery({
@@ -112,5 +114,25 @@ export function useDeleteProjectDocument(projectId: string) {
       toast.success("Document deleted");
     },
     onError: (error: any) => toast.error(error?.message || "Failed to delete document"),
+  });
+}
+
+// Overview tab - one lightweight aggregate call instead of several unrelated
+// requests just to draw KPI cards (§4).
+export function useProjectSummaryQuery(projectId: string) {
+  return useQuery({
+    queryKey: summaryKey(projectId),
+    queryFn: () => projectsApi.getSummary(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+
+// Team tab - only fetched when that tab is actually opened (§22), via the
+// `enabled` option below.
+export function useProjectTeamQuery(projectId: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: teamKey(projectId),
+    queryFn: () => projectsApi.getTeam(projectId),
+    enabled: Boolean(projectId) && (options.enabled ?? true),
   });
 }

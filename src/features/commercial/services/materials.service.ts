@@ -189,6 +189,7 @@ export const materialsApi = {
       plumberId?: string;
       siteId?: string;
       customerId?: string;
+      projectId?: string;
     } = {},
   ): Promise<MaterialTransaction[]> {
     const query = new URLSearchParams({ limit: "200" });
@@ -197,6 +198,7 @@ export const materialsApi = {
     if (params.plumberId) query.set("plumberId", params.plumberId);
     if (params.siteId) query.set("siteId", params.siteId);
     if (params.customerId) query.set("customerId", params.customerId);
+    if (params.projectId) query.set("projectId", params.projectId);
     const rows = await apiRequest<BackendMaterialTransaction[]>(`/materials/transactions?${query.toString()}`);
     return rows.map(mapTransaction);
   },

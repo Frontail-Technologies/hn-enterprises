@@ -25,15 +25,18 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateBill, useUpdateBill, useDeleteBill } from "../../hooks/useBills";
 import type { Bill, BillFormValues, BillStage, BillStatus } from "../../types/bill.types";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
 const billStages: BillStage[] = ["GI", "GC", "Commissioning", "Conversion", "Other"];
 const billStatuses: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
+const CUSTOMER_NONE = "__none__";
 
-function emptyValues(): BillFormValues {
+function emptyValues(defaultProjectId = ""): BillFormValues {
   return {
+    projectId: defaultProjectId,
     customerId: "",
     billNumber: "",
     stage: "Other",
@@ -48,6 +51,7 @@ function emptyValues(): BillFormValues {
 
 function valuesFromBill(bill: Bill): BillFormValues {
   return {
+    projectId: bill.projectId,
     customerId: bill.customerId,
     billNumber: bill.billNumber,
     stage: bill.stage,
@@ -65,32 +69,43 @@ export function BillDrawer({
   triggerLabel,
   icon,
   iconOnly = false,
+  defaultProjectId,
+  defaultProjectName,
 }: {
   bill?: Bill;
   triggerLabel: string;
   icon?: ReactNode;
   iconOnly?: boolean;
+  /** Locks the bill to a project when created from inside a project's Billing tab. */
+  defaultProjectId?: string;
+  defaultProjectName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<BillFormValues>(bill ? valuesFromBill(bill) : emptyValues());
+  const [values, setValues] = useState<BillFormValues>(
+    bill ? valuesFromBill(bill) : emptyValues(defaultProjectId),
+  );
   const [saveError, setSaveError] = useState("");
-  const { data: customers = [] } = useCustomersQuery();
+  const { data: projects = [] } = useProjectsQuery();
+  // Customer is an optional reference scoped to the chosen project, so only
+  // that project's customers are offered.
+  const { data: customers = [] } = useCustomersQuery({ projectId: values.projectId || undefined });
   const createBill = useCreateBill();
   const updateBill = useUpdateBill(bill?.id ?? "");
   const deleteBill = useDeleteBill();
   const isSaving = createBill.isPending || updateBill.isPending;
+  const projectLocked = Boolean(defaultProjectId) && !bill;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setValues(bill ? valuesFromBill(bill) : emptyValues());
+      setValues(bill ? valuesFromBill(bill) : emptyValues(defaultProjectId));
       setSaveError("");
     }
     setOpen(nextOpen);
   }
 
   async function handleSave() {
-    if (!values.customerId || !values.billNumber.trim() || !values.totalAmount) {
-      setSaveError("Customer, bill number and total amount are required");
+    if (!values.projectId || !values.billNumber.trim() || !values.totalAmount) {
+      setSaveError("Project, bill number and total amount are required");
       return;
     }
     setSaveError("");
@@ -136,14 +151,41 @@ export function BillDrawer({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Customer</span>
+            <span className="text-xs font-medium text-muted-foreground">Project</span>
+            {projectLocked ? (
+              <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                {defaultProjectName || "-"}
+              </div>
+            ) : (
+              <SearchableSelect
+                value={values.projectId || undefined}
+                onValueChange={(projectId) =>
+                  // Changing project clears any customer that belonged to the old one.
+                  setValues((current) => ({ ...current, projectId: projectId ?? "", customerId: "" }))
+                }
+                placeholder="Select project"
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                className="w-full"
+              />
+            )}
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Customer (optional)</span>
             <SearchableSelect
               value={values.customerId || undefined}
               onValueChange={(customerId) =>
-                setValues((current) => ({ ...current, customerId: customerId ?? "" }))
+                setValues((current) => ({
+                  ...current,
+                  customerId: customerId && customerId !== CUSTOMER_NONE ? customerId : "",
+                }))
               }
-              placeholder="Select customer"
-              options={customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName }))}
+              placeholder={values.projectId ? "Select customer" : "Select a project first"}
+              disabled={!values.projectId}
+              options={[
+                { value: CUSTOMER_NONE, label: "— No specific customer —" },
+                ...customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName })),
+              ]}
               className="w-full"
             />
           </label>

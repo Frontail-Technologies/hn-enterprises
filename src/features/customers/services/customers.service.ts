@@ -1279,7 +1279,7 @@ function formatBoolean(value: boolean) {
 
 // ---- Real backend API + adapters ----
 
-const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
+export const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
   Draft: "draft",
   Pending: "pending",
   Active: "active",

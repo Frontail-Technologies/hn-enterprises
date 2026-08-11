@@ -61,7 +61,8 @@ function toDateOnly(value: string | null | undefined) {
 
 type BackendBill = {
   id: string;
-  customerId: string;
+  projectId: string;
+  customerId: string | null;
   billNumber: string;
   stage: BackendBillStage;
   billDate: string | null;
@@ -87,7 +88,8 @@ type BackendBillPayment = {
 function mapBill(raw: BackendBill): Bill {
   return {
     id: raw.id,
-    customerId: raw.customerId,
+    projectId: raw.projectId,
+    customerId: raw.customerId ?? "",
     billNumber: raw.billNumber,
     stage: STAGE_TO_FRONTEND[raw.stage] ?? "Other",
     billDate: toDateOnly(raw.billDate),
@@ -103,7 +105,8 @@ function mapBill(raw: BackendBill): Bill {
 
 function mapBillFormToBody(values: BillFormValues) {
   return {
-    customerId: values.customerId,
+    projectId: values.projectId,
+    customerId: values.customerId || undefined,
     billNumber: values.billNumber,
     stage: STAGE_TO_BACKEND[values.stage],
     billDate: values.billDate || undefined,
@@ -128,11 +131,15 @@ function mapPayment(raw: BackendBillPayment): BillPayment {
 }
 
 export const billsApi = {
-  async list(params: { search?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {}): Promise<Bill[]> {
+  async list(
+    params: { search?: string; projectId?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {},
+  ): Promise<Bill[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.search) query.set("search", params.search);
+    if (params.projectId) query.set("projectId", params.projectId);
     if (params.customerId) query.set("customerId", params.customerId);
     if (params.stage) query.set("stage", STAGE_TO_BACKEND[params.stage]);
+    if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
     const rows = await apiRequest<BackendBill[]>(`/bills?${query.toString()}`);
     return rows.map(mapBill);
   },
@@ -156,6 +163,7 @@ export const billsApi = {
       body: JSON.stringify(
         Object.fromEntries(
           Object.entries({
+            projectId: values.projectId,
             customerId: values.customerId,
             billNumber: values.billNumber,
             stage: values.stage ? STAGE_TO_BACKEND[values.stage] : undefined,

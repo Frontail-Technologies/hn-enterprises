@@ -25,8 +25,8 @@ export function PageShell({
       ) : (
         <PageHeader title={title} subtitle={subtitle} actions={actions} />
       )}
-      {tabs ? <div className="border-b border-border/70">{tabs}</div> : null}
-      <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
+      {tabs ? <div className="border-b border-border">{tabs}</div> : null}
+      <section className="space-y-3 rounded-card border border-border bg-card p-4">
         {children}
       </section>
     </div>

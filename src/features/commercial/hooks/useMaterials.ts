@@ -65,7 +65,14 @@ export function useDeleteMaterial() {
 }
 
 export function useMaterialTransactionsQuery(
-  params: { materialId?: string; type?: MaterialTransactionType; plumberId?: string; siteId?: string; customerId?: string } = {},
+  params: {
+    materialId?: string;
+    type?: MaterialTransactionType;
+    plumberId?: string;
+    siteId?: string;
+    customerId?: string;
+    projectId?: string;
+  } = {},
 ) {
   return useQuery({
     queryKey: transactionsKey(params),

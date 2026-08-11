@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ImageSquareIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +92,10 @@ interface CustomerFormProps {
 export function CustomerForm({ mode, customerId }: CustomerFormProps) {
   const isEdit = mode === "edit";
   const { data: customer, isLoading } = useCustomerQuery(customerId ?? "");
+  // Project Details → Customers → Add Customer already knows the project -
+  // it's passed as ?projectId=X instead of making the user pick it again (§24).
+  const searchParams = useSearchParams();
+  const defaultProjectId = searchParams.get("projectId") ?? undefined;
 
   if (isEdit && isLoading) {
     return <PageLoading />;
@@ -103,6 +107,7 @@ export function CustomerForm({ mode, customerId }: CustomerFormProps) {
       mode={mode}
       customerId={customerId}
       initialValues={customer ?? defaultCustomerFormValues}
+      defaultProjectId={isEdit ? undefined : defaultProjectId}
     />
   );
 }
@@ -111,10 +116,12 @@ function CustomerFormFields({
   mode,
   customerId,
   initialValues,
+  defaultProjectId,
 }: {
   mode: "create" | "edit";
   customerId?: string;
   initialValues: CustomerFormValues;
+  defaultProjectId?: string;
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -123,6 +130,20 @@ function CustomerFormFields({
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: projects = [] } = useProjectsQuery();
+
+  // Backfills projectId/projectName once the project list has loaded - the
+  // ?projectId= param is known immediately, but the human-readable project
+  // name the form displays comes from this list. Applied during render
+  // (React's "adjust state" pattern, gated on a tracked "already applied"
+  // value) rather than in an effect, to avoid an extra commit-then-rerender.
+  const [appliedDefaultProjectId, setAppliedDefaultProjectId] = useState<string | undefined>(undefined);
+  if (defaultProjectId && defaultProjectId !== appliedDefaultProjectId && projects.length > 0 && !values.projectId) {
+    const project = projects.find((item) => item.id === defaultProjectId);
+    if (project) {
+      setAppliedDefaultProjectId(defaultProjectId);
+      setValues((current) => ({ ...current, projectId: project.id, projectName: project.name }));
+    }
+  }
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const createCustomer = useCreateCustomer();
@@ -225,20 +246,29 @@ function CustomerFormFields({
             <SectionCard title="Customer & Connection Details">
               <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <FormField label="Project">
-                  <SearchableSelect
-                    value={values.projectId || undefined}
-                    onValueChange={(projectId) => {
-                      const project = projectOptions.find((item) => item.value === projectId);
-                      setValues((current) => ({
-                        ...current,
-                        projectId: projectId ?? "",
-                        projectName: project?.label ?? "",
-                      }));
-                    }}
-                    placeholder="Select project"
-                    options={projectOptions}
-                    className="w-full"
-                  />
+                  {defaultProjectId && !isEdit ? (
+                    // Opened from inside a project's own Customers tab - the
+                    // project is already known, so it's shown locked rather
+                    // than asking the user to pick it again (§11/§24).
+                    <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                      {values.projectName || "-"}
+                    </div>
+                  ) : (
+                    <SearchableSelect
+                      value={values.projectId || undefined}
+                      onValueChange={(projectId) => {
+                        const project = projectOptions.find((item) => item.value === projectId);
+                        setValues((current) => ({
+                          ...current,
+                          projectId: projectId ?? "",
+                          projectName: project?.label ?? "",
+                        }));
+                      }}
+                      placeholder="Select project"
+                      options={projectOptions}
+                      className="w-full"
+                    />
+                  )}
                 </FormField>
                 <FormField label="Assigned Plumber">
                   <SearchableSelect

@@ -12,13 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import {
   Sheet,
@@ -145,15 +139,50 @@ export function CustomerEvidencePanel({
           customerId={customerId}
         />
       ) : null}
-      <MediaSection title="Survey Photos" items={surveyPhotos} onDelete={handleDeleteDocument} />
-      <MediaSection title="LMC Evidence" items={lmcEvidence} onDelete={handleDeleteDocument} />
-      <MediaSection title="GI Evidence" items={giEvidence} onDelete={handleDeleteDocument} />
-      <MediaSection title="GC Evidence" items={gcEvidence} onDelete={handleDeleteDocument} />
-      <MediaSection title="Meter Photo" items={meterPhotos} onDelete={handleDeleteDocument} />
-      <MediaSection title="Customer Photos" items={customerPhotos} onDelete={handleDeleteDocument} />
-      <MediaSection title="Payment Receipts" items={paymentReceipts} onDelete={handleDeleteDocument} />
-      <MediaSection title="Other Photos" items={otherPhotos} onDelete={handleDeleteDocument} />
-      <UploadedPdfSection items={pdfDocuments} onDelete={handleDeleteDocument} />
+      <MediaSection
+        title="Survey Photos"
+        items={surveyPhotos}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="LMC Evidence"
+        items={lmcEvidence}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="GI Evidence"
+        items={giEvidence}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="GC Evidence"
+        items={gcEvidence}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="Meter Photo"
+        items={meterPhotos}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="Customer Photos"
+        items={customerPhotos}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="Payment Receipts"
+        items={paymentReceipts}
+        onDelete={handleDeleteDocument}
+      />
+      <MediaSection
+        title="Other Photos"
+        items={otherPhotos}
+        onDelete={handleDeleteDocument}
+      />
+      <UploadedPdfSection
+        items={pdfDocuments}
+        onDelete={handleDeleteDocument}
+      />
     </div>
   );
 }
@@ -180,7 +209,7 @@ function CustomerEvidenceUpload({
   const [remarks, setRemarks] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  
+
   const customerEvidenceCategories = useCustomerDocumentCategories();
 
   const resetForm = () => {
@@ -222,7 +251,9 @@ function CustomerEvidenceUpload({
       resetForm();
       onOpenChange(false);
     } catch {
-      setSaveError("Some files failed to upload. Please retry or remove them before saving.");
+      setSaveError(
+        "Some files failed to upload. Please retry or remove them before saving.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -240,7 +271,8 @@ function CustomerEvidenceUpload({
       className="p-3"
     >
       <p className="text-sm text-muted-foreground">
-        Add customer photos, site evidence, meter photos, receipts, or supporting files.
+        Add customer photos, site evidence, meter photos, receipts, or
+        supporting files.
       </p>
 
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -248,14 +280,18 @@ function CustomerEvidenceUpload({
           <SheetHeader className="border-b border-border/70 px-5 py-4">
             <SheetTitle>Upload Evidence</SheetTitle>
             <SheetDescription>
-              Keep this simple: select category, attach photos, add reference/date if needed.
+              Keep this simple: select category, attach photos, add
+              reference/date if needed.
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <FormField label="Category">
               <SearchableSelect
                 value={category}
-                options={customerEvidenceCategories.map(c => ({ value: c, label: c }))}
+                options={customerEvidenceCategories.map((c) => ({
+                  value: c,
+                  label: c,
+                }))}
                 placeholder="Select category"
                 onValueChange={(value) => setCategory(value ?? "Other")}
               />
@@ -268,10 +304,19 @@ function CustomerEvidenceUpload({
               />
             </FormField>
             <FormField label="Evidence Date">
-              <DatePicker value={evidenceDate} onChange={setEvidenceDate} className="w-full" />
+              <DatePicker
+                value={evidenceDate}
+                onChange={setEvidenceDate}
+                className="w-full"
+              />
             </FormField>
             <FormField label="Photos">
-              <ImageUploadPreview images={images} onChange={setImages} module="customers" recordId={customerId} />
+              <ImageUploadPreview
+                images={images}
+                onChange={setImages}
+                module="customers"
+                recordId={customerId}
+              />
             </FormField>
             <FormField label="Remarks">
               <Textarea
@@ -281,13 +326,23 @@ function CustomerEvidenceUpload({
                 placeholder="Optional notes"
               />
             </FormField>
-            {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
+            {saveError ? (
+              <p className="text-xs text-destructive">{saveError}</p>
+            ) : null}
           </div>
           <SheetFooter className="flex-row justify-end border-t border-border/70 px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="button" onClick={() => void saveEvidence()} disabled={!images.length || isSaving}>
+            <Button
+              type="button"
+              onClick={() => void saveEvidence()}
+              disabled={!images.length || isSaving}
+            >
               {isSaving ? "Saving..." : "Save Evidence"}
             </Button>
           </SheetFooter>
@@ -304,7 +359,8 @@ export function CustomerReportsPanel({
   customerId?: string;
   customer?: Customer;
 }) {
-  const [activeTemplate, setActiveTemplate] = useState<ReportTemplateDefinition | null>(null);
+  const [activeTemplate, setActiveTemplate] =
+    useState<ReportTemplateDefinition | null>(null);
   const reports = reportTemplates.map((template) => ({
     ...template,
     reportNo: getCustomerReportNo(template.id, customer),
@@ -339,7 +395,9 @@ export function CustomerReportsPanel({
               </div>
               <div className="text-xs">
                 <span className="text-muted-foreground">Report No.: </span>
-                <span className="font-medium text-foreground">{template.reportNo}</span>
+                <span className="font-medium text-foreground">
+                  {template.reportNo}
+                </span>
               </div>
               <StatusBadge status={template.status} />
               <div className="flex flex-wrap gap-2 md:justify-end">
@@ -393,7 +451,8 @@ function CustomerReportPreviewSheet({
             <div>
               <SheetTitle>{template.title}</SheetTitle>
               <SheetDescription>
-                Preview generated from current data for {customer.customerConnection.customerName}.
+                Preview generated from current data for{" "}
+                {customer.customerConnection.customerName}.
               </SheetDescription>
             </div>
             <PDFDownloadLink
@@ -473,7 +532,11 @@ function MediaSection({
                   >
                     {isImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={href} alt={item.fileName} className="h-full w-full object-cover" />
+                      <img
+                        src={href}
+                        alt={item.fileName}
+                        className="h-full w-full object-cover"
+                      />
                     ) : isImageFile(item.fileName) ? (
                       <ImageSquareIcon size={30} />
                     ) : (
@@ -508,9 +571,14 @@ function MediaSection({
         </div>
       )}
 
-      <Dialog open={Boolean(previewItem)} onOpenChange={(open) => !open && setPreviewItem(null)}>
+      <Dialog
+        open={Boolean(previewItem)}
+        onOpenChange={(open) => !open && setPreviewItem(null)}
+      >
         <DialogContent className="sm:max-w-2xl">
-          <DialogTitle className="truncate">{previewItem?.fileName}</DialogTitle>
+          <DialogTitle className="truncate">
+            {previewItem?.fileName}
+          </DialogTitle>
           {previewItem ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -546,8 +614,12 @@ function UploadedPdfSection({
                   <FilePdfIcon size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">{item.fileName}</p>
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {item.title}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {item.fileName}
+                  </p>
                 </div>
                 <span className="hidden text-xs text-muted-foreground sm:inline">
                   {formatDisplayDate(item.uploadedOn)}
@@ -559,7 +631,10 @@ function UploadedPdfSection({
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), !href && "pointer-events-none opacity-50")}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                        !href && "pointer-events-none opacity-50",
+                      )}
                       aria-label={`Preview ${item.title}`}
                     >
                       <EyeIcon size={15} />
@@ -569,7 +644,10 @@ function UploadedPdfSection({
                     <a
                       href={href}
                       download={item.fileName}
-                      className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), !href && "pointer-events-none opacity-50")}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                        !href && "pointer-events-none opacity-50",
+                      )}
                       aria-label={`Download ${item.title}`}
                     >
                       <DownloadSimpleIcon size={15} />
@@ -581,7 +659,11 @@ function UploadedPdfSection({
                         type="button"
                         onClick={() => onDelete(item.documentId!)}
                         aria-label={`Delete ${item.title}`}
-                        className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "text-destructive hover:text-destructive" })}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "icon-sm",
+                          className: "text-destructive hover:text-destructive",
+                        })}
                       >
                         <TrashIcon size={15} />
                       </button>
@@ -610,17 +692,25 @@ function documentToEvidence(document: CustomerDocument): EvidenceItem {
   };
 }
 
-function getCustomerReportNo(templateId: ReportTemplateId, customer?: Customer) {
+function getCustomerReportNo(
+  templateId: ReportTemplateId,
+  customer?: Customer,
+) {
   if (!customer) return "-";
   const connection = customer.customerConnection;
 
   if (templateId === "gc-report") return connection.reportNoGc || "-";
-  if (templateId === "conversion-report") return connection.reportNoConversion || "-";
-  if (templateId === "png-connection-job-card") return connection.reportNoConversion || connection.reportNoGi || "-";
+  if (templateId === "conversion-report")
+    return connection.reportNoConversion || "-";
+  if (templateId === "png-connection-job-card")
+    return connection.reportNoConversion || connection.reportNoGi || "-";
   return connection.reportNoGi || "-";
 }
 
-function getCustomerReportStatus(templateId: ReportTemplateId, customer?: Customer) {
+function getCustomerReportStatus(
+  templateId: ReportTemplateId,
+  customer?: Customer,
+) {
   if (!customer) return "Pending";
 
   if (templateId === "jmr-customer-consent") {
@@ -630,15 +720,24 @@ function getCustomerReportStatus(templateId: ReportTemplateId, customer?: Custom
     return customer.billingCompletion.gcBillDone ? "Completed" : "In Review";
   }
   if (templateId === "conversion-report") {
-    return customer.billingCompletion.conversionBillDone ? "Completed" : "Pending";
+    return customer.billingCompletion.conversionBillDone
+      ? "Completed"
+      : "Pending";
   }
-  if (templateId === "testing-report-mdpe-line" || templateId === "pressure-observation-chart") {
-    return customer.lmcPipelineWork.pipeRecords.some((pipe) => pipe.testingStatus === "Testing Completed")
+  if (
+    templateId === "testing-report-mdpe-line" ||
+    templateId === "pressure-observation-chart"
+  ) {
+    return customer.lmcPipelineWork.pipeRecords.some(
+      (pipe) => pipe.testingStatus === "Testing Completed",
+    )
       ? "Completed"
       : "Pending";
   }
   if (templateId === "pre-commissioning-report") {
-    return customer.lmcPipelineWork.pipeRecords.some((pipe) => pipe.purgingStatus === "Purging Completed")
+    return customer.lmcPipelineWork.pipeRecords.some(
+      (pipe) => pipe.purgingStatus === "Purging Completed",
+    )
       ? "Completed"
       : "Pending";
   }

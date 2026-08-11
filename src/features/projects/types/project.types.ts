@@ -81,3 +81,73 @@ export type ActivityItem = {
 };
 
 export type ProjectFormValues = Omit<Project, "id">;
+
+// GET /projects/:id/summary - lightweight KPI aggregation for the Overview
+// tab (see projects-summary.service.ts on the backend for exactly how each
+// number is computed).
+export type ProjectSummary = {
+  customers: {
+    total: number;
+    surveyDone: number;
+    giDone: number;
+    gcDone: number;
+    conversionDone: number;
+    jmrDone: number;
+    jmrSubmittedInPbg: number;
+    giBillDone: number;
+    gcBillDone: number;
+    conversionBillDone: number;
+    connectionRemark: number;
+  };
+  sites: {
+    total: number;
+    active: number;
+    list: {
+      id: string;
+      name: string;
+      status: string;
+      supervisorName: string | null;
+      plannedConnections: number | null;
+      customerCount: number;
+    }[];
+  };
+  dpr: { pending: number; submittedThisMonth: number };
+  expenses: { total: number };
+  materials: { lowStockAlerts: number };
+  team: { supervisors: number; plumbers: number; staff: number };
+};
+
+// GET /projects/:id/team - "people actually working on this project", never
+// the global roster. See projects-team.service.ts for the derivation rules.
+export type ProjectTeamSiteRef = { id: string; name: string };
+
+export type ProjectTeamSupervisor = {
+  id: string;
+  name: string;
+  role: "Supervisor";
+  sites: ProjectTeamSiteRef[];
+  customerCount: number;
+  lastActivityAt: string | null;
+};
+
+export type ProjectTeamPlumber = {
+  id: string;
+  name: string;
+  role: "Plumber";
+  sites: ProjectTeamSiteRef[];
+  customerCount: number;
+  lastActivityAt: string | null;
+};
+
+export type ProjectTeamStaffMember = {
+  id: string;
+  name: string;
+  designation: string;
+  status: string;
+};
+
+export type ProjectTeam = {
+  supervisors: ProjectTeamSupervisor[];
+  plumbers: ProjectTeamPlumber[];
+  staff: ProjectTeamStaffMember[];
+};

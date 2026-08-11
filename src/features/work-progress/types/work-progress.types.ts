@@ -15,3 +15,21 @@ export type WorkProgressUpdate = {
   createdAt: string;
   supervisor: { id: string; name: string } | null;
 };
+
+// One row per customer (their LATEST stage/status), not one row per update -
+// backing the Work Queue (`GET /work-progress/queue`), which already
+// supports projectId server-side.
+export type WorkQueueRow = {
+  id: string;
+  customerName: string;
+  trBpNumber: string;
+  mobileNumber: string;
+  project: { id: string; name: string } | null;
+  site: { id: string; name: string } | null;
+  stage: WorkStage;
+  status: WorkProgressStatus;
+  nextRequiredAction: string;
+  evidenceCount: number;
+  lastUpdated: string;
+  supervisor: { id: string; name: string } | null;
+};

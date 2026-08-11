@@ -5,7 +5,9 @@ import type { PaymentCategory, PaymentFormValues, PaymentStatus } from "../types
 
 const paymentsKey = ["payments"] as const;
 
-export function usePaymentsQuery(params: { category?: PaymentCategory; status?: PaymentStatus; search?: string } = {}) {
+export function usePaymentsQuery(
+  params: { category?: PaymentCategory; status?: PaymentStatus; search?: string; projectId?: string } = {},
+) {
   return useQuery({
     queryKey: [...paymentsKey, params],
     queryFn: () => paymentsApi.list(params),

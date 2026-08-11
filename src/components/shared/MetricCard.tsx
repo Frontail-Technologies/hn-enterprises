@@ -21,7 +21,10 @@ export function MetricCard({
   return (
     <article
       className={cn(
-        "flex h-24 w-full min-w-32 max-w-44 flex-col justify-between rounded-lg border border-border/70 bg-card p-3 sm:w-40",
+        // Fills whatever grid cell it's placed in (CompactStatGrid etc.) -
+        // no fixed/max width here, so a 4- or 5-up KPI row packs tightly
+        // instead of leaving large gaps between narrow, left-aligned cards.
+        "flex min-h-24 w-full flex-col justify-between rounded-card border border-border bg-card p-4",
         className,
       )}
     >
@@ -35,11 +38,11 @@ export function MetricCard({
             iconClassName,
           )}
         >
-          <Icon size={17} weight="bold" />
+          <Icon size={16} weight="bold" />
         </div>
       </div>
       <div>
-        <p className="text-xl font-semibold leading-tight text-foreground">{value}</p>
+        <p className="text-[22px] font-semibold leading-tight text-foreground">{value}</p>
         {helperText ? (
           <p className="mt-0.5 truncate text-xs font-medium leading-tight text-muted-foreground">
             {helperText}
