@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usersImportApi } from "../services/users-import.service";
+import type { UserImportPreviewRow } from "../services/users-import.service";
 
 export function useUserImportPreview() {
   return useMutation({
@@ -14,7 +15,7 @@ export function useUserImportPreview() {
 export function useUserImportConfirm() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (validRows: any[]) => usersImportApi.confirm(validRows),
+    mutationFn: (validRows: UserImportPreviewRow[]) => usersImportApi.confirm(validRows),
     onSuccess: (result) => {
       toast.success(`Successfully imported ${result.insertedCount} users`);
       queryClient.invalidateQueries({ queryKey: ["users"] });

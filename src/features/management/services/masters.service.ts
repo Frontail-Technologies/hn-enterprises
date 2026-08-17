@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import type {
   Holiday,
   HolidayFormValues,
@@ -31,7 +32,7 @@ const CATEGORY_TO_FRONTEND: Record<BackendCategory, MasterValueCategory> = {
   meter_types: "Meter Types",
 };
 
-const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> = {
+export const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> = {
   "Payment Types": "payment_types",
   "Connection Types": "connection_types",
   "House Types": "house_types",
@@ -123,6 +124,17 @@ export const masterValuesApi = {
       method: "DELETE",
     });
   },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/masters/values/${id}/delete-impact`);
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/masters/values/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+  },
 };
 
 type BackendHoliday = {
@@ -181,6 +193,13 @@ export const holidaysApi = {
   async delete(id: string): Promise<void> {
     await apiRequest(`/masters/holidays/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/masters/holidays/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
     });
   },
 };

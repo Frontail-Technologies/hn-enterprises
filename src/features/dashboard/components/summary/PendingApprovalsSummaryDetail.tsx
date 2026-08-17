@@ -96,18 +96,14 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
       }));
 
     const billRows: PendingApprovalRow[] = bills
-      // Project scope already applied server-side; a specific-city filter can
-      // only match customer-linked bills.
-      .filter(
-        (bill) =>
-          bill.status === "Submitted" &&
-          (city === "all" || (bill.customerId ? scopedCustomerIds.has(bill.customerId) : false)),
-      )
+      // Project scope already applied server-side. Bills have no customer
+      // link, so they aren't further scoped by the city filter.
+      .filter((bill) => bill.status === "Submitted")
       .map((bill) => ({
         id: `bill-${bill.id}`,
         type: "Bill",
         reference: bill.billNumber,
-        detail: bill.stage,
+        detail: bill.dueDate ? `Due ${formatDate(bill.dueDate)}` : "-",
         amount: money(bill.totalAmount),
         status: bill.status,
         date: bill.billDate,

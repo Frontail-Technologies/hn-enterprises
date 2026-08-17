@@ -111,6 +111,18 @@ export function RecentActivityPage() {
   );
 }
 
+// Trimmed to the fields a reader actually scans a feed for. Dropped:
+// - "Actor" and "Supervisor" were the same value for every source except Billing
+//   (where "Actor" was just a hardcoded "Accounts" placeholder) - merged into one
+//   "Actor" column sourced from whichever field carries the real value.
+// - "Related Record" was a meaningful BP number for Work rows but an internal
+//   8-char UUID fragment for DPR/Billing/System rows - not a real reference number,
+//   just noise for 3 of the 4 activity types, so it's dropped rather than shown
+//   inconsistently.
+// - "Site / Area" was "-" for DPR/Billing/System and Project already carries the
+//   main location context, so it was dropped as a separate column.
+// Related Record and Site are still searchable via the search box even though
+// neither is a column.
 const activityColumns: ExcelColumn<DashboardActivity>[] = [
   {
     key: "dateTime",
@@ -122,50 +134,32 @@ const activityColumns: ExcelColumn<DashboardActivity>[] = [
   {
     key: "title",
     label: "Activity",
-    width: 240,
+    width: 260,
     sticky: true,
     getValue: (row) => row.title,
   },
   {
     key: "type",
     label: "Type",
-    width: 130,
+    width: 110,
     getValue: (row) => row.type,
   },
   {
     key: "actor",
     label: "Actor",
-    width: 150,
-    getValue: (row) => row.actor,
-  },
-  {
-    key: "supervisor",
-    label: "Supervisor",
     width: 170,
-    getValue: (row) => row.supervisor,
+    getValue: (row) => (row.supervisor && row.supervisor !== "-" ? row.supervisor : row.actor),
   },
   {
     key: "project",
     label: "Project",
-    width: 240,
+    width: 220,
     getValue: (row) => row.project,
-  },
-  {
-    key: "site",
-    label: "Site / Area",
-    width: 190,
-    getValue: (row) => row.site,
-  },
-  {
-    key: "relatedRecord",
-    label: "Related Record",
-    width: 170,
-    getValue: (row) => row.relatedRecord,
   },
   {
     key: "description",
     label: "Description",
-    width: 360,
+    width: 380,
     getValue: (row) => row.description,
   },
 ];

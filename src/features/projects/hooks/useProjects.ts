@@ -50,6 +50,19 @@ export function useUpdateProject(id: string) {
   });
 }
 
+// Only fetched while the delete dialog is actually open (`enabled`) - opening the
+// dialog is what triggers the check, not rendering the trigger button (§11).
+export function useProjectDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...projectKey(id), "delete-impact"],
+    queryFn: () => projectsApi.getDeleteImpact(id),
+    enabled: Boolean(id) && (options.enabled ?? true),
+    // A fresh check every time the dialog opens - the whole point is to catch
+    // records added since the last time it was open, not serve a stale cache.
+    staleTime: 0,
+  });
+}
+
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -59,6 +72,18 @@ export function useDeleteProject() {
       toast.success("Project deleted successfully");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete project"),
+  });
+}
+
+export function useBulkDeleteProjects() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => projectsApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: projectsKey });
+      toast.success(`${result.count} project${result.count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete projects"),
   });
 }
 

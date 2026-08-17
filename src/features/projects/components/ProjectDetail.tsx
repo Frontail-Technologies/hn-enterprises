@@ -60,7 +60,6 @@ import { useBillsQuery } from "@/features/commercial/hooks/useBills";
 import { useMaterialsQuery, useMaterialTransactionsQuery } from "@/features/commercial/hooks/useMaterials";
 import { useDeletePayment, usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import { formatDate as formatMoneyDate, money } from "@/features/commercial/utils/format";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import { useAuditLogsQuery } from "@/features/management/hooks/useAuditLogs";
 import { useWorkProgressQueueQuery } from "@/features/work-progress/hooks/useWorkProgress";
@@ -477,22 +476,11 @@ function ProjectBillingTab({
   onDrillDown: (statKey: string) => void;
 }) {
   const { data: summary, isLoading: summaryLoading } = useProjectSummaryQuery(projectId);
-  const { data: customers = [] } = useCustomersQuery({ projectId });
-  // Bills are project-linked now, so this is a direct server-side filter -
-  // no client-side customer-id join, and pure project bills (no customer)
-  // correctly show up too.
+  // Bills are project-linked - filtered server-side by project.
   const { data: bills = [], isLoading: billsLoading } = useBillsQuery({ projectId });
-
-  const customerById = useMemo(() => new Map(customers.map((customer) => [customer.id, customer])), [customers]);
 
   const billColumns: ColumnDef<(typeof bills)[number]>[] = [
     { key: "billNumber", header: "Bill Number" },
-    {
-      key: "customer",
-      header: "Customer",
-      render: (row) => (row.customerId ? customerById.get(row.customerId)?.customerConnection.customerName ?? "-" : "—"),
-    },
-    { key: "stage", header: "Stage" },
     { key: "billDate", header: "Bill Date", render: (row) => formatMoneyDate(row.billDate) },
     { key: "totalAmount", header: "Total", render: (row) => money(row.totalAmount) },
     { key: "paidAmount", header: "Paid", render: (row) => money(row.paidAmount) },

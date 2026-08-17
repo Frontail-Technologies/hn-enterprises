@@ -9,6 +9,7 @@ import { MetricCard } from "@/components/shared/MetricCard";
 import { PageShell } from "@/components/shared/PageShell";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
+import { DashboardProjectFilter } from "@/features/dashboard/components/DashboardProjectFilter";
 import { DashboardMetricFilter } from "@/features/dashboard/components/DashboardMetricFilter";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
 import {
@@ -40,6 +41,7 @@ export function DashboardContent() {
   const [period, setPeriod] = useState<DashboardPeriod>("this-month");
   const [month, setMonth] = useState("07");
   const [year, setYear] = useState("2026");
+  const [projectId, setProjectId] = useState("all");
 
   const [selectedMetricIds, setSelectedMetricIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -74,12 +76,12 @@ export function DashboardContent() {
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
   const { data: attendance = [] } = useAttendanceQuery({ from: today, to: today });
 
-  const { data: adminStats } = useDashboardStatsQuery({ projectId: "all", city: "all" });
+  const { data: adminStats } = useDashboardStatsQuery({ projectId, city: "all" });
 
   const dashboard = useMemo(
     () =>
       getAdminDashboardData(
-        { projectId: "all", city: "all", period: metricPeriod },
+        { projectId, city: "all", period: metricPeriod },
         { customers, projects, projectSites, bills, payments, materials, dprRecords, workProgress, attendance },
         adminStats,
       ),
@@ -95,6 +97,7 @@ export function DashboardContent() {
       workProgress,
       attendance,
       adminStats,
+      projectId,
     ],
   );
 
@@ -134,6 +137,7 @@ export function DashboardContent() {
             selectedIds={selectedMetricIds}
             onChange={handleMetricChange}
           />
+          <DashboardProjectFilter projects={projects} value={projectId} onChange={setProjectId} />
           <DashboardPeriodFilter
             value={period}
             onChange={setPeriod}

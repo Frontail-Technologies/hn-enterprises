@@ -13,7 +13,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { CaretLeftIcon, CaretRightIcon, ClockIcon, MapPinIcon } from "@phosphor-icons/react";
+import { CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
+import { useDownloadAttendanceRegister } from "@/features/exports/hooks/useExports";
 import { cn } from "@/lib/utils";
 import { attendanceKey, useAttendanceQuery, useRosterQuery } from "../hooks/useAttendance";
 import type { AttendanceViewMode } from "../data/attendance.data";
@@ -48,7 +49,7 @@ export function AttendancePage() {
     }),
     [calendarMonth],
   );
-  const { data: roster = [], isLoading: rosterLoading } = useRosterQuery("supervisor,field_executive");
+  const { data: roster = [], isLoading: rosterLoading } = useRosterQuery("supervisor");
   const {
     data: attendanceRecords = [],
     isLoading,
@@ -56,6 +57,12 @@ export function AttendancePage() {
   } = useAttendanceQuery(monthRange);
   const refetchRecords = () =>
     queryClient.invalidateQueries({ queryKey: attendanceKey(monthRange.from, monthRange.to) });
+  const downloadAttendanceRegister = useDownloadAttendanceRegister();
+  const handleExportRegister = () =>
+    downloadAttendanceRegister.mutate({
+      month: calendarMonth.getMonth() + 1,
+      year: calendarMonth.getFullYear(),
+    });
 
   const visibleRecords = useMemo(
     () =>
@@ -141,6 +148,16 @@ export function AttendancePage() {
           <CaretRightIcon size={15} />
         </Button>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={downloadAttendanceRegister.isPending}
+        onClick={handleExportRegister}
+      >
+        <DownloadSimpleIcon size={14} />
+        {downloadAttendanceRegister.isPending ? "Exporting..." : "Export Register"}
+      </Button>
     </div>
   );
 

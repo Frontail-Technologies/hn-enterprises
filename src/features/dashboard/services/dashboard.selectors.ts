@@ -74,6 +74,10 @@ export function getAdminDashboardData(
   const scopedBills = data.bills.filter((bill) => scopedProjectIds.has(bill.projectId));
   const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
   const scopedWorkProgress = data.workProgress.filter((update) => scopedCustomerIds.has(update.customerId));
+  // DPR records are project-linked directly (like bills), but weren't being
+  // scoped here - DPR Pending silently ignored the project filter while most
+  // other cards respected it.
+  const scopedDprRecords = data.dprRecords.filter((record) => scopedProjectIds.has(record.projectId));
 
   const adminMetrics = buildAdminMetrics({
     projectsCount: scopedProjects.length,
@@ -82,7 +86,7 @@ export function getAdminDashboardData(
     bills: scopedBills,
     payments: scopedPayments,
     materials: data.materials,
-    dprRecords: data.dprRecords,
+    dprRecords: scopedDprRecords,
     workProgress: scopedWorkProgress,
     scope,
   });
@@ -90,8 +94,14 @@ export function getAdminDashboardData(
 
   return {
     allMetrics: [...adminMetrics, ...workflowMetrics],
+    // Attendance has no project linkage in the current data model (it's
+    // tracked per staff member/day, not per project), and Material is a
+    // shared inventory catalog with no per-project balance (only its
+    // per-project MaterialTransaction rows are project-linked) - neither can
+    // be scoped by the project filter without a real data-model change, so
+    // both stay company-wide regardless of the selected project.
     attendanceRows: buildAttendanceRows(data.attendance),
-    alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, data.dprRecords),
+    alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, scopedDprRecords),
   };
 }
 
@@ -367,7 +377,6 @@ function buildAlerts(
   materials: Material[],
   dprRecords: DprRecord[],
 ): DashboardAlert[] {
-  const customerById = new Map(customers.map((customer) => [customer.id, customer]));
   const lowStock = materials.filter((material) => ["Low Stock", "Out of Stock"].includes(material.status));
   const overdueBills = bills.filter((bill) => bill.status === "Overdue");
   const submittedPayments = payments.filter((payment) => payment.status === "Submitted");
@@ -384,7 +393,7 @@ function buildAlerts(
     ...overdueBills.map<DashboardAlert>((bill) => ({
       id: `bill-${bill.id}`,
       title: `${bill.billNumber} is overdue`,
-      description: `${customerById.get(bill.customerId)?.customerConnection.customerName ?? "Customer"} has ${money(bill.pendingAmount)} pending`,
+      description: `${money(bill.pendingAmount)} pending`,
       tone: "danger",
     })),
     ...submittedPayments.map<DashboardAlert>((payment) => ({

@@ -115,6 +115,15 @@
 
 html {
   scroll-behavior: smooth;
+  /* The page's own scroll uses CustomScrollbar (DashboardLayout) instead of
+     the native scrollbar, so its cursor can actually change on hover/drag -
+     hide the native one here only, every other scrollable element in the
+     app keeps the native scrollbar + the color-only treatment below. */
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -162,11 +171,36 @@ summary {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: color-mix(in oklch, var(--foreground) 22%, transparent);
   border-radius: 9999px;
+  cursor: pointer;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: var(--primary);
+  cursor: pointer;
+}
+::-webkit-scrollbar-thumb:active {
+  background: color-mix(in oklch, var(--primary) 80%, black);
+  cursor: grabbing;
+}
+
+/* Fully hidden scrollbar for a specific horizontally-scrolling element (e.g.
+   ScrollableTabsList) - a dedicated, unlayered rule rather than Tailwind's
+   `scrollbar-none` utility, which only sets `scrollbar-width: none` and
+   never touches ::-webkit-scrollbar at all, or arbitrary-variant classes,
+   which compile inside Tailwind's utilities layer and can lose to any
+   unlayered rule (like the ::-webkit-scrollbar block above) touching the
+   same pseudo-element on a property it does declare. This rule is written
+   directly, outside any layer, so there's no ambiguity either way. */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 :focus-visible {

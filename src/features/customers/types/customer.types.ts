@@ -149,6 +149,7 @@ export type LmcPipelineWork = {
   paverBlocks: string;
   malua: string;
   hardRock: string;
+  civilRemarks?: string;
   approvalStatus?: string;
   approvalComments?: string;
 };
@@ -236,6 +237,49 @@ export type BillingCompletionStatus = {
   remark: string;
 };
 
+export type CompletionStatus = "NOT_STARTED" | "IN_PROGRESS" | "DONE";
+
+// Only these sections support an explicit Mark Complete / Reopen action.
+export type CompletionSectionKey =
+  | "giMeasurements"
+  | "valvesRegulators"
+  | "fittingsAccessories"
+  | "mdpeFittings";
+
+export type SectionCompletionResult = {
+  status: CompletionStatus;
+  requiredFields: string[];
+  missingRequiredFields: string[];
+};
+
+export type CustomerSectionCompletion = {
+  survey: SectionCompletionResult;
+  commissioning: SectionCompletionResult;
+  giMeasurements: SectionCompletionResult;
+  valvesRegulators: SectionCompletionResult;
+  fittingsAccessories: SectionCompletionResult;
+  mdpeFittings: SectionCompletionResult;
+  lmc: SectionCompletionResult;
+};
+
+// Read-only "who/when completed this section" projection, already resolved
+// server-side (date + display name, not a raw user id) - the Web master sheet
+// reads these 10 fields as-is via `row.values[key]`, the same values the
+// Excel export's Completion Audit columns render (§ shared column config).
+// Only populated on customer LIST rows, not the single-customer detail view.
+export type CustomerCompletionAudit = {
+  giCompletedOn: string | null;
+  giCompletedBy: string | null;
+  valvesCompletedOn: string | null;
+  valvesCompletedBy: string | null;
+  fittingsCompletedOn: string | null;
+  fittingsCompletedBy: string | null;
+  lmcCompletedOn: string | null;
+  lmcCompletedBy: string | null;
+  mdpeCompletedOn: string | null;
+  mdpeCompletedBy: string | null;
+};
+
 export type Customer = {
   id: string;
   status: CustomerStatus;
@@ -245,6 +289,7 @@ export type Customer = {
   siteArea: string;
   city: string;
   createdDate: string;
+  updatedDate: string;
   customerConnection: CustomerConnectionDetails;
   giMeasurements: GiMeasurements;
   valvesRegulators: ValvesRegulators;
@@ -257,9 +302,11 @@ export type Customer = {
   media: UploadedImage[];
   documents: CustomerDocument[];
   customFields?: Record<string, string | boolean>;
+  sectionCompletion?: CustomerSectionCompletion;
+  completionAudit?: CustomerCompletionAudit;
 };
 
-export type CustomerFormValues = Omit<Customer, "id" | "createdDate">;
+export type CustomerFormValues = Omit<Customer, "id" | "createdDate" | "updatedDate">;
 
 export type CustomerDocument = {
   id: string;

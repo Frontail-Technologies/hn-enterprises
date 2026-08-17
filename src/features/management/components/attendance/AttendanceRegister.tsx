@@ -1,8 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AttendanceRecord } from "../../data/attendance.data";
 import type { RosterUser } from "../../services/users.service";
@@ -83,10 +81,6 @@ export function AttendanceRegister({
             Muster roll style view for {format(month, "MMMM yyyy")}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm">
-          <DownloadSimpleIcon size={14} />
-          Export Register
-        </Button>
       </div>
       <div className="overflow-y-auto">
         <div className="flex min-w-0">

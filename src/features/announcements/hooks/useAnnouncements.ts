@@ -39,9 +39,15 @@ export function usePublishAnnouncement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => announcementsApi.publish(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
-      toast.success("Announcement published successfully");
+      if (result.pushSuccess) {
+        toast.success(`Announcement published and pushed to ${result.pushTokenCount} device${result.pushTokenCount === 1 ? "" : "s"}`);
+      } else {
+        toast.warning(
+          `Announcement published, but push delivery failed${result.pushError ? `: ${result.pushError}` : ""}. It's still visible in the mobile app's notification list.`,
+        );
+      }
     },
     onError: (error: any) => toast.error(error?.message || "Failed to publish announcement"),
   });
@@ -56,5 +62,17 @@ export function useDeleteAnnouncement() {
       toast.success("Announcement deleted successfully");
     },
     onError: (error: any) => toast.error(error?.message || "Failed to delete announcement"),
+  });
+}
+
+export function useBulkDeleteAnnouncements() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => announcementsApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: announcementsKey });
+      toast.success(`${result.count} announcement${result.count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete announcements"),
   });
 }

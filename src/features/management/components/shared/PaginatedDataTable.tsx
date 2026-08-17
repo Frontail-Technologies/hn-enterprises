@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DataTable, type ColumnDef, type DataTableSelection } from "@/components/shared/DataTable";
 import { Pagination } from "@/components/shared/Pagination";
 
 export function PaginatedDataTable<T extends { id: string }>({
@@ -8,12 +8,14 @@ export function PaginatedDataTable<T extends { id: string }>({
   pageSize = 50,
   isLoading,
   stickyLastColumn = true,
+  selection,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
   pageSize?: number;
   isLoading?: boolean;
   stickyLastColumn?: boolean;
+  selection?: DataTableSelection<T>;
 }) {
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(data.length / pageSize));
@@ -41,6 +43,7 @@ export function PaginatedDataTable<T extends { id: string }>({
         stickyHeader
         stickyLastColumn={stickyLastColumn}
         isLoading={isLoading}
+        selection={selection}
       />
     </div>
   );

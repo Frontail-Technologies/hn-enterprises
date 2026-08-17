@@ -5,29 +5,11 @@ import type {
   BillPayment,
   BillPaymentFormValues,
   BillPaymentStatus,
-  BillStage,
   BillStatus,
 } from "../types/bill.types";
 
-type BackendBillStage = "gi" | "gc" | "commissioning" | "conversion" | "other";
 type BackendBillStatus = "draft" | "submitted" | "completed" | "overdue";
 type BackendBillPaymentStatus = "pending" | "cleared" | "bounced";
-
-const STAGE_TO_FRONTEND: Record<BackendBillStage, BillStage> = {
-  gi: "GI",
-  gc: "GC",
-  commissioning: "Commissioning",
-  conversion: "Conversion",
-  other: "Other",
-};
-
-const STAGE_TO_BACKEND: Record<BillStage, BackendBillStage> = {
-  GI: "gi",
-  GC: "gc",
-  Commissioning: "commissioning",
-  Conversion: "conversion",
-  Other: "other",
-};
 
 const STATUS_TO_FRONTEND: Record<BackendBillStatus, BillStatus> = {
   draft: "Draft",
@@ -62,9 +44,7 @@ function toDateOnly(value: string | null | undefined) {
 type BackendBill = {
   id: string;
   projectId: string;
-  customerId: string | null;
   billNumber: string;
-  stage: BackendBillStage;
   billDate: string | null;
   dueDate: string | null;
   totalAmount: string;
@@ -89,9 +69,7 @@ function mapBill(raw: BackendBill): Bill {
   return {
     id: raw.id,
     projectId: raw.projectId,
-    customerId: raw.customerId ?? "",
     billNumber: raw.billNumber,
-    stage: STAGE_TO_FRONTEND[raw.stage] ?? "Other",
     billDate: toDateOnly(raw.billDate),
     dueDate: toDateOnly(raw.dueDate),
     totalAmount: Number(raw.totalAmount),
@@ -106,9 +84,7 @@ function mapBill(raw: BackendBill): Bill {
 function mapBillFormToBody(values: BillFormValues) {
   return {
     projectId: values.projectId,
-    customerId: values.customerId || undefined,
     billNumber: values.billNumber,
-    stage: STAGE_TO_BACKEND[values.stage],
     billDate: values.billDate || undefined,
     dueDate: values.dueDate || undefined,
     totalAmount: Number(values.totalAmount) || 0,
@@ -132,13 +108,11 @@ function mapPayment(raw: BackendBillPayment): BillPayment {
 
 export const billsApi = {
   async list(
-    params: { search?: string; projectId?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {},
+    params: { search?: string; projectId?: string; status?: BillStatus } = {},
   ): Promise<Bill[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.search) query.set("search", params.search);
     if (params.projectId) query.set("projectId", params.projectId);
-    if (params.customerId) query.set("customerId", params.customerId);
-    if (params.stage) query.set("stage", STAGE_TO_BACKEND[params.stage]);
     if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
     const rows = await apiRequest<BackendBill[]>(`/bills?${query.toString()}`);
     return rows.map(mapBill);
@@ -164,9 +138,7 @@ export const billsApi = {
         Object.fromEntries(
           Object.entries({
             projectId: values.projectId,
-            customerId: values.customerId,
             billNumber: values.billNumber,
-            stage: values.stage ? STAGE_TO_BACKEND[values.stage] : undefined,
             billDate: values.billDate || undefined,
             dueDate: values.dueDate || undefined,
             totalAmount: values.totalAmount != null ? Number(values.totalAmount) : undefined,

@@ -55,6 +55,24 @@ export type AnnouncementFormValues = {
   image?: ImagePreviewItem;
 };
 
+export type AnnouncementPublishResult = Announcement & {
+  recipientCount: number;
+  notifiedCount: number;
+  notifyError?: string;
+  pushTokenCount: number;
+  pushSuccess: boolean;
+  pushError?: string;
+};
+
+type BackendAnnouncementPublishResult = BackendAnnouncement & {
+  recipientCount: number;
+  notifiedCount: number;
+  notifyError?: string;
+  pushTokenCount: number;
+  pushSuccess: boolean;
+  pushError?: string;
+};
+
 // The image is embedded directly in this request instead of uploaded
 // separately beforehand - a photo picked but never saved never reaches
 // storage at all.
@@ -93,16 +111,31 @@ export const announcementsApi = {
     return mapAnnouncement(raw);
   },
 
-  async publish(id: string): Promise<Announcement> {
-    const raw = await apiRequest<BackendAnnouncement>(`/announcements/${id}/publish`, {
+  async publish(id: string): Promise<AnnouncementPublishResult> {
+    const raw = await apiRequest<BackendAnnouncementPublishResult>(`/announcements/${id}/publish`, {
       method: "POST",
     });
-    return mapAnnouncement(raw);
+    return {
+      ...mapAnnouncement(raw),
+      recipientCount: raw.recipientCount,
+      notifiedCount: raw.notifiedCount,
+      notifyError: raw.notifyError,
+      pushTokenCount: raw.pushTokenCount,
+      pushSuccess: raw.pushSuccess,
+      pushError: raw.pushError,
+    };
   },
 
   async delete(id: string): Promise<void> {
     await apiRequest(`/announcements/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/announcements/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
     });
   },
 };

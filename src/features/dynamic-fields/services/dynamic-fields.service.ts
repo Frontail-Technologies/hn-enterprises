@@ -134,6 +134,13 @@ export const dynamicFieldsApi = {
     await apiRequest(`/masters/custom-fields/${id}`, { method: "DELETE" });
   },
 
+  async bulkDelete(ids: string[]): Promise<{ count: number; skippedActive: number }> {
+    return apiRequest<{ count: number; skippedActive: number }>("/masters/custom-fields/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+  },
+
   async reorder(items: ReorderCustomFieldItem[]): Promise<void> {
     await apiRequest("/masters/custom-fields/reorder", {
       method: "PATCH",

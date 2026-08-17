@@ -74,6 +74,21 @@ export function useDeleteDynamicField() {
   });
 }
 
+export function useBulkDeleteDynamicFields() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => dynamicFieldsApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: dynamicFieldsKey });
+      const suffix = result.skippedActive
+        ? ` (${result.skippedActive} still-active field${result.skippedActive === 1 ? "" : "s"} skipped - deactivate first)`
+        : "";
+      toast.success(`${result.count} field${result.count === 1 ? "" : "s"} permanently deleted${suffix}`);
+    },
+    onError: (error) => toast.error(errorMessage(error, "Failed to delete fields")),
+  });
+}
+
 export function useReorderDynamicFields() {
   const queryClient = useQueryClient();
   return useMutation({

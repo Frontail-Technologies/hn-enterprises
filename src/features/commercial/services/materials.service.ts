@@ -1,12 +1,17 @@
 import { apiRequest } from "@/lib/api-client";
 import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import type {
+  CorrectMaterialTransactionInput,
   Material,
   MaterialFormValues,
+  MaterialSource,
   MaterialTransaction,
   MaterialTransactionFormValues,
+  MaterialTransactionLinkType,
   MaterialTransactionType,
   PlumberBalance,
+  StockBalance,
 } from "../types/material.types";
 
 type BackendMaterialStatus = "active" | "low_stock" | "out_of_stock";
@@ -33,6 +38,8 @@ type BackendMaterialTransaction = {
   type: MaterialTransactionType;
   quantity: string;
   quantityDelta: string;
+  source: MaterialSource | null;
+  projectId: string | null;
   referenceNo: string | null;
   vendorName: string | null;
   rate: string | null;
@@ -53,14 +60,22 @@ type BackendMaterialTransaction = {
   transactionDate: string;
   evidence: Record<string, unknown>[] | null;
   remarks: string | null;
+  relatedTransactionId: string | null;
+  linkType: MaterialTransactionLinkType | null;
+  correctionReason: string | null;
+  isReversed?: boolean;
+  isCorrected?: boolean;
 };
 
 type BackendPlumberBalance = {
   plumberId: string;
   materialId: string;
+  source: MaterialSource | null;
+  projectId: string | null;
   issued: number;
   consumed: number;
   returned: number;
+  adjusted: number;
   balance: number;
 };
 
@@ -92,6 +107,8 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     type: raw.type,
     quantity: Number(raw.quantity),
     quantityDelta: Number(raw.quantityDelta),
+    source: raw.source ?? "",
+    projectId: raw.projectId ?? "",
     referenceNo: raw.referenceNo ?? "",
     vendorName: raw.vendorName ?? "",
     rate: raw.rate != null ? Number(raw.rate) : null,
@@ -112,6 +129,11 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     transactionDate: raw.transactionDate.slice(0, 10),
     evidence: (raw.evidence ?? []) as MaterialTransaction["evidence"],
     remarks: raw.remarks ?? "",
+    relatedTransactionId: raw.relatedTransactionId ?? "",
+    linkType: raw.linkType ?? "",
+    correctionReason: raw.correctionReason ?? "",
+    isReversed: raw.isReversed ?? false,
+    isCorrected: raw.isCorrected ?? false,
   };
 }
 
@@ -124,6 +146,9 @@ function buildTransactionFormData(type: MaterialTransactionType, values: Materia
   formData.append("type", type);
   formData.append("quantity", String(Number(values.quantity) || 0));
   formData.append("transactionDate", values.transactionDate);
+  if (values.source) formData.append("source", values.source);
+  if (values.direction) formData.append("direction", values.direction);
+  if (values.projectId) formData.append("projectId", values.projectId);
   if (values.referenceNo) formData.append("referenceNo", values.referenceNo);
   if (values.vendorName) formData.append("vendorName", values.vendorName);
   if (values.rate) formData.append("rate", String(Number(values.rate)));
@@ -182,23 +207,33 @@ export const materialsApi = {
     await apiRequest(`/materials/${id}`, { method: "DELETE" });
   },
 
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/materials/${id}/delete-impact`);
+  },
+
   async listTransactions(
     params: {
       materialId?: string;
       type?: MaterialTransactionType;
+      source?: MaterialSource;
       plumberId?: string;
       siteId?: string;
       customerId?: string;
       projectId?: string;
+      from?: string;
+      to?: string;
     } = {},
   ): Promise<MaterialTransaction[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.materialId) query.set("materialId", params.materialId);
     if (params.type) query.set("type", params.type);
+    if (params.source) query.set("source", params.source);
     if (params.plumberId) query.set("plumberId", params.plumberId);
     if (params.siteId) query.set("siteId", params.siteId);
     if (params.customerId) query.set("customerId", params.customerId);
     if (params.projectId) query.set("projectId", params.projectId);
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
     const rows = await apiRequest<BackendMaterialTransaction[]>(`/materials/transactions?${query.toString()}`);
     return rows.map(mapTransaction);
   },
@@ -214,12 +249,65 @@ export const materialsApi = {
     return mapTransaction(raw);
   },
 
-  async plumberBalances(params: { plumberId?: string; materialId?: string } = {}): Promise<PlumberBalance[]> {
+  async plumberBalances(
+    params: { plumberId?: string; materialId?: string; source?: MaterialSource; projectId?: string } = {},
+  ): Promise<PlumberBalance[]> {
     const query = new URLSearchParams();
     if (params.plumberId) query.set("plumberId", params.plumberId);
     if (params.materialId) query.set("materialId", params.materialId);
+    if (params.source) query.set("source", params.source);
+    if (params.projectId) query.set("projectId", params.projectId);
     const qs = query.toString();
     const rows = await apiRequest<BackendPlumberBalance[]>(`/materials/plumber-balances${qs ? `?${qs}` : ""}`);
-    return rows;
+    return rows.map((row) => ({ ...row, source: row.source ?? "", projectId: row.projectId ?? "" }));
+  },
+
+  async stockBalances(
+    params: { materialId?: string; source?: MaterialSource; projectId?: string } = {},
+  ): Promise<StockBalance[]> {
+    const query = new URLSearchParams();
+    if (params.materialId) query.set("materialId", params.materialId);
+    if (params.source) query.set("source", params.source);
+    if (params.projectId) query.set("projectId", params.projectId);
+    const qs = query.toString();
+    return apiRequest<StockBalance[]>(`/materials/stock-balances${qs ? `?${qs}` : ""}`);
+  },
+
+  async reverseTransaction(id: string, reason: string): Promise<MaterialTransaction> {
+    const raw = await apiRequest<BackendMaterialTransaction>(`/materials/transactions/${id}/reverse`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    return mapTransaction(raw);
+  },
+
+  async correctTransaction(id: string, input: CorrectMaterialTransactionInput): Promise<MaterialTransaction> {
+    const body: Record<string, unknown> = { correctionReason: input.correctionReason };
+    if (input.quantity) body.quantity = Number(input.quantity);
+    if (input.transactionDate) body.transactionDate = input.transactionDate;
+    if (input.source) body.source = input.source;
+    if (input.direction) body.direction = input.direction;
+    if (input.projectId !== undefined) body.projectId = input.projectId;
+    if (input.referenceNo) body.referenceNo = input.referenceNo;
+    if (input.vendorName) body.vendorName = input.vendorName;
+    if (input.rate) body.rate = Number(input.rate);
+    if (input.billAmount) body.billAmount = Number(input.billAmount);
+    if (input.plumberId) body.plumberId = input.plumberId;
+    if (input.supervisorId) body.supervisorId = input.supervisorId;
+    if (input.siteId) body.siteId = input.siteId;
+    if (input.address) body.address = input.address;
+    if (input.storeLabel) body.storeLabel = input.storeLabel;
+    if (input.customerId) body.customerId = input.customerId;
+    if (input.reportNo) body.reportNo = input.reportNo;
+    if (input.condition) body.condition = input.condition;
+    if (input.adjustmentType) body.adjustmentType = input.adjustmentType;
+    if (input.vehicleNo) body.vehicleNo = input.vehicleNo;
+    if (input.vehicleQty) body.vehicleQty = Number(input.vehicleQty);
+    if (input.remarks) body.remarks = input.remarks;
+    const raw = await apiRequest<BackendMaterialTransaction>(`/materials/transactions/${id}/correct`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return mapTransaction(raw);
   },
 };

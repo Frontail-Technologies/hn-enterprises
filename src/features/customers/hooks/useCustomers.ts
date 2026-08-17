@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { customersApi } from "../services/customers.service";
-import type { Customer, CustomerDocument, CustomerFormValues, CustomerStatus, LmcPipeSizeRecord } from "../types/customer.types";
+import type { CompletionSectionKey, Customer, CustomerDocument, CustomerFormValues, CustomerStatus, LmcPipeSizeRecord } from "../types/customer.types";
 
 const customersKey = ["customers"] as const;
 const customerKey = (id: string) => ["customers", id] as const;
@@ -30,7 +30,7 @@ export function useCreateCustomer() {
       queryClient.invalidateQueries({ queryKey: customersKey });
       toast.success("Customer created successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create customer"),
+    onError: (error: Error) => toast.error(error.message || "Failed to create customer"),
   });
 }
 
@@ -43,7 +43,23 @@ export function useUpdateCustomer(id: string) {
       queryClient.setQueryData(customerKey(id), updated);
       toast.success("Customer updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update customer"),
+    onError: (error: Error) => toast.error(error.message || "Failed to update customer"),
+  });
+}
+
+export function useSetSectionCompletion(id: string, sectionLabel: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sectionKey, completed }: { sectionKey: CompletionSectionKey; completed: boolean }) =>
+      customersApi.setSectionCompletion(id, sectionKey, completed),
+    onSuccess: (updated: Customer, { completed }) => {
+      queryClient.setQueryData(customerKey(id), updated);
+      queryClient.invalidateQueries({ queryKey: customersKey });
+      // GI/section completion feeds the dashboard completion stats.
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      toast.success(completed ? `${sectionLabel} marked complete.` : `${sectionLabel} reopened.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update section completion"),
   });
 }
 
@@ -59,6 +75,17 @@ export function useDeleteCustomer() {
   });
 }
 
+// Only fetched while the delete dialog is open - opening the dialog is what
+// triggers the check, matching the Projects delete-impact pattern.
+export function useCustomerDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...customerKey(id), "delete-impact"],
+    queryFn: () => customersApi.getDeleteImpact(id),
+    enabled: Boolean(id) && (options.enabled ?? true),
+    staleTime: 0,
+  });
+}
+
 export function useUpsertLmcPipeRecord(customerId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -67,7 +94,7 @@ export function useUpsertLmcPipeRecord(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("LMC record saved");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to save LMC record"),
+    onError: (error: Error) => toast.error(error.message || "Failed to save LMC record"),
   });
 }
 
@@ -88,7 +115,7 @@ export function useCreateCustomerDocument(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("Document uploaded successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to upload document"),
+    onError: (error: Error) => toast.error(error.message || "Failed to upload document"),
   });
 }
 
@@ -101,6 +128,6 @@ export function useDeleteCustomerDocument(customerId: string) {
       queryClient.invalidateQueries({ queryKey: customerKey(customerId) });
       toast.success("Document deleted");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete document"),
+    onError: (error: Error) => toast.error(error.message || "Failed to delete document"),
   });
 }

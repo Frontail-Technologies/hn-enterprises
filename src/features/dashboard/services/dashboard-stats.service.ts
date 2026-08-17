@@ -114,36 +114,6 @@ export function getDashboardStatValue(key: DashboardStatKey, source: Customer[])
   return `${rows.length}/${total}`;
 }
 
-function matchesStat(customer: Customer, key: DashboardStatKey) {
-  const connection = customer.customerConnection;
-  const commissioning = customer.commissioningConversion;
-  const billing = customer.billingCompletion;
-
-  if (key === "total-customers") return true;
-  if (key === "survey-done") return Boolean(customer.survey?.surveyDate);
-  if (key === "gi-done") return Boolean(commissioning.installationDate);
-  if (key === "gc-done") return Boolean(commissioning.commissioningDate || commissioning.meterNo);
-  if (key === "conversion-done") return Boolean(commissioning.conversionDate);
-  if (key === "jmr-done") return Boolean(billing.jmrDone);
-  if (key === "gi-bill-done") return Boolean(billing.giBillDone);
-  if (key === "gc-bill-done") return Boolean(billing.gcBillDone);
-  if (key === "conversion-bill-done") return Boolean(billing.conversionBillDone);
-
-  if (key === "total-pbg-assignment") {
-    return Boolean(billing.jmrSubmittedInPbg);
-  }
-  if (key === "connection-remark") {
-    return (
-      customer.status === "On Hold" ||
-      customer.survey?.approvalStatus === "Sent Back" ||
-      customer.survey?.approvalStatus === "Rejected" ||
-      customer.lmcPipelineWork.pipeRecords.some((pipe) => deriveLmcPipeCurrentStage(pipe) === "On Hold")
-    );
-  }
-
-  return false;
-}
-
 function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
   const connection = customer.customerConnection;
   const survey = customer.survey;

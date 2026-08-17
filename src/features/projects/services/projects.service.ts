@@ -8,6 +8,7 @@ import type {
   ProjectTeam,
 } from "../types/project.types";
 import type { StatusValue } from "@/components/shared/StatusBadge";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 
 export const projectStatusOptions = [
   "Draft",
@@ -260,6 +261,17 @@ export const projectsApi = {
 
   async delete(id: string): Promise<void> {
     await apiRequest(`/projects/${id}`, { method: "DELETE" });
+  },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/projects/${id}/delete-impact`);
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/projects/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
   },
 
   async listSites(projectId: string): Promise<ProjectSite[]> {

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { format } from "date-fns";
 import { FilePdfIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -19,11 +20,11 @@ import { PageLoading } from "@/components/shared/PageLoading";
 
 export function PlanningDprPage() {
   const searchParams = useSearchParams();
-  const siteId = searchParams.get("siteId") ?? "";
+  const customerId = searchParams.get("customerId") ?? "";
   const supervisorId = searchParams.get("supervisorId") ?? "";
-  const date = searchParams.get("date") ?? "2026-07-22";
+  const date = searchParams.get("date") ?? format(new Date(), "yyyy-MM-dd");
 
-  const { data: dprRecords = [], isLoading } = useDprRecordsQuery({ siteId, supervisorId, date });
+  const { data: dprRecords = [], isLoading } = useDprRecordsQuery({ customerId, supervisorId, date });
   const record = dprRecords[0];
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -31,6 +32,7 @@ export function PlanningDprPage() {
   const remarks = record?.remarks ?? "";
   const siteLabel = record?.siteLabel || "Unknown site";
   const supervisorName = record?.supervisorName || "Unknown supervisor";
+  const customerName = record?.customerName || "Unknown customer";
 
   const totalCompleted = useMemo(
     () => tasks.reduce((sum, item) => sum + (Number(item.completedQty) || 0), 0),
@@ -40,11 +42,11 @@ export function PlanningDprPage() {
   return (
     <PageShell
       title="DPR"
-      subtitle={`${supervisorName} - ${siteLabel}`}
+      subtitle={`${supervisorName} - ${customerName} - ${siteLabel}`}
       actions={
         <>
           <Link
-            href={`/planning/plan?supervisorId=${supervisorId}&siteId=${siteId}&date=${date}`}
+            href={`/planning/plan?supervisorId=${supervisorId}&customerId=${customerId}&date=${date}`}
             className={buttonVariants({ variant: "outline" })}
           >
             Open Planning

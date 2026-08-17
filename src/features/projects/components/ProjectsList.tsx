@@ -7,9 +7,12 @@ import { DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-ico
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { PageShell } from "@/components/shared/PageShell";
 import { TablePanel } from "@/components/shared/TablePanel";
-import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useBulkDeleteProjects, useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { exportRowsToExcel } from "@/lib/export-excel";
 import type { Project } from "../types/project.types";
 
@@ -50,6 +53,9 @@ export function ProjectsList() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const { data: projects = [], isLoading } = useProjectsQuery();
+  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const bulkDelete = useBulkDeleteProjects();
 
   const rows = useMemo(() => projects.map(projectToMasterSheetRow), [projects]);
 
@@ -63,6 +69,12 @@ export function ProjectsList() {
       ),
     );
   }, [rows, search]);
+
+  async function handleBulkDelete() {
+    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    clear();
+    setDeleteOpen(false);
+  }
 
   return (
     <PageShell
@@ -106,14 +118,31 @@ export function ProjectsList() {
           </div>
         }
       >
+        <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
         <ExcelDataGrid
           columns={projectMasterSheetColumns}
           rows={filteredRows}
           emptyTitle="No project master records found"
           isLoading={isLoading}
           onRowClick={(row) => router.push(`/projects/${row.id}`)}
+          selection={{
+            selectedIds,
+            onToggleRow: toggleRow,
+            onTogglePage: toggleAllOnPage,
+            getRowLabel: (row) => row.values.name,
+          }}
         />
       </TablePanel>
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="Project"
+        isSubmitting={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+        note="Projects with associated records (e.g. customers or sites) will be skipped with an error instead of partially deleted."
+      />
     </PageShell>
   );
 }

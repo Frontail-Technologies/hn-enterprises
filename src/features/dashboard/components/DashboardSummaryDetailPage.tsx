@@ -28,7 +28,7 @@ export function DashboardSummaryDetailPage({
     return <ActiveSitesSummaryDetail city={city} />;
   }
   if (statKey === "overdue-bills") {
-    return <OverdueBillsSummaryDetail projectId={projectId} city={city} />;
+    return <OverdueBillsSummaryDetail projectId={projectId} />;
   }
   if (statKey === "field-updates") {
     return <FieldUpdatesSummaryDetail period={period} />;
@@ -40,7 +40,7 @@ export function DashboardSummaryDetailPage({
     return <PendingApprovalsSummaryDetail projectId={projectId} city={city} />;
   }
   if (statKey === "billing-pending") {
-    return <BillingPendingSummaryDetail projectId={projectId} city={city} period={period} />;
+    return <BillingPendingSummaryDetail projectId={projectId} period={period} />;
   }
   if (statKey === "monthly-expenses") {
     return <MonthlyExpensesSummaryDetail projectId={projectId} city={city} period={period} />;

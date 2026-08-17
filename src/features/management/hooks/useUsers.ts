@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { usersApi, type CreateUserFormValues, type UpdateUserFormValues } from "../services/users.service";
 
 const usersKey = ["users", "full"] as const;
+const userKey = (id: string) => ["users", id] as const;
 
 export function useUsersQuery(search?: string) {
   return useQuery({
@@ -56,5 +57,28 @@ export function useDeleteUser() {
       toast.success("User deleted successfully");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete user"),
+  });
+}
+
+// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
+export function useUserDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...userKey(id), "delete-impact"],
+    queryFn: () => usersApi.getDeleteImpact(id),
+    enabled: Boolean(id) && (options.enabled ?? true),
+    staleTime: 0,
+  });
+}
+
+export function useBulkDeleteUsers() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => usersApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: usersKey });
+      const suffix = result.skippedSelf ? " (your own account was skipped)" : "";
+      toast.success(`${result.count} user${result.count === 1 ? "" : "s"} deleted${suffix}`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete users"),
   });
 }

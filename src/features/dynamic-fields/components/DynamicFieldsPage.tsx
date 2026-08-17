@@ -12,8 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageShell } from "@/components/shared/PageShell";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useDynamicFieldsQuery } from "../hooks/useDynamicFields";
+import { useBulkDeleteDynamicFields, useDynamicFieldsQuery } from "../hooks/useDynamicFields";
 import type { CustomField } from "../types";
 import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
 import { DynamicFieldGrid } from "./DynamicFieldGrid";
@@ -39,6 +42,15 @@ export function DynamicFieldsPage() {
   const [importOpen, setImportOpen] = useState(false);
 
   const { data: fields = [], isLoading } = useDynamicFieldsQuery(statusFilter === "All" ? undefined : statusFilter);
+  const { selectedIds, toggleRow, clear } = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const bulkDelete = useBulkDeleteDynamicFields();
+
+  async function handleBulkDelete() {
+    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    setDeleteOpen(false);
+    clear();
+  }
 
   const filteredFields = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -94,9 +106,25 @@ export function DynamicFieldsPage() {
         </Select>
       </div>
 
-      <DynamicFieldGrid fields={filteredFields} isLoading={isLoading} dragEnabled={!search.trim()} />
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
+      <DynamicFieldGrid
+        fields={filteredFields}
+        isLoading={isLoading}
+        dragEnabled={!search.trim()}
+        selection={{ selectedIds, onToggleRow: toggleRow }}
+      />
 
       <DynamicFieldImport open={importOpen} onOpenChange={setImportOpen} />
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="Field"
+        isSubmitting={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+        note="Only fields that are already Inactive can be permanently deleted, matching the single-field delete flow - active fields in the selection are skipped."
+      />
     </PageShell>
   );
 }

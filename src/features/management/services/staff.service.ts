@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import {
   ROLE_TO_BACKEND,
   ROLE_TO_FRONTEND,
@@ -190,6 +191,17 @@ export const staffApi = {
   async delete(id: string): Promise<void> {
     await apiRequest(`/staff/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/staff/${id}/delete-impact`);
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/staff/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
     });
   },
 };

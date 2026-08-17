@@ -10,7 +10,6 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { buttonVariants } from "@/components/ui/button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { billingTabs } from "../data/bills.data";
 import type { BillingView } from "../types/commercial.types";
@@ -27,7 +26,6 @@ import { TableSection } from "./shared/TableSection";
 export function BillingPage() {
   const [activeView, setActiveView] = useState<BillingView>("wages");
   const { data: bills = [] } = useBillsQuery();
-  const { data: customers = [] } = useCustomersQuery();
   const { data: projects = [] } = useProjectsQuery();
   const projectNameById = useMemo(() => new Map(projects.map((project) => [project.id, project.name])), [projects]);
   const totals = {
@@ -42,31 +40,20 @@ export function BillingPage() {
   };
   const [filters, setFilters] = useState({
     search: "",
-    stage: "all",
     status: "all",
     project: "all",
   });
-  const getBillCustomer = useMemo(
-    () => (bill: Bill) => (bill.customerId ? customers.find((customer) => customer.id === bill.customerId) : undefined),
-    [customers],
-  );
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return bills.filter((row) => {
-      const customer = getBillCustomer(row);
       const projectName = projectNameById.get(row.projectId) ?? "";
       return (
-        (!search ||
-          [row.billNumber, projectName, customer?.customerConnection.customerName]
-            .join(" ")
-            .toLowerCase()
-            .includes(search)) &&
-        (filters.stage === "all" || row.stage === filters.stage) &&
+        (!search || [row.billNumber, projectName].join(" ").toLowerCase().includes(search)) &&
         (filters.status === "all" || row.status === filters.status) &&
         (filters.project === "all" || projectName === filters.project)
       );
     });
-  }, [bills, filters, getBillCustomer, projectNameById]);
+  }, [bills, filters, projectNameById]);
   const columns: ColumnDef<Bill>[] = [
     {
       key: "billNumber",
@@ -81,24 +68,11 @@ export function BillingPage() {
       ),
     },
     {
-      key: "projectCustomer",
-      header: "Project / Customer",
-      render: (row) => {
-        const customer = getBillCustomer(row);
-        return (
-          <div>
-            <p className="font-medium text-foreground">{projectNameById.get(row.projectId) ?? "-"}</p>
-            <p className="text-xs text-muted-foreground">
-              {customer?.customerConnection.customerName ?? "—"}
-            </p>
-          </div>
-        );
-      },
-    },
-    {
-      key: "stage",
-      header: "Stage",
-      render: (row) => row.stage,
+      key: "project",
+      header: "Project",
+      render: (row) => (
+        <p className="font-medium text-foreground">{projectNameById.get(row.projectId) ?? "-"}</p>
+      ),
     },
     {
       key: "billDate",
@@ -131,8 +105,6 @@ export function BillingPage() {
   const exportColumns: ExportColumn<Bill>[] = [
     { label: "Bill Number", getValue: (row) => row.billNumber },
     { label: "Project", getValue: (row) => projectNameById.get(row.projectId) ?? "-" },
-    { label: "Customer", getValue: (row) => getBillCustomer(row)?.customerConnection.customerName ?? "-" },
-    { label: "Stage", getValue: (row) => row.stage },
     { label: "Bill Date", getValue: (row) => formatDate(row.billDate) },
     { label: "Total Amount", getValue: (row) => row.totalAmount },
     { label: "Paid Amount", getValue: (row) => row.paidAmount },
@@ -200,11 +172,6 @@ export function BillingPage() {
                   ),
                 },
                 {
-                  key: "stage",
-                  placeholder: "All Stages",
-                  options: uniqOptions(bills.map((row) => row.stage)),
-                },
-                {
                   key: "status",
                   placeholder: "All Statuses",
                   options: uniqOptions(bills.map((row) => row.status)),
@@ -214,7 +181,7 @@ export function BillingPage() {
                 setFilters((current) => ({ ...current, [key]: value }))
               }
               onReset={() =>
-                setFilters({ search: "", stage: "all", status: "all", project: "all" })
+                setFilters({ search: "", status: "all", project: "all" })
               }
             />
             <PaginatedDataTable data={data} columns={columns} />

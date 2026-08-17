@@ -5,15 +5,15 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useCreateMasterValue } from "@/features/management/hooks/useMasters";
 import type { MasterValueFormValues } from "@/features/management/types/masters.types";
 
@@ -56,17 +56,17 @@ export function MaterialCategoryDrawer() {
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger render={<Button type="button" variant="outline" />}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger render={<Button type="button" variant="outline" />}>
         <PlusIcon size={15} className="mr-1.5" />
         Add Category
-      </SheetTrigger>
-      <SheetContent className="w-full border-border bg-card sm:max-w-md">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>Add Material Category</SheetTitle>
-          <SheetDescription>Create a new category for grouping materials.</SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
+        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+          <DialogTitle>Add Material Category</DialogTitle>
+          <DialogDescription>Create a new category for grouping materials.</DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           <Field label="Category Name">
             <Input value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} placeholder="e.g. GI Pipe" />
           </Field>
@@ -75,17 +75,15 @@ export function MaterialCategoryDrawer() {
           </Field>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
-        <SheetFooter className="border-t border-border/70 pt-4">
-          <div className="flex items-center justify-end gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>
-              Cancel
-            </SheetClose>
-            <Button type="button" onClick={handleSave} disabled={createValue.isPending}>
-              {createValue.isPending ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+          <DialogClose render={<Button type="button" variant="outline" />}>
+            Cancel
+          </DialogClose>
+          <Button type="button" onClick={handleSave} disabled={createValue.isPending}>
+            {createValue.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

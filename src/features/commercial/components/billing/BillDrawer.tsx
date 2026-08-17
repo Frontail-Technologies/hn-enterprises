@@ -24,22 +24,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateBill, useUpdateBill, useDeleteBill } from "../../hooks/useBills";
-import type { Bill, BillFormValues, BillStage, BillStatus } from "../../types/bill.types";
+import type { Bill, BillFormValues, BillStatus } from "../../types/bill.types";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 
-const billStages: BillStage[] = ["GI", "GC", "Commissioning", "Conversion", "Other"];
 const billStatuses: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
-const CUSTOMER_NONE = "__none__";
 
 function emptyValues(defaultProjectId = ""): BillFormValues {
   return {
     projectId: defaultProjectId,
-    customerId: "",
     billNumber: "",
-    stage: "Other",
     billDate: format(new Date(), "yyyy-MM-dd"),
     dueDate: "",
     totalAmount: "",
@@ -52,9 +47,7 @@ function emptyValues(defaultProjectId = ""): BillFormValues {
 function valuesFromBill(bill: Bill): BillFormValues {
   return {
     projectId: bill.projectId,
-    customerId: bill.customerId,
     billNumber: bill.billNumber,
-    stage: bill.stage,
     billDate: bill.billDate,
     dueDate: bill.dueDate,
     totalAmount: String(bill.totalAmount),
@@ -86,9 +79,6 @@ export function BillDrawer({
   );
   const [saveError, setSaveError] = useState("");
   const { data: projects = [] } = useProjectsQuery();
-  // Customer is an optional reference scoped to the chosen project, so only
-  // that project's customers are offered.
-  const { data: customers = [] } = useCustomersQuery({ projectId: values.projectId || undefined });
   const createBill = useCreateBill();
   const updateBill = useUpdateBill(bill?.id ?? "");
   const deleteBill = useDeleteBill();
@@ -160,34 +150,13 @@ export function BillDrawer({
               <SearchableSelect
                 value={values.projectId || undefined}
                 onValueChange={(projectId) =>
-                  // Changing project clears any customer that belonged to the old one.
-                  setValues((current) => ({ ...current, projectId: projectId ?? "", customerId: "" }))
+                  setValues((current) => ({ ...current, projectId: projectId ?? "" }))
                 }
                 placeholder="Select project"
                 options={projects.map((p) => ({ value: p.id, label: p.name }))}
                 className="w-full"
               />
             )}
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Customer (optional)</span>
-            <SearchableSelect
-              value={values.customerId || undefined}
-              onValueChange={(customerId) =>
-                setValues((current) => ({
-                  ...current,
-                  customerId: customerId && customerId !== CUSTOMER_NONE ? customerId : "",
-                }))
-              }
-              placeholder={values.projectId ? "Select customer" : "Select a project first"}
-              disabled={!values.projectId}
-              options={[
-                { value: CUSTOMER_NONE, label: "— No specific customer —" },
-                ...customers.map((c) => ({ value: c.id, label: c.customerConnection.customerName })),
-              ]}
-              className="w-full"
-            />
           </label>
 
           <label className="block space-y-1.5">
@@ -200,35 +169,12 @@ export function BillDrawer({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Billing Stage</span>
-              <Select
-                value={values.stage}
-                onValueChange={(stage) => {
-                  if (stage) setValues((current) => ({ ...current, stage: stage as BillStage }));
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {billStages.map((stage) => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Bill Date</span>
               <DatePicker
                 value={values.billDate}
                 onChange={(billDate) => setValues((current) => ({ ...current, billDate }))}
               />
             </label>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Total Amount</span>
               <Input
@@ -237,6 +183,9 @@ export function BillDrawer({
                 onChange={(event) => setValues((current) => ({ ...current, totalAmount: event.target.value }))}
               />
             </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Tax</span>
               <Input
@@ -245,9 +194,6 @@ export function BillDrawer({
                 onChange={(event) => setValues((current) => ({ ...current, tax: event.target.value }))}
               />
             </label>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Due Date</span>
               <DatePicker
@@ -255,27 +201,28 @@ export function BillDrawer({
                 onChange={(dueDate) => setValues((current) => ({ ...current, dueDate }))}
               />
             </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Status</span>
-              <Select
-                value={values.status}
-                onValueChange={(status) => {
-                  if (status) setValues((current) => ({ ...current, status: status as BillStatus }));
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {billStatuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
           </div>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Status</span>
+            <Select
+              value={values.status}
+              onValueChange={(status) => {
+                if (status) setValues((current) => ({ ...current, status: status as BillStatus }));
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {billStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Remarks</span>

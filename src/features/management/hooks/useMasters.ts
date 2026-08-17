@@ -8,6 +8,7 @@ import type {
 } from "../types/masters.types";
 
 const masterValuesKey = (category: MasterValueCategory) => ["masters", "values", category] as const;
+const masterValueKey = (id: string) => ["masters", "values", "detail", id] as const;
 const holidaysKey = ["masters", "holidays"] as const;
 
 export function useMasterValuesQuery(category: MasterValueCategory, search?: string) {
@@ -53,6 +54,28 @@ export function useDeleteMasterValue(category: MasterValueCategory) {
   });
 }
 
+// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
+export function useMasterValueDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...masterValueKey(id), "delete-impact"],
+    queryFn: () => masterValuesApi.getDeleteImpact(id),
+    enabled: Boolean(id) && (options.enabled ?? true),
+    staleTime: 0,
+  });
+}
+
+export function useBulkDeleteMasterValues(category: MasterValueCategory) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => masterValuesApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
+      toast.success(`${result.count} value${result.count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete master values"),
+  });
+}
+
 export function useHolidaysQuery(search?: string) {
   return useQuery({
     queryKey: [...holidaysKey, search ?? ""],
@@ -93,5 +116,17 @@ export function useDeleteHoliday() {
       toast.success("Holiday deleted successfully");
     },
     onError: (error: any) => toast.error(error?.message || "Failed to delete holiday"),
+  });
+}
+
+export function useBulkDeleteHolidays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => holidaysApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: holidaysKey });
+      toast.success(`${result.count} holiday${result.count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete holidays"),
   });
 }

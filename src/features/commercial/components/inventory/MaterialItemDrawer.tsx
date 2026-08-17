@@ -12,15 +12,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useCreateMaterial } from "../../hooks/useMaterials";
 import type { MaterialFormValues } from "../../types/material.types";
 import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
@@ -85,20 +85,20 @@ export function MaterialItemDrawer() {
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger render={<Button type="button" variant="outline" />}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger render={<Button type="button" />}>
         <PlusIcon size={15} />
         Add Material
-      </SheetTrigger>
-      <SheetContent className="w-full border-border bg-card sm:max-w-md">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>Add Material</SheetTitle>
-          <SheetDescription>
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
+        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+          <DialogTitle>Add Material</DialogTitle>
+          <DialogDescription>
             Create an actual stock item. Categories only group materials; they are not selectable stock items.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           <Field label="Material Name" helper={'Example: GI Pipe 20MM, 1/2" GI Tee, 90MM Coupler.'}>
             <Input
               value={values.name}
@@ -146,15 +146,13 @@ export function MaterialItemDrawer() {
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
 
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex w-full items-center justify-end gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
-            <Button type="button" onClick={handleSave} disabled={createMaterial.isPending}>
-              {createMaterial.isPending ? "Saving..." : "Save Material"}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+          <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+          <Button type="button" onClick={handleSave} disabled={createMaterial.isPending}>
+            {createMaterial.isPending ? "Saving..." : "Save Material"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

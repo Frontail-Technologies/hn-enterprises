@@ -15,11 +15,10 @@ import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
-import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
+import { useDownloadWageRegister } from "@/features/exports/hooks/useExports";
 import { cn } from "@/lib/utils";
 import { useDeleteWage, useWagesQuery } from "../../hooks/useWages";
 import { money } from "../../utils/format";
-import type { WageRecord } from "../../types/wage.types";
 import { WageDrawer } from "./WageDrawer";
 
 import { sum } from "../../utils/format";
@@ -40,6 +39,7 @@ export function WageRegister() {
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
   const isLoading = wagesLoading || plumbersLoading;
   const deleteWage = useDeleteWage();
+  const downloadWageRegister = useDownloadWageRegister();
 
   const wageTotals = {
     gross: sum(wages.map((row) => row.total)),
@@ -48,23 +48,10 @@ export function WageRegister() {
     pending: wages.filter((row) => row.status === "Pending").length,
   };
 
-  const exportColumns: ExportColumn<WageRecord>[] = useMemo(
-    () => [
-      { label: "Name", getValue: (row) => plumberNameById.get(row.plumberId) ?? "Unknown" },
-      { label: "Category", getValue: (row) => row.category },
-      { label: "Rate of Wage", getValue: (row) => row.wageRate },
-      { label: "Days Worked", getValue: (row) => row.daysWorked },
-      { label: "Basic", getValue: (row) => row.basic },
-      { label: "Total", getValue: (row) => row.total },
-      { label: "PF", getValue: (row) => row.pf },
-      { label: "ESIC", getValue: (row) => row.esic },
-      { label: "Total Deduction", getValue: (row) => row.totalDeduction },
-      { label: "Net Payment", getValue: (row) => row.netPayment },
-      { label: "Status", getValue: (row) => row.status },
-      { label: "Remarks", getValue: (row) => row.remarks },
-    ],
-    [plumberNameById],
-  );
+  const handleExport = () => {
+    const [yearStr, monthStr] = month.split("-");
+    downloadWageRegister.mutate({ month: Number(monthStr), year: Number(yearStr) });
+  };
 
   return (
     <>
@@ -108,10 +95,11 @@ export function WageRegister() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => void exportRowsToExcel(`wage-sheet-${month}.xlsx`, exportColumns, wages)}
+            disabled={downloadWageRegister.isPending}
+            onClick={handleExport}
           >
             <DownloadSimpleIcon size={14} />
-            Export Wage Sheet
+            {downloadWageRegister.isPending ? "Exporting..." : "Export Wage Register"}
           </Button>
         </div>
       </div>

@@ -3,8 +3,11 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
+import { useDownloadHolidays, useDownloadMasterValues } from "@/features/exports/hooks/useExports";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -32,16 +35,21 @@ import { DatePicker } from "@/components/shared/DatePicker";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import {
   useCreateHoliday,
   useCreateMasterValue,
   useHolidaysQuery,
   useMasterValuesQuery,
+  useMasterValueDeleteImpactQuery,
   useUpdateHoliday,
   useUpdateMasterValue,
   useDeleteMasterValue,
   useDeleteHoliday,
+  useBulkDeleteMasterValues,
+  useBulkDeleteHolidays,
 } from "../hooks/useMasters";
+import { CATEGORY_TO_BACKEND } from "../services/masters.service";
 import {
   masterTabs,
   type Holiday,
@@ -69,6 +77,20 @@ export function MastersPage() {
   const { data: values = [], isLoading: valuesLoading } = useMasterValuesQuery(category ?? "Payment Types", undefined);
   const { data: holidays = [], isLoading: holidaysLoading } = useHolidaysQuery();
 
+  const valuesSelection = useBulkSelection();
+  const holidaysSelection = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const bulkDeleteValues = useBulkDeleteMasterValues(category ?? "Payment Types");
+  const bulkDeleteHolidays = useBulkDeleteHolidays();
+  const activeSelection = isHolidayTab ? holidaysSelection : valuesSelection;
+  const activeBulkDelete = isHolidayTab ? bulkDeleteHolidays : bulkDeleteValues;
+
+  async function handleBulkDelete() {
+    await activeBulkDelete.mutateAsync(Array.from(activeSelection.selectedIds));
+    setDeleteOpen(false);
+    activeSelection.clear();
+  }
+
   const valueData = useMemo(() => {
     if (!category) return [];
     const query = search.toLowerCase();
@@ -84,22 +106,14 @@ export function MastersPage() {
 
   const tableLoading = isHolidayTab ? holidaysLoading : valuesLoading;
 
-  const valueExportColumns: ExportColumn<MasterValue>[] = [
-    { label: "Value", getValue: (row) => row.value },
-    { label: "Description", getValue: (row) => row.description },
-    { label: "Status", getValue: (row) => row.status },
-  ];
-
-  const holidayExportColumns: ExportColumn<Holiday>[] = [
-    { label: "Holiday Name", getValue: (row) => row.name },
-    { label: "Date", getValue: (row) => row.date },
-    { label: "Type", getValue: (row) => row.type },
-    { label: "Status", getValue: (row) => row.status },
-  ];
+  const downloadValues = useDownloadMasterValues();
+  const downloadHolidays = useDownloadHolidays();
+  const exportPending = downloadValues.isPending || downloadHolidays.isPending;
 
   function handleExport() {
-    if (isHolidayTab) void exportRowsToExcel("holidays.xlsx", holidayExportColumns, holidayData);
-    else void exportRowsToExcel(`${activeTab.toLowerCase().replace(/\s+/g, "-")}.xlsx`, valueExportColumns, valueData);
+    const trimmedSearch = search.trim() || undefined;
+    if (isHolidayTab) downloadHolidays.mutate({ search: trimmedSearch });
+    else if (category) downloadValues.mutate({ category: CATEGORY_TO_BACKEND[category], search: trimmedSearch });
   }
 
   const valueColumns: ColumnDef<MasterValue>[] = [
@@ -114,7 +128,7 @@ export function MastersPage() {
         category ? (
           <div className="flex items-center gap-1">
             <MasterValueDrawer category={category} value={row} iconOnly />
-            <MasterValueDeleteButton id={row.id} label={row.value} category={category} />
+            <MasterValueDeleteButton value={row} category={category} />
           </div>
         ) : null,
     },
@@ -149,6 +163,8 @@ export function MastersPage() {
           onChange={(tab) => {
             setActiveTab(tab as MasterTabId);
             setSearch("");
+            valuesSelection.clear();
+            holidaysSelection.clear();
           }}
         />
       }
@@ -158,9 +174,10 @@ export function MastersPage() {
             type="button"
             className={buttonVariants({ variant: "outline", size: "default" })}
             onClick={handleExport}
+            disabled={exportPending}
           >
             <DownloadSimpleIcon size={15} />
-            Export Excel
+            {exportPending ? "Exporting..." : "Export Excel"}
           </button>
           {category && <MasterValueImportDrawer category={category} />}
           {isHolidayTab ? (
@@ -183,11 +200,45 @@ export function MastersPage() {
           placeholder={isHolidayTab ? "Search holidays..." : `Search ${activeTab.toLowerCase()}...`}
         />
       </div>
+      <BulkDeleteBar
+        selectedCount={activeSelection.selectedIds.size}
+        onClear={activeSelection.clear}
+        onDelete={() => setDeleteOpen(true)}
+      />
       {isHolidayTab ? (
-        <PaginatedDataTable data={holidayData} columns={holidayColumns} isLoading={tableLoading} />
+        <PaginatedDataTable
+          data={holidayData}
+          columns={holidayColumns}
+          isLoading={tableLoading}
+          selection={{
+            selectedIds: holidaysSelection.selectedIds,
+            onToggleRow: holidaysSelection.toggleRow,
+            onTogglePage: holidaysSelection.toggleAllOnPage,
+            getRowLabel: (row) => row.name,
+          }}
+        />
       ) : (
-        <PaginatedDataTable data={valueData} columns={valueColumns} isLoading={tableLoading} />
+        <PaginatedDataTable
+          data={valueData}
+          columns={valueColumns}
+          isLoading={tableLoading}
+          selection={{
+            selectedIds: valuesSelection.selectedIds,
+            onToggleRow: valuesSelection.toggleRow,
+            onTogglePage: valuesSelection.toggleAllOnPage,
+            getRowLabel: (row) => row.value,
+          }}
+        />
       )}
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={activeSelection.selectedIds.size}
+        entityLabel={isHolidayTab ? "Holiday" : "Value"}
+        isSubmitting={activeBulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+      />
     </PageShell>
   );
 }
@@ -201,9 +252,48 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function MasterValueDeleteButton({ id, label, category }: { id: string; label: string; category: MasterValueCategory }) {
-  const deleteMutation = useDeleteMasterValue(category);
-  return <DeleteButton id={id} label={label} hook={() => deleteMutation} />;
+function MasterValueDeleteButton({ value, category }: { value: MasterValue; category: MasterValueCategory }) {
+  const [open, setOpen] = useState(false);
+  const deleteValue = useDeleteMasterValue(category);
+  const deactivateValue = useUpdateMasterValue(category, value.id);
+  const deleteImpact = useMasterValueDeleteImpactQuery(value.id, { enabled: open });
+
+  return (
+    <DeleteImpactDialog
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Delete ${value.value}`}
+        >
+          <TrashIcon size={15} className="text-destructive" />
+        </Button>
+      }
+      entityTypeLabel="Value"
+      impact={deleteImpact.data}
+      isLoading={deleteImpact.isLoading}
+      isError={deleteImpact.isError}
+      onRetry={() => void deleteImpact.refetch()}
+      isConfirming={deleteValue.isPending}
+      onConfirm={async () => {
+        await deleteValue.mutateAsync(value.id);
+        setOpen(false);
+      }}
+      isArchiving={deactivateValue.isPending}
+      archiveLabel="Deactivate Value"
+      onArchive={async () => {
+        await deactivateValue.mutateAsync({
+          value: value.value,
+          description: value.description,
+          status: "Inactive",
+        });
+        setOpen(false);
+      }}
+    />
+  );
 }
 
 function DeleteButton({ id, label, hook }: { id: string; label: string; hook: () => { mutate: (id: string) => void; isPending: boolean } }) {

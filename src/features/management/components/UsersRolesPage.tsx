@@ -1,29 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { buttonVariants } from "@/components/ui/button";
-import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useDownloadUserRegister } from "@/features/exports/hooks/useExports";
 import { useUsersQuery } from "../hooks/useUsers";
 import { formatDateTime, uniqOptions } from "../utils/format";
-import type { User } from "../services/users.service";
+import { ROLE_TO_BACKEND, STATUS_TO_BACKEND, type User, type UserRole, type UserStatus } from "../services/users.service";
 import { UserDrawer } from "./UserDrawer";
-import { UserImportDrawer } from "./staff/UserImportDrawer";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { useDeleteUser } from "../hooks/useUsers";
+import { UserImportDialog } from "./staff/UserImportDialog";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
+import { useBulkDeleteUsers, useDeleteUser, useUpdateUser, useUserDeleteImpactQuery } from "../hooks/useUsers";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
-
-const exportColumns: ExportColumn<User>[] = [
-  { label: "Name", getValue: (row) => row.name },
-  { label: "Mobile", getValue: (row) => row.mobile },
-  { label: "Role", getValue: (row) => row.role },
-  { label: "Status", getValue: (row) => row.status },
-  { label: "Last Login", getValue: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never") },
-];
 
 export function UsersRolesPage() {
   const [filters, setFilters] = useState({
@@ -32,7 +27,28 @@ export function UsersRolesPage() {
     status: "all",
   });
   const { data: users = [], isLoading } = useUsersQuery();
-  const deleteUser = useDeleteUser();
+  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const bulkDelete = useBulkDeleteUsers();
+  const downloadRegister = useDownloadUserRegister();
+
+  async function handleBulkDelete() {
+    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    setDeleteOpen(false);
+    clear();
+  }
+
+  // Mirrors the page's own filtering exactly (§ data useMemo below): the
+  // hardcoded Super Admin/Supervisor scope plus whatever the filter dropdowns
+  // currently narrow to, translated to the backend's role/status casing.
+  function handleExportRegister() {
+    downloadRegister.mutate({
+      role: filters.role === "all" ? undefined : ROLE_TO_BACKEND[filters.role as UserRole],
+      status: filters.status === "all" ? undefined : STATUS_TO_BACKEND[filters.status as UserStatus],
+      search: filters.search || undefined,
+    });
+  }
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
     return users.filter(
@@ -75,10 +91,7 @@ export function UsersRolesPage() {
       render: (row) => (
         <div className="flex items-center gap-1">
           <UserDrawer user={row} iconOnly />
-          <DeleteConfirmDialog
-            itemName={row.name}
-            onConfirm={() => deleteUser.mutateAsync(row.id)}
-          />
+          <UserDeleteAction user={row} />
         </div>
       ),
     },
@@ -92,12 +105,20 @@ export function UsersRolesPage() {
           <button
             type="button"
             className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("users.xlsx", exportColumns, data)}
+            onClick={handleExportRegister}
+            disabled={downloadRegister.isPending}
           >
             <DownloadSimpleIcon size={15} />
-            Export Excel
+            {downloadRegister.isPending ? "Exporting..." : "Export Excel"}
           </button>
-          <UserImportDrawer />
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => setImportOpen(true)}
+          >
+            <UploadSimpleIcon size={15} />
+            Import Users
+          </button>
           <UserDrawer />
         </>
       }
@@ -124,7 +145,78 @@ export function UsersRolesPage() {
         }
         onReset={() => setFilters({ search: "", role: "all", status: "all" })}
       />
-      <PaginatedDataTable data={data} columns={columns} isLoading={isLoading} />
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
+      <PaginatedDataTable
+        data={data}
+        columns={columns}
+        isLoading={isLoading}
+        selection={{
+          selectedIds,
+          onToggleRow: toggleRow,
+          onTogglePage: toggleAllOnPage,
+          getRowLabel: (row) => row.name,
+        }}
+      />
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="User"
+        isSubmitting={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+        note="Users with associated records will be skipped with an error instead of partially deleted. Your own account is never deleted even if selected."
+      />
+
+      <UserImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </PageShell>
+  );
+}
+
+function UserDeleteAction({ user }: { user: User }) {
+  const [open, setOpen] = useState(false);
+  const deleteUser = useDeleteUser();
+  const deactivateUser = useUpdateUser(user.id);
+  const deleteImpact = useUserDeleteImpactQuery(user.id, { enabled: open });
+
+  return (
+    <DeleteImpactDialog
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Delete ${user.name}`}
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
+          <TrashIcon size={13} />
+        </Button>
+      }
+      entityTypeLabel="User"
+      impact={deleteImpact.data}
+      isLoading={deleteImpact.isLoading}
+      isError={deleteImpact.isError}
+      onRetry={() => void deleteImpact.refetch()}
+      isConfirming={deleteUser.isPending}
+      onConfirm={async () => {
+        await deleteUser.mutateAsync(user.id);
+        setOpen(false);
+      }}
+      isArchiving={deactivateUser.isPending}
+      archiveLabel="Deactivate User"
+      onArchive={async () => {
+        await deactivateUser.mutateAsync({
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          mobile: user.mobile,
+          role: user.role,
+          status: "Inactive",
+        });
+        setOpen(false);
+      }}
+    />
   );
 }

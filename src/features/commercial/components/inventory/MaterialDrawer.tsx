@@ -14,22 +14,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
-import type { MaterialTransactionFormValues, MaterialTransactionType } from "../../types/material.types";
+import type {
+  AdjustmentDirection,
+  MaterialSource,
+  MaterialTransactionFormValues,
+  MaterialTransactionType,
+} from "../../types/material.types";
 import { ImageProofField } from "../shared/ImageProofField";
+
+// Which types need an explicit source (they can move either PBG or purchased stock);
+// everywhere else source is implied by the transaction type itself (see backend
+// materials.service.ts's IMPLIED_SOURCE) and asking again would be redundant.
+const SOURCE_REQUIRED_TYPES: MaterialTransactionType[] = ["issue", "return", "adjustment"];
 
 const TYPE_LABELS: Record<MaterialTransactionType, string> = {
   purchase: "Add Purchase",
@@ -56,6 +67,9 @@ function emptyValues(): MaterialTransactionFormValues {
     materialId: "",
     quantity: "",
     transactionDate: format(new Date(), "yyyy-MM-dd"),
+    source: "",
+    direction: "",
+    projectId: "",
     referenceNo: "",
     vendorName: "",
     rate: "",
@@ -91,21 +105,37 @@ export function MaterialDrawer({
   triggerLabel,
   icon,
   iconOnly = false,
+  variant = "default",
+  hideTrigger = false,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   type: MaterialTransactionType;
   triggerLabel?: string;
   icon?: ReactNode;
   iconOnly?: boolean;
+  // Lets a caller demote this to a secondary/outline action when several
+  // MaterialDrawers sit side by side (§3 - only one should read as primary).
+  variant?: "default" | "outline";
+  // Renders no trigger of its own - open/onOpenChange are driven externally
+  // (e.g. a dropdown menu item), so the same form can be launched without a
+  // second visible button competing for attention.
+  hideTrigger?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
   const [values, setValues] = useState<MaterialTransactionFormValues>(emptyValues());
   const [saveError, setSaveError] = useState("");
   const { data: materials = [] } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const { data: customers = [] } = useCustomersQuery();
+  const { data: projects = [] } = useProjectsQuery();
   const createTransaction = useCreateMaterialTransaction(type);
   const label = triggerLabel ?? TYPE_LABELS[type];
+  const needsSource = SOURCE_REQUIRED_TYPES.includes(type);
 
   function set<K extends keyof MaterialTransactionFormValues>(key: K, value: MaterialTransactionFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -116,7 +146,8 @@ export function MaterialDrawer({
       setValues(emptyValues());
       setSaveError("");
     }
-    setOpen(nextOpen);
+    if (controlledOnOpenChange) controlledOnOpenChange(nextOpen);
+    else setUncontrolledOpen(nextOpen);
   }
 
   async function handleSave() {
@@ -124,10 +155,18 @@ export function MaterialDrawer({
       setSaveError("Material and a valid quantity are required");
       return;
     }
+    if (needsSource && !values.source) {
+      setSaveError("Material source (Purchase or PBG) is required");
+      return;
+    }
+    if (type === "adjustment" && !values.direction) {
+      setSaveError("Adjustment direction (In or Out) is required");
+      return;
+    }
     setSaveError("");
     try {
       await createTransaction.mutateAsync(values);
-      setOpen(false);
+      handleOpenChange(false);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save transaction");
     }
@@ -211,6 +250,49 @@ export function MaterialDrawer({
     </Field>
   );
 
+  const sourceField = (
+    <Field label="Material Source">
+      <Select value={values.source || undefined} onValueChange={(source) => set("source", (source as MaterialSource) ?? "")}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select source" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="purchase">Purchase</SelectItem>
+          <SelectItem value="pbg">PBG</SelectItem>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+
+  const directionField = (
+    <Field label="Direction">
+      <Select
+        value={values.direction || undefined}
+        onValueChange={(direction) => set("direction", (direction as AdjustmentDirection) ?? "")}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select direction" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="in">In (adds to balance)</SelectItem>
+          <SelectItem value="out">Out (reduces balance)</SelectItem>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+
+  const projectField = (
+    <Field label="Project (optional)">
+      <SearchableSelect
+        value={values.projectId || undefined}
+        onValueChange={(projectId) => set("projectId", projectId ?? "")}
+        placeholder="Select project"
+        options={projects.map((project) => ({ value: project.id, label: project.name }))}
+        className="w-full"
+      />
+    </Field>
+  );
+
   const quantityField = (labelText: string) => (
     <Field label={labelText}>
       <Input type="number" value={values.quantity} onChange={(event) => set("quantity", event.target.value)} />
@@ -224,10 +306,10 @@ export function MaterialDrawer({
   );
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      {iconOnly ? (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {hideTrigger ? null : iconOnly ? (
         <ActionTooltip label={label}>
-          <SheetTrigger
+          <DialogTrigger
             render={
               <button
                 type="button"
@@ -237,21 +319,21 @@ export function MaterialDrawer({
             }
           >
             {icon ?? <PlusIcon size={15} />}
-          </SheetTrigger>
+          </DialogTrigger>
         </ActionTooltip>
       ) : (
-        <SheetTrigger render={<Button type="button" />}>
+        <DialogTrigger render={<Button type="button" variant={variant} />}>
           {icon ?? <PlusIcon size={15} />}
           {label}
-        </SheetTrigger>
+        </DialogTrigger>
       )}
-      <SheetContent className="w-full border-border bg-card sm:max-w-lg">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>{label}</SheetTitle>
-          <SheetDescription>{TYPE_DESCRIPTIONS[type]}</SheetDescription>
-        </SheetHeader>
+      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+          <DialogTitle>{label}</DialogTitle>
+          <DialogDescription>{TYPE_DESCRIPTIONS[type]}</DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {materialField}
 
           {type === "purchase" ? (
@@ -262,6 +344,7 @@ export function MaterialDrawer({
               <Field label="Vendor Name">
                 <Input value={values.vendorName} onChange={(event) => set("vendorName", event.target.value)} />
               </Field>
+              {projectField}
               {dateField("Purchase Date")}
               {quantityField("Quantity")}
               <div className="grid gap-3 sm:grid-cols-2">
@@ -285,6 +368,7 @@ export function MaterialDrawer({
                 <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
               </Field>
               {supervisorField}
+              {projectField}
               {dateField("Issue Date")}
               {quantityField("Quantity")}
               <Field label="Vendor Name">
@@ -310,6 +394,8 @@ export function MaterialDrawer({
               <Field label="RA Bill No.">
                 <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
               </Field>
+              {customerField}
+              {plumberField}
               {dateField("Consumption Date")}
               {quantityField("Total Consumption")}
               <Field label="Vendor Name">
@@ -323,9 +409,11 @@ export function MaterialDrawer({
               <Field label="Slip No.">
                 <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
               </Field>
+              {sourceField}
               {dateField("Issue Date")}
               {plumberField}
               {supervisorField}
+              {projectField}
               {addressField}
               {quantityField("Issued Quantity")}
             </>
@@ -336,6 +424,7 @@ export function MaterialDrawer({
               <Field label="Return No.">
                 <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
               </Field>
+              {sourceField}
               {dateField("Return Date")}
               {plumberField}
               {addressField}
@@ -360,6 +449,8 @@ export function MaterialDrawer({
           {type === "adjustment" ? (
             <>
               {plumberField}
+              {sourceField}
+              {directionField}
               {quantityField("Adjustment Quantity")}
               <Field label="Adjustment Type">
                 <Select
@@ -414,15 +505,13 @@ export function MaterialDrawer({
           {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
         </div>
 
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
-            <Button type="button" onClick={handleSave} disabled={createTransaction.isPending}>
-              {createTransaction.isPending ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+          <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+          <Button type="button" onClick={handleSave} disabled={createTransaction.isPending}>
+            {createTransaction.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

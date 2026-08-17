@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { format } from "date-fns";
 import { buttonVariants } from "@/components/ui/button";
 import { PageShell } from "@/components/shared/PageShell";
 import { useSitePlansQuery } from "../hooks/usePlanning";
@@ -12,15 +13,16 @@ import { PageLoading } from "@/components/shared/PageLoading";
 
 export function PlanningPlanPage() {
   const searchParams = useSearchParams();
-  const siteId = searchParams.get("siteId") ?? "";
+  const customerId = searchParams.get("customerId") ?? "";
   const supervisorId = searchParams.get("supervisorId") ?? "";
-  const date = searchParams.get("date") ?? "2026-07-22";
+  const date = searchParams.get("date") ?? format(new Date(), "yyyy-MM-dd");
 
-  const { data: sitePlans = [], isLoading } = useSitePlansQuery({ siteId, supervisorId, date });
+  const { data: sitePlans = [], isLoading } = useSitePlansQuery({ customerId, supervisorId, date });
   const plan = sitePlans[0];
   const tasks = plan?.tasks ?? planningTaskTemplates.map((template) => ({ ...template, qty: "", worker: "" }));
   const siteLabel = plan?.siteLabel || "Unknown site";
   const supervisorName = plan?.supervisorName || "Unknown supervisor";
+  const customerName = plan?.customerName || "Unknown customer";
 
   const totalQty = useMemo(
     () => tasks.reduce((sum, task) => sum + (Number(task.qty) || 0), 0),
@@ -30,10 +32,10 @@ export function PlanningPlanPage() {
   return (
     <PageShell
       title="Planning"
-      subtitle={`${supervisorName} - ${siteLabel}`}
+      subtitle={`${supervisorName} - ${customerName} - ${siteLabel}`}
       actions={
         <Link
-          href={`/planning/dpr?supervisorId=${supervisorId}&siteId=${siteId}&date=${date}`}
+          href={`/planning/dpr?supervisorId=${supervisorId}&customerId=${customerId}&date=${date}`}
           className={buttonVariants({ variant: "outline" })}
         >
           Open DPR

@@ -33,8 +33,11 @@ type BackendDprTask = {
 type BackendEvidenceFile = { id: string; fileName: string; fileUrl: string; mimeType?: string; capturedAt?: string };
 type BackendJoinedRef = { id: string; name: string } | null;
 
+type BackendCustomerRef = { id: string; name: string; trBpNumber: string } | null;
+
 type BackendSitePlan = {
   id: string;
+  customerId: string;
   projectId: string;
   siteId: string;
   date: string;
@@ -43,10 +46,12 @@ type BackendSitePlan = {
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
   project: BackendJoinedRef;
+  customer: BackendCustomerRef;
 };
 
 type BackendDprRecord = {
   id: string;
+  customerId: string;
   projectId: string;
   siteId: string;
   date: string;
@@ -59,6 +64,7 @@ type BackendDprRecord = {
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
   project: BackendJoinedRef;
+  customer: BackendCustomerRef;
 };
 
 const STATUS_TO_FRONTEND: Record<string, DprRecord["status"]> = {
@@ -100,6 +106,9 @@ function mapEvidence(files: BackendEvidenceFile[] | null): EvidenceFile[] {
 function mapSitePlan(raw: BackendSitePlan): SitePlan {
   return {
     id: raw.id,
+    customerId: raw.customerId,
+    customerName: raw.customer?.name ?? "",
+    customerTrBpNo: raw.customer?.trBpNumber ?? "",
     projectId: raw.projectId,
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
@@ -113,6 +122,9 @@ function mapDprRecord(raw: BackendDprRecord): DprRecord {
   return {
     id: raw.id,
     date: raw.date,
+    customerId: raw.customerId,
+    customerName: raw.customer?.name ?? "",
+    customerTrBpNo: raw.customer?.trBpNumber ?? "",
     projectId: raw.projectId,
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
@@ -129,6 +141,7 @@ type ListParams = {
   projectId?: string;
   siteId?: string;
   supervisorId?: string;
+  customerId?: string;
   date?: string;
   from?: string;
   to?: string;
@@ -139,6 +152,7 @@ function buildQuery(params: ListParams) {
   if (params.projectId) query.set("projectId", params.projectId);
   if (params.siteId) query.set("siteId", params.siteId);
   if (params.supervisorId) query.set("supervisorId", params.supervisorId);
+  if (params.customerId) query.set("customerId", params.customerId);
   if (params.date) query.set("date", params.date);
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);

@@ -64,18 +64,126 @@ import {
   type LmcCivilWork,
 } from "../services/customers.service";
 import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
-import { useCustomerQuery, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
+import { useCustomerQuery, useSetSectionCompletion, useUpsertLmcPipeRecord } from "../hooks/useCustomers";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
 import { PageLoading } from "@/components/shared/PageLoading";
 import type {
+  CompletionSectionKey,
   Customer,
   CustomerSurvey,
   CustomerSurveyRevision,
   LmcEvidenceFile,
   LmcPipeSizeRecord,
   LmcPipelineWork,
+  SectionCompletionResult,
 } from "../types/customer.types";
+
+const COMPLETION_LABEL: Record<SectionCompletionResult["status"], string> = {
+  NOT_STARTED: "Not Started",
+  IN_PROGRESS: "In Progress",
+  DONE: "Done",
+};
+
+// Section status is read straight from the backend `sectionCompletion` - never
+// recomputed on the client.
+function SectionCompletionActions({
+  customerId,
+  sectionKey,
+  sectionLabel,
+  result,
+}: {
+  customerId: string;
+  sectionKey: CompletionSectionKey;
+  sectionLabel: string;
+  result?: SectionCompletionResult;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const mutation = useSetSectionCompletion(customerId, sectionLabel);
+  const isDone = result?.status === "DONE";
+
+  return (
+    <div className="flex items-center gap-2">
+      <SectionStatusBadge result={result} />
+      {isDone ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={mutation.isPending}
+            onClick={() => setConfirmOpen(true)}
+          >
+            Reopen
+          </Button>
+          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Reopen {sectionLabel}?</DialogTitle>
+                <DialogDescription>
+                  This will mark the section as In Progress. Existing data will be kept.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={mutation.isPending}
+                  onClick={() =>
+                    mutation.mutate(
+                      { sectionKey, completed: false },
+                      { onSuccess: () => setConfirmOpen(false) },
+                    )
+                  }
+                >
+                  Reopen
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate({ sectionKey, completed: true })}
+        >
+          Mark Complete
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function SectionStatusBadge({ result }: { result?: SectionCompletionResult }) {
+  if (!result) return null;
+  const tone =
+    result.status === "DONE"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+      : result.status === "IN_PROGRESS"
+        ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+        : "border-border bg-muted/40 text-muted-foreground";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${tone}`}
+      title={result.missingRequiredFields.length ? `Missing: ${result.missingRequiredFields.join(", ")}` : undefined}
+    >
+      {COMPLETION_LABEL[result.status]}
+    </span>
+  );
+}
 
 type CustomerApprovalRow = {
   id: string;
@@ -129,6 +237,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   }
 
   const connection = customer.customerConnection;
+  const completion = customer.sectionCompletion;
 
   const visibleFieldGroups = groupVisibleDynamicFields(dynamicFields, isAdmin);
   const sectionLinks = [
@@ -183,21 +292,30 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         </section>
 
         <section id="survey" className="scroll-mt-16">
-          <CustomerSurveyDetail survey={customer.survey} />
+          <CustomerSurveyDetail survey={customer.survey} completion={completion?.survey} />
         </section>
 
         <section id="gi" className="scroll-mt-16">
-          <SectionCard title="GI Installation Measurements">
+          <SectionCard
+            title="GI Installation Measurements"
+            action={<SectionCompletionActions customerId={customer.id} sectionKey="giMeasurements" sectionLabel="GI Measurements" result={completion?.giMeasurements} />}
+          >
             <KeyValueGrid items={itemsFromFields(giMeasurementFields, customer.giMeasurements)} columns={3} />
           </SectionCard>
         </section>
 
         <section id="isolation" className="scroll-mt-16">
           <div className="space-y-4">
-            <SectionCard title="Isolation Valves & Regulators">
+            <SectionCard
+              title="Isolation Valves & Regulators"
+              action={<SectionCompletionActions customerId={customer.id} sectionKey="valvesRegulators" sectionLabel="Isolation & Regulators" result={completion?.valvesRegulators} />}
+            >
               <KeyValueGrid items={itemsFromFields(isolationValveFields, customer.valvesRegulators)} columns={3} />
             </SectionCard>
-            <SectionCard title="Fittings & Accessories">
+            <SectionCard
+              title="Fittings & Accessories"
+              action={<SectionCompletionActions customerId={customer.id} sectionKey="fittingsAccessories" sectionLabel="Fittings & Accessories" result={completion?.fittingsAccessories} />}
+            >
               <KeyValueGrid items={itemsFromFields(fittingAccessoryFields, customer.fittingsAccessories)} columns={3} />
             </SectionCard>
           </div>
@@ -209,17 +327,21 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
             customerId={customer.id}
             values={customer.lmcPipelineWork}
             initialPipeId={initialPipeId}
+            completion={completion?.lmc}
           />
         </section>
 
         <section id="mdpe" className="scroll-mt-16">
-          <SectionCard title="MDPE Fittings">
+          <SectionCard
+            title="MDPE Fittings"
+            action={<SectionCompletionActions customerId={customer.id} sectionKey="mdpeFittings" sectionLabel="MDPE Fittings" result={completion?.mdpeFittings} />}
+          >
             <KeyValueGrid items={itemsFromFields(mdpeFittingFields, customer.mdpeFittings)} columns={3} />
           </SectionCard>
         </section>
 
         <section id="commissioning" className="scroll-mt-16">
-          <SectionCard title="Commissioning & Conversion">
+          <SectionCard title="Commissioning & Conversion" action={<SectionStatusBadge result={completion?.commissioning} />}>
             <KeyValueGrid
               items={itemsFromFields(commissioningConversionFields, customer.commissioningConversion)}
               columns={2}
@@ -377,7 +499,7 @@ function CustomerApprovalsHistory({ customer }: { customer: Customer }) {
   );
 }
 
-function CustomerSurveyDetail({ survey }: { survey?: CustomerSurvey }) {
+function CustomerSurveyDetail({ survey, completion }: { survey?: CustomerSurvey; completion?: SectionCompletionResult }) {
   if (!survey) {
     return (
       <SectionCard
@@ -400,7 +522,8 @@ function CustomerSurveyDetail({ survey }: { survey?: CustomerSurvey }) {
         <SectionCard
           title="Survey Details"
           action={
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <SectionStatusBadge result={completion} />
               <Button type="button" variant="outline" size="sm">
                 Edit
               </Button>
@@ -492,10 +615,12 @@ function LmcPipelineDetail({
   customerId,
   values: initialValues,
   initialPipeId,
+  completion,
 }: {
   customerId: string;
   values: LmcPipelineWork;
   initialPipeId?: string | null;
+  completion?: SectionCompletionResult;
 }) {
   const [values, setValues] = useState(initialValues);
   const [editingPipeId, setEditingPipeId] = useState<string | null>(initialPipeId ?? null);
@@ -526,7 +651,12 @@ function LmcPipelineDetail({
     <div className="space-y-4">
       <SectionCard
         title="Pipe Size Records"
-        action={<StatusBadge status={overallStatus} />}
+        action={
+          <div className="flex items-center gap-2">
+            <SectionStatusBadge result={completion} />
+            <StatusBadge status={overallStatus} />
+          </div>
+        }
       >
         <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
           <Table>

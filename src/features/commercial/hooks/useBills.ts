@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { billsApi } from "../services/bills.service";
-import type { BillFormValues, BillPaymentFormValues, BillPaymentStatus, BillStage, BillStatus } from "../types/bill.types";
+import type { BillFormValues, BillPaymentFormValues, BillPaymentStatus, BillStatus } from "../types/bill.types";
 
 const billsKey = ["bills"] as const;
 const billKey = (id: string) => ["bills", id] as const;
 const paymentsKey = (billId: string) => ["bills", billId, "payments"] as const;
 
 export function useBillsQuery(
-  params: { search?: string; projectId?: string; customerId?: string; stage?: BillStage; status?: BillStatus } = {},
+  params: { search?: string; projectId?: string; status?: BillStatus } = {},
 ) {
   return useQuery({
     queryKey: [...billsKey, params],

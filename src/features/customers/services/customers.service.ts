@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { apiRequest } from "@/lib/api-client";
 import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import {
   appendEvidenceArray,
   type ImagePreviewItem,
@@ -9,11 +10,14 @@ import type { CustomFieldValueType as MasterSheetColumnValueType } from "@/featu
 import type {
   BillingCompletionStatus,
   CommissioningConversionDetails,
+  CompletionSectionKey,
   Customer,
+  CustomerCompletionAudit,
   CustomerConnectionDetails,
   CustomerDocument,
   CustomerFormValues,
   CustomerStatus,
+  CustomerSectionCompletion,
   CustomerSurvey,
   CustomerSurveyApprovalStatus,
   CustomerSurveyWorkableStatus,
@@ -55,6 +59,25 @@ export type CustomerMasterSheetRow = {
   customerId: string;
   values: Record<string, string>;
 };
+
+// Server-authoritative shared column config (§ Customer column configuration) -
+// order/label/visibility/width/type are resolved backend-side (catalog + the
+// user's saved preference) and consumed as-is by both the Web master sheet and
+// the Excel export, so a reorder/hide saved here shows up identically in both.
+export type CustomerColumnType = "text" | "num" | "money" | "date" | "bool";
+
+export type ResolvedCustomerColumn = {
+  key: string;
+  label: string;
+  group: string;
+  type: CustomerColumnType;
+  width: number;
+  visible: boolean;
+  /** True for a live custom field, false for a static catalog field. */
+  custom: boolean;
+};
+
+export type ColumnPreferenceEntry = { key: string; visible: boolean };
 
 export type LmcCivilWork = Pick<
   LmcPipelineWork,
@@ -382,7 +405,7 @@ export function useCommissioningConversionFields(): FieldDefinition<Commissionin
 
   return useMemo(
     () => [
-      { key: "meterNo", label: "Meter No.", input: "meter", digits: 10 },
+      { key: "meterNo", label: "Meter No." },
       { key: "installationDate", label: "Installation Date", input: "date" },
       { key: "commissioningDate", label: "Commissioning Date", input: "date" },
       { key: "conversionDate", label: "Conversion Date", input: "date" },
@@ -394,7 +417,7 @@ export function useCommissioningConversionFields(): FieldDefinition<Commissionin
         input: "select",
         options: meterTypes.map((t) => t.value),
       },
-      { key: "meterReading", label: "Meter Reading" },
+      { key: "meterReading", label: "Meter Reading", input: "meter", digits: 8 },
       {
         key: "nonConversionRemark",
         label: "Non-Conversion Remark",
@@ -1160,10 +1183,10 @@ export function getCustomerMasterSheetRows(
         projectName: customer.projectName,
         siteArea: customer.siteArea,
         city: customer.city,
+        status: customer.status,
         paymentStatus: String(billing.paymentStatus),
         paymentMode: billing.paymentMode,
         initialAmount: billing.initialAmount,
-        preferredPaymentType: billing.paymentMode,
         kycVerified: customer.documents?.some(
           (document) =>
             document.category === "ID / Address Proof" &&
@@ -1176,10 +1199,27 @@ export function getCustomerMasterSheetRows(
             ? commissioning.conversionDate
             : "",
         scheme: connection.scheme,
+        surveyId: customer.survey?.surveyId ?? "",
         surveyDate: customer.survey?.surveyDate ?? "",
+        assignedSurveyor: customer.survey?.assignedSurveyor ?? "",
+        submittedBy: customer.survey?.submittedBy ?? "",
+        submissionDate: customer.survey?.submissionDate ?? "",
+        latitude: customer.survey?.latitude != null ? String(customer.survey.latitude) : "",
+        longitude: customer.survey?.longitude != null ? String(customer.survey.longitude) : "",
+        captureAccuracy: customer.survey?.captureAccuracy ?? "",
         workableStatus: customer.survey?.workableStatus ?? "",
-        surveyRemarks:
-          customer.survey?.obstaclesRemarks ?? customer.survey?.notes ?? "",
+        surveyApprovalStatus: customer.survey?.approvalStatus ?? "",
+        initialMeasurements: customer.survey?.initialMeasurements ?? "",
+        siteAccessibility: customer.survey?.siteAccessibility ?? "",
+        meterPlacement: customer.survey?.meterPlacement ?? "",
+        pipelineRoute: customer.survey?.pipelineRoute ?? "",
+        civilWorkRequired: customer.survey?.civilWorkRequired ?? "",
+        obstaclesRemarks: customer.survey?.obstaclesRemarks ?? "",
+        surveyNotes: customer.survey?.notes ?? "",
+        surveyReason: customer.survey?.reason ?? "",
+        surveyRecommendedAction: customer.survey?.recommendedAction ?? "",
+        surveyExpectedResolutionDate: customer.survey?.expectedResolutionDate ?? "",
+        surveyApprovalComments: customer.survey?.approvalComments ?? "",
         plumberName: connection.plumberName,
         supervisorName: connection.supervisorName,
         meterNo: commissioning.meterNo,
@@ -1195,6 +1235,8 @@ export function getCustomerMasterSheetRows(
         giPipeOneInch: gi.giPipeOneInch,
         giPipeOneAndHalfInch: gi.giPipeOneAndHalfInch,
         giPipeTwoInch: gi.giPipeTwoInch,
+        giApprovalStatus: gi.approvalStatus ?? "",
+        giApprovalComments: gi.approvalComments ?? "",
         isolationValveHalfInch: valves.isolationValveHalfInch,
         isolationValveThreeQuarterInch: valves.isolationValveThreeQuarterInch,
         isolationValveOneInch: valves.isolationValveOneInch,
@@ -1219,6 +1261,8 @@ export function getCustomerMasterSheetRows(
         threeQuarterInchTo3Inch: fittings.threeQuarterInchTo3Inch,
         unionHalfInch: fittings.unionHalfInch,
         plugHalfInch: fittings.plugHalfInch,
+        fittingsOneAndHalfInchQuantity: fittings.fittingsOneAndHalfInchQuantity,
+        fittingsTwoInchQuantity: fittings.fittingsTwoInchQuantity,
         extraGiAbove10Metres: fittings.extraGiAbove10Metres,
         pipe20Length: pipe20?.lengthMetres ?? "",
         pipe20LayingDate: pipe20?.layingDate ?? "",
@@ -1237,7 +1281,11 @@ export function getCustomerMasterSheetRows(
         paverBlocks: lmc.paverBlocks,
         malua: lmc.malua,
         hardRock: lmc.hardRock,
+        civilRemarks: lmc.civilRemarks ?? "",
+        lmcApprovalStatus: lmc.approvalStatus ?? "",
+        lmcApprovalComments: lmc.approvalComments ?? "",
         saddle90To32Mm: mdpe.saddle90To32Mm,
+        saddle90Mm: mdpe.saddle90Mm,
         saddle63To32Mm: mdpe.saddle63To32Mm,
         saddle32To20Mm: mdpe.saddle32To20Mm,
         tee32Mm: mdpe.tee32Mm,
@@ -1263,10 +1311,47 @@ export function getCustomerMasterSheetRows(
         gcBillDone: formatBoolean(billing.gcBillDone),
         conversionBillDone: formatBoolean(billing.conversionBillDone),
         billingRemark: billing.remark,
+        createdAt: customer.createdDate,
+        updatedAt: customer.updatedDate,
+        // Backend-resolved (date + display name, never a raw user id) - see
+        // CustomerCompletionAudit. Not derived here; only projected as-is.
+        giCompletedOn: customer.completionAudit?.giCompletedOn ?? "",
+        giCompletedBy: customer.completionAudit?.giCompletedBy ?? "",
+        valvesCompletedOn: customer.completionAudit?.valvesCompletedOn ?? "",
+        valvesCompletedBy: customer.completionAudit?.valvesCompletedBy ?? "",
+        fittingsCompletedOn: customer.completionAudit?.fittingsCompletedOn ?? "",
+        fittingsCompletedBy: customer.completionAudit?.fittingsCompletedBy ?? "",
+        lmcCompletedOn: customer.completionAudit?.lmcCompletedOn ?? "",
+        lmcCompletedBy: customer.completionAudit?.lmcCompletedBy ?? "",
+        mdpeCompletedOn: customer.completionAudit?.mdpeCompletedOn ?? "",
+        mdpeCompletedBy: customer.completionAudit?.mdpeCompletedBy ?? "",
         ...customer.customFields,
       },
     };
   });
+}
+
+// Dev-only guard against the exact class of bug this hardening pass fixed: a
+// static catalog column with a real Excel getter but no corresponding key in
+// the master sheet's `values` projection above, which renders blank on the
+// Web table the moment a user makes it visible. Dynamic custom fields
+// (`column.custom`, backend-flagged) are excluded - they're legitimately
+// absent from the static `values` literal, arriving instead via the
+// `...customer.customFields` spread. Not a hard CI gate, just a loud, cheap
+// early signal.
+export function warnIfMasterSheetProjectionIncomplete(
+  resolvedColumns: ResolvedCustomerColumn[],
+  rows: CustomerMasterSheetRow[],
+): void {
+  if (process.env.NODE_ENV === "production" || !rows.length) return;
+  const projectedKeys = new Set(Object.keys(rows[0].values));
+  const missing = resolvedColumns.filter((column) => !column.custom && !projectedKeys.has(column.key));
+  if (missing.length) {
+    console.error(
+      `[customer-columns] Web table has no value projection for: ${missing.map((c) => c.key).join(", ")}. ` +
+        "These are selectable in Customize Columns but will render blank until getCustomerMasterSheetRows is extended.",
+    );
+  }
 }
 
 function getPipeRecord(records: LmcPipeSizeRecord[], pipeSize: LmcPipeSize) {
@@ -1369,10 +1454,13 @@ type BackendCustomer = {
   billingCompletion: Record<string, unknown> | null;
   customFields: Record<string, unknown> | null;
   createdAt: string;
+  updatedAt: string;
   lmcPipeRecords?: BackendLmcPipeRecord[];
   documents?: BackendCustomerDocument[];
   project?: { id: string; name: string } | null;
   site?: { id: string; name: string } | null;
+  sectionCompletion?: CustomerSectionCompletion;
+  completionAudit?: CustomerCompletionAudit;
 };
 
 type BackendLmcPipeRecord = {
@@ -1485,6 +1573,7 @@ function mapCustomer(raw: BackendCustomer): Customer {
     siteArea: raw.site?.name ?? "",
     city: raw.city ?? "",
     createdDate: toDateOnly(raw.createdAt),
+    updatedDate: toDateOnly(raw.updatedAt),
     customerConnection: {
       ...emptyCustomerConnection,
       trBpNo: raw.trBpNumber,
@@ -1544,6 +1633,8 @@ function mapCustomer(raw: BackendCustomer): Customer {
       : undefined,
     media: [],
     documents: (raw.documents ?? []).map(mapDocument),
+    sectionCompletion: raw.sectionCompletion,
+    completionAudit: raw.completionAudit,
   };
 }
 
@@ -1746,8 +1837,39 @@ export const customersApi = {
     return mapCustomer(raw);
   },
 
+  async setSectionCompletion(
+    id: string,
+    sectionKey: CompletionSectionKey,
+    completed: boolean,
+  ): Promise<Customer> {
+    const raw = await apiRequest<BackendCustomer>(
+      `/customers/${id}/sections/${sectionKey}/completion`,
+      { method: "PATCH", body: JSON.stringify({ completed }) },
+    );
+    return mapCustomer(raw);
+  },
+
   async delete(id: string): Promise<void> {
     await apiRequest(`/customers/${id}`, { method: "DELETE" });
+  },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/customers/${id}/delete-impact`);
+  },
+
+  async getColumns(): Promise<ResolvedCustomerColumn[]> {
+    return apiRequest<ResolvedCustomerColumn[]>("/customers/columns");
+  },
+
+  async saveColumns(columns: ColumnPreferenceEntry[]): Promise<ResolvedCustomerColumn[]> {
+    return apiRequest<ResolvedCustomerColumn[]>("/customers/columns", {
+      method: "PUT",
+      body: JSON.stringify({ columns }),
+    });
+  },
+
+  async resetColumns(): Promise<ResolvedCustomerColumn[]> {
+    return apiRequest<ResolvedCustomerColumn[]>("/customers/columns", { method: "DELETE" });
   },
 
   async upsertLmcPipeRecord(

@@ -17,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { DotsSixVerticalIcon, PauseCircleIcon, PlayCircleIcon, TrashIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -35,6 +36,16 @@ import type { CustomField } from "../types";
 import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
 
 type GroupedFields = Record<string, CustomField[]>;
+
+// Only Inactive fields may ever be permanently deleted (same rule the
+// single-field "Permanently delete" action already enforces - a field must
+// be deactivated first) so this only exposes a per-row checkbox, no "select
+// all" affordance, since the grouped-by-section layout has no single
+// natural "select all rows" header row the way a flat table does.
+export interface DynamicFieldGridSelection {
+  selectedIds: ReadonlySet<string>;
+  onToggleRow: (id: string) => void;
+}
 
 function groupFields(fields: CustomField[]): GroupedFields {
   const groups: GroupedFields = {};
@@ -56,10 +67,12 @@ export function DynamicFieldGrid({
   fields,
   isLoading,
   dragEnabled,
+  selection,
 }: {
   fields: CustomField[];
   isLoading?: boolean;
   dragEnabled: boolean;
+  selection?: DynamicFieldGridSelection;
 }) {
   const [groups, setGroups] = useState<GroupedFields>(() => groupFields(fields));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -154,6 +167,10 @@ export function DynamicFieldGrid({
     );
   }
 
+  const gridTemplate = selection
+    ? "grid-cols-[28px_28px_1.6fr_1fr_0.9fr_1.3fr_0.9fr_0.7fr_100px_120px]"
+    : "grid-cols-[28px_1.6fr_1fr_0.9fr_1.3fr_0.9fr_0.7fr_100px_120px]";
+
   return (
     <DndContext
       sensors={sensors}
@@ -163,8 +180,9 @@ export function DynamicFieldGrid({
       onDragEnd={handleDragEnd}
     >
       <div className="overflow-hidden rounded-lg border border-border/70 bg-white">
-        <div className="grid grid-cols-[28px_1.6fr_1fr_0.9fr_1.3fr_0.9fr_0.7fr_100px_120px] gap-2 border-b border-border/70 bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">
+        <div className={cn("grid gap-2 border-b border-border/70 bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground", gridTemplate)}>
           <span />
+          {selection && <span />}
           <span>Label</span>
           <span className="text-center">Key</span>
           <span className="text-center">Value Type</span>
@@ -182,7 +200,14 @@ export function DynamicFieldGrid({
               </div>
               <SortableContext items={groups[groupName].map((field) => field.id)} strategy={verticalListSortingStrategy}>
                 {groups[groupName].map((field) => (
-                  <FieldRow key={field.id} field={field} allFields={fields} dragEnabled={dragEnabled} />
+                  <FieldRow
+                    key={field.id}
+                    field={field}
+                    allFields={fields}
+                    dragEnabled={dragEnabled}
+                    selection={selection}
+                    gridTemplate={gridTemplate}
+                  />
                 ))}
               </SortableContext>
             </div>
@@ -200,10 +225,23 @@ export function DynamicFieldGrid({
   );
 }
 
-function FieldRow({ field, allFields, dragEnabled }: { field: CustomField; allFields: CustomField[]; dragEnabled: boolean }) {
+function FieldRow({
+  field,
+  allFields,
+  dragEnabled,
+  selection,
+  gridTemplate,
+}: {
+  field: CustomField;
+  allFields: CustomField[];
+  dragEnabled: boolean;
+  selection?: DynamicFieldGridSelection;
+  gridTemplate: string;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id, disabled: !dragEnabled });
   const setStatus = useSetDynamicFieldStatus();
   const deleteField = useDeleteDynamicField();
+  const isSelected = Boolean(selection?.selectedIds.has(field.id));
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -215,7 +253,8 @@ function FieldRow({ field, allFields, dragEnabled }: { field: CustomField; allFi
       ref={setNodeRef}
       style={style}
       className={cn(
-        "grid grid-cols-[28px_1.6fr_1fr_0.9fr_1.3fr_0.9fr_0.7fr_100px_120px] items-center gap-2 bg-white px-3 py-2 text-sm",
+        "grid items-center gap-2 bg-white px-3 py-2 text-sm",
+        gridTemplate,
         isDragging && "z-10 opacity-60",
       )}
     >
@@ -231,6 +270,17 @@ function FieldRow({ field, allFields, dragEnabled }: { field: CustomField; allFi
       >
         <DotsSixVerticalIcon size={16} weight="bold" />
       </button>
+      {selection && (
+        <span className="flex justify-center">
+          {field.status === "Inactive" ? (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => selection.onToggleRow(field.id)}
+              aria-label={isSelected ? `Deselect ${field.label}` : `Select ${field.label}`}
+            />
+          ) : null}
+        </span>
+      )}
       <span className="truncate font-medium text-foreground" title={field.label}>{field.label}</span>
       <code className="max-w-full justify-self-center truncate rounded bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground" title={field.key}>{field.key}</code>
       <span className="text-center text-muted-foreground">{field.valueType}</span>

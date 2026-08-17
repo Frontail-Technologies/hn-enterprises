@@ -1,18 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { type ColumnDef } from "@/components/shared/DataTable";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { ImportDialog } from "@/components/shared/ImportDialog";
 import { type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/features/management/components/shared/PageShell";
 import { PaginatedDataTable } from "@/features/management/components/shared/PaginatedDataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useDeletePlumber, usePlumbersQuery } from "../hooks/usePlumbers";
+import {
+  useBulkDeletePlumbers,
+  useDeletePlumber,
+  usePlumberDeleteImpactQuery,
+  usePlumbersQuery,
+  useUpdatePlumber,
+} from "../hooks/usePlumbers";
 import { usePlumbersImportPreview, usePlumbersImportConfirm } from "../hooks/usePlumbersImport";
 import type { PlumberImportRow } from "../services/plumbers-import.service";
 import { PlumberDrawer } from "./PlumberDrawer";
@@ -44,10 +53,18 @@ const importPreviewColumns: ExcelColumn<PlumberImportRow & { id: string }>[] = [
 export function PlumbersPage() {
   const [filters, setFilters] = useState({ search: "", type: "all", status: "all" });
   const { data: plumbers = [] } = usePlumbersQuery(filters.search || undefined);
-  const deletePlumber = useDeletePlumber();
   const [drawerState, setDrawerState] = useState<{ open: boolean; plumber?: Plumber }>({ open: false });
   const importPreview = usePlumbersImportPreview();
   const importConfirm = usePlumbersImportConfirm();
+  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const bulkDelete = useBulkDeletePlumbers();
+
+  async function handleBulkDelete() {
+    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    setDeleteOpen(false);
+    clear();
+  }
 
   const filteredPlumbers = useMemo(
     () =>
@@ -87,10 +104,7 @@ export function PlumbersPage() {
           >
             <NotePencilIcon size={15} />
           </Button>
-          <DeleteConfirmDialog
-            itemName={row.name}
-            onConfirm={() => deletePlumber.mutateAsync(row.id)}
-          />
+          <PlumberDeleteAction plumber={row} />
         </div>
       ),
     },
@@ -161,7 +175,27 @@ export function PlumbersPage() {
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
         onReset={() => setFilters({ search: "", type: "all", status: "all" })}
       />
-      <PaginatedDataTable data={filteredPlumbers} columns={columns} />
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
+      <PaginatedDataTable
+        data={filteredPlumbers}
+        columns={columns}
+        selection={{
+          selectedIds,
+          onToggleRow: toggleRow,
+          onTogglePage: toggleAllOnPage,
+          getRowLabel: (row) => row.name,
+        }}
+      />
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="Plumber"
+        isSubmitting={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+        note="Plumbers with associated records (e.g. wage records) will be skipped with an error instead of partially deleted."
+      />
 
       <PlumberDrawer
         key={drawerState.plumber?.id ?? "new"}
@@ -170,5 +204,54 @@ export function PlumbersPage() {
         plumber={drawerState.plumber}
       />
     </PageShell>
+  );
+}
+
+// Owns its own dialog-open state so the delete-impact check is only fetched for
+// the row actually being deleted, not every row on the page.
+function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
+  const [open, setOpen] = useState(false);
+  const deletePlumber = useDeletePlumber();
+  const deactivatePlumber = useUpdatePlumber(plumber.id);
+  const deleteImpact = usePlumberDeleteImpactQuery(plumber.id, { enabled: open });
+
+  return (
+    <DeleteImpactDialog
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Delete ${plumber.name}`}
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
+          <TrashIcon size={13} />
+        </Button>
+      }
+      entityTypeLabel="Plumber"
+      impact={deleteImpact.data}
+      isLoading={deleteImpact.isLoading}
+      isError={deleteImpact.isError}
+      onRetry={() => void deleteImpact.refetch()}
+      isConfirming={deletePlumber.isPending}
+      onConfirm={async () => {
+        await deletePlumber.mutateAsync(plumber.id);
+        setOpen(false);
+      }}
+      isArchiving={deactivatePlumber.isPending}
+      archiveLabel="Deactivate Plumber"
+      onArchive={async () => {
+        await deactivatePlumber.mutateAsync({
+          name: plumber.name,
+          type: plumber.type,
+          contactNumber: plumber.contactNumber,
+          status: "inactive",
+          remarks: plumber.remarks,
+        });
+        setOpen(false);
+      }}
+    />
   );
 }

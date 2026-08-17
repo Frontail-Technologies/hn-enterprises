@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,12 +23,13 @@ import {
 import {
   useCreateProject,
   useProjectQuery,
+  useProjectDeleteImpactQuery,
   useUpdateProject,
   useDeleteProject,
 } from "@/features/projects/hooks/useProjects";
 import type { ProjectFormValues } from "../types/project.types";
 import { PageLoading } from "@/components/shared/PageLoading";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 
 const defaultValues: ProjectFormValues = {
   name: "",
@@ -83,8 +85,12 @@ function ProjectFormFields({
   const [values, setValues] = useState<ProjectFormValues>(initialValues);
   const createProject = useCreateProject();
   const updateProject = useUpdateProject(projectId ?? "");
+  const archiveProject = useUpdateProject(projectId ?? "");
   const deleteProject = useDeleteProject();
   const mutation = isEdit ? updateProject : createProject;
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteImpact = useProjectDeleteImpactQuery(projectId ?? "", { enabled: deleteDialogOpen });
 
   const setField = <K extends keyof ProjectFormValues>(key: K, value: ProjectFormValues[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
@@ -213,11 +219,35 @@ function ProjectFormFields({
 
         <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-sm border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
           {isEdit && projectId && (
-            <DeleteConfirmDialog
-              itemName={initialValues.name}
+            <DeleteImpactDialog
+              open={deleteDialogOpen}
+              onOpenChange={setDeleteDialogOpen}
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                >
+                  <TrashIcon size={14} />
+                  Delete
+                </Button>
+              }
+              entityTypeLabel="Project"
+              impact={deleteImpact.data}
+              isLoading={deleteImpact.isLoading}
+              isError={deleteImpact.isError}
+              onRetry={() => void deleteImpact.refetch()}
+              isConfirming={deleteProject.isPending}
               onConfirm={async () => {
                 await deleteProject.mutateAsync(projectId);
+                setDeleteDialogOpen(false);
                 router.push("/projects");
+              }}
+              isArchiving={archiveProject.isPending}
+              onArchive={async () => {
+                await archiveProject.mutateAsync({ ...values, status: "Archived" });
+                setDeleteDialogOpen(false);
+                router.push(`/projects/${projectId}`);
               }}
             />
           )}

@@ -5,6 +5,7 @@ type ListParams = {
   projectId?: string;
   siteId?: string;
   supervisorId?: string;
+  customerId?: string;
   date?: string;
   from?: string;
   to?: string;

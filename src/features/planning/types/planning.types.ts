@@ -25,6 +25,9 @@ export type PlanTask = {
 
 export type SitePlan = {
   id: string;
+  customerId: string;
+  customerName: string;
+  customerTrBpNo: string;
   projectId: string;
   siteId: string;
   siteLabel: string;
@@ -53,6 +56,9 @@ export type DprTask = {
 export type DprRecord = {
   id: string;
   date: string;
+  customerId: string;
+  customerName: string;
+  customerTrBpNo: string;
   projectId: string;
   siteId: string;
   siteLabel: string;
@@ -67,9 +73,14 @@ export type DprRecord = {
 export type PlanningEntryRow = {
   supervisorId: string;
   supervisorName: string;
+  customerId: string;
+  customerName: string;
+  customerTrBpNo: string;
   projectId: string;
   siteId: string;
   siteArea: string;
   planFiled: boolean;
+  planTasks: PlanTask[];
   dprStatus: "Not Filed" | "Draft" | "Submitted" | "Approved";
+  dprRemarks: string;
 };

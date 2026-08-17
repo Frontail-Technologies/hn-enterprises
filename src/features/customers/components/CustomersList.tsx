@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,12 +18,13 @@ import { exportRowsToExcel } from "@/lib/export-excel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
-  buildCustomerMasterSheetColumns,
   getCustomerMasterSheetRows,
+  warnIfMasterSheetProjectionIncomplete,
   type CustomerMasterSheetRow,
 } from "../services/customers.service";
 import { useCustomersQuery } from "../hooks/useCustomers";
-import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
+import { useCustomerColumnsQuery } from "../hooks/useCustomerColumns";
+import { useDownloadCustomerRegister } from "@/features/exports/hooks/useExports";
 import { useBulkCustomerSelection } from "../hooks/useBulkCustomerSelection";
 import { useBulkFieldOptions } from "../hooks/useBulkFieldOptions";
 import { useBulkDeleteCustomers, useBulkRemarkCustomers, useBulkUpdateCustomers } from "../hooks/useCustomerBulk";
@@ -33,7 +34,26 @@ import { BulkEditDialog } from "./bulk/BulkEditDialog";
 import { BulkQuickFieldDialog } from "./bulk/BulkQuickFieldDialog";
 import { BulkRemarkDialog } from "./bulk/BulkRemarkDialog";
 import { BulkDeleteDialog } from "./bulk/BulkDeleteDialog";
+import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
+
+// The one place a catalog key needs bespoke client-side filter-group logic
+// (splitting a free-text address into filterable tokens) rather than the
+// uniform `row.values[key]` lookup every other column uses.
+const CUSTOM_FILTER_GROUPS: Partial<Record<string, (row: CustomerMasterSheetRow) => string[]>> = {
+  fullAddress: (row) => {
+    const address = row.values.fullAddress || "";
+    if (!address) return ["(Blank)"];
+    return Array.from(
+      new Set(
+        address
+          .split(",")
+          .map((part) => part.trim())
+          .filter((part) => part.length >= 3 && !/^\d+$/.test(part)),
+      ),
+    );
+  },
+};
 
 interface CustomersListProps {
   /** Locks the list to one project's customers (Project Details → Customers tab, §5). Server-side filtered, never client-filtered from the full table. */
@@ -48,7 +68,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   const router = useRouter();
   const [masterSheetSearch, setMasterSheetSearch] = useState("");
   const { data: customers = [], isLoading } = useCustomersQuery({ projectId, statKey });
-  const { data: activeCustomFields = [] } = useDynamicFieldsQuery("Active");
+  const { data: resolvedColumns = [], isLoading: columnsLoading } = useCustomerColumnsQuery();
   const realCustomerIds = useMemo(() => new Set(customers.map((customer) => customer.id)), [customers]);
   const { user } = useAuth();
   const canBulkEdit = user?.role === "admin" || user?.role === "super_admin";
@@ -116,19 +136,26 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const masterSheetRows = useMemo(() => getCustomerMasterSheetRows(customers), [customers]);
 
+  useEffect(() => {
+    warnIfMasterSheetProjectionIncomplete(resolvedColumns, masterSheetRows);
+  }, [resolvedColumns, masterSheetRows]);
+
   const masterSheetColumns: ExcelColumn<CustomerMasterSheetRow>[] = useMemo(() => {
-    const columns: ExcelColumn<CustomerMasterSheetRow>[] = buildCustomerMasterSheetColumns(activeCustomFields).map(
-      (column) => ({
-        ...column,
+    const columns: ExcelColumn<CustomerMasterSheetRow>[] = resolvedColumns
+      .filter((column) => column.visible)
+      .map((column) => ({
+        key: column.key,
+        label: column.label,
+        width: column.width,
         getValue: (row) => row.values[column.key],
-      }),
-    );
+        getFilterGroups: CUSTOM_FILTER_GROUPS[column.key],
+      }));
     // Every row already belongs to the current project when the list is
     // locked to one (§10) - the Project column would just repeat the same
     // value on every row, so it's dropped here only (never on the
     // standalone Customers page, where it's still the useful filter it always was).
     return projectId ? columns.filter((column) => column.key !== "projectName") : columns;
-  }, [activeCustomFields, projectId]);
+  }, [resolvedColumns, projectId]);
 
   const filteredMasterSheetRows = useMemo(() => {
     const search = masterSheetSearch.trim().toLowerCase();
@@ -152,6 +179,25 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     void exportRowsToExcel("customers-selected.xlsx", masterSheetColumns, selectedRows);
   }
 
+  // Stable across renders (unlike an inline arrow) so ExcelDataGrid's
+  // per-row memoization actually holds - otherwise every row would see a
+  // "new" onRowClick prop and re-render on every selection toggle, even
+  // though only the toggled row's own checked state changed.
+  const handleRowClick = useCallback(
+    (row: CustomerMasterSheetRow) => {
+      if (realCustomerIds.has(row.customerId)) {
+        router.push(`/customers/${row.customerId}/edit`);
+      }
+    },
+    [realCustomerIds, router],
+  );
+
+  // Full formatted Customer Register (backend template), scoped to whatever this list
+  // is showing (project / stat drill-down). The transient client-side search box is not
+  // applied - the register covers the whole scope.
+  const downloadRegister = useDownloadCustomerRegister();
+  const handleExportRegister = () => downloadRegister.mutate({ projectId, statKey });
+
   // Project Details → Customers → Add Customer already knows which project
   // it's for, so it's passed through instead of making the user pick the
   // same project again on the form (§24).
@@ -159,6 +205,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const actions = (
     <>
+      <CustomizeColumnsDialog />
       <Link
         href="/customers/import"
         className={buttonVariants({ variant: "outline", size: "default" })}
@@ -169,10 +216,11 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
       <button
         type="button"
         className={buttonVariants({ variant: "outline", size: "default" })}
-        onClick={() => void exportRowsToExcel("customers.xlsx", masterSheetColumns, filteredMasterSheetRows)}
+        onClick={handleExportRegister}
+        disabled={downloadRegister.isPending}
       >
         <DownloadSimpleIcon size={15} />
-        Export Excel
+        {downloadRegister.isPending ? "Exporting..." : "Export Register"}
       </button>
       <Link
         href={newCustomerHref}
@@ -224,12 +272,8 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
           rows={filteredMasterSheetRows}
           maxHeightClassName={embedded ? "h-[calc(100vh-420px)]" : "h-[calc(100vh-240px)]"}
           emptyTitle="No customer master records found"
-          isLoading={isLoading}
-          onRowClick={(row) => {
-            if (realCustomerIds.has(row.customerId)) {
-              router.push(`/customers/${row.customerId}/edit`);
-            }
-          }}
+          isLoading={isLoading || columnsLoading}
+          onRowClick={handleRowClick}
           getRowClassName={(row) =>
             cn(
               !realCustomerIds.has(row.customerId) && "cursor-default text-muted-foreground",

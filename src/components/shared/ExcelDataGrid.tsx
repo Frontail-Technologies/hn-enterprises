@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CustomScrollbar } from "@/components/shared/CustomScrollbar";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import {
   Popover,
@@ -76,7 +78,7 @@ interface ExcelDataGridProps<T extends { id: string }> {
 
 type ActiveFilters = Record<string, string[]>;
 
-const SELECT_COLUMN_WIDTH = 44;
+const SELECT_COLUMN_WIDTH = 52;
 
 export function ExcelDataGrid<T extends { id: string }>({
   columns,
@@ -175,13 +177,22 @@ export function ExcelDataGrid<T extends { id: string }>({
     return JSON.stringify(entries);
   }, [filters]);
 
+  // filteredRows/paginatedRows are recomputed (new array reference) whenever
+  // `columns` or `rows` change reference upstream, even when the actual set
+  // of visible ids is unchanged - calling onVisibleRowsChange on every one of
+  // those recomputes let a parent's setState-on-change turn into a render
+  // loop (the parent re-renders -> passes a new `columns`/`rows` reference ->
+  // this effect fires again). Comparing the actual id/signature VALUES before
+  // notifying breaks that loop regardless of how stable the caller's props are.
+  const lastVisibleSignatureRef = useRef<string | null>(null);
   useEffect(() => {
     if (!onVisibleRowsChange) return;
-    onVisibleRowsChange({
-      filteredIds: filteredRows.map((row) => row.id),
-      pageIds: paginatedRows.map((row) => row.id),
-      filterSignature,
-    });
+    const filteredIds = filteredRows.map((row) => row.id);
+    const pageIds = paginatedRows.map((row) => row.id);
+    const signature = `${filterSignature}|${filteredIds.join(",")}|${pageIds.join(",")}`;
+    if (lastVisibleSignatureRef.current === signature) return;
+    lastVisibleSignatureRef.current = signature;
+    onVisibleRowsChange({ filteredIds, pageIds, filterSignature });
   }, [filteredRows, paginatedRows, filterSignature, onVisibleRowsChange]);
 
   const updateScrollMetrics = useCallback(() => {
@@ -288,7 +299,7 @@ export function ExcelDataGrid<T extends { id: string }>({
       <div className={cn("group/excel-grid relative flex flex-col", maxHeightClassName)}>
         <div
           ref={scrollAreaRef}
-          className="min-w-0 flex-1 overflow-auto"
+          className="min-w-0 flex-1 overflow-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           <ExcelTable
             columns={columns}
@@ -306,15 +317,25 @@ export function ExcelDataGrid<T extends { id: string }>({
           />
         </div>
 
+        <CustomScrollbar targetRef={scrollAreaRef} orientation="horizontal" />
+        <CustomScrollbar targetRef={scrollAreaRef} orientation="vertical" />
+
         {canScrollHorizontally ? (
           <>
             <HoldScrollButton
               direction="left"
+              // Sticky/frozen columns (the selection checkbox, any `sticky`
+              // data column) live at left:0..fixedWidth - a flat `left-2`
+              // would sit on top of them and steal their clicks (the
+              // checkbox in particular, since it's the leftmost sticky
+              // column), so this button starts just past that frozen strip.
+              offset={fixedWidth + 8}
               onStart={() => startHoldScroll("left")}
               onStop={stopHoldScroll}
             />
             <HoldScrollButton
               direction="right"
+              offset={8}
               onStart={() => startHoldScroll("right")}
               onStop={stopHoldScroll}
             />
@@ -327,10 +348,13 @@ export function ExcelDataGrid<T extends { id: string }>({
 
 function HoldScrollButton({
   direction,
+  offset,
   onStart,
   onStop,
 }: {
   direction: "left" | "right";
+  /** Pixels from that edge - the left button needs to clear the sticky/frozen columns strip. */
+  offset: number;
   onStart: () => void;
   onStop: () => void;
 }) {
@@ -348,10 +372,8 @@ function HoldScrollButton({
       onPointerUp={onStop}
       onPointerCancel={onStop}
       onPointerLeave={onStop}
-      className={cn(
-        "absolute top-1/2 z-30 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-border/70 bg-white text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-primary focus-visible:opacity-100 group-hover/excel-grid:opacity-100",
-        direction === "left" ? "left-2" : "right-2",
-      )}
+      style={direction === "left" ? { left: offset } : { right: offset }}
+      className="absolute top-1/2 z-30 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-border/70 bg-white text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-primary focus-visible:opacity-100 group-hover/excel-grid:opacity-100"
     >
       <Icon size={18} weight="bold" />
     </button>
@@ -398,7 +420,7 @@ function ExcelTable<T extends { id: string }>({
           {selection && (
             <th
               style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
-              className="sticky top-0 left-0 z-30 h-10.5 border-b border-border bg-secondary px-0 py-2 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+              className="sticky top-0 left-0 z-30 h-10.5 border-r border-b border-r-border/40 border-b-border bg-secondary pl-3 pr-0 py-2 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
             >
               <Checkbox
                 checked={allOnPageSelected}
@@ -420,7 +442,7 @@ function ExcelTable<T extends { id: string }>({
                 key={column.key}
                 style={{ minWidth: width, left: stickyOffset }}
                 className={cn(
-                  "sticky top-0 z-20 h-10.5 border-b border-border bg-secondary px-3 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
+                  "sticky top-0 z-20 h-10.5 border-r border-b border-r-border/40 border-b-border bg-secondary px-3 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
                   isSticky && "z-30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                 )}
               >
@@ -452,58 +474,19 @@ function ExcelTable<T extends { id: string }>({
             </td>
           </tr>
         ) : rows.length ? (
-          rows.map((row) => {
-            const isRowSelected = Boolean(selection?.selectedIds.has(row.id));
-            return (
-            <tr key={row.id} className={cn("group/excel-row bg-white hover:bg-muted/30", onRowClick && "cursor-pointer", getRowClassName?.(row))} onClick={() => onRowClick?.(row)}>
-              {selection && (
-                <td
-                  style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
-                  className="sticky left-0 z-10 h-11 border-b border-border/60 bg-secondary px-0 py-2 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={isRowSelected}
-                    onCheckedChange={() => selection.onToggleRow(row.id)}
-                    aria-label={selection.getRowLabel?.(row) ?? (isRowSelected ? "Deselect row" : "Select row")}
-                  />
-                </td>
-              )}
-              {columns.map((column, columnIndex) => {
-                const width = column.width ?? 140;
-                const value = formatCellValue(column.getValue(row));
-                const rendered = column.render?.(row);
-                const stickyOffset = stickyOffsets[columnIndex];
-                const isSticky = stickyOffset !== undefined;
-
-                return (
-                  <td
-                    key={column.key}
-                    style={{ minWidth: width, left: stickyOffset }}
-                    className={cn(
-                      "h-11 border-b border-border/60 px-3 py-2 text-sm font-normal text-foreground",
-                      isSticky && "sticky z-10 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
-                    )}
-                    title={value === EMPTY_VALUE ? undefined : value}
-                  >
-                    {rendered !== undefined && rendered !== null ? (
-                      rendered
-                    ) : (
-                      <span
-                        className={cn(
-                          "block max-w-full truncate",
-                          value === EMPTY_VALUE && "text-muted-foreground",
-                        )}
-                      >
-                        {value}
-                      </span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-            );
-          })
+          rows.map((row) => (
+            <ExcelTableRow
+              key={row.id}
+              row={row}
+              columns={columns}
+              stickyOffsets={stickyOffsets}
+              rowClassName={getRowClassName?.(row)}
+              isSelected={Boolean(selection?.selectedIds.has(row.id))}
+              ariaLabel={selection?.getRowLabel?.(row)}
+              onRowClick={onRowClick}
+              onToggleRow={selection?.onToggleRow}
+            />
+          ))
         ) : (
           <tr>
             <td
@@ -518,6 +501,94 @@ function ExcelTable<T extends { id: string }>({
     </table>
   );
 }
+
+// Selecting one row previously re-rendered every row in the table (up to
+// pageSize=100, each with as many <td> as visible columns) since selection
+// toggles a new Set reference passed straight down through ExcelTable's
+// inline `rows.map`. Splitting the row out into its own memoized component
+// means only the row(s) whose own props actually changed - isSelected,
+// rowClassName - re-render; everything else bails out on React.memo's
+// shallow prop comparison. That comparison only holds if every prop here is
+// referentially stable across a selection-only re-render: `row`/`columns`/
+// `stickyOffsets` already are (memoized upstream), and `onToggleRow` is the
+// bulk-selection hook's useCallback(..., []) - callers just need to keep
+// `onRowClick` similarly stable (see CustomersList.tsx).
+function ExcelTableRowImpl<T extends { id: string }>({
+  row,
+  columns,
+  stickyOffsets,
+  rowClassName,
+  isSelected,
+  ariaLabel,
+  onRowClick,
+  onToggleRow,
+}: {
+  row: T;
+  columns: ExcelColumn<T>[];
+  stickyOffsets: Array<number | undefined>;
+  rowClassName?: string;
+  isSelected: boolean;
+  ariaLabel?: string;
+  onRowClick?: (row: T) => void;
+  onToggleRow?: (id: string) => void;
+}) {
+  const hasSelection = Boolean(onToggleRow);
+
+  return (
+    <tr
+      className={cn("group/excel-row bg-white hover:bg-muted/30", onRowClick && "cursor-pointer", rowClassName)}
+      onClick={() => onRowClick?.(row)}
+    >
+      {hasSelection && (
+        <td
+          style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
+          className="sticky left-0 z-10 h-11 border-r border-b border-r-border/30 border-b-border/60 bg-secondary pl-3 pr-0 py-2 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleRow?.(row.id)}
+            aria-label={ariaLabel ?? (isSelected ? "Deselect row" : "Select row")}
+          />
+        </td>
+      )}
+      {columns.map((column, columnIndex) => {
+        const width = column.width ?? 140;
+        const value = formatCellValue(column.getValue(row));
+        const rendered = column.render?.(row);
+        const stickyOffset = stickyOffsets[columnIndex];
+        const isSticky = stickyOffset !== undefined;
+
+        return (
+          <td
+            key={column.key}
+            style={{ minWidth: width, left: stickyOffset }}
+            className={cn(
+              "h-11 border-r border-b border-r-border/30 border-b-border/60 px-3 py-2 text-sm font-normal text-foreground",
+              isSticky && "sticky z-10 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+            )}
+            title={value === EMPTY_VALUE ? undefined : value}
+          >
+            {rendered !== undefined && rendered !== null ? (
+              rendered
+            ) : (
+              <span
+                className={cn(
+                  "block max-w-full truncate",
+                  value === EMPTY_VALUE && "text-muted-foreground",
+                )}
+              >
+                {value}
+              </span>
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}
+
+const ExcelTableRow = memo(ExcelTableRowImpl) as typeof ExcelTableRowImpl;
 
 function ColumnFilter<T extends { id: string }>({
   column,

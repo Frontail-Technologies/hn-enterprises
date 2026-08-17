@@ -7,6 +7,10 @@ export type MaterialTransactionType =
   | "adjustment"
   | "consumption";
 
+export type MaterialSource = "purchase" | "pbg";
+export type AdjustmentDirection = "in" | "out";
+export type MaterialTransactionLinkType = "reversal" | "correction";
+
 export type MaterialStatus = "Active" | "Low Stock" | "Out of Stock";
 
 export type Material = {
@@ -39,6 +43,8 @@ export type MaterialTransaction = {
   type: MaterialTransactionType;
   quantity: number;
   quantityDelta: number;
+  source: MaterialSource | "";
+  projectId: string;
   referenceNo: string;
   vendorName: string;
   rate: number | null;
@@ -59,12 +65,52 @@ export type MaterialTransaction = {
   transactionDate: string;
   evidence: MaterialEvidence[];
   remarks: string;
+  relatedTransactionId: string;
+  linkType: MaterialTransactionLinkType | "";
+  correctionReason: string;
+  isReversed: boolean;
+  isCorrected: boolean;
+};
+
+export type StockBalance = {
+  materialId: string;
+  balance: number;
+};
+
+// Fields the Correct workflow may change; everything else falls back to the original
+// row's value server-side. Mirrors backend CorrectMaterialTransactionBody.
+export type CorrectMaterialTransactionInput = {
+  correctionReason: string;
+  quantity?: string;
+  transactionDate?: string;
+  source?: MaterialSource | "";
+  direction?: AdjustmentDirection | "";
+  projectId?: string;
+  referenceNo?: string;
+  vendorName?: string;
+  rate?: string;
+  billAmount?: string;
+  plumberId?: string;
+  supervisorId?: string;
+  siteId?: string;
+  address?: string;
+  storeLabel?: string;
+  customerId?: string;
+  reportNo?: string;
+  condition?: string;
+  adjustmentType?: string;
+  vehicleNo?: string;
+  vehicleQty?: string;
+  remarks?: string;
 };
 
 export type MaterialTransactionFormValues = {
   materialId: string;
   quantity: string;
   transactionDate: string;
+  source: MaterialSource | "";
+  direction: AdjustmentDirection | "";
+  projectId: string;
   referenceNo: string;
   vendorName: string;
   rate: string;
@@ -88,8 +134,11 @@ export type MaterialTransactionFormValues = {
 export type PlumberBalance = {
   plumberId: string;
   materialId: string;
+  source: MaterialSource | "";
+  projectId: string;
   issued: number;
   consumed: number;
   returned: number;
+  adjusted: number;
   balance: number;
 };

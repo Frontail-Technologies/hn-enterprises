@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { exportGridToExcel, type GridCell } from "@/lib/export-excel";
-import { useCustomerQuery } from "@/features/customers/hooks/useCustomers";
+import { useProjectQuery } from "@/features/projects/hooks/useProjects";
 import { useBillPaymentsQuery, useBillQuery, useDeleteBill, useUpdateBillPaymentStatus } from "../hooks/useBills";
 import type { BillPayment, BillPaymentStatus } from "../types/bill.types";
 import { formatDate, money } from "../utils/format";
@@ -31,7 +31,7 @@ export function BillingDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { data: bill, isLoading, isError } = useBillQuery(id);
   const { data: payments = [] } = useBillPaymentsQuery(id);
-  const { data: customer } = useCustomerQuery(bill?.customerId ?? "");
+  const { data: project } = useProjectQuery(bill?.projectId ?? "");
   const deleteMutation = useDeleteBill();
   const updatePaymentStatus = useUpdateBillPaymentStatus(id);
   // Replaces the layout's generic (raw-UUID) breadcrumb segment with the
@@ -88,8 +88,8 @@ export function BillingDetailPage({ id }: { id: string }) {
     const grid: GridCell[][] = [
       [bold("INVOICE")],
       [bold("Bill Number"), bill.billNumber, bold("Bill Date"), formatDate(bill.billDate)],
-      [bold("Customer"), customer?.customerConnection.customerName ?? "-", bold("Billing Stage"), bill.stage],
-      [bold("Due Date"), formatDate(bill.dueDate), bold("Status"), bill.status],
+      [bold("Project"), project?.name ?? "-", bold("Due Date"), formatDate(bill.dueDate)],
+      [bold("Status"), bill.status],
       [bold("Total Amount"), money(bill.totalAmount), bold("Tax"), money(bill.tax)],
       [bold("Paid Amount"), money(bill.paidAmount), bold("Pending Amount"), money(bill.pendingAmount)],
       [],
@@ -109,7 +109,7 @@ export function BillingDetailPage({ id }: { id: string }) {
     <div className="space-y-5">
       <PageHeader
         title={bill.billNumber}
-        subtitle={`${bill.stage} billing for ${customer?.customerConnection.customerName ?? "customer"}`}
+        subtitle={`Billing for ${project?.name ?? "project"}`}
         actions={
           <div className="flex items-center gap-2">
             <BillDrawer bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />

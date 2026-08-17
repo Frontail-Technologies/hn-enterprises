@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 
 export type RosterUser = {
   id: string;
@@ -7,7 +8,7 @@ export type RosterUser = {
   status: string;
 };
 
-export type UserRole = "Super Admin" | "Admin" | "Supervisor" | "Field Executive" | "Viewer";
+export type UserRole = "Super Admin" | "Admin" | "Supervisor" | "Viewer";
 export type UserStatus = "Active" | "Inactive" | "Suspended";
 
 export type User = {
@@ -33,14 +34,13 @@ export type CreateUserFormValues = {
 
 export type UpdateUserFormValues = Omit<CreateUserFormValues, "password">;
 
-export type BackendRole = "super_admin" | "admin" | "supervisor" | "field_executive" | "viewer";
+export type BackendRole = "super_admin" | "admin" | "supervisor" | "viewer";
 export type BackendStatus = "active" | "inactive" | "suspended";
 
 export const ROLE_TO_FRONTEND: Record<BackendRole, UserRole> = {
   super_admin: "Super Admin",
   admin: "Admin",
   supervisor: "Supervisor",
-  field_executive: "Field Executive",
   viewer: "Viewer",
 };
 
@@ -48,7 +48,6 @@ export const ROLE_TO_BACKEND: Record<UserRole, BackendRole> = {
   "Super Admin": "super_admin",
   Admin: "admin",
   Supervisor: "supervisor",
-  "Field Executive": "field_executive",
   Viewer: "viewer",
 };
 
@@ -143,5 +142,16 @@ export const usersApi = {
 
   async delete(id: string): Promise<void> {
     await apiRequest(`/users/${id}`, { method: "DELETE" });
+  },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/users/${id}/delete-impact`);
+  },
+
+  async bulkDelete(ids: string[]): Promise<{ count: number; skippedSelf: boolean }> {
+    return apiRequest<{ count: number; skippedSelf: boolean }>("/users/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
   },
 };

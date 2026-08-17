@@ -20,17 +20,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { FormField } from "@/components/shared/FormField";
 import { ImageUploadPreview, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   useAnnouncementsQuery,
   useCreateAnnouncement,
   usePublishAnnouncement,
   useUpdateAnnouncement,
   useDeleteAnnouncement,
+  useBulkDeleteAnnouncements,
 } from "../hooks/useAnnouncements";
 import type { Announcement } from "../types/announcement.types";
 
@@ -54,6 +58,15 @@ export function AnnouncementsPage() {
   const updateMutation = useUpdateAnnouncement(editingId ?? "");
   const publishMutation = usePublishAnnouncement();
   const deleteMutation = useDeleteAnnouncement();
+  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const bulkDeleteMutation = useBulkDeleteAnnouncements();
+
+  async function handleBulkDelete() {
+    await bulkDeleteMutation.mutateAsync(Array.from(selectedIds));
+    setBulkDeleteOpen(false);
+    clear();
+  }
 
   const openCreate = () => {
     setEditingId(null);
@@ -95,21 +108,6 @@ export function AnnouncementsPage() {
       closeDialog();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save announcement");
-    }
-  };
-
-  const publishFromDialog = async () => {
-    if (!draft.title.trim() || !draft.message.trim()) return;
-    setSaveError("");
-    try {
-      const values = draftFormValues();
-      const saved = editingId
-        ? await updateMutation.mutateAsync(values)
-        : await createMutation.mutateAsync(values);
-      await publishMutation.mutateAsync(saved.id);
-      closeDialog();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Unable to push announcement");
     }
   };
 
@@ -215,6 +213,7 @@ export function AnnouncementsPage() {
         }
       />
 
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setBulkDeleteOpen(true)} />
       <div className="rounded-lg border border-border/70 bg-card p-3">
         <DataTable
           columns={columns}
@@ -223,6 +222,12 @@ export function AnnouncementsPage() {
           emptyTitle="No announcements yet"
           emptyDescription="Create an announcement to push it to the mobile app."
           variant="striped"
+          selection={{
+            selectedIds,
+            onToggleRow: toggleRow,
+            onTogglePage: toggleAllOnPage,
+            getRowLabel: (row) => row.title,
+          }}
         />
       </div>
 
@@ -234,7 +239,15 @@ export function AnnouncementsPage() {
         onDraftChange={setDraft}
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
         onSaveDraft={() => void saveDraft()}
-        onPush={() => void publishFromDialog()}
+      />
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="Announcement"
+        isSubmitting={bulkDeleteMutation.isPending}
+        onConfirm={handleBulkDelete}
       />
     </div>
   );
@@ -248,7 +261,6 @@ function AnnouncementDialog({
   onDraftChange,
   onOpenChange,
   onSaveDraft,
-  onPush,
 }: {
   open: boolean;
   title: string;
@@ -257,7 +269,6 @@ function AnnouncementDialog({
   onDraftChange: React.Dispatch<React.SetStateAction<Announcement>>;
   onOpenChange: (open: boolean) => void;
   onSaveDraft: () => void;
-  onPush: () => void;
 }) {
   const images: ImagePreviewItem[] = draft.image ? [draft.image] : [];
 
@@ -267,7 +278,7 @@ function AnnouncementDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            This announcement will appear in the Notifications list on the mobile app.
+            Save it as a draft first - once it&apos;s created, use &ldquo;Push to mobile app&rdquo; on the list to send it.
           </DialogDescription>
         </DialogHeader>
 
@@ -303,12 +314,8 @@ function AnnouncementDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" variant="secondary" onClick={onSaveDraft}>
+          <Button type="button" onClick={onSaveDraft}>
             Save Draft
-          </Button>
-          <Button type="button" onClick={onPush}>
-            <PaperPlaneTiltIcon size={15} />
-            Push Notification
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ImageSquareIcon } from "@phosphor-icons/react";
+import { ImageSquareIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -38,6 +38,7 @@ import {
   type ImagePreviewItem,
 } from "@/components/shared/ImageUploadPreview";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { SegmentedDigitInput } from "@/components/shared/SegmentedDigitInput";
@@ -69,14 +70,15 @@ import {
   type LmcCivilWork,
   type LmcPipeEditableFields,
 } from "../services/customers.service";
-import { useCreateCustomer, useCustomerQuery, useUpdateCustomer, useDeleteCustomer } from "../hooks/useCustomers";
+import { useCreateCustomer, useCustomerQuery, useUpdateCustomer, useDeleteCustomer, useCustomerDeleteImpactQuery } from "../hooks/useCustomers";
 import { customersApi } from "../services/customers.service";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
 import { PageLoading } from "@/components/shared/PageLoading";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import type {
   CustomerFormValues,
+  CustomerSectionCompletion,
   CustomerSurvey,
   CustomerSurveyPhoto,
   LmcEvidenceFile,
@@ -108,6 +110,7 @@ export function CustomerForm({ mode, customerId }: CustomerFormProps) {
       customerId={customerId}
       initialValues={customer ?? defaultCustomerFormValues}
       defaultProjectId={isEdit ? undefined : defaultProjectId}
+      completion={isEdit ? customer?.sectionCompletion : undefined}
     />
   );
 }
@@ -117,11 +120,13 @@ function CustomerFormFields({
   customerId,
   initialValues,
   defaultProjectId,
+  completion,
 }: {
   mode: "create" | "edit";
   customerId?: string;
   initialValues: CustomerFormValues;
   defaultProjectId?: string;
+  completion?: CustomerSectionCompletion;
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -148,8 +153,11 @@ function CustomerFormFields({
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer(customerId ?? "");
+  const archiveCustomer = useUpdateCustomer(customerId ?? "");
   const deleteCustomer = useDeleteCustomer();
   const mutation = isEdit ? updateCustomer : createCustomer;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteImpact = useCustomerDeleteImpactQuery(customerId ?? "", { enabled: deleteDialogOpen });
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const { data: customFields = [] } = useDynamicFieldsQuery("Active");
@@ -222,7 +230,7 @@ function CustomerFormFields({
       >
         <Tabs defaultValue="customer" className="flex flex-col gap-3">
           <div className="border-b border-border/70">
-            <TabsList variant="line" className="flex w-full max-w-full justify-start gap-6 overflow-x-auto p-0">
+            <ScrollableTabsList>
               <FormTab value="customer">Customer Details</FormTab>
               <FormTab value="survey">Survey</FormTab>
               <FormTab value="gi">GI Measurements</FormTab>
@@ -239,7 +247,7 @@ function CustomerFormFields({
                 <FormTab key={`tab-custom-${group}`} value={`custom-${group}`}>{group}</FormTab>
               ))}
               {isEdit && <FormTab value="complaints">Complaints</FormTab>}
-            </TabsList>
+            </ScrollableTabsList>
           </div>
 
           <TabsContent value="customer">
@@ -333,6 +341,7 @@ function CustomerFormFields({
               survey={values.survey ?? emptyCustomerSurvey}
               onChange={(survey) => setValues((current) => ({ ...current, survey }))}
               customerId={customerId}
+              requiredFields={completion?.survey.requiredFields}
             />
           </TabsContent>
 
@@ -403,6 +412,7 @@ function CustomerFormFields({
               <SectionFields
                 fields={commissioningConversionFields}
                 values={values.commissioningConversion}
+                requiredFields={completion?.commissioning.requiredFields}
                 onChange={(next) => setValues((current) => ({ ...current, commissioningConversion: next }))}
               />
             </SectionCard>
@@ -432,7 +442,7 @@ function CustomerFormFields({
           </TabsContent>
 
           <TabsContent value="reports">
-            <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "" } : undefined} />
+            <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "", updatedDate: "" } : undefined} />
           </TabsContent>
 
           {Object.entries(customFieldGroups).map(([group, fields]) => {
@@ -476,11 +486,35 @@ function CustomerFormFields({
 
         <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
           {isEdit && customerId && (
-            <DeleteConfirmDialog
-              itemName={initialValues?.customerConnection?.customerName || "this customer"}
+            <DeleteImpactDialog
+              open={deleteDialogOpen}
+              onOpenChange={setDeleteDialogOpen}
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                >
+                  <TrashIcon size={14} />
+                  Delete
+                </Button>
+              }
+              entityTypeLabel="Customer"
+              impact={deleteImpact.data}
+              isLoading={deleteImpact.isLoading}
+              isError={deleteImpact.isError}
+              onRetry={() => void deleteImpact.refetch()}
+              isConfirming={deleteCustomer.isPending}
               onConfirm={async () => {
                 await deleteCustomer.mutateAsync(customerId);
+                setDeleteDialogOpen(false);
                 router.push("/customers");
+              }}
+              isArchiving={archiveCustomer.isPending}
+              onArchive={async () => {
+                await archiveCustomer.mutateAsync({ ...values, status: "Archived" });
+                setDeleteDialogOpen(false);
+                router.push(`/customers/${customerId}`);
               }}
             />
           )}
@@ -503,14 +537,17 @@ function CustomerSurveyEditor({
   survey,
   onChange,
   customerId,
+  requiredFields,
 }: {
   survey: CustomerSurvey;
   onChange: (survey: CustomerSurvey) => void;
   customerId?: string;
+  requiredFields?: string[];
 }) {
   const update = <K extends keyof CustomerSurvey>(key: K, value: CustomerSurvey[K]) => {
     onChange({ ...survey, [key]: value });
   };
+  const isRequired = (key: string) => requiredFields?.includes(key) ?? false;
 
   return (
     <div className="space-y-4">
@@ -525,7 +562,7 @@ function CustomerSurveyEditor({
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <TextField label="Survey ID" value={survey.surveyId} onChange={(value) => update("surveyId", value)} />
-          <FormField label="Survey Date">
+          <FormField label="Survey Date" required={isRequired("surveyDate")}>
             <DatePicker value={survey.surveyDate} onChange={(value) => update("surveyDate", value)} className="w-full" />
           </FormField>
           <TextField label="Assigned Surveyor" value={survey.assignedSurveyor} onChange={(value) => update("assignedSurveyor", value)} />
@@ -547,7 +584,7 @@ function CustomerSurveyEditor({
         </div>
       </SectionCard>
 
-      <SectionCard title="Workable Status">
+      <SectionCard title={isRequired("workableStatus") ? "Workable Status *" : "Workable Status"}>
         <div className="grid gap-3 md:grid-cols-3">
           {surveyWorkableStatusOptions.map((status) => (
             <button
@@ -879,9 +916,6 @@ function FormTab({ value, children }: { value: string; children: React.ReactNode
   return (
     <TabsTrigger
       value={value}
-      onClick={(event) => {
-        event.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      }}
       className="h-10 flex-none cursor-pointer justify-start rounded-none px-0.5 py-0 font-medium"
     >
       {children}
@@ -893,11 +927,13 @@ function SectionFields<T extends Record<string, string | boolean>>({
   fields,
   values,
   onChange,
+  requiredFields,
   gridClassName = "grid gap-4 md:grid-cols-2 xl:grid-cols-3",
 }: {
   fields: FieldDefinition<T>[];
   values: T;
   onChange: (values: T) => void;
+  requiredFields?: string[];
   gridClassName?: string;
 }) {
   return (
@@ -907,6 +943,7 @@ function SectionFields<T extends Record<string, string | boolean>>({
           key={String(field.key)}
           field={field}
           value={values[field.key]}
+          required={requiredFields?.includes(String(field.key)) ?? false}
           onChange={(value) => onChange({ ...values, [field.key]: value })}
         />
       ))}
@@ -918,14 +955,16 @@ function MasterField<T extends Record<string, string | boolean>>({
   field,
   value,
   onChange,
+  required,
 }: {
   field: FieldDefinition<T>;
   value: string | boolean;
   onChange: (value: string | boolean) => void;
+  required?: boolean;
 }) {
   if (field.input === "textarea") {
     return (
-      <FormField label={field.label} className="md:col-span-2 xl:col-span-3">
+      <FormField label={field.label} required={required} className="md:col-span-2 xl:col-span-3">
         <Textarea
           value={String(value ?? "")}
           onChange={(event) => onChange(event.target.value)}
@@ -938,7 +977,7 @@ function MasterField<T extends Record<string, string | boolean>>({
 
   if (field.input === "date") {
     return (
-      <FormField label={field.label}>
+      <FormField label={field.label} required={required}>
         <DatePicker value={String(value ?? "")} onChange={onChange} className="w-full min-w-0" />
       </FormField>
     );
@@ -946,7 +985,7 @@ function MasterField<T extends Record<string, string | boolean>>({
 
   if (field.input === "meter") {
     return (
-      <FormField label={field.label}>
+      <FormField label={field.label} required={required}>
         <SegmentedDigitInput value={String(value ?? "")} onChange={onChange} digits={field.digits} />
       </FormField>
     );
@@ -954,7 +993,7 @@ function MasterField<T extends Record<string, string | boolean>>({
 
   if (field.input === "select") {
     return (
-      <FormField label={field.label}>
+      <FormField label={field.label} required={required}>
         <SearchableSelect
           value={String(value || "")}
           options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
@@ -967,7 +1006,7 @@ function MasterField<T extends Record<string, string | boolean>>({
 
   if (field.input === "boolean") {
     return (
-      <FormField label={field.label}>
+      <FormField label={field.label} required={required}>
         <Select value={value ? "Yes" : "No"} onValueChange={(next) => onChange(next === "Yes")}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -984,6 +1023,7 @@ function MasterField<T extends Record<string, string | boolean>>({
   return (
     <TextField
       label={field.label}
+      required={required}
       type={field.input === "number" ? "number" : "text"}
       value={String(value ?? "")}
       onChange={onChange}
@@ -998,15 +1038,17 @@ function TextField({
   onChange,
   type = "text",
   disabled = false,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   disabled?: boolean;
+  required?: boolean;
 }) {
   return (
-    <FormField label={label}>
+    <FormField label={label} required={required}>
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
     </FormField>
   );

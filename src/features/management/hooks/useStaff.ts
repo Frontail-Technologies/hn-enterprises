@@ -58,3 +58,25 @@ export function useDeleteStaff() {
     onError: (error: Error) => toast.error(error.message || "Failed to delete staff member"),
   });
 }
+
+// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
+export function useStaffDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...staffMemberKey(id), "delete-impact"],
+    queryFn: () => staffApi.getDeleteImpact(id),
+    enabled: Boolean(id) && (options.enabled ?? true),
+    staleTime: 0,
+  });
+}
+
+export function useBulkDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => staffApi.bulkDelete(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: staffKey });
+      toast.success(`${result.count} staff member${result.count === 1 ? "" : "s"} deleted`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete staff members"),
+  });
+}

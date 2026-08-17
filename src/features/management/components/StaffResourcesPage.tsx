@@ -2,19 +2,22 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DownloadSimpleIcon, EyeIcon, NotePencilIcon } from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
+import { DownloadSimpleIcon, EyeIcon, NotePencilIcon, TrashIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
+import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useStaffQuery, useDeleteStaff } from "../hooks/useStaff";
+import { useStaffQuery, useDeleteStaff, useStaffDeleteImpactQuery, useBulkDeleteStaff } from "../hooks/useStaff";
 import { useUsersQuery } from "../hooks/useUsers";
 import type { Staff } from "../types/staff.types";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { StaffDrawer } from "./StaffDrawer";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
@@ -33,8 +36,16 @@ export function StaffResourcesPage() {
     status: "all",
   });
   const { data: staff = [], isLoading: staffLoading } = useStaffQuery();
-  const deleteStaff = useDeleteStaff();
   const { data: users = [] } = useUsersQuery();
+  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const bulkDelete = useBulkDeleteStaff();
+
+  async function handleBulkDelete() {
+    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    setDeleteOpen(false);
+    clear();
+  }
   const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
   const data = useMemo(() => {
     const search = filters.search.toLowerCase();
@@ -86,10 +97,7 @@ export function StaffResourcesPage() {
               <NotePencilIcon size={15} />
             </Link>
           </ActionTooltip>
-          <DeleteConfirmDialog
-            itemName={row.name}
-            onConfirm={() => deleteStaff.mutateAsync(row.id)}
-          />
+          <StaffDeleteAction staff={row} />
         </div>
       ),
     },
@@ -134,7 +142,66 @@ export function StaffResourcesPage() {
         }
         onReset={() => setFilters({ search: "", role: "all", status: "all" })}
       />
-      <PaginatedDataTable data={data} columns={columns} isLoading={staffLoading} />
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
+      <PaginatedDataTable
+        data={data}
+        columns={columns}
+        isLoading={staffLoading}
+        selection={{
+          selectedIds,
+          onToggleRow: toggleRow,
+          onTogglePage: toggleAllOnPage,
+          getRowLabel: (row) => row.name,
+        }}
+      />
+
+      <BulkDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        selectedCount={selectedIds.size}
+        entityLabel="Staff Member"
+        entityLabelPlural="Staff Members"
+        isSubmitting={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+        note="This deactivates the linked login, matching the existing single-record delete - it does not erase the staff record."
+      />
     </PageShell>
+  );
+}
+
+// Staff deletion never hard-deletes (it only deactivates the linked login), so
+// this is never blocked - the impact preview here is purely informational
+// (shows linked attendance history that will be preserved).
+function StaffDeleteAction({ staff }: { staff: Staff }) {
+  const [open, setOpen] = useState(false);
+  const deleteStaff = useDeleteStaff();
+  const deleteImpact = useStaffDeleteImpactQuery(staff.id, { enabled: open });
+
+  return (
+    <DeleteImpactDialog
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Delete ${staff.name}`}
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
+          <TrashIcon size={13} />
+        </Button>
+      }
+      entityTypeLabel="Staff Member"
+      impact={deleteImpact.data}
+      isLoading={deleteImpact.isLoading}
+      isError={deleteImpact.isError}
+      onRetry={() => void deleteImpact.refetch()}
+      isConfirming={deleteStaff.isPending}
+      onConfirm={async () => {
+        await deleteStaff.mutateAsync(staff.id);
+        setOpen(false);
+      }}
+    />
   );
 }

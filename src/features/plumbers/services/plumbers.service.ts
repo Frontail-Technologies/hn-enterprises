@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api-client";
 import type { Plumber, PlumberFormValues } from "../types/plumber.types";
+import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 
 type BackendPlumber = {
   id: string;
@@ -59,5 +60,16 @@ export const plumbersApi = {
 
   async remove(id: string): Promise<void> {
     await apiRequest<null>(`/plumbers/${id}`, { method: "DELETE" });
+  },
+
+  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
+    return apiRequest<DeleteImpactResult>(`/plumbers/${id}/delete-impact`);
+  },
+
+  async bulkRemove(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/plumbers/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
   },
 };

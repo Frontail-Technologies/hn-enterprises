@@ -3,6 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005/a
 type ApiEnvelope<T> = {
   success: boolean;
   message?: string;
+  code?: string;
   data?: T;
 };
 
@@ -12,11 +13,16 @@ type RequestOptions = RequestInit & {
 
 export class ApiError extends Error {
   status: number;
+  /** App-level error code from the response body, e.g. "ENTITY_IN_USE" (§9) - lets
+   * callers distinguish a specific, known failure from a generic one without
+   * string-matching the message. */
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -26,7 +32,7 @@ async function parseResponse<T>(response: Response) {
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
 
   if (!response.ok || payload?.success === false) {
-    throw new ApiError(payload?.message || "Request failed", response.status);
+    throw new ApiError(payload?.message || "Request failed", response.status, payload?.code);
   }
 
   return payload?.data as T;
