@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -277,9 +276,6 @@ function AnnouncementDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Save it as a draft first - once it&apos;s created, use &ldquo;Push to mobile app&rdquo; on the list to send it.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -287,14 +283,12 @@ function AnnouncementDialog({
             <Input
               value={draft.title}
               onChange={(event) => onDraftChange((current) => ({ ...current, title: event.target.value }))}
-              placeholder="Holiday notice, safety update, rate revision..."
             />
           </FormField>
           <FormField label="Message">
             <Textarea
               value={draft.message}
               onChange={(event) => onDraftChange((current) => ({ ...current, message: event.target.value }))}
-              placeholder="Write the announcement message shown to the mobile app user."
               rows={4}
             />
           </FormField>
