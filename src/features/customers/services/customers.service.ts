@@ -1461,6 +1461,13 @@ type BackendCustomer = {
   site?: { id: string; name: string } | null;
   sectionCompletion?: CustomerSectionCompletion;
   completionAudit?: CustomerCompletionAudit;
+  // Only present when listed with statKey=complaint-customer|customer-resolved.
+  latestComplaint?: {
+    status: string;
+    createdAt: string;
+    resolvedAt: string | null;
+    supervisorRemark: string | null;
+  } | null;
 };
 
 type BackendLmcPipeRecord = {
@@ -1635,6 +1642,7 @@ function mapCustomer(raw: BackendCustomer): Customer {
     documents: (raw.documents ?? []).map(mapDocument),
     sectionCompletion: raw.sectionCompletion,
     completionAudit: raw.completionAudit,
+    latestComplaint: raw.latestComplaint,
   };
 }
 

@@ -11,7 +11,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   inventory: "Inventory & Material",
   billing: "Billing",
   payments: "Payments & Expenses",
-  staff: "Staff & Resources",
+  staff: "Supervisors",
   plumbers: "Plumbers",
   attendance: "Attendance",
   activity: "Recent Activity",
@@ -59,7 +59,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "management",
     label: "Management",
     items: [
-      { id: "staff", label: "Staff & Resources", icon: "UsersThree", href: "/staff" },
+      { id: "staff", label: "Supervisors", icon: "UsersThree", href: "/staff" },
       { id: "plumbers", label: "Plumbers", icon: "Wrench", href: "/plumbers" },
       { id: "attendance", label: "Attendance", icon: "CalendarBlank", href: "/attendance" },
       { id: "activity", label: "Recent Activity", icon: "ClockCounterClockwise", href: "/activity" },

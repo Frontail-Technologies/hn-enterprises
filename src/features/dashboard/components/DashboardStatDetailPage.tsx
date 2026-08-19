@@ -127,9 +127,9 @@ function getColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] 
         </Link>
       ),
     },
-    { key: "mobileNo", label: "Mobile", width: 130, getValue: (row) => row.mobileNo },
-    { key: "siteArea", label: "Site / Area", width: 190, getValue: (row) => row.siteArea },
-    { key: "supervisor", label: "Supervisor", width: 160, getValue: (row) => row.supervisor },
+    { key: "siteArea", label: "Site", width: 160, getValue: (row) => row.siteArea },
+    { key: "address", label: "Address", width: 220, getValue: (row) => row.address },
+    { key: "mobileNo", label: "Phone", width: 130, getValue: (row) => row.mobileNo },
   ];
 
   const actionColumn: ExcelColumn<DashboardStatRow> = {
@@ -250,6 +250,114 @@ function getColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] 
         getValue: (row) => row.approvalStatus || row.status,
         render: (row) => <StatusBadge status={row.approvalStatus || row.status} />,
       },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "commissioning") {
+    return [
+      ...identityColumns,
+      { key: "commissioningDate", label: "Commissioning Date", width: 170, getValue: (row) => formatMaybeDate(row.commissioningDate) },
+      { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "valve-chamber-done") {
+    return [
+      ...identityColumns,
+      { key: "valveChamberCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.valveChamberCompletedOn) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "pre-commissioning-done") {
+    return [
+      ...identityColumns,
+      { key: "preCommissioningCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.preCommissioningCompletedOn) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "pole-marker-done") {
+    return [
+      ...identityColumns,
+      { key: "poleMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.poleMarkerCompletedOn) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "route-marker-done") {
+    return [
+      ...identityColumns,
+      { key: "routeMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.routeMarkerCompletedOn) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "connection-done") {
+    return [
+      ...identityColumns,
+      { key: "connectionCompletedOn", label: "Connection Completed On", width: 190, getValue: (row) => formatMaybeDate(row.connectionCompletedOn) },
+      { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "site-expenses-done") {
+    return [
+      ...identityColumns,
+      { key: "siteExpensesCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.siteExpensesCompletedOn) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "laying-done") {
+    return [
+      ...identityColumns,
+      { key: "layingDate", label: "Laying Date", width: 150, getValue: (row) => formatMaybeDate(row.layingDate) },
+      { key: "pipeSummary", label: "Pipe Summary", width: 220, getValue: (row) => row.pipeSummary },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "flushing-testing-done") {
+    return [
+      ...identityColumns,
+      { key: "testingDate", label: "Testing Date", width: 150, getValue: (row) => formatMaybeDate(row.testingDate) },
+      { key: "purgingDate", label: "Purging Date", width: 150, getValue: (row) => formatMaybeDate(row.purgingDate) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "complaint-customer") {
+    return [
+      ...identityColumns,
+      {
+        key: "complaintStatus",
+        label: "Complaint Status",
+        width: 160,
+        getValue: (row) => row.complaintStatus,
+        render: (row) => <StatusBadge status={row.complaintStatus} />,
+      },
+      { key: "complaintDate", label: "Complaint Date", width: 150, getValue: (row) => formatMaybeDate(row.complaintDate) },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "customer-resolved") {
+    return [
+      ...identityColumns,
+      { key: "resolvedDate", label: "Resolved Date", width: 150, getValue: (row) => formatMaybeDate(row.resolvedDate) },
+      { key: "resolutionRemark", label: "Resolution Remark", width: 260, getValue: (row) => row.resolutionRemark },
+      actionColumn,
+    ];
+  }
+
+  if (statKey === "total-connection-remark") {
+    return [
+      ...identityColumns,
+      { key: "connectionRemark", label: "Connection Remark", width: 300, getValue: (row) => row.connectionRemark },
       actionColumn,
     ];
   }

@@ -5,7 +5,7 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-export const metadata: Metadata = { title: "Edit Staff" };
+export const metadata: Metadata = { title: "Edit Supervisor" };
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;

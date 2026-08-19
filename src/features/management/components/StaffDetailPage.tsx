@@ -15,7 +15,7 @@ export function StaffDetailPage({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <PageShell title="Staff Details" subtitle="View employee and payment details.">
+      <PageShell title="Supervisor Details" subtitle="View employee and payment details.">
         <PageLoading className="min-h-24 rounded-md bg-muted/30" />
       </PageShell>
     );
@@ -23,9 +23,9 @@ export function StaffDetailPage({ id }: { id: string }) {
 
   if (isError || !staffMember) {
     return (
-      <PageShell title="Staff Details" subtitle="View employee and payment details.">
+      <PageShell title="Supervisor Details" subtitle="View employee and payment details.">
         <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">
-          Staff record not found.
+          Supervisor record not found.
         </div>
       </PageShell>
     );
@@ -44,7 +44,7 @@ export function StaffDetailPage({ id }: { id: string }) {
           className={buttonVariants({ variant: "default" })}
         >
           <NotePencilIcon size={15} />
-          Edit Staff
+          Edit Supervisor
         </Link>
       }
     >
@@ -52,7 +52,7 @@ export function StaffDetailPage({ id }: { id: string }) {
         <section className="rounded-md border border-border/70 bg-background p-4">
           <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
-              <h2 className="text-base font-semibold text-foreground">Staff Information</h2>
+              <h2 className="text-base font-semibold text-foreground">Supervisor Information</h2>
               <p className="text-xs text-muted-foreground">Core profile and assignment details.</p>
             </div>
             <StatusBadge status={staffMember.status} />
@@ -115,7 +115,7 @@ export function StaffDetailPage({ id }: { id: string }) {
 
         <div className="flex justify-end">
           <Link href="/staff">
-            <Button variant="outline">Back to Staff</Button>
+            <Button variant="outline">Back to Supervisors</Button>
           </Link>
         </div>
       </div>

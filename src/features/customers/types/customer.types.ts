@@ -244,7 +244,14 @@ export type CompletionSectionKey =
   | "giMeasurements"
   | "valvesRegulators"
   | "fittingsAccessories"
-  | "mdpeFittings";
+  | "mdpeFittings"
+  | "gc"
+  | "valveChamber"
+  | "preCommissioning"
+  | "poleMarker"
+  | "routeMarker"
+  | "connection"
+  | "siteExpenses";
 
 export type SectionCompletionResult = {
   status: CompletionStatus;
@@ -260,6 +267,13 @@ export type CustomerSectionCompletion = {
   fittingsAccessories: SectionCompletionResult;
   mdpeFittings: SectionCompletionResult;
   lmc: SectionCompletionResult;
+  gc: SectionCompletionResult;
+  valveChamber: SectionCompletionResult;
+  preCommissioning: SectionCompletionResult;
+  poleMarker: SectionCompletionResult;
+  routeMarker: SectionCompletionResult;
+  connection: SectionCompletionResult;
+  siteExpenses: SectionCompletionResult;
 };
 
 // Read-only "who/when completed this section" projection, already resolved
@@ -278,6 +292,27 @@ export type CustomerCompletionAudit = {
   lmcCompletedBy: string | null;
   mdpeCompletedOn: string | null;
   mdpeCompletedBy: string | null;
+  gcCompletedOn: string | null;
+  gcCompletedBy: string | null;
+  valveChamberCompletedOn: string | null;
+  valveChamberCompletedBy: string | null;
+  preCommissioningCompletedOn: string | null;
+  preCommissioningCompletedBy: string | null;
+  poleMarkerCompletedOn: string | null;
+  poleMarkerCompletedBy: string | null;
+  routeMarkerCompletedOn: string | null;
+  routeMarkerCompletedBy: string | null;
+  connectionCompletedOn: string | null;
+  connectionCompletedBy: string | null;
+  siteExpensesCompletedOn: string | null;
+  siteExpensesCompletedBy: string | null;
+};
+
+export type CustomerLatestComplaint = {
+  status: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  supervisorRemark: string | null;
 };
 
 export type Customer = {
@@ -304,6 +339,7 @@ export type Customer = {
   customFields?: Record<string, string | boolean>;
   sectionCompletion?: CustomerSectionCompletion;
   completionAudit?: CustomerCompletionAudit;
+  latestComplaint?: CustomerLatestComplaint | null;
 };
 
 export type CustomerFormValues = Omit<Customer, "id" | "createdDate" | "updatedDate">;

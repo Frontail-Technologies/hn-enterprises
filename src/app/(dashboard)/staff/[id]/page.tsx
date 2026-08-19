@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { StaffDetailPage } from "@/features/management/components/StaffDetailPage";
 
-export const metadata: Metadata = { title: "Staff Details" };
+export const metadata: Metadata = { title: "Supervisor Details" };
 
 export default async function StaffDetailRoute({
   params,

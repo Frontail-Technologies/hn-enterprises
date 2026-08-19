@@ -23,11 +23,10 @@ import type {
   StaffSalaryType,
   StaffUserPatchValues,
 } from "../types/staff.types";
-import type { UserRole, UserStatus } from "../services/users.service";
+import type { UserStatus } from "../services/users.service";
 import { PageShell } from "./shared/PageShell";
 import { PageLoading } from "@/components/shared/PageLoading";
 
-const roles: UserRole[] = ["Super Admin", "Supervisor"];
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
 const salaryTypes: StaffSalaryType[] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
 const paymentAccountTypes: StaffPaymentAccountType[] = ["Bank Account", "UPI", "Cash", "Other"];
@@ -37,7 +36,7 @@ export function StaffEditPage({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <PageShell title="Edit Staff" subtitle="Update employee and salary details.">
+      <PageShell title="Edit Supervisor" subtitle="Update employee and salary details.">
         <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-muted/20" />
       </PageShell>
     );
@@ -45,9 +44,9 @@ export function StaffEditPage({ id }: { id: string }) {
 
   if (isError || !staffMember) {
     return (
-      <PageShell title="Edit Staff" subtitle="Update employee and salary details.">
+      <PageShell title="Edit Supervisor" subtitle="Update employee and salary details.">
         <div className="rounded-lg border border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-          Staff record not found.
+          Supervisor record not found.
         </div>
       </PageShell>
     );
@@ -105,7 +104,7 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
 
   return (
     <div className="space-y-4 pb-20">
-      <PageHeader title="Edit Staff" subtitle="Update employee, assignment and salary details." />
+      <PageHeader title="Edit Supervisor" subtitle="Update employee, assignment and salary details." />
 
       <section className="rounded-lg border border-border/70 bg-card">
         <div className="border-b border-border/70 px-4 py-3">
@@ -117,7 +116,6 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
           <FormSection title="Basic Details">
             <EditField label="Name" value={userPatch.name} onChange={(value) => setUserField("name", value)} />
             <EditField label="Mobile" value={userPatch.mobile} onChange={(value) => setUserField("mobile", value)} />
-            <SelectField label="Role" value={userPatch.role} options={roles} onChange={(value) => setUserField("role", value as UserRole)} />
             <SelectField label="Status" value={userPatch.status} options={statuses} onChange={(value) => setUserField("status", value as UserStatus)} />
           </FormSection>
 

@@ -32,7 +32,6 @@ const exportColumns: ExportColumn<Staff>[] = [
 export function StaffResourcesPage() {
   const [filters, setFilters] = useState({
     search: "",
-    role: "all",
     status: "all",
   });
   const { data: staff = [], isLoading: staffLoading } = useStaffQuery();
@@ -51,17 +50,15 @@ export function StaffResourcesPage() {
     const search = filters.search.toLowerCase();
     return staff.filter(
       (row) =>
-        (row.role === "Super Admin" || row.role === "Supervisor") &&
+        row.role === "Supervisor" &&
         (!search ||
           row.name.toLowerCase().includes(search) ||
           row.contact.toLowerCase().includes(search)) &&
-        (filters.role === "all" || row.role === filters.role) &&
         (filters.status === "all" || row.status === filters.status),
     );
   }, [staff, filters]);
   const columns: ColumnDef<Staff>[] = [
     { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
-    { key: "role", header: "Role" },
     { key: "contact", header: "Contact" },
     {
       key: "status",
@@ -79,7 +76,7 @@ export function StaffResourcesPage() {
       className: "w-24",
       render: (row) => (
         <div className="flex items-center gap-1">
-          <ActionTooltip label="View staff">
+          <ActionTooltip label="View supervisor">
             <Link
               href={`/staff/${row.id}`}
               aria-label={`View ${row.name}`}
@@ -88,7 +85,7 @@ export function StaffResourcesPage() {
               <EyeIcon size={15} />
             </Link>
           </ActionTooltip>
-          <ActionTooltip label="Edit staff">
+          <ActionTooltip label="Edit supervisor">
             <Link
               href={`/staff/${row.id}/edit`}
               aria-label={`Edit ${row.name}`}
@@ -104,14 +101,14 @@ export function StaffResourcesPage() {
   ];
   return (
     <PageShell
-      title="Staff & Resources"
-      subtitle="Manage employees, supervisors and field executives — payroll details linked to their real login."
+      title="Supervisors"
+      subtitle="Manage field supervisors — payroll details linked to their real login."
       actions={
         <>
           <button
             type="button"
             className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("staff.xlsx", exportColumns, data)}
+            onClick={() => void exportRowsToExcel("supervisors.xlsx", exportColumns, data)}
           >
             <DownloadSimpleIcon size={15} />
             Export Excel
@@ -122,15 +119,10 @@ export function StaffResourcesPage() {
     >
       <FilterSheetButton
         searchKey="search"
-        searchPlaceholder="Search staff or mobile..."
-        title="Staff Filters"
+        searchPlaceholder="Search supervisors or mobile..."
+        title="Supervisor Filters"
         values={filters}
         filters={[
-          {
-            key: "role",
-            placeholder: "All Roles",
-            options: uniqOptions(staff.map((row) => row.role)),
-          },
           {
             key: "status",
             placeholder: "All Statuses",
@@ -140,7 +132,7 @@ export function StaffResourcesPage() {
         onChange={(key, value) =>
           setFilters((current) => ({ ...current, [key]: value }))
         }
-        onReset={() => setFilters({ search: "", role: "all", status: "all" })}
+        onReset={() => setFilters({ search: "", status: "all" })}
       />
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
@@ -159,11 +151,11 @@ export function StaffResourcesPage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         selectedCount={selectedIds.size}
-        entityLabel="Staff Member"
-        entityLabelPlural="Staff Members"
+        entityLabel="Supervisor"
+        entityLabelPlural="Supervisors"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
-        note="This deactivates the linked login, matching the existing single-record delete - it does not erase the staff record."
+        note="This deactivates the linked login, matching the existing single-record delete - it does not erase the supervisor record."
       />
     </PageShell>
   );
@@ -192,7 +184,7 @@ function StaffDeleteAction({ staff }: { staff: Staff }) {
           <TrashIcon size={13} />
         </Button>
       }
-      entityTypeLabel="Staff Member"
+      entityTypeLabel="Supervisor"
       impact={deleteImpact.data}
       isLoading={deleteImpact.isLoading}
       isError={deleteImpact.isError}

@@ -12,7 +12,19 @@ export type DashboardStatKey =
   | "gc-bill-done"
   | "conversion-bill-done"
   | "total-pbg-assignment"
-  | "connection-remark";
+  | "connection-remark"
+  | "total-connection-remark"
+  | "commissioning"
+  | "valve-chamber-done"
+  | "pre-commissioning-done"
+  | "pole-marker-done"
+  | "route-marker-done"
+  | "connection-done"
+  | "site-expenses-done"
+  | "laying-done"
+  | "flushing-testing-done"
+  | "complaint-customer"
+  | "customer-resolved";
 
 export type DashboardStatRow = {
   id: string;
@@ -20,6 +32,7 @@ export type DashboardStatRow = {
   bpTrNo: string;
   customerName: string;
   mobileNo: string;
+  address: string;
   projectName: string;
   siteArea: string;
   supervisor: string;
@@ -87,8 +100,75 @@ export const dashboardStatDefinitions: DashboardStatDefinition[] = [
   },
   {
     key: "connection-remark",
+    // Was mislabeled "Total Connection Remark" - this condition is actually a
+    // "needs attention" workflow flag (on hold / sent back / rejected), not a
+    // free-text remark. Renamed to avoid colliding with the real Total
+    // Connection Remark stat below.
+    title: "Needs Attention",
+    helperText: "On hold, sent back or rejected",
+  },
+  {
+    key: "total-connection-remark",
     title: "Total Connection Remark",
-    helperText: "Sent back, rejected or on hold",
+    // BUSINESS-CONFIRMATION-PENDING: mapped to billingCompletion.remark, the
+    // closest existing field - no field is literally named "Connection
+    // Remark" in the schema. See customer-completion.ts's STAT_CONDITION_SQL.
+    helperText: "Customers with a connection remark on file",
+  },
+  {
+    key: "commissioning",
+    title: "Commissioning",
+    helperText: "Commissioning date recorded",
+  },
+  {
+    key: "valve-chamber-done",
+    title: "Valve Chamber",
+    helperText: "Valve chamber marked complete",
+  },
+  {
+    key: "pre-commissioning-done",
+    title: "Pre Commissioning",
+    helperText: "Pre-commissioning marked complete",
+  },
+  {
+    key: "pole-marker-done",
+    title: "Pole Marker",
+    helperText: "Pole marker marked complete",
+  },
+  {
+    key: "route-marker-done",
+    title: "Route Marker",
+    helperText: "Route marker marked complete",
+  },
+  {
+    key: "connection-done",
+    title: "Total Connection Done",
+    helperText: "Connection marked complete",
+  },
+  {
+    key: "site-expenses-done",
+    title: "Site Expenses Done",
+    helperText: "Site expenses marked complete",
+  },
+  {
+    key: "laying-done",
+    title: "Laying",
+    helperText: "All LMC pipe laying complete",
+  },
+  {
+    key: "flushing-testing-done",
+    title: "Flushing / Testing",
+    helperText: "All LMC pipe testing & purging complete",
+  },
+  {
+    key: "complaint-customer",
+    title: "Complaint Customer",
+    helperText: "Customers with an open or in-progress complaint",
+  },
+  {
+    key: "customer-resolved",
+    title: "Customer Resolved",
+    helperText: "Had complaints, none currently unresolved",
   },
 ];
 
@@ -102,16 +182,6 @@ export function getDashboardStatDefinition(key: DashboardStatKey) {
 
 export function getDashboardStatRows(key: DashboardStatKey, source: Customer[]): DashboardStatRow[] {
   return source.map((customer) => buildRow(customer, key));
-}
-
-export function getDashboardStatValue(key: DashboardStatKey, source: Customer[]) {
-  const total = source.length;
-  const rows = getDashboardStatRows(key, source);
-
-
-
-  if (key === "total-customers") return String(total);
-  return `${rows.length}/${total}`;
 }
 
 function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
@@ -128,6 +198,9 @@ function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
   const onHoldPipe = customer.lmcPipelineWork.pipeRecords.find(
     (pipe) => deriveLmcPipeCurrentStage(pipe) === "On Hold",
   );
+  const audit = customer.completionAudit;
+  const pipes = customer.lmcPipelineWork.pipeRecords;
+  const complaint = customer.latestComplaint;
 
   return {
     id: customer.id,
@@ -135,6 +208,7 @@ function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
     bpTrNo: connection.trBpNo,
     customerName: connection.customerName,
     mobileNo: connection.mobileNo,
+    address: connection.fullAddress || "-",
     projectName: customer.projectName,
     siteArea: customer.siteArea,
     supervisor: connection.supervisorName,
@@ -169,7 +243,38 @@ function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
       billing.remark ||
       "-",
     assignedTo: connection.supervisorName || connection.plumberName || "-",
+    // New progress-milestone columns - straight from the server-resolved
+    // completion audit, never re-derived client-side.
+    gcCompletedOn: formatDateOrDash(audit?.gcCompletedOn),
+    valveChamberCompletedOn: formatDateOrDash(audit?.valveChamberCompletedOn),
+    preCommissioningCompletedOn: formatDateOrDash(audit?.preCommissioningCompletedOn),
+    poleMarkerCompletedOn: formatDateOrDash(audit?.poleMarkerCompletedOn),
+    routeMarkerCompletedOn: formatDateOrDash(audit?.routeMarkerCompletedOn),
+    connectionCompletedOn: formatDateOrDash(audit?.connectionCompletedOn),
+    siteExpensesCompletedOn: formatDateOrDash(audit?.siteExpensesCompletedOn),
+    commissioningDate: commissioning.commissioningDate || "-",
+    // LMC laying/testing/purging - across all pipe-size records for this customer.
+    layingDate: formatDateOrDash(latestDate(pipes.map((p) => p.layingDate))),
+    testingDate: formatDateOrDash(latestDate(pipes.map((p) => p.testingDate))),
+    purgingDate: formatDateOrDash(latestDate(pipes.map((p) => p.purgingDate))),
+    pipeSummary: pipes.length ? pipes.map((p) => `${p.pipeSize}`).join(", ") : "-",
+    // Complaints - only populated when this row came from the
+    // complaint-customer/customer-resolved drill-down (§ backend join).
+    complaintStatus: complaint?.status ?? "-",
+    complaintDate: formatDateOrDash(complaint?.createdAt ?? null),
+    resolvedDate: formatDateOrDash(complaint?.resolvedAt ?? null),
+    resolutionRemark: complaint?.supervisorRemark || "-",
+    connectionRemark: billing.remark || "-",
   };
+}
+
+function formatDateOrDash(value: string | null | undefined) {
+  return value || "-";
+}
+
+function latestDate(dates: (string | null | undefined)[]) {
+  const valid = dates.filter((d): d is string => Boolean(d)).sort();
+  return valid.length ? valid[valid.length - 1] : null;
 }
 
 function hasDocument(customer: Customer, category: string) {

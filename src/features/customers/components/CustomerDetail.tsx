@@ -185,6 +185,46 @@ function SectionStatusBadge({ result }: { result?: SectionCompletionResult }) {
   );
 }
 
+// One compact row in the Progress Milestones block: label (+ Completed
+// On/By once done) on the left, the existing status badge + Mark
+// Complete/Reopen action on the right - same completion plumbing every
+// other section already uses, just laid out as a row instead of a card.
+function ProgressMilestoneRow({
+  label,
+  customerId,
+  sectionKey,
+  sectionLabel,
+  result,
+  completedOn,
+  completedBy,
+}: {
+  label: string;
+  customerId: string;
+  sectionKey: CompletionSectionKey;
+  sectionLabel: string;
+  result?: SectionCompletionResult;
+  completedOn?: string | null;
+  completedBy?: string | null;
+}) {
+  const isDone = result?.status === "DONE";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 py-2.5 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {isDone && (completedOn || completedBy) ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {completedOn ? `Completed on ${formatDateTime(completedOn)}` : null}
+            {completedOn && completedBy ? " · " : null}
+            {completedBy ? `by ${completedBy}` : null}
+          </p>
+        ) : null}
+      </div>
+      <SectionCompletionActions customerId={customerId} sectionKey={sectionKey} sectionLabel={sectionLabel} result={result} />
+    </div>
+  );
+}
+
 type CustomerApprovalRow = {
   id: string;
   reference: string;
@@ -238,6 +278,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
 
   const connection = customer.customerConnection;
   const completion = customer.sectionCompletion;
+  const audit = customer.completionAudit;
 
   const visibleFieldGroups = groupVisibleDynamicFields(dynamicFields, isAdmin);
   const sectionLinks = [
@@ -341,12 +382,81 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         </section>
 
         <section id="commissioning" className="scroll-mt-16">
-          <SectionCard title="Commissioning & Conversion" action={<SectionStatusBadge result={completion?.commissioning} />}>
-            <KeyValueGrid
-              items={itemsFromFields(commissioningConversionFields, customer.commissioningConversion)}
-              columns={2}
-            />
-          </SectionCard>
+          <div className="space-y-4">
+            <SectionCard title="Commissioning & Conversion" action={<SectionStatusBadge result={completion?.commissioning} />}>
+              <KeyValueGrid
+                items={itemsFromFields(commissioningConversionFields, customer.commissioningConversion)}
+                columns={2}
+              />
+            </SectionCard>
+            <SectionCard title="Progress Milestones">
+              <div className="divide-y divide-border/60">
+                <ProgressMilestoneRow
+                  label="GC Done"
+                  customerId={customer.id}
+                  sectionKey="gc"
+                  sectionLabel="GC Done"
+                  result={completion?.gc}
+                  completedOn={audit?.gcCompletedOn}
+                  completedBy={audit?.gcCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Valve Chamber"
+                  customerId={customer.id}
+                  sectionKey="valveChamber"
+                  sectionLabel="Valve Chamber"
+                  result={completion?.valveChamber}
+                  completedOn={audit?.valveChamberCompletedOn}
+                  completedBy={audit?.valveChamberCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Pole Marker"
+                  customerId={customer.id}
+                  sectionKey="poleMarker"
+                  sectionLabel="Pole Marker"
+                  result={completion?.poleMarker}
+                  completedOn={audit?.poleMarkerCompletedOn}
+                  completedBy={audit?.poleMarkerCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Route Marker"
+                  customerId={customer.id}
+                  sectionKey="routeMarker"
+                  sectionLabel="Route Marker"
+                  result={completion?.routeMarker}
+                  completedOn={audit?.routeMarkerCompletedOn}
+                  completedBy={audit?.routeMarkerCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Pre Commissioning"
+                  customerId={customer.id}
+                  sectionKey="preCommissioning"
+                  sectionLabel="Pre Commissioning"
+                  result={completion?.preCommissioning}
+                  completedOn={audit?.preCommissioningCompletedOn}
+                  completedBy={audit?.preCommissioningCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Connection Done"
+                  customerId={customer.id}
+                  sectionKey="connection"
+                  sectionLabel="Connection Done"
+                  result={completion?.connection}
+                  completedOn={audit?.connectionCompletedOn}
+                  completedBy={audit?.connectionCompletedBy}
+                />
+                <ProgressMilestoneRow
+                  label="Site Expenses Done"
+                  customerId={customer.id}
+                  sectionKey="siteExpenses"
+                  sectionLabel="Site Expenses Done"
+                  result={completion?.siteExpenses}
+                  completedOn={audit?.siteExpensesCompletedOn}
+                  completedBy={audit?.siteExpensesCompletedBy}
+                />
+              </div>
+            </SectionCard>
+          </div>
         </section>
 
         <section id="billing" className="scroll-mt-16">

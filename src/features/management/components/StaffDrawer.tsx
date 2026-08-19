@@ -24,9 +24,8 @@ import {
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateStaff } from "../hooks/useStaff";
 import type { CreateStaffFormValues } from "../types/staff.types";
-import type { User, UserRole } from "../services/users.service";
+import type { User } from "../services/users.service";
 
-const roles: UserRole[] = ["Super Admin", "Supervisor"];
 const salaryTypes: CreateStaffFormValues["salaryType"][] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
 const paymentAccountTypes: CreateStaffFormValues["paymentAccountType"][] = ["Bank Account", "UPI", "Cash", "Other"];
 
@@ -60,7 +59,9 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const [saveError, setSaveError] = useState("");
   const { data: projects = [] } = useProjectsQuery();
   const createStaff = useCreateStaff();
-  const availableUsers = users.filter((user) => !staffedUserIds.has(user.id));
+  // This page only ever manages supervisors, so linking an existing login
+  // only offers accounts that are already Supervisor-role.
+  const availableUsers = users.filter((user) => !staffedUserIds.has(user.id) && user.role === "Supervisor");
 
   function set<K extends keyof CreateStaffFormValues>(key: K, value: CreateStaffFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -106,13 +107,13 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger render={<Button type="button" />}>
         <PlusIcon size={15} />
-        Add Staff
+        Add Supervisor
       </SheetTrigger>
       <SheetContent className="w-full border-border bg-card sm:max-w-lg">
         <SheetHeader className="border-b border-border/70">
-          <SheetTitle>Add Staff</SheetTitle>
+          <SheetTitle>Add Supervisor</SheetTitle>
           <SheetDescription>
-            Link an existing login or create a new one — payroll details attach to that account.
+            Link an existing supervisor login or create a new one — payroll details attach to that account.
           </SheetDescription>
         </SheetHeader>
 
@@ -162,18 +163,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                   <Input value={values.newUser.mobile} onChange={(event) => setNewUser("mobile", event.target.value)} />
                 </Field>
                 <Field label="Role">
-                  <Select value={values.newUser.role} onValueChange={(role) => { if (role) setNewUser("role", role as UserRole); }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <p className="flex h-9 items-center text-sm text-muted-foreground">Supervisor</p>
                 </Field>
               </div>
               <Field label="Initial Password">
