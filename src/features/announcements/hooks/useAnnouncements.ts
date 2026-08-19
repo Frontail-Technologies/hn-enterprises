@@ -53,6 +53,24 @@ export function usePublishAnnouncement() {
   });
 }
 
+export function useRepublishAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => announcementsApi.republish(id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: announcementsKey });
+      if (result.pushSuccess) {
+        toast.success(`Announcement re-pushed to ${result.pushTokenCount} device${result.pushTokenCount === 1 ? "" : "s"}`);
+      } else {
+        toast.warning(
+          `Announcement re-pushed, but push delivery failed${result.pushError ? `: ${result.pushError}` : ""}. It's still visible in the mobile app's notification list.`,
+        );
+      }
+    },
+    onError: (error: any) => toast.error(error?.message || "Failed to re-push announcement"),
+  });
+}
+
 export function useDeleteAnnouncement() {
   const queryClient = useQueryClient();
   return useMutation({

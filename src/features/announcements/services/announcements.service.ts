@@ -126,6 +126,21 @@ export const announcementsApi = {
     };
   },
 
+  async republish(id: string): Promise<AnnouncementPublishResult> {
+    const raw = await apiRequest<BackendAnnouncementPublishResult>(`/announcements/${id}/republish`, {
+      method: "POST",
+    });
+    return {
+      ...mapAnnouncement(raw),
+      recipientCount: raw.recipientCount,
+      notifiedCount: raw.notifiedCount,
+      notifyError: raw.notifyError,
+      pushTokenCount: raw.pushTokenCount,
+      pushSuccess: raw.pushSuccess,
+      pushError: raw.pushError,
+    };
+  },
+
   async delete(id: string): Promise<void> {
     await apiRequest(`/announcements/${id}`, {
       method: "DELETE",

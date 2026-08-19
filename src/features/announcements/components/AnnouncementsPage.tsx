@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import {
+  ArrowsClockwiseIcon,
   MegaphoneIcon,
   PaperPlaneTiltIcon,
   PlusIcon,
@@ -31,6 +32,7 @@ import {
   useAnnouncementsQuery,
   useCreateAnnouncement,
   usePublishAnnouncement,
+  useRepublishAnnouncement,
   useUpdateAnnouncement,
   useDeleteAnnouncement,
   useBulkDeleteAnnouncements,
@@ -56,6 +58,7 @@ export function AnnouncementsPage() {
   const createMutation = useCreateAnnouncement();
   const updateMutation = useUpdateAnnouncement(editingId ?? "");
   const publishMutation = usePublishAnnouncement();
+  const republishMutation = useRepublishAnnouncement();
   const deleteMutation = useDeleteAnnouncement();
   const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -112,6 +115,10 @@ export function AnnouncementsPage() {
 
   const publishRow = (id: string) => {
     void publishMutation.mutateAsync(id);
+  };
+
+  const republishRow = (id: string) => {
+    void republishMutation.mutateAsync(id);
   };
 
   const columns: ColumnDef<Announcement>[] = [
@@ -187,6 +194,19 @@ export function AnnouncementsPage() {
                 onClick={() => openEdit(announcement)}
               >
                 <MegaphoneIcon size={14} />
+              </Button>
+            </ActionTooltip>
+          ) : null}
+          {announcement.status === "Sent" ? (
+            <ActionTooltip label="Re-push to mobile app">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Re-push announcement"
+                onClick={() => republishRow(announcement.id)}
+              >
+                <ArrowsClockwiseIcon size={14} />
               </Button>
             </ActionTooltip>
           ) : null}
