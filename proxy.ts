@@ -10,7 +10,8 @@ export function proxy(request: NextRequest) {
     path.startsWith('/api') ||
     path.startsWith('/_next') ||
     path.startsWith('/public') ||
-    path === '/privacy';
+    path === '/privacy' ||
+    path === '/support';
 
   if (isPublicPage) {
     return NextResponse.next();
