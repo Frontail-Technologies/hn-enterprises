@@ -66,9 +66,16 @@ function shouldAttemptRefresh(path: string, skipRefresh?: boolean) {
   ].includes(path);
 }
 
+// Public pages need to render for signed-out visitors (App Store/Play Console
+// reviewers, anyone following a shared link) - AuthProvider's unconditional
+// getCurrentUser() check on mount would otherwise 401 here and force this
+// redirect over whatever the page was actually showing. Keep in sync with
+// proxy.ts's isPublicPage list.
+const PUBLIC_PAGES = ["/login", "/privacy", "/support"];
+
 function redirectToLogin() {
   if (typeof window === "undefined") return;
-  if (window.location.pathname === "/login") return;
+  if (PUBLIC_PAGES.includes(window.location.pathname)) return;
   window.location.href = "/login";
 }
 
