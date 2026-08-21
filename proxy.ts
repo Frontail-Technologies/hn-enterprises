@@ -5,7 +5,12 @@ export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   
   const isAuthPage = path === '/login' || path === '/forgot-password' || path.startsWith('/reset-password');
-  const isPublicPage = path === '/favicon.ico' || path.startsWith('/api') || path.startsWith('/_next') || path.startsWith('/public');
+  const isPublicPage =
+    path === '/favicon.ico' ||
+    path.startsWith('/api') ||
+    path.startsWith('/_next') ||
+    path.startsWith('/public') ||
+    path === '/privacy';
 
   if (isPublicPage) {
     return NextResponse.next();
