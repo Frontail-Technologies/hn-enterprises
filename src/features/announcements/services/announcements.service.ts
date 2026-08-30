@@ -73,9 +73,6 @@ type BackendAnnouncementPublishResult = BackendAnnouncement & {
   pushError?: string;
 };
 
-// The image is embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all.
 function buildAnnouncementFormData(values: AnnouncementFormValues): FormData {
   const formData = new FormData();
   formData.append("title", values.title);

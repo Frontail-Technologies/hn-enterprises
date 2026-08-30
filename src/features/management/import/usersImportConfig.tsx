@@ -19,9 +19,6 @@ import {
 
 const TEMPLATE_HEADERS = ["Name", "Username", "Email", "Mobile", "Role", "Password"];
 
-// Matches the full allow-list the import backend actually validates against
-// (users.import.service.ts's VALID_ROLES) - wider than the 2-role subset the
-// Staff page's own quick-create drawer exposes for that narrower context.
 const ROLE_OPTIONS = ["Super Admin", "Admin", "Supervisor", "Accountant", "Office Staff"];
 
 function toDraft(row: UserImportPreviewRow): ImportRowDraft<UserImportRowData> {

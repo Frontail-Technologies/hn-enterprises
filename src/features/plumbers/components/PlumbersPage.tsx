@@ -191,8 +191,6 @@ export function PlumbersPage() {
   );
 }
 
-// Owns its own dialog-open state so the delete-impact check is only fetched for
-// the row actually being deleted, not every row on the page.
 function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
   const [open, setOpen] = useState(false);
   const deletePlumber = useDeletePlumber();

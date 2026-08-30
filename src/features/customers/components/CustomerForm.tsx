@@ -94,8 +94,6 @@ interface CustomerFormProps {
 export function CustomerForm({ mode, customerId }: CustomerFormProps) {
   const isEdit = mode === "edit";
   const { data: customer, isLoading } = useCustomerQuery(customerId ?? "");
-  // Project Details → Customers → Add Customer already knows the project -
-  // it's passed as ?projectId=X instead of making the user pick it again (§24).
   const searchParams = useSearchParams();
   const defaultProjectId = searchParams.get("projectId") ?? undefined;
 
@@ -136,11 +134,6 @@ function CustomerFormFields({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: projects = [] } = useProjectsQuery();
 
-  // Backfills projectId/projectName once the project list has loaded - the
-  // ?projectId= param is known immediately, but the human-readable project
-  // name the form displays comes from this list. Applied during render
-  // (React's "adjust state" pattern, gated on a tracked "already applied"
-  // value) rather than in an effect, to avoid an extra commit-then-rerender.
   const [appliedDefaultProjectId, setAppliedDefaultProjectId] = useState<string | undefined>(undefined);
   if (defaultProjectId && defaultProjectId !== appliedDefaultProjectId && projects.length > 0 && !values.projectId) {
     const project = projects.find((item) => item.id === defaultProjectId);
@@ -255,9 +248,6 @@ function CustomerFormFields({
               <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <FormField label="Project">
                   {defaultProjectId && !isEdit ? (
-                    // Opened from inside a project's own Customers tab - the
-                    // project is already known, so it's shown locked rather
-                    // than asking the user to pick it again (§11/§24).
                     <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
                       {values.projectName || "-"}
                     </div>

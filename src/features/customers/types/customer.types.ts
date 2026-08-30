@@ -33,7 +33,6 @@ export type CustomerSurveyPhoto = {
   caption: string;
   fileName: string;
   fileUrl?: string;
-  // Only set while editing on the web, before the file finishes uploading; never persisted.
   previewUrl?: string;
   status?: "staged" | "uploading" | "uploaded" | "error";
   file?: File;
@@ -173,7 +172,6 @@ export type LmcEvidenceFile = {
   label: string;
   fileName: string;
   fileUrl?: string;
-  // Only set while editing on the web, before the file finishes uploading; never persisted.
   previewUrl?: string;
   status?: "staged" | "uploading" | "uploaded" | "error";
   file?: File;
@@ -239,7 +237,6 @@ export type BillingCompletionStatus = {
 
 export type CompletionStatus = "NOT_STARTED" | "IN_PROGRESS" | "DONE";
 
-// Only these sections support an explicit Mark Complete / Reopen action.
 export type CompletionSectionKey =
   | "giMeasurements"
   | "valvesRegulators"
@@ -276,11 +273,6 @@ export type CustomerSectionCompletion = {
   siteExpenses: SectionCompletionResult;
 };
 
-// Read-only "who/when completed this section" projection, already resolved
-// server-side (date + display name, not a raw user id) - the Web master sheet
-// reads these 10 fields as-is via `row.values[key]`, the same values the
-// Excel export's Completion Audit columns render (§ shared column config).
-// Only populated on customer LIST rows, not the single-customer detail view.
 export type CustomerCompletionAudit = {
   giCompletedOn: string | null;
   giCompletedBy: string | null;

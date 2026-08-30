@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 interface CompactStatGridProps {
   children: ReactNode;
   dashboard?: boolean;
-  /** Target column count at the widest breakpoint (default 4). Cards fill their cell - see MetricCard. */
   columns?: 3 | 4 | 5;
   className?: string;
 }

@@ -17,10 +17,6 @@ export function Breadcrumb() {
   const crumbs = segments.map((seg, idx) => {
     const href = '/' + segments.slice(0, idx + 1).join('/')
     const isLast = idx === segments.length - 1
-    // Dynamic route segments (e.g. a bill's raw UUID) fall back to the
-    // segment text itself, which a detail page can override with something
-    // readable via useBreadcrumbLabel() instead of rendering its own
-    // duplicate breadcrumb.
     const label =
       isLast && lastLabelOverride
         ? lastLabelOverride

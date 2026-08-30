@@ -2,8 +2,6 @@ import { WarningCircleIcon, XCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { ImportFieldError } from "./types";
 
-/** Compact row-level summary for the preview table - all messages joined,
- * truncated with a title tooltip for the full text. */
 export function ImportErrorSummary({
   errors,
   warnings,
@@ -34,7 +32,6 @@ export function ImportErrorSummary({
   );
 }
 
-/** Inline per-field message, for use directly under a form field in the row editor. */
 export function ImportFieldErrorText({ errors, field }: { errors: ImportFieldError[]; field: string }) {
   const message = errors.find((error) => error.field === field)?.message;
   if (!message) return null;

@@ -26,7 +26,6 @@ export const ROUTE_LABELS: Record<string, string> = {
   profile: "Profile",
 };
 
-// Ungrouped, always-visible top-level items.
 export const NAV_ITEMS: NavItem[] = [
   {
     id: "dashboard",

@@ -162,9 +162,6 @@ export function StaffResourcesPage() {
   );
 }
 
-// Staff deletion never hard-deletes (it only deactivates the linked login), so
-// this is never blocked - the impact preview here is purely informational
-// (shows linked attendance history that will be preserved).
 function StaffDeleteAction({ staff }: { staff: Staff }) {
   const [open, setOpen] = useState(false);
   const deleteStaff = useDeleteStaff();

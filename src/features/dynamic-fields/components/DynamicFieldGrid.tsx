@@ -37,11 +37,6 @@ import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
 
 type GroupedFields = Record<string, CustomField[]>;
 
-// Only Inactive fields may ever be permanently deleted (same rule the
-// single-field "Permanently delete" action already enforces - a field must
-// be deactivated first) so this only exposes a per-row checkbox, no "select
-// all" affordance, since the grouped-by-section layout has no single
-// natural "select all rows" header row the way a flat table does.
 export interface DynamicFieldGridSelection {
   selectedIds: ReadonlySet<string>;
   onToggleRow: (id: string) => void;
@@ -78,8 +73,6 @@ export function DynamicFieldGrid({
   const [activeId, setActiveId] = useState<string | null>(null);
   const reorder = useReorderDynamicFields();
 
-  // Re-derive local (draggable) state when the source `fields` prop changes -
-  // done during render, not in an effect, so it can't trigger an extra commit.
   const [syncedFields, setSyncedFields] = useState(fields);
   if (fields !== syncedFields) {
     setSyncedFields(fields);
@@ -141,9 +134,6 @@ export function DynamicFieldGrid({
       }
     }
 
-    // Persist sequential positions for every group touched by this drag -
-    // recomputing from scratch (rather than diffing) is simpler and can't
-    // drift from what's rendered.
     const touched = new Set([activeContainer, overContainer]);
     const items = Array.from(touched).flatMap((groupName) =>
       (finalGroups[groupName] ?? []).map((field, index) => ({ id: field.id, groupName, sortOrder: index })),

@@ -226,9 +226,6 @@ function CustomerEvidenceUpload({
     setSaveError("");
     setIsSaving(true);
     try {
-      // Files are embedded directly in the record-save request (see
-      // CustomerForm.handleSave) instead of uploaded here - this just stages
-      // the picked files locally.
       const today = new Date().toISOString().slice(0, 10);
       const newDocuments: CustomerDocument[] = images.map((image, index) => ({
         id: `cust-evidence-${Date.now()}-${index}`,
@@ -487,10 +484,6 @@ type EvidenceItem = {
   caption: string;
   fileName: string;
   fileUrl?: string;
-  // Only present for items backed by a real customer_documents row - that's
-  // the only evidence source with a delete endpoint today. Survey Photos and
-  // native LMC pipe evidence live in jsonb columns instead and are removed
-  // via their own edit tabs (Survey / LMC Pipe editor), not from here.
   documentId?: string;
   status: string;
   uploadedOn: string;

@@ -12,9 +12,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-// A self-rendering, uncontrolled form field for quick mock "Add" drawers/forms
-// that don't wire up real state. For fields that need real values/children,
-// use FormField instead.
 export function QuickField({
   label,
   select,

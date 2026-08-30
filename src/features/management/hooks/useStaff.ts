@@ -59,7 +59,6 @@ export function useDeleteStaff() {
   });
 }
 
-// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
 export function useStaffDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...staffMemberKey(id), "delete-impact"],

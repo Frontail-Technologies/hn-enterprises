@@ -28,11 +28,6 @@ export function useBreadcrumbLastLabel() {
   return useBreadcrumbLabelContext().label;
 }
 
-// A detail page calls this with a human-readable label for its own dynamic
-// route segment (e.g. a bill number instead of the raw UUID in the URL) -
-// the global auto-breadcrumb in the layout uses it in place of the raw
-// segment text for the last crumb, so the page doesn't need to render a
-// second, duplicate breadcrumb of its own.
 export function useBreadcrumbLabel(label: string | null | undefined) {
   const { setLabel } = useBreadcrumbLabelContext();
 

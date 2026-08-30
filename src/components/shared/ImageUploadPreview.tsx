@@ -31,13 +31,6 @@ export type ImagePreviewItem = {
   file?: File;
 };
 
-/**
- * Uploads every not-yet-uploaded item (anything still carrying a local `file`) and
- * returns the resolved list with real `fileUrl`s. Call this from a parent form's save
- * handler - on the state itself, not a ref into the widget - since the widget may live
- * inside a tab or dialog that's no longer mounted by the time the user hits Save.
- * Throws if any file fails to upload, so the caller can stop the save.
- */
 export async function flushImageUploads(
   items: ImagePreviewItem[],
   module: string,
@@ -65,14 +58,6 @@ export async function flushImageUploads(
   return next;
 }
 
-/**
- * Appends an array-shaped evidence field to a save request's FormData: items
- * that are already uploaded (real fileUrl, no local file) go in as a
- * JSON-stringified array under `fieldKey`; not-yet-uploaded local files go in
- * as repeated "files" fields, to be uploaded server-side in the same request.
- * Use this instead of `flushImageUploads` when the target endpoint embeds the
- * upload in the save request itself (one round-trip instead of two).
- */
 export function appendEvidenceArray(formData: FormData, fieldKey: string, items: ImagePreviewItem[]) {
   const alreadyUploaded = items.filter((item) => item.fileUrl && !item.file);
   formData.append(
@@ -88,13 +73,6 @@ export function appendEvidenceArray(formData: FormData, fieldKey: string, items:
     });
 }
 
-/**
- * Appends a single not-yet-uploaded image to a save request's FormData under
- * `fieldKey` (e.g. "file"), to be uploaded server-side in the same request.
- * A no-op if the item is already uploaded or absent - the caller is
- * responsible for sending the existing url/fileName as plain fields in that
- * case, since there's nothing new to embed.
- */
 export function appendSingleImage(formData: FormData, fieldKey: string, item: ImagePreviewItem | undefined) {
   if (item?.file) {
     formData.append(fieldKey, item.file, item.fileName);

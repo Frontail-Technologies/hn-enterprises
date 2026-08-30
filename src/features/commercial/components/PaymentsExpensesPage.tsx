@@ -242,9 +242,7 @@ export function PaymentDrawer({
 }: {
   payment?: Payment;
   defaultCategory?: PaymentCategory;
-  /** Locks the new expense to a project when opened from inside Project Details (§24). */
   defaultProjectId?: string;
-  /** Human-readable name shown for the locked project - never shows the raw id. */
   defaultProjectName?: string;
   iconOnly?: boolean;
 }) {

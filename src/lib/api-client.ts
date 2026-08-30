@@ -13,9 +13,6 @@ type RequestOptions = RequestInit & {
 
 export class ApiError extends Error {
   status: number;
-  /** App-level error code from the response body, e.g. "ENTITY_IN_USE" (§9) - lets
-   * callers distinguish a specific, known failure from a generic one without
-   * string-matching the message. */
   code?: string;
 
   constructor(message: string, status: number, code?: string) {
@@ -66,11 +63,6 @@ function shouldAttemptRefresh(path: string, skipRefresh?: boolean) {
   ].includes(path);
 }
 
-// Public pages need to render for signed-out visitors (App Store/Play Console
-// reviewers, anyone following a shared link) - AuthProvider's unconditional
-// getCurrentUser() check on mount would otherwise 401 here and force this
-// redirect over whatever the page was actually showing. Keep in sync with
-// proxy.ts's isPublicPage list.
 const PUBLIC_PAGES = ["/login", "/privacy", "/support"];
 
 function redirectToLogin() {
@@ -81,8 +73,6 @@ function redirectToLogin() {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { skipRefresh, headers, ...init } = options;
-  // FormData bodies must not get a manual Content-Type - the browser sets the multipart
-  // boundary itself. Only default to JSON for plain (string/undefined) bodies.
   const isFormData = init.body instanceof FormData;
   const requestHeaders = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),

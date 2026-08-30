@@ -50,15 +50,11 @@ export function useUpdateProject(id: string) {
   });
 }
 
-// Only fetched while the delete dialog is actually open (`enabled`) - opening the
-// dialog is what triggers the check, not rendering the trigger button (§11).
 export function useProjectDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...projectKey(id), "delete-impact"],
     queryFn: () => projectsApi.getDeleteImpact(id),
     enabled: Boolean(id) && (options.enabled ?? true),
-    // A fresh check every time the dialog opens - the whole point is to catch
-    // records added since the last time it was open, not serve a stale cache.
     staleTime: 0,
   });
 }
@@ -142,8 +138,6 @@ export function useDeleteProjectDocument(projectId: string) {
   });
 }
 
-// Overview tab - one lightweight aggregate call instead of several unrelated
-// requests just to draw KPI cards (§4).
 export function useProjectSummaryQuery(projectId: string) {
   return useQuery({
     queryKey: summaryKey(projectId),
@@ -152,8 +146,6 @@ export function useProjectSummaryQuery(projectId: string) {
   });
 }
 
-// Team tab - only fetched when that tab is actually opened (§22), via the
-// `enabled` option below.
 export function useProjectTeamQuery(projectId: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: teamKey(projectId),

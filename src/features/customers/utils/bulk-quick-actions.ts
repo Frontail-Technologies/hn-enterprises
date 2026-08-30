@@ -4,20 +4,12 @@ import type { useBulkFieldOptions } from "../hooks/useBulkFieldOptions";
 
 export type BulkQuickAction = {
   field: CustomerBulkQuickField;
-  /** Label shown in the Assign▾/Update▾ dropdown menu item. */
   menuLabel: string;
-  /** Dialog title, e.g. "Assign Supervisor". */
   title: string;
-  /** Action-specific submit button label (§ Button Label - not a generic "Apply"). */
   actionLabel: (count: number) => string;
-  /** Optional caption shown under the field control (e.g. "replaces the existing value"). */
   note?: string;
 };
 
-// One config entry per Assign▾ / Update▾ menu item - each opens the SAME
-// compact BulkQuickFieldDialog, just parametrized differently, instead of
-// 14 near-duplicate dialog components. Both the toolbar (for menu items)
-// and CustomersList (for the dialog's title/button text) read from this.
 export const BULK_ASSIGN_ACTIONS: BulkQuickAction[] = [
   {
     field: "supervisorId",
@@ -113,10 +105,6 @@ export const BULK_UPDATE_ACTIONS: BulkQuickAction[] = [
 
 export const BULK_QUICK_ACTIONS: BulkQuickAction[] = [...BULK_ASSIGN_ACTIONS, ...BULK_UPDATE_ACTIONS];
 
-// Field-specific success toasts (§ Toast) instead of a generic "updated" -
-// reads straight off the typed `changes` payload rather than parsing the
-// human-readable summary strings, so it stays correct if the display
-// formatting ever changes.
 export function buildBulkQuickSuccessMessage(
   action: BulkQuickAction,
   changes: CustomerBulkChanges,

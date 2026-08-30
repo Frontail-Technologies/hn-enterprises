@@ -79,9 +79,6 @@ function mapPayment(raw: BackendPayment): Payment {
   };
 }
 
-// Evidence is embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all.
 function buildPaymentFormData(values: PaymentFormValues): FormData {
   const formData = new FormData();
   formData.append("category", CATEGORY_TO_BACKEND[values.category]);

@@ -194,9 +194,6 @@ function getFilterLabel(filter: FilterConfig, value: string) {
   return filter.options.find((option) => option.value === value)?.label ?? filter.placeholder;
 }
 
-/** One filter's dropdown - a searchable combobox for `searchable` filters (a
- * long/dynamic option list), the plain compact Select otherwise. Shared by
- * both the inline-row and sheet layouts so they never drift out of sync. */
 function FilterSelectField({
   filter,
   value,

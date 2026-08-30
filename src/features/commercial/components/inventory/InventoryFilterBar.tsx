@@ -14,10 +14,8 @@ import { Button } from "@/components/ui/button";
 import type { MaterialSource } from "../../types/material.types";
 
 export type InventoryFilterState = {
-  // "" = all projects, "unassigned" = Central / Unassigned (projectId IS NULL)
   projectId: string;
   source: MaterialSource | "";
-  // yyyy-MM, "" = all time
   month: string;
   plumberId: string;
 };
@@ -33,8 +31,6 @@ export function hasActiveInventoryFilters(filters: InventoryFilterState) {
   return Boolean(filters.projectId || filters.source || filters.month || filters.plumberId);
 }
 
-// Backend query params driven by these filters query the full dataset (source, project,
-// from/to) rather than filtering rows already loaded into the browser (§2).
 export function inventoryFiltersToDateRange(month: string) {
   if (!month) return { from: undefined, to: undefined };
   const [year, monthNum] = month.split("-").map(Number);
@@ -57,9 +53,6 @@ export function InventoryFilterBar({
   projects: { id: string; name: string }[];
   plumbers: { id: string; name: string }[];
   showPlumberFilter: boolean;
-  // Stock Sheet shows a point-in-time balance, not activity within a period - a
-  // date-range filter over it would silently become "sum of movements in range" and
-  // get mislabeled as the current balance, so it's hidden there (§1).
   showMonthFilter?: boolean;
 }) {
   function set<K extends keyof InventoryFilterState>(key: K, value: InventoryFilterState[K]) {

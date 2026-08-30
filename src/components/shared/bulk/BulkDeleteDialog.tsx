@@ -22,9 +22,6 @@ interface BulkDeleteDialogProps {
   note?: string;
 }
 
-// Generic version of Customers' BulkDeleteDialog - a plain Cancel/Delete
-// click-to-confirm, parameterized by entity label so every bulk-delete list
-// in the app shares one implementation instead of seven near-identical copies.
 export function BulkDeleteDialog({
   open,
   onOpenChange,

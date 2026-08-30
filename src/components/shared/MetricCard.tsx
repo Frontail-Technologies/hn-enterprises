@@ -21,9 +21,6 @@ export function MetricCard({
   return (
     <article
       className={cn(
-        // Fills whatever grid cell it's placed in (CompactStatGrid etc.) -
-        // no fixed/max width here, so a 4- or 5-up KPI row packs tightly
-        // instead of leaving large gaps between narrow, left-aligned cards.
         "flex min-h-24 w-full flex-col justify-between rounded-card border border-border bg-card p-4",
         className,
       )}

@@ -54,7 +54,6 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
     projectId: projectId === "all" ? undefined : projectId,
   });
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-  // Bills are project-linked now - scoped server-side by project.
   const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });

@@ -66,14 +66,9 @@ export function getAdminDashboardData(
   const scopedProjectIds = new Set(scopedProjects.map((project) => project.id));
   const scopedCustomers = getScopedCustomers(data.customers, scope);
   const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
-  // Bills are project-linked now, so scope them by their project directly -
-  // this also correctly includes bills that aren't tied to any customer.
   const scopedBills = data.bills.filter((bill) => scopedProjectIds.has(bill.projectId));
   const scopedPayments = data.payments.filter((payment) => scopedCustomerIds.has(payment.customerId));
   const scopedWorkProgress = data.workProgress.filter((update) => scopedCustomerIds.has(update.customerId));
-  // DPR records are project-linked directly (like bills), but weren't being
-  // scoped here - DPR Pending silently ignored the project filter while most
-  // other cards respected it.
   const scopedDprRecords = data.dprRecords.filter((record) => scopedProjectIds.has(record.projectId));
 
   const adminMetrics = buildAdminMetrics({
@@ -91,12 +86,6 @@ export function getAdminDashboardData(
 
   return {
     allMetrics: [...adminMetrics, ...workflowMetrics],
-    // Attendance has no project linkage in the current data model (it's
-    // tracked per staff member/day, not per project), and Material is a
-    // shared inventory catalog with no per-project balance (only its
-    // per-project MaterialTransaction rows are project-linked) - neither can
-    // be scoped by the project filter without a real data-model change, so
-    // both stay company-wide regardless of the selected project.
     attendanceRows: buildAttendanceRows(data.attendance),
     alerts: buildAlerts(scopedBills, scopedPayments, scopedCustomers, data.materials, scopedDprRecords),
   };
@@ -172,8 +161,6 @@ function buildAdminMetrics({
     ).length +
     payments.filter((payment) => payment.status === "Submitted").length +
     bills.filter((bill) => bill.status === "Submitted").length;
-  // Billing/expenses are genuinely period-scoped (a bill/payment happens on a date); project and
-  // customer counts are current-state snapshots, not flow metrics, so they aren't scaled by period.
   const billingPending = bills
     .filter((bill) => withinRange(bill.billDate, range))
     .reduce((sum, bill) => sum + bill.pendingAmount, 0);
@@ -183,7 +170,6 @@ function buildAdminMetrics({
   const dprPending = dprRecords.filter(
     (record) => record.status !== "Approved" && withinRange(record.date, range),
   ).length;
-  // Overdue is a current-state snapshot (like project/site counts), not scaled by period.
   const overdueBills = bills.filter((bill) => bill.status === "Overdue").length;
   const fieldUpdates = workProgress.filter((update) => withinRange(update.createdAt, range)).length;
 

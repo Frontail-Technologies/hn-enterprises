@@ -123,9 +123,6 @@ export const exportsApi = {
     return downloadXlsx(`/exports/inventory/total-issue${query ? `?${query}` : ""}`, "Total-Issue.xlsx");
   },
 
-  // No from/to param accepted here on purpose - see materials.service.ts's
-  // plumberBalances and §5 of the Inventory exports task: a date range can't be
-  // applied to a running balance without inventing opening-balance logic.
   inventoryPlumberBalance(params: { projectId?: string; source?: string; plumberId?: string; materialId?: string } = {}) {
     const query = buildQuery({
       projectId: params.projectId,

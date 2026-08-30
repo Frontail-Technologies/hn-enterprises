@@ -113,11 +113,6 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   )
 }
 
-// Sub-headings were removed from sheets (to match the app header and
-// dialogs) - intentionally renders nothing. Kept as a component, not
-// deleted, so existing <SheetDescription> call sites don't need editing;
-// base-ui only wires up aria-describedby when a Description actually
-// mounts, so an always-empty one is a no-op rather than a dangling reference.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- keeps the accepted prop shape documented
 function SheetDescription(_props: SheetPrimitive.Description.Props) {
   return null

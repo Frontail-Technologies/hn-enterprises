@@ -60,10 +60,6 @@ export type CustomerMasterSheetRow = {
   values: Record<string, string>;
 };
 
-// Server-authoritative shared column config (§ Customer column configuration) -
-// order/label/visibility/width/type are resolved backend-side (catalog + the
-// user's saved preference) and consumed as-is by both the Web master sheet and
-// the Excel export, so a reorder/hide saved here shows up identically in both.
 export type CustomerColumnType = "text" | "num" | "money" | "date" | "bool";
 
 export type ResolvedCustomerColumn = {
@@ -73,7 +69,6 @@ export type ResolvedCustomerColumn = {
   type: CustomerColumnType;
   width: number;
   visible: boolean;
-  /** True for a live custom field, false for a static catalog field. */
   custom: boolean;
 };
 
@@ -1313,8 +1308,6 @@ export function getCustomerMasterSheetRows(
         billingRemark: billing.remark,
         createdAt: customer.createdDate,
         updatedAt: customer.updatedDate,
-        // Backend-resolved (date + display name, never a raw user id) - see
-        // CustomerCompletionAudit. Not derived here; only projected as-is.
         giCompletedOn: customer.completionAudit?.giCompletedOn ?? "",
         giCompletedBy: customer.completionAudit?.giCompletedBy ?? "",
         valvesCompletedOn: customer.completionAudit?.valvesCompletedOn ?? "",
@@ -1331,14 +1324,6 @@ export function getCustomerMasterSheetRows(
   });
 }
 
-// Dev-only guard against the exact class of bug this hardening pass fixed: a
-// static catalog column with a real Excel getter but no corresponding key in
-// the master sheet's `values` projection above, which renders blank on the
-// Web table the moment a user makes it visible. Dynamic custom fields
-// (`column.custom`, backend-flagged) are excluded - they're legitimately
-// absent from the static `values` literal, arriving instead via the
-// `...customer.customFields` spread. Not a hard CI gate, just a loud, cheap
-// early signal.
 export function warnIfMasterSheetProjectionIncomplete(
   resolvedColumns: ResolvedCustomerColumn[],
   rows: CustomerMasterSheetRow[],
@@ -1362,7 +1347,6 @@ function formatBoolean(value: boolean) {
   return value ? "Yes" : "No";
 }
 
-// ---- Real backend API + adapters ----
 
 export const STATUS_TO_BACKEND: Record<CustomerStatus, string> = {
   Draft: "draft",
@@ -1461,7 +1445,6 @@ type BackendCustomer = {
   site?: { id: string; name: string } | null;
   sectionCompletion?: CustomerSectionCompletion;
   completionAudit?: CustomerCompletionAudit;
-  // Only present when listed with statKey=complaint-customer|customer-resolved.
   latestComplaint?: {
     status: string;
     createdAt: string;
@@ -1599,7 +1582,6 @@ function mapCustomer(raw: BackendCustomer): Customer {
       reportNoGi: raw.giReportNumber ?? "",
       reportNoGc: raw.gcReportNumber ?? "",
       reportNoConversion: raw.conversionReportNumber ?? "",
-      // master-import writes this into billingCompletion.jobCardDone, not a top-level column
       jobCardDone: String(
         (raw.billingCompletion as Record<string, unknown> | null)
           ?.jobCardDone ?? "",
@@ -1685,8 +1667,6 @@ function mapFormValuesToBody(values: CustomerFormValues) {
     mdpeFittings: values.mdpeFittings,
     commissioningConversion: values.commissioningConversion,
     customFields: values.customFields,
-    // jobCardDone lives in the customerConnection tab in the UI, but master-import (and this
-    // adapter's read side) stores it in billingCompletion - no top-level column for it.
     billingCompletion: {
       ...values.billingCompletion,
       jobCardDone: values.customerConnection.jobCardDone,
@@ -1694,9 +1674,6 @@ function mapFormValuesToBody(values: CustomerFormValues) {
   };
 }
 
-// Evidence is embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all.
 function buildLmcPipeRecordFormData(record: LmcPipeSizeRecord): FormData {
   const formData = new FormData();
   formData.append("pipeSize", LMC_SIZE_TO_BACKEND[record.pipeSize] ?? "other");
@@ -1727,10 +1704,6 @@ function buildLmcPipeRecordFormData(record: LmcPipeSizeRecord): FormData {
   return formData;
 }
 
-// Survey Photos are embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all. Every other field goes through unchanged (JSON-stringified
-// per nested section, same shape `mapFormValuesToBody` always produced).
 function buildCustomerFormData(values: CustomerFormValues): FormData {
   const body = mapFormValuesToBody(values);
   const formData = new FormData();
@@ -1773,9 +1746,6 @@ function buildCustomerFormData(values: CustomerFormValues): FormData {
   return formData;
 }
 
-// The file is embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all.
 function buildDocumentFormData(doc: CustomerDocument): FormData {
   const formData = new FormData();
   formData.append("documentType", doc.type || doc.category);

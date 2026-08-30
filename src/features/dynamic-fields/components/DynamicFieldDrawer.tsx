@@ -65,7 +65,6 @@ export function DynamicFieldDrawer({
   iconOnly = false,
 }: {
   field?: CustomField;
-  /** Full current field list, used to auto-append a new field to the end of its group. */
   fields: CustomField[];
   iconOnly?: boolean;
 }) {

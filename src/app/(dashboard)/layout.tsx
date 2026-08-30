@@ -13,17 +13,11 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
   useEffect(() => {
     if (isLoading) return
 
-    // Session couldn't be confirmed (expired/invalid cookie, or the backend
-    // is unreachable so /auth/me failed) - send to login instead of rendering
-    // a blank page. proxy.ts only checks whether the auth cookie is present,
-    // not whether it's still valid or the backend is up, so it can't catch
-    // this case on its own.
     if (!isAuthenticated) {
       router.replace('/login')
       return
     }
 
-    // Role gate - only admins may use the dashboard.
     if (user && user.role !== 'super_admin' && user.role !== 'admin') {
       router.replace('/login')
     }

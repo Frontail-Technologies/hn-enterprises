@@ -1,11 +1,5 @@
 import type { ImportSummary as ImportSummaryData } from "./types";
 
-/**
- * Compact secondary status - NOT a stats row. `ImportFilterTabs` (All/Ready/
- * Rejected, with counts) is the primary summary; this only surfaces the two
- * things the tabs don't cover - removed rows and rows already committed in a
- * prior partial import - and only renders when there's something to say.
- */
 export function ImportSummary({
   summary,
   importedCount,

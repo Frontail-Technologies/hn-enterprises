@@ -22,8 +22,6 @@ export function PaginatedDataTable<T extends { id: string }>({
   isLoading?: boolean;
   stickyLastColumn?: boolean;
   selection?: DataTableSelection<T>;
-  /** Adds a compact expand/collapse toggle that portals the pagination bar
-   * and table together into an application-level Full View surface. */
   enableFullView?: boolean;
 }) {
   const [page, setPage] = useState(1);

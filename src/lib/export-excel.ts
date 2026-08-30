@@ -59,11 +59,6 @@ async function downloadWorkbook(filename: string, workbook: ExcelJS.Workbook) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Exports rows to a real, formatted .xlsx workbook (bold/shaded header row, cell borders,
- * frozen header, sized columns). Accepts any `{label, getValue}` column list - an
- * `ExcelDataGrid` table's `ExcelColumn[]` already satisfies this shape.
- */
 export async function exportRowsToExcel<T>(filename: string, columns: ExportColumn<T>[], rows: T[]) {
   const ExcelJSMod = await loadExcelJS();
   const workbook = new ExcelJSMod.Workbook();
@@ -78,7 +73,6 @@ export async function exportRowsToExcel<T>(filename: string, columns: ExportColu
   await downloadWorkbook(filename, workbook);
 }
 
-/** Exports a header-only template file (no rows) for a set of columns. */
 export async function exportColumnTemplate(filename: string, columnLabels: string[]) {
   const ExcelJSMod = await loadExcelJS();
   const workbook = new ExcelJSMod.Workbook();
@@ -90,11 +84,6 @@ export async function exportColumnTemplate(filename: string, columnLabels: strin
 
 export type GridCell = string | number | { value: string | number; bold?: boolean };
 
-/**
- * Exports an arbitrary grid of cells (rows of varying shape - title rows, label/value
- * pairs, a header row, data rows) for forms that aren't a single uniform table, such as
- * a printed DPR sheet. Wrap a cell as `{value, bold: true}` to bold just that cell.
- */
 export async function exportGridToExcel(filename: string, grid: GridCell[][]) {
   const ExcelJSMod = await loadExcelJS();
   const workbook = new ExcelJSMod.Workbook();

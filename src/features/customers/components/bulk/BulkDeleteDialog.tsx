@@ -19,10 +19,6 @@ interface BulkDeleteDialogProps {
   onConfirm: () => void;
 }
 
-// A plain Cancel/Delete click-to-confirm, matching the single-customer
-// DeleteConfirmDialog. This is a hard delete matching the existing
-// single-customer delete policy - the codebase has no soft-delete concept
-// for customers, so none was invented here.
 export function BulkDeleteDialog({ open, onOpenChange, selectedCount, isSubmitting, onConfirm }: BulkDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -34,8 +34,6 @@ export function BillingDetailPage({ id }: { id: string }) {
   const { data: project } = useProjectQuery(bill?.projectId ?? "");
   const deleteMutation = useDeleteBill();
   const updatePaymentStatus = useUpdateBillPaymentStatus(id);
-  // Replaces the layout's generic (raw-UUID) breadcrumb segment with the
-  // bill number instead of rendering a second breadcrumb on this page.
   useBreadcrumbLabel(bill?.billNumber);
 
   if (isLoading) {

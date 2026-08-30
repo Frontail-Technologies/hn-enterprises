@@ -314,9 +314,6 @@ export const projectsApi = {
     });
   },
 
-  // Backend also returns the raw project record alongside these counts, but
-  // the Overview tab already has it via useProjectQuery - no need for a
-  // second project-mapping path here.
   async getSummary(projectId: string): Promise<ProjectSummary> {
     return apiRequest<ProjectSummary>(`/projects/${projectId}/summary`);
   },

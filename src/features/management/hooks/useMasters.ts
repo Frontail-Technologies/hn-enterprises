@@ -54,7 +54,6 @@ export function useDeleteMasterValue(category: MasterValueCategory) {
   });
 }
 
-// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
 export function useMasterValueDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...masterValueKey(id), "delete-impact"],

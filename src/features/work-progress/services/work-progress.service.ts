@@ -96,9 +96,6 @@ export const workProgressApi = {
     return rows.map(mapWorkProgressUpdate);
   },
 
-  // "One row per customer, latest stage/status" queue - already supports
-  // projectId server-side (work-progress.service.ts `listQueue`), reused
-  // as-is for the Project Execution tab instead of re-deriving it client-side.
   async listQueue(
     params: { projectId?: string; siteId?: string; search?: string } = {},
   ): Promise<WorkQueueRow[]> {

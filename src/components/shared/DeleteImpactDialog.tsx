@@ -27,17 +27,12 @@ const ACTION_META: Record<DeleteImpactAction, { label: string; badgeVariant: "de
   block: { label: "Blocks deletion", badgeVariant: "destructive" },
 };
 
-// Above this many affected records, the entity name must be typed to confirm
-// (§5) - below it, a normal Cancel/Confirm pair is enough. Deliberately not
-// required for every deletion, only ones with real blast radius.
 const DEFAULT_HIGH_IMPACT_THRESHOLD = 10;
 
 export type DeleteImpactDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Rendered as the dialog's own trigger button - omit for a fully external/controlled trigger. */
   trigger?: ReactElement;
-  /** e.g. "Project" - used to build "Delete Project & Related Data". */
   entityTypeLabel: string;
   impact: DeleteImpactResult | undefined;
   isLoading: boolean;
@@ -45,8 +40,6 @@ export type DeleteImpactDialogProps = {
   onRetry?: () => void;
   onConfirm: () => Promise<void>;
   isConfirming?: boolean;
-  /** Offered instead of a disabled delete button when the entity is blocked and an
-   * archive/deactivate path already exists (§8) - omit if none exists. */
   onArchive?: () => Promise<void>;
   isArchiving?: boolean;
   archiveLabel?: string;

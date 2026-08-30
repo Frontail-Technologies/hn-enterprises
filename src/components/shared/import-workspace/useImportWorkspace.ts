@@ -6,12 +6,6 @@ import type { CommitResult, ImportRowDraft, ImportSummary, ImportWorkspaceConfig
 export type ImportWorkspaceView = "upload" | "preview";
 export type ImportPreviewFilter = "all" | "ready" | "rejected";
 
-/**
- * Owns all draft state for one import session: the parsed rows, per-row
- * edit/remove/commit lifecycle, and the derived summary/filter views the
- * shell renders. Module-agnostic - every read/write of `TData` happens
- * through the adapter config passed in, never assumed here.
- */
 export function useImportWorkspace<TData>(config: ImportWorkspaceConfig<TData>) {
   const [view, setView] = useState<ImportWorkspaceView>("upload");
   const [fileName, setFileName] = useState("");
@@ -124,10 +118,6 @@ export function useImportWorkspace<TData>(config: ImportWorkspaceConfig<TData>) 
     }
   }
 
-  // Convenience for the compact "N removed · Undo" notice - restores every
-  // currently-removed row by calling the exact same per-row toggleRemove()
-  // already used by each row's own Undo button, just looped. No new
-  // remove/undo semantics: same adapter call, same state update, per row.
   async function undoAllRemoved() {
     const removedTempIds = rows.filter((row) => row.isRemoved).map((row) => row.tempId);
     for (const tempId of removedTempIds) {
@@ -179,9 +169,6 @@ export function useImportWorkspace<TData>(config: ImportWorkspaceConfig<TData>) 
     return rows;
   }, [rows, filter]);
 
-  // Drives the "don't lose my edits" confirmation - true while there is any
-  // local work (an edit, a removal, or a still-rejected row) that hasn't
-  // already been committed. Never true once every non-removed row is imported.
   const hasUnsavedWork = useMemo(
     () => rows.some((row) => !row.isImported && (row.isEdited || row.isRemoved || row.status === "invalid")),
     [rows],

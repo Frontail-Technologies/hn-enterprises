@@ -137,9 +137,6 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
   };
 }
 
-// Evidence is embedded directly in this request instead of uploaded
-// separately beforehand - a photo picked but never saved never reaches
-// storage at all.
 function buildTransactionFormData(type: MaterialTransactionType, values: MaterialTransactionFormValues): FormData {
   const formData = new FormData();
   formData.append("materialId", values.materialId);

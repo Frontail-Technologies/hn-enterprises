@@ -93,8 +93,6 @@ export function resolveReportTemplateDataFromCustomer(
     regulatorNo: commissioning.regulatorNo,
     regulatorMake: "GREENGLOB",
     regulatorPressure: commissioning.regulatorPressure,
-    // Pressure/JMR/GC-upload testing details no longer exist as standalone features in this app
-    // (see the removed mock-report-sources.ts) - left blank rather than fabricated.
     riserTestingPressure: "-",
     riserTestingTime: "-",
     meterTestingPressure: "-",
@@ -167,9 +165,6 @@ function buildMaterialRows(customer: Customer): PdfTableRow[] {
   ];
 }
 
-// Fixed instructional text printed on every copy of this form - not per-customer data, so it
-// stays even though the actual test result (a real inspection outcome) has no data source
-// anymore and is left blank below.
 function buildTestingChecklistRows(): PdfTableRow[] {
   return [
     ["Flushing: Pipe cleaned from water & debris", "Yes / No / NA"],
@@ -196,9 +191,6 @@ function buildPipeSummaryRows(customer: Customer): PdfTableRow[] {
     ]);
 }
 
-// Pressure observation readings no longer exist as a real, standalone feature in this app - the
-// form prints as a blank 12-row observation chart ready to be filled in by hand rather than
-// fabricated readings.
 function buildPressureRows(): PdfTableRow[] {
   const rows: PdfTableRow[] = [];
   for (let index = 1; index <= 12; index += 1) {
@@ -215,10 +207,6 @@ function formatPaperDate(value: string) {
   return `${day}.${month}.${year}`;
 }
 
-// Static form structure (which checklist items / evidence categories this report expects) - not
-// per-customer data, so it stays as fixed template content even though the actual inspection
-// status/remarks/file names (a real per-customer outcome) have no data source and are blanked
-// in resolveReportTemplateDataFromCustomer above.
 const gcChecklistItems: Array<{ label: string; required: boolean }> = [
   { label: "Trench depth as per approved drawing", required: true },
   { label: "Pipe bedding and warning tape laid", required: true },

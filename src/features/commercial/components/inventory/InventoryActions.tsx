@@ -22,9 +22,6 @@ import { MaterialDrawer } from "./MaterialDrawer";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { useDeleteMaterial, useMaterialDeleteImpactQuery } from "../../hooks/useMaterials";
 
-// One "Add Transaction" menu instead of four equally-weighted buttons (§3) - each
-// item opens the same MaterialDrawer form used everywhere else in Inventory, just
-// launched from a menu selection instead of its own visible trigger.
 const TRANSACTION_MENU = [
   { type: "purchase", label: "Add Purchase", icon: <PlusIcon size={14} /> },
   { type: "pbg_issue", label: "PBG Receipt", icon: <PlusIcon size={14} /> },

@@ -24,8 +24,6 @@ export type Payment = {
   siteId: string;
   address: string;
   customerId: string;
-  // Nullable/optional - most historical rows resolve their project via
-  // siteId/customerId instead (see backend payment.schema.ts).
   projectId: string;
   amount: number;
   paymentDate: string;

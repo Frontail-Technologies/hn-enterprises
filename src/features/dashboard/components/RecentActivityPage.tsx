@@ -111,18 +111,6 @@ export function RecentActivityPage() {
   );
 }
 
-// Trimmed to the fields a reader actually scans a feed for. Dropped:
-// - "Actor" and "Supervisor" were the same value for every source except Billing
-//   (where "Actor" was just a hardcoded "Accounts" placeholder) - merged into one
-//   "Actor" column sourced from whichever field carries the real value.
-// - "Related Record" was a meaningful BP number for Work rows but an internal
-//   8-char UUID fragment for DPR/Billing/System rows - not a real reference number,
-//   just noise for 3 of the 4 activity types, so it's dropped rather than shown
-//   inconsistently.
-// - "Site / Area" was "-" for DPR/Billing/System and Project already carries the
-//   main location context, so it was dropped as a separate column.
-// Related Record and Site are still searchable via the search box even though
-// neither is a column.
 const activityColumns: ExcelColumn<DashboardActivity>[] = [
   {
     key: "dateTime",

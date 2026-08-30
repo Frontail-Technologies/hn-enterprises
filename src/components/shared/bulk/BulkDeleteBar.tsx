@@ -10,11 +10,6 @@ interface BulkDeleteBarProps {
   label?: string;
 }
 
-// Minimal sticky bulk-action bar for entities that only support one bulk
-// action (delete) - a smaller cousin of Customers'
-// features/customers/components/bulk/BulkActionToolbar.tsx, which needs a
-// dropdown-menu overflow because it has several bulk actions. With exactly
-// one action there's nothing to put behind an overflow menu.
 export function BulkDeleteBar({ selectedCount, onClear, onDelete, label = "Delete Selected" }: BulkDeleteBarProps) {
   if (selectedCount === 0) return null;
 

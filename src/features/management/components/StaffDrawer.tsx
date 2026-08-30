@@ -59,8 +59,6 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const [saveError, setSaveError] = useState("");
   const { data: projects = [] } = useProjectsQuery();
   const createStaff = useCreateStaff();
-  // This page only ever manages supervisors, so linking an existing login
-  // only offers accounts that are already Supervisor-role.
   const availableUsers = users.filter((user) => !staffedUserIds.has(user.id) && user.role === "Supervisor");
 
   function set<K extends keyof CreateStaffFormValues>(key: K, value: CreateStaffFormValues[K]) {

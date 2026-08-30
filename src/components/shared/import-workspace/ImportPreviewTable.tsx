@@ -27,11 +27,6 @@ function RowStatusBadge<TData>({ row }: { row: ImportRowDraft<TData> }) {
   return <Badge variant="outline" className="border-status-success/30 bg-status-success-bg text-status-success-fg">Ready</Badge>;
 }
 
-// One combined column instead of a separate Status + Messages pair - a
-// Ready row shows just its badge (no reserved, mostly-empty message space);
-// a rejected/warning row (or one that failed at commit) shows the badge with
-// its exact reason directly beneath it, so the problem is still obvious at
-// a glance without a dedicated column most rows leave blank.
 function RowImportStatus<TData>({ row }: { row: ImportRowDraft<TData> }) {
   const hasMessage = Boolean(row.commitError) || row.errors.length > 0 || row.warnings.length > 0;
 
@@ -60,20 +55,12 @@ export function ImportPreviewTable<TData>({
   onEdit: (tempId: string) => void;
   onToggleRemove: (tempId: string, removed: boolean) => void;
   removingTempId: string | null;
-  /** Fills the remaining height of a bounded flex ancestor instead of
-   * capping at a fixed viewport fraction - see ImportWorkspace, which is a
-   * viewport-bounded flex column on desktop. */
   fillHeight?: boolean;
 }) {
   const isFullViewActive = useFullViewActive();
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
 
-  // Reset to page 1 whenever the filtered row count changes (a new filter
-  // tab, an edit that changes a row's status) - adjusted during render
-  // rather than in an effect, the same pattern CustomerForm.tsx uses for
-  // "derived state that resets when a key prop changes" (React's own
-  // recommended alternative to a setState-in-effect cascade).
   const [lastRowCount, setLastRowCount] = useState(rows.length);
   if (rows.length !== lastRowCount) {
     setLastRowCount(rows.length);

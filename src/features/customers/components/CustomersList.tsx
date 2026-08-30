@@ -43,9 +43,6 @@ import { BulkDeleteDialog } from "./bulk/BulkDeleteDialog";
 import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
 
-// The one place a catalog key needs bespoke client-side filter-group logic
-// (splitting a free-text address into filterable tokens) rather than the
-// uniform `row.values[key]` lookup every other column uses.
 const CUSTOM_FILTER_GROUPS: Partial<Record<string, (row: CustomerMasterSheetRow) => string[]>> = {
   fullAddress: (row) => {
     const address = row.values.fullAddress || "";
@@ -62,11 +59,8 @@ const CUSTOM_FILTER_GROUPS: Partial<Record<string, (row: CustomerMasterSheetRow)
 };
 
 interface CustomersListProps {
-  /** Locks the list to one project's customers (Project Details → Customers tab, §5). Server-side filtered, never client-filtered from the full table. */
   projectId?: string;
-  /** Drops the standalone page chrome (PageHeader) when embedded inside another page's tab - the host page already has its own header. */
   embedded?: boolean;
-  /** Pre-applies an existing customer stat filter (e.g. "gi-bill-done") server-side - the Billing tab's KPI drill-down uses this. */
   statKey?: string;
 }
 
@@ -105,9 +99,6 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     setQuickActionDialogOpen(true);
   }
 
-  // The general multi-field editor: a specific one-line toast when exactly
-  // one field actually changed, otherwise the mutation hook's generic
-  // "N customer records updated." default.
   async function handleBulkEditSubmit(changes: CustomerBulkChanges, changeSummary: string[]) {
     const count = selection.selectedIds.size;
     const successMessage =
@@ -156,17 +147,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         getValue: (row) => row.values[column.key],
         getFilterGroups: CUSTOM_FILTER_GROUPS[column.key],
       }));
-    // Every row already belongs to the current project when the list is
-    // locked to one (§10) - the Project column would just repeat the same
-    // value on every row, so it's dropped here only (never on the
-    // standalone Customers page, where it's still the useful filter it always was).
     const scoped = projectId ? columns.filter((column) => column.key !== "projectName") : columns;
-    // Freeze the first 4 customer-data columns (desktop only - ExcelDataGrid
-    // disables column stickiness on mobile on its own) so the most
-    // identifying fields stay visible while scrolling right through the wide
-    // master sheet. Positional rather than by key: `resolvedColumns` is the
-    // user's own saved order (Customize Columns can reorder/hide), so "first
-    // 4" always tracks whatever actually renders first, not a fixed key set.
     return scoped.map((column, index) => (index < 4 ? { ...column, sticky: true } : column));
   }, [resolvedColumns, projectId]);
 
@@ -192,10 +173,6 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     void exportRowsToExcel("customers-selected.xlsx", masterSheetColumns, selectedRows);
   }
 
-  // Stable across renders (unlike an inline arrow) so ExcelDataGrid's
-  // per-row memoization actually holds - otherwise every row would see a
-  // "new" onRowClick prop and re-render on every selection toggle, even
-  // though only the toggled row's own checked state changed.
   const handleRowClick = useCallback(
     (row: CustomerMasterSheetRow) => {
       if (realCustomerIds.has(row.customerId)) {
@@ -205,15 +182,9 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     [realCustomerIds, router],
   );
 
-  // Full formatted Customer Register (backend template), scoped to whatever this list
-  // is showing (project / stat drill-down). The transient client-side search box is not
-  // applied - the register covers the whole scope.
   const downloadRegister = useDownloadCustomerRegister();
   const handleExportRegister = () => downloadRegister.mutate({ projectId, statKey });
 
-  // Project Details → Customers → Add Customer already knows which project
-  // it's for, so it's passed through instead of making the user pick the
-  // same project again on the form (§24).
   const newCustomerHref = projectId ? `/customers/new?projectId=${projectId}` : "/customers/new";
 
   const actions = (

@@ -93,8 +93,6 @@ const COMPLETION_LABEL: Record<SectionCompletionResult["status"], string> = {
   DONE: "Done",
 };
 
-// Section status is read straight from the backend `sectionCompletion` - never
-// recomputed on the client.
 function SectionCompletionActions({
   customerId,
   sectionKey,
@@ -185,10 +183,6 @@ function SectionStatusBadge({ result }: { result?: SectionCompletionResult }) {
   );
 }
 
-// One compact row in the Progress Milestones block: label (+ Completed
-// On/By once done) on the left, the existing status badge + Mark
-// Complete/Reopen action on the right - same completion plumbing every
-// other section already uses, just laid out as a row instead of a card.
 function ProgressMilestoneRow({
   label,
   customerId,
@@ -235,9 +229,6 @@ type CustomerApprovalRow = {
   status: string;
 };
 
-// Dynamic field groups are inserted between these two lists - after
-// Complaints, before Approvals / History - since group names (and how many
-// there are) come from live data, not a fixed set.
 const customerSectionLinksBeforeGroups = [
   { href: "#customer-details", label: "Customer Details" },
   { href: "#survey", label: "Survey" },

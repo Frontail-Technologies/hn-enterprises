@@ -9,16 +9,12 @@ import { cn } from "@/lib/utils";
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 interface MonthPickerProps {
-  // "yyyy-MM", "" = no month selected
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
 }
 
-// The shadcn-style counterpart to DatePicker for month-granularity filters - same
-// Popover + Button shell, month/year grid instead of a day grid since a specific day
-// is meaningless for these filters.
 export function MonthPicker({ value, onChange, placeholder = "All time", className }: MonthPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedYear, selectedMonth] = value ? value.split("-").map(Number) : [undefined, undefined];

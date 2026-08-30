@@ -45,9 +45,6 @@ export function UsersRolesPage() {
     clear();
   }
 
-  // Mirrors the page's own filtering exactly (§ data useMemo below): the
-  // hardcoded Super Admin/Supervisor scope plus whatever the filter dropdowns
-  // currently narrow to, translated to the backend's role/status casing.
   function handleExportRegister() {
     downloadRegister.mutate({
       role: filters.role === "all" ? undefined : ROLE_TO_BACKEND[filters.role as UserRole],

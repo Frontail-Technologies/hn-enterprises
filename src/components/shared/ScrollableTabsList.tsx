@@ -5,17 +5,6 @@ import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { TabsList } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-/**
- * Wraps a `line`-variant TabsList that has too many tabs to fit on one row:
- * horizontal scroll with no visible scrollbar at all (native hidden, no
- * custom track/thumb - navigation is chevrons + wheel/trackpad/touch only),
- * chevrons that appear only when there's overflow (disabled rather than
- * removed at either end, so nothing shifts layout), the active tab
- * auto-scrolled into view, and a subtle edge fade hinting at more content.
- * Tabs/TabsTrigger/TabsContent and whatever drives the active value
- * (controlled or uncontrolled) are untouched - this only repositions where
- * TabsList's own overflow lives.
- */
 export function ScrollableTabsList({ children, className }: { children: ReactNode; className?: string }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -44,10 +33,6 @@ export function ScrollableTabsList({ children, className }: { children: ReactNod
     };
   }, [updateScrollState]);
 
-  // Whichever tab gets `data-active` (base-ui's line-variant styling already
-  // keys off this) scrolls into view - covers clicks, keyboard tab-list
-  // navigation, and a controlled Tabs' `value` changing from elsewhere, all
-  // without this wrapper needing to know how the active tab is driven.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;

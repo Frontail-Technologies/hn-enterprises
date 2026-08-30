@@ -21,15 +21,8 @@ interface BulkRemarkDialogProps {
   onSubmit: (note: string) => void;
 }
 
-// customerNotes is an append-only history (confirmed via audit: no update
-// path exists), so this always ADDS a new note row per selected customer -
-// there's no "overwrite" mode because nothing in the existing remarks system
-// supports overwriting.
 export function BulkRemarkDialog({ open, onOpenChange, selectedCount, isSubmitting, onSubmit }: BulkRemarkDialogProps) {
   const [note, setNote] = useState("");
-  // Reset the draft note whenever the dialog transitions to open, following
-  // React's "adjust state during render" pattern instead of an effect (a
-  // synchronous setState-in-effect would trigger an avoidable extra render).
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);

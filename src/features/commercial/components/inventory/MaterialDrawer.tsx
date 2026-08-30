@@ -37,9 +37,6 @@ import type {
 } from "../../types/material.types";
 import { ImageProofField } from "../shared/ImageProofField";
 
-// Which types need an explicit source (they can move either PBG or purchased stock);
-// everywhere else source is implied by the transaction type itself (see backend
-// materials.service.ts's IMPLIED_SOURCE) and asking again would be redundant.
 const SOURCE_REQUIRED_TYPES: MaterialTransactionType[] = ["issue", "return", "adjustment"];
 
 const TYPE_LABELS: Record<MaterialTransactionType, string> = {
@@ -114,12 +111,7 @@ export function MaterialDrawer({
   triggerLabel?: string;
   icon?: ReactNode;
   iconOnly?: boolean;
-  // Lets a caller demote this to a secondary/outline action when several
-  // MaterialDrawers sit side by side (§3 - only one should read as primary).
   variant?: "default" | "outline";
-  // Renders no trigger of its own - open/onOpenChange are driven externally
-  // (e.g. a dropdown menu item), so the same form can be launched without a
-  // second visible button competing for attention.
   hideTrigger?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

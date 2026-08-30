@@ -35,8 +35,6 @@ export function BillingPendingSummaryDetail({
   projectId: string;
   period: DashboardMetricPeriod;
 }) {
-  // Bills are project-linked - filtered server-side by project. Bills have no
-  // customer link, so there's no city to filter/enrich them by.
   const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });

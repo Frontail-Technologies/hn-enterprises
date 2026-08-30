@@ -5,11 +5,6 @@ import type { ColumnPreferenceEntry } from "../services/customers.service";
 
 const customerColumnsKey = ["customers", "columns"] as const;
 
-// Resolved server-side (catalog + saved preference, or catalog defaults for a
-// new user) - the Web table and the Excel export both consume this same
-// response, so a save here is instantly reflected in both (§ shared column
-// config). staleTime 0 so opening the Customize dialog always shows the
-// latest saved state, not a stale cache from before a save/reset.
 export function useCustomerColumnsQuery() {
   return useQuery({
     queryKey: customerColumnsKey,

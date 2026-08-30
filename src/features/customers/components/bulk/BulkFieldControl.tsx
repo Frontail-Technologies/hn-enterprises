@@ -12,20 +12,12 @@ import {
 import type { CustomerBulkFieldKey } from "../../types/customer-bulk.types";
 import type { useBulkFieldOptions } from "../../hooks/useBulkFieldOptions";
 
-// Sentinel used by the nullable-field pickers (Supervisor/Plumber/Site) to
-// mean "explicitly clear this field" - distinct from "no selection made yet".
 export const BULK_CLEAR_VALUE = "__clear__";
 export const BULK_YES_VALUE = "yes";
 export const BULK_NO_VALUE = "no";
 
 type BulkFieldOptions = ReturnType<typeof useBulkFieldOptions>;
 
-// The list of fields whose value is a Yes/No toggle over a persisted
-// boolean column (all live in billingCompletion). Rendered as an explicit
-// two-option select, never a bare checkbox - Bulk Edit already uses a
-// checkbox to mean "include this field in the update", so a second
-// checkbox on the value itself would be ambiguous (unchecked = No, or
-// unchecked = don't touch it?).
 const BOOLEAN_FIELDS = new Set<CustomerBulkFieldKey>([
   "jmrDone",
   "jmrSubmittedInPbg",
@@ -40,22 +32,14 @@ export function isBulkBooleanField(field: CustomerBulkFieldKey) {
 
 interface BulkFieldControlProps {
   field: CustomerBulkFieldKey;
-  /** For most fields, the raw value; for boolean fields, BULK_YES_VALUE/BULK_NO_VALUE. */
   value: string;
   onChange: (value: string) => void;
   fieldOptions: BulkFieldOptions;
-  /** Only meaningful for `siteId` - scopes the site list and blocks selection until a project is chosen. */
   relatedProjectId?: string;
 }
 
-// Renders the correct input for one bulk-editable field. Used by BOTH the
-// general BulkEditDialog (one row per checked field) and the compact
-// BulkQuickFieldDialog (a single field) so there is exactly one place that
-// knows "how do you edit X" for every bulk-editable field.
 export function BulkFieldControl({ field, value, onChange, fieldOptions, relatedProjectId }: BulkFieldControlProps) {
   const { projects, plumbers, supervisors, schemes, houseTypes } = fieldOptions;
-  // Always called (hooks can't be conditional) - a no-op fetch unless this
-  // instance is actually rendering the Site control for a chosen project.
   const { data: sites = [] } = useProjectSitesQuery(field === "siteId" ? relatedProjectId ?? "" : "");
 
   switch (field) {

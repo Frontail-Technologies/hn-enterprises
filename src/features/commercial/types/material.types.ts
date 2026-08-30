@@ -77,8 +77,6 @@ export type StockBalance = {
   balance: number;
 };
 
-// Fields the Correct workflow may change; everything else falls back to the original
-// row's value server-side. Mirrors backend CorrectMaterialTransactionBody.
 export type CorrectMaterialTransactionInput = {
   correctionReason: string;
   quantity?: string;

@@ -53,12 +53,8 @@ import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
 import { MaterialCategoryDrawer } from "./inventory/MaterialCategoryDrawer";
 import { TransactionRowActions } from "./inventory/TransactionRowActions";
 
-// Plumber is only a genuinely useful filter on tabs with a plumber dimension (§2).
 const PLUMBER_FILTER_TABS = new Set<InventoryTab>(["storeIssue", "plumberBalance", "plumberConsumption"]);
 
-// Month/Date has no meaning for a point-in-time balance: Stock Sheet (§1, prior
-// pass) and Plumber Balance (§5) are both running balances, not period totals - a
-// date range there would compute "movement within that range," not the balance.
 const MONTH_FILTER_EXCLUDED_TABS = new Set<InventoryTab>(["stock", "plumberBalance"]);
 
 const TAB_TO_TRANSACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = {
@@ -70,9 +66,6 @@ const TAB_TO_TRANSACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionT
   plumberConsumption: "consumption",
 };
 
-// The header's primary write action follows the active tab (§2) - Stock Sheet gets
-// "Add Material" (handled separately, it's not a transaction) and Total Issue is a
-// read-only aggregate with no write action at all, so both are absent here.
 const TAB_ACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = {
   purchase: "purchase",
   pbgIssue: "pbg_issue",
@@ -107,8 +100,6 @@ export function InventoryPage() {
   const showPlumberFilter = PLUMBER_FILTER_TABS.has(activeTab);
   const effectivePlumberId = showPlumberFilter ? filters.plumberId || undefined : undefined;
   const { from, to } = useMemo(() => inventoryFiltersToDateRange(filters.month), [filters.month]);
-  // These flow straight to backend query params (§2) - every tab queries the full
-  // dataset filtered server-side, never the rows already loaded into the browser.
   const sourceFilter = filters.source || undefined;
   const projectFilter = filters.projectId || undefined;
 
@@ -135,8 +126,6 @@ export function InventoryPage() {
     projectId: projectFilter,
     plumberId: effectivePlumberId,
   });
-  // Only queried once a Project or Source filter narrows the view - "All Projects +
-  // All Sources" reads materials.currentBalance directly instead (§3).
   const stockFiltered = Boolean(sourceFilter || projectFilter);
   const { data: stockBalances = [] } = useStockBalancesQuery(
     { source: sourceFilter, projectId: projectFilter },
@@ -147,9 +136,6 @@ export function InventoryPage() {
     [stockBalances],
   );
 
-  // Fetched unconditionally (not gated to the active tab) so every tab's
-  // count badge is right from the first render instead of only appearing
-  // once that tab has been clicked.
   const { data: purchaseTransactions = [], isLoading: purchaseLoading } = useMaterialTransactionsQuery({
     type: "purchase",
     source: sourceFilter,
@@ -231,10 +217,6 @@ export function InventoryPage() {
     return Array.from(grouped.values()).sort((a, b) => b.totalIssued - a.totalIssued);
   }, [issueTransactions, materialNameById]);
 
-  // Consumption Log means "actual customer/site consumption" (§11) - both PBG-sourced
-  // (recorded via the separate `pbg_consumption` type/tab) and purchase-sourced
-  // (`consumption`) transactions are real consumption events, so the log shows both;
-  // the PBG Consumption tab stays its own filtered view of just the PBG-attributed half.
   const consumptionLogRows = useMemo(
     () =>
       [...consumptionTransactions, ...pbgConsumptionTransactions].sort((a, b) =>
@@ -247,8 +229,6 @@ export function InventoryPage() {
     () =>
       plumberBalances.map((row) => ({
         ...row,
-        // A plumber can hold balances of the same material split by source and
-        // project (§1) - plumberId+materialId alone collides across those rows.
         id: `${row.plumberId}-${row.materialId}-${row.source || "unspecified"}-${row.projectId || "none"}`,
         plumberName: plumberNameById.get(row.plumberId) ?? "Unknown plumber",
         materialName: materialNameById.get(row.materialId)?.name ?? "Unknown material",
@@ -283,10 +263,6 @@ export function InventoryPage() {
       key: "currentBalance",
       label: stockFiltered ? "Balance (Filtered)" : "Current Balance",
       width: 160,
-      // "All Projects + All Sources" reads materials.currentBalance (the authoritative
-      // global store balance); a Project/Source filter switches to the derived balance
-      // from material_transactions instead (§3) - Material Master itself never gains
-      // project/source columns.
       getValue: (row) => (stockFiltered ? stockBalanceByMaterialId.get(row.id) ?? 0 : row.currentBalance),
     },
     { key: "reorderLevel", label: "Reorder Level", width: 140, getValue: (row) => row.reorderLevel },
@@ -294,10 +270,6 @@ export function InventoryPage() {
       key: "status",
       label: "Status",
       width: 140,
-      // Derived from whichever balance the Current Balance column above actually
-      // shows - unfiltered, that's the material's own precomputed global status;
-      // filtered, Status must be recomputed against the filtered balance, or it
-      // silently claims stock is low/out based on a number the reader can't see.
       getValue: (row) => (stockFiltered ? computeStockStatus(stockBalanceByMaterialId.get(row.id) ?? 0, row.reorderLevel) : row.status),
       render: (row) => (
         <StatusBadge status={stockFiltered ? computeStockStatus(stockBalanceByMaterialId.get(row.id) ?? 0, row.reorderLevel) : row.status} />
@@ -445,10 +417,6 @@ export function InventoryPage() {
     },
   ];
 
-  // Every export downloads the complete matching backend dataset for the active
-  // tab's current filters (§2) - never the rows currently loaded/paginated in the
-  // grid. Plumber Balance deliberately never receives from/to (§5) - it's a running
-  // balance, not a period total.
   function handleExport() {
     if (activeTab === "stock") {
       void downloadStockSheet.mutateAsync({ projectId: projectFilter, source: sourceFilter });

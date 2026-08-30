@@ -55,7 +55,6 @@ export function useSetSectionCompletion(id: string, sectionLabel: string) {
     onSuccess: (updated: Customer, { completed }) => {
       queryClient.setQueryData(customerKey(id), updated);
       queryClient.invalidateQueries({ queryKey: customersKey });
-      // GI/section completion feeds the dashboard completion stats.
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       toast.success(completed ? `${sectionLabel} marked complete.` : `${sectionLabel} reopened.`);
     },
@@ -75,8 +74,6 @@ export function useDeleteCustomer() {
   });
 }
 
-// Only fetched while the delete dialog is open - opening the dialog is what
-// triggers the check, matching the Projects delete-impact pattern.
 export function useCustomerDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...customerKey(id), "delete-impact"],

@@ -104,8 +104,6 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Overrides the raw UUID the global breadcrumb would otherwise show for
-  // this dynamic route segment - no second, duplicate breadcrumb needed here.
   useBreadcrumbLabel(project?.name);
 
   const rawSection = searchParams.get("section");
@@ -114,8 +112,6 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   function setSection(next: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", next);
-    // A tab switch is a real navigation event here (not incidental state),
-    // so it's pushed (not replaced) - back/forward moves between sections (§23).
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -205,9 +201,6 @@ function navigateToCustomersStatKey(router: ReturnType<typeof useRouter>, pathna
   router.push(`${pathname}?${params.toString()}`, { scroll: false });
 }
 
-// One consistent header pattern for every tab's content (§26) - title +
-// optional subtitle on the left, primary action top-right - so no section
-// invents its own spacing.
 function ProjectTabHeader({
   title,
   subtitle,
@@ -228,9 +221,6 @@ function ProjectTabHeader({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Overview
-// ---------------------------------------------------------------------------
 
 function ProjectOverviewTab({ project }: { project: Project }) {
   const { data: summary, isLoading } = useProjectSummaryQuery(project.id);
@@ -358,9 +348,6 @@ function ProjectOverviewTab({ project }: { project: Project }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Customers
-// ---------------------------------------------------------------------------
 
 function ProjectCustomersTab({ projectId, onClearStatKey }: { projectId: string; onClearStatKey: () => void }) {
   const searchParams = useSearchParams();
@@ -384,9 +371,6 @@ function ProjectCustomersTab({ projectId, onClearStatKey }: { projectId: string;
   );
 }
 
-// ---------------------------------------------------------------------------
-// Execution
-// ---------------------------------------------------------------------------
 
 function ProjectExecutionTab({ projectId }: { projectId: string }) {
   const { data: dprRecords = [], isLoading: dprLoading } = useDprRecordsQuery({ projectId });
@@ -462,9 +446,6 @@ function ProjectExecutionTab({ projectId }: { projectId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Billing (Phase 1 - read-only existing indicators, no project-level billing yet)
-// ---------------------------------------------------------------------------
 
 function ProjectBillingTab({
   projectId,
@@ -476,7 +457,6 @@ function ProjectBillingTab({
   onDrillDown: (statKey: string) => void;
 }) {
   const { data: summary, isLoading: summaryLoading } = useProjectSummaryQuery(projectId);
-  // Bills are project-linked - filtered server-side by project.
   const { data: bills = [], isLoading: billsLoading } = useBillsQuery({ projectId });
 
   const billColumns: ColumnDef<(typeof bills)[number]>[] = [
@@ -553,9 +533,6 @@ function ProjectBillingTab({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Expenses
-// ---------------------------------------------------------------------------
 
 function ProjectExpensesTab({ projectId, projectName }: { projectId: string; projectName: string }) {
   const { data: payments = [], isLoading } = usePaymentsQuery({ projectId });
@@ -629,9 +606,6 @@ function ProjectExpensesTab({ projectId, projectName }: { projectId: string; pro
   );
 }
 
-// ---------------------------------------------------------------------------
-// Materials
-// ---------------------------------------------------------------------------
 
 const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   purchase: "Purchase",
@@ -731,9 +705,6 @@ function ProjectMaterialsTab({ projectId }: { projectId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Team
-// ---------------------------------------------------------------------------
 
 type TeamFilter = "all" | "supervisors" | "plumbers" | "staff";
 
@@ -744,8 +715,6 @@ const TEAM_EMPTY_MESSAGES: Record<TeamFilter, string> = {
   staff: "No staff members are assigned to this project.",
 };
 
-// Stable empty-array references so the Team tab's useMemo doesn't see a new
-// "empty list" identity on every render while the query is still loading.
 const EMPTY_SUPERVISORS: ProjectTeam["supervisors"] = [];
 const EMPTY_PLUMBERS: ProjectTeam["plumbers"] = [];
 const EMPTY_STAFF: ProjectTeam["staff"] = [];
@@ -852,9 +821,6 @@ type TeamRow = {
   lastActivity: string;
 };
 
-// ---------------------------------------------------------------------------
-// Documents (reused as-is from the pre-existing implementation)
-// ---------------------------------------------------------------------------
 
 function ProjectDocumentsTab({ projectId }: { projectId: string }) {
   const { data: documents = [], isLoading } = useProjectDocumentsQuery(projectId);
@@ -1092,9 +1058,6 @@ function DocumentDialog({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Activity
-// ---------------------------------------------------------------------------
 
 function ProjectActivityTab({ projectId }: { projectId: string }) {
   const { data: logs = [], isLoading } = useAuditLogsQuery({ projectId });
@@ -1124,9 +1087,6 @@ function ProjectActivityTab({ projectId }: { projectId: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
 
 function InfoGrid({ items }: { items: (string | undefined)[][] }) {
   return <KeyValueGrid items={items.map(([label, value]) => ({ label: label ?? "", value }))} columns={2} />;

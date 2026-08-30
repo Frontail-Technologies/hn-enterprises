@@ -67,7 +67,6 @@ export function useDeleteMaterial() {
   });
 }
 
-// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
 export function useMaterialDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...materialKey(id), "delete-impact"],
@@ -119,8 +118,6 @@ export function usePlumberBalancesQuery(
   });
 }
 
-// Only used when a Project or Source filter narrows the Stock Sheet (§3) - the "All
-// Projects + All Sources" view reads materials.currentBalance directly instead.
 export function useStockBalancesQuery(
   params: { materialId?: string; source?: MaterialSource; projectId?: string } = {},
   enabled = true,

@@ -32,9 +32,6 @@ export function SectionAnchorTabs({
     return () => window.removeEventListener("hashchange", updateFromHash);
   }, []);
 
-  // Keep the active tab in view within the horizontally-scrolling nav - the
-  // page can jump to an anchor (via hash, back/forward, or a click) faster
-  // than the user can manually scroll the tab bar to follow it.
   useEffect(() => {
     tabRefs.current[activeHref]?.scrollIntoView({
       behavior: "smooth",

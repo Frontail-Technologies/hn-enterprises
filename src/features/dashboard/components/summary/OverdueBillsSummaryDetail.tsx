@@ -27,8 +27,6 @@ const columns: ExcelColumn<OverdueBillRow>[] = [
 ];
 
 export function OverdueBillsSummaryDetail({ projectId }: { projectId: string }) {
-  // Bills are project-linked - filtered server-side by project. Bills have no
-  // customer link, so there's no city to filter them by.
   const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });

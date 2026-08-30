@@ -15,10 +15,6 @@ export interface ColumnDef<T> {
   render?: (row: T) => React.ReactNode
 }
 
-// Opt-in row-selection support (bulk operations toolbar) - mirrors
-// ExcelDataGrid's `selection` prop so both shared table primitives offer the
-// same bulk-select contract. A caller that doesn't pass `selection` gets no
-// checkbox column and no behavior change.
 export interface DataTableSelection<T extends { id: string }> {
   selectedIds: ReadonlySet<string>
   onToggleRow: (id: string) => void
@@ -42,12 +38,6 @@ interface DataTableProps<T extends { id: string }> {
   stickyHeader?: boolean
   stickyLastColumn?: boolean
   selection?: DataTableSelection<T>
-  /**
-   * Fills the remaining height of a bounded flex ancestor (e.g.
-   * PaginatedDataTable's own Full View mode) instead of relying on the page/
-   * document to scroll - adds a bounded vertical scroll container so
-   * `stickyHeader` sticks within it rather than the whole page.
-   */
   fillHeight?: boolean
 }
 
@@ -77,21 +67,9 @@ export function DataTable<T extends { id: string }>({
     Boolean(selection) && !allOnPageSelected && selectableIds.some((id) => selection!.selectedIds.has(id))
 
   return (
-    // `overflow-hidden` here only clips to the rounded corners - the actual
-    // horizontal scroll container is the one `<Table>` (ui/table.tsx)
-    // already provides internally. This div used to ALSO set
-    // `overflow-x-auto`, nesting two independent scroll containers around
-    // the same content; with both at effectively 100% width, sub-pixel
-    // rounding could make the outer one register 1px of "overflow" and show
-    // a scrollbar even when there was nothing real to scroll (the empty
-    // Store Issue table case) - a single scroll container can't do that.
     <div
       className={cn(
         'w-full bg-card [&_tbody_svg]:text-primary',
-        // `fillHeight` is only ever true when a caller (PaginatedDataTable's
-        // Full View) is already providing the full-viewport outer surface -
-        // a second nested rounded/bordered card on top of that just eats
-        // space, so it goes edge-to-edge instead of stacking another shell.
         fillHeight ? 'flex h-full min-h-0 flex-1 flex-col' : 'overflow-hidden rounded-card border border-border',
         containerClassName,
       )}

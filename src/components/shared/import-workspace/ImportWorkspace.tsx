@@ -16,27 +16,8 @@ import type { ImportWorkspaceConfig } from "./types";
 
 const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".csv"];
 
-// Same viewport-chrome anchor PageShell's own `fillHeight` mode uses (see
-// that component for the full derivation: <main>'s own padding + the
-// breadcrumb block, at the md: breakpoint and up). This workspace builds its
-// own compact header instead of going through PageShell/PageHeader, but it
-// still renders inside that same <main>, so the offset is identical - one
-// deliberate viewport anchor, everything below it sizes via flexbox.
 const VIEWPORT_HEIGHT_CLASS = "md:flex md:h-[calc(100dvh-4.5rem)] md:min-h-0 md:flex-col";
 
-/**
- * The one reusable import UI shell every module page renders: upload ->
- * editable preview (see/edit/remove/revalidate rejected rows in place,
- * never re-upload) -> commit. All module-specific behavior comes from
- * `config` - this component owns no business logic of its own.
- *
- * Deliberately compact: one back affordance (not a breadcrumb + a button),
- * the filename as small secondary text under the title (not its own row),
- * the filter tabs as the single row/ready/rejected summary (not a second
- * stats row), and a merged status+message table column (not a permanently
- * reserved, mostly-empty Messages column). See each section's comments for
- * the specific duplication it replaces.
- */
 export function ImportWorkspace<TData>({
   config,
   backHref,
@@ -192,12 +173,6 @@ export function ImportWorkspace<TData>({
           </section>
         </div>
       ) : (
-        // Full View portals this same fragment (same useImportWorkspace
-        // instance, so draft edits/removed rows/rejected state carry over
-        // untouched) into an application-level surface instead of just the
-        // inline page. `contents` makes the wrapper invisible to layout
-        // (preserving the outer flex column's own gap-3 rhythm) when not
-        // active; it becomes the actual flex-fill container once it does.
         <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
           <div className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
             {workspace.commitResult ? (

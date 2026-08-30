@@ -62,9 +62,6 @@ function customerLabel(name: string, trBpNo: string) {
   return trBpNo ? `${trBpNo} — ${name}` : name || "—";
 }
 
-// Done/Partial/Pending aren't part of the shared StatusBadge palette (they're
-// derived, not a real record status), so this is a small local pill using the
-// same visual language instead of stretching StatusBadge's status list.
 function OverviewStatusPill({ status }: { status: "Done" | "Partial" | "Pending" }) {
   const classes =
     status === "Done"

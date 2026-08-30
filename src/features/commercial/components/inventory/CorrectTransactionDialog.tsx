@@ -74,8 +74,6 @@ function prefill(transaction: MaterialTransaction): CorrectMaterialTransactionIn
   };
 }
 
-// Prefills from the original row and requires a reason (§7) - the original transaction
-// is never mutated: Save atomically reverses its effect and inserts this replacement.
 export function CorrectTransactionDialog({ transaction, materialName }: { transaction: MaterialTransaction; materialName: string }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<CorrectMaterialTransactionInput>(() => prefill(transaction));

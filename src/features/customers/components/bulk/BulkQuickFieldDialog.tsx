@@ -28,12 +28,6 @@ interface BulkQuickFieldDialogProps {
   onSubmit: (changes: CustomerBulkChanges, changeSummary: string[]) => void;
 }
 
-// The compact single-purpose dialog behind every Assign▾/Update▾ menu item
-// (§ Assign Menu / § Update Menu) - one field (or the Project+Site pair),
-// no field-selection checkboxes needed since there's nothing else to
-// choose. Still builds its payload through the same bulkFieldToChange
-// helper and submits through the same bulk update mutation as the general
-// BulkEditDialog - no separate backend logic.
 export function BulkQuickFieldDialog({
   open,
   onOpenChange,

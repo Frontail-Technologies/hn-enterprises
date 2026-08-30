@@ -23,10 +23,6 @@ export function ImportRowEditorModal<TData>({
 }) {
   const [draft, setDraft] = useState<TData | null>(row ? row.data : null);
 
-  // Row identity (tempId) changes each time a different row is opened for
-  // editing - reseed the local draft from that row's current data then.
-  // Adjusted during render (React's recommended alternative to a
-  // setState-in-effect cascade) rather than in a useEffect.
   const [lastTempId, setLastTempId] = useState<string | null>(row?.tempId ?? null);
   if ((row?.tempId ?? null) !== lastTempId) {
     setLastTempId(row?.tempId ?? null);

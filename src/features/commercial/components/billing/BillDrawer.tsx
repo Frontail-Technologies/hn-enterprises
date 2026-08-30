@@ -69,7 +69,6 @@ export function BillDrawer({
   triggerLabel: string;
   icon?: ReactNode;
   iconOnly?: boolean;
-  /** Locks the bill to a project when created from inside a project's Billing tab. */
   defaultProjectId?: string;
   defaultProjectName?: string;
 }) {

@@ -3,24 +3,12 @@ import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
   title: string
-  /**
-   * No longer rendered - sub-headings were removed from the app header
-   * (and, to match, from dialogs and sheets). Kept optional in the prop
-   * type only so existing callers that still pass one don't need editing.
-   */
   subtitle?: string
-  /** Optional small line above the title (e.g. breadcrumb-style context). */
   eyebrow?: ReactNode
-  /** Page-specific actions, right-aligned; wraps on narrow widths. */
   actions?: ReactNode
   className?: string
 }
 
-/**
- * The single canonical page header for the admin dashboard.
- * Spec: title 20px/semibold, right-aligned actions.
- * `PageShell` renders this internally so both share one implementation.
- */
 export function PageHeader({ title, eyebrow, actions, className }: PageHeaderProps) {
   return (
     <div

@@ -28,10 +28,6 @@ type Lookups = {
   projectName?: string;
 };
 
-// View/Correct/Reverse (§7): the ledger is append-only, so this is the only way to
-// change a stock-impacting transaction after the fact. Reverse negates the original's
-// effect with a linked row; Correct does that and inserts a replacement. Neither ever
-// mutates or deletes the original row.
 export function TransactionRowActions({ transaction, lookups }: { transaction: MaterialTransaction; lookups: Lookups }) {
   const isLinkRow = transaction.linkType !== "";
   const isSuperseded = transaction.isReversed || transaction.isCorrected;

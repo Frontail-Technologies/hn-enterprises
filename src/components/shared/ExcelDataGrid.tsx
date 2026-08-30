@@ -33,29 +33,12 @@ export type ExcelColumn<T extends { id: string }> = {
   label: string;
   width?: number;
   sticky?: boolean;
-  /**
-   * Lets this column absorb leftover table width instead of every column
-   * rendering at exactly its configured `width` - for descriptive/free-text
-   * columns (Item Name, Category, Address...) on tables with few columns,
-   * where a fixed-width-only table would leave blank space on wide screens.
-   * `width` still applies as this column's minimum (its floor once the
-   * container is too narrow to show every column at its natural size, and
-   * the value sticky-offset math uses for any column after it). Numeric/
-   * status/unit/action columns should stay non-grow so they don't stretch
-   * to fill space pointlessly - see `docs` note in ExcelTable for the sticky
-   * interaction rule.
-   */
   grow?: boolean;
   getValue: (row: T) => string | number | boolean | null | undefined;
   getFilterGroups?: (row: T) => string[];
   render?: (row: T) => ReactNode;
 };
 
-// Opt-in row-selection support (bulk operations toolbar) - a caller passes
-// `selection` to get a leading checkbox column; grids that don't pass it are
-// completely unaffected (no column added, no behavior change). Kept as a
-// bundled object rather than loose props so it reads as one clearly-optional
-// feature rather than four easy-to-half-wire props.
 export interface ExcelDataGridSelection<T extends { id: string }> {
   selectedIds: ReadonlySet<string>;
   onToggleRow: (id: string) => void;
@@ -69,33 +52,11 @@ interface ExcelDataGridProps<T extends { id: string }> {
   emptyTitle?: string;
   isLoading?: boolean;
   maxHeightClassName?: string;
-  /**
-   * Fills whatever height its flex ancestor gives it instead of capping at
-   * `maxHeightClassName` - for pages that make the table the last flex-child
-   * of a viewport-bounded column (see PageShell's own `fillHeight`), so the
-   * table grows to use available space rather than a fixed vh guess. Takes
-   * priority over `maxHeightClassName` when set.
-   */
   fillHeight?: boolean;
-  /**
-   * Adds a compact expand/collapse toggle to the grid's own top bar. When
-   * active, the grid (this same instance - no remount, no refetch) portals
-   * into an application-level Full View surface covering most of the
-   * viewport, escapable via the toggle or Escape. See FullViewPortal.
-   */
   enableFullView?: boolean;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
   selection?: ExcelDataGridSelection<T>;
-  /**
-   * Fired whenever the filtered/paginated id sets change (filtering,
-   * pagination, or the underlying rows themselves) so a caller driving bulk
-   * selection can know "every id matching the current filters" (for a
-   * "select all N matching" banner) and "ids on the current page" (for the
-   * header checkbox's tri-state), plus a signature that changes only when
-   * the active filters change (not on pagination) for the "clear selection
-   * when filters change" rule.
-   */
   onVisibleRowsChange?: (context: {
     filteredIds: string[];
     pageIds: string[];
@@ -121,18 +82,8 @@ export function ExcelDataGrid<T extends { id: string }>({
   onVisibleRowsChange,
 }: ExcelDataGridProps<T>) {
   const [fullView, setFullView] = useState(false);
-  // True whether this grid owns the active Full View itself OR merely
-  // inherits one from an ancestor - either way, the grid should drop its own
-  // card border/rounding rather than show a redundant nested shell inside
-  // the outer full-view surface. Hook called
-  // unconditionally first, then combined - `fullView || useFullViewActive()`
-  // would skip the hook call whenever `fullView` is already true, which
-  // breaks the rules of hooks.
   const inheritedFullView = useFullViewActive();
   const isFullViewActive = fullView || inheritedFullView;
-  // Full View always behaves like fillHeight (it's meant to consume almost
-  // the entire viewport) regardless of what the caller passed for normal
-  // (non-full-view) sizing.
   const effectiveFillHeight = fillHeight || isFullViewActive;
 
   const [filters, setFilters] = useState<ActiveFilters>({});
@@ -140,8 +91,6 @@ export function ExcelDataGrid<T extends { id: string }>({
   const pageSize = 100;
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  // Pinned/sticky columns eat a large share of the viewport on small screens, leaving little
-  // room for the rest of the table, so columns aren't fixed there - the whole table just scrolls.
   const isMobile = useIsMobile();
   const stickyOffsets = useMemo(() => {
     if (isMobile) return columns.map(() => undefined);
@@ -184,11 +133,6 @@ export function ExcelDataGrid<T extends { id: string }>({
     );
   }, [columns, filters, rows]);
 
-  // Reset to page 1 whenever the active filters change - adjusted during
-  // render (React's recommended alternative to a setState-in-effect
-  // cascade) rather than in a useEffect. `filters` gets a new object
-  // reference exactly when a column filter is applied/cleared, so reference
-  // equality is the right check here.
   const [lastFilters, setLastFilters] = useState(filters);
   if (filters !== lastFilters) {
     setLastFilters(filters);
@@ -201,8 +145,6 @@ export function ExcelDataGrid<T extends { id: string }>({
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
 
-  // Sorted so the signature only changes when the *set* of active filter
-  // values changes, not key insertion order.
   const filterSignature = useMemo(() => {
     const entries = Object.entries(filters)
       .filter(([, values]) => values.length > 0)
@@ -211,13 +153,6 @@ export function ExcelDataGrid<T extends { id: string }>({
     return JSON.stringify(entries);
   }, [filters]);
 
-  // filteredRows/paginatedRows are recomputed (new array reference) whenever
-  // `columns` or `rows` change reference upstream, even when the actual set
-  // of visible ids is unchanged - calling onVisibleRowsChange on every one of
-  // those recomputes let a parent's setState-on-change turn into a render
-  // loop (the parent re-renders -> passes a new `columns`/`rows` reference ->
-  // this effect fires again). Comparing the actual id/signature VALUES before
-  // notifying breaks that loop regardless of how stable the caller's props are.
   const lastVisibleSignatureRef = useRef<string | null>(null);
   useEffect(() => {
     if (!onVisibleRowsChange) return;
@@ -234,11 +169,6 @@ export function ExcelDataGrid<T extends { id: string }>({
       <div
         className={cn(
           "flex flex-col bg-card",
-          // Full View already provides its own outer surface (see
-          // FullViewPortal) - a second nested rounded/bordered card inside
-          // it just eats space and reads as "not really full-screen", so
-          // this one goes edge-to-edge instead, whether it owns the active
-          // Full View itself or is nested inside an ancestor's.
           isFullViewActive ? "rounded-none" : "rounded-card border border-border",
           effectiveFillHeight && "h-full min-h-0 flex-1",
         )}
@@ -364,38 +294,6 @@ function ExcelTable<T extends { id: string }>({
   const someOnPageSelected =
     Boolean(selection) && !allOnPageSelected && pageIds.some((id) => selection!.selectedIds.has(id));
 
-  // table-layout:auto (the browser default) sizes columns by content, using
-  // `minWidth` as a floor only - a long value in any row silently blows a
-  // column past its configured `width`, which also desyncs it from the
-  // sticky-offset math below (that part already keys off `column.width`
-  // alone). `table-layout:fixed` + an explicit <colgroup> makes the
-  // configured width authoritative for both header and body cells in one
-  // place, so columns can no longer auto-expand from content and stay
-  // pixel-aligned with their own sticky offset.
-  //
-  // A plain fixed total table width (every column exactly its configured
-  // px) leaves blank space on a wide screen once density dropped column
-  // widths down - a 6-column table doesn't need to be as wide as a
-  // 20-column one. So the table itself is `width:100%` (fills the
-  // container) with `minWidth` pinned to the sum of every column's
-  // configured width (the floor at which horizontal scroll must take over).
-  // Non-grow columns keep an explicit <col width> - under table-layout:fixed
-  // that's authoritative and they can't be stretched. `grow` columns get NO
-  // <col width>, so the fixed-layout algorithm hands them 100% of whatever
-  // width is left over once every explicit column is accounted for (equally
-  // split, if more than one); their own `column.width` still applies via the
-  // cell-level `minWidth` below, so they still won't shrink under their own
-  // configured floor once the container gets tight enough to scroll.
-  //
-  // Sticky interaction: `stickyOffsets` (above) always keys off the
-  // *configured* `column.width`, never a column's actual rendered width, so
-  // a sticky column's own offset is unaffected by being `grow` too. But a
-  // LATER sticky column's offset is computed assuming every earlier column
-  // sits at its configured width - if an earlier sticky column is also
-  // `grow` (and therefore may render wider than that), a sticky column after
-  // it would visually drift from its computed offset. So `grow` is safe on
-  // any non-sticky column, and on a sticky column only when it's the last
-  // (or only) sticky column in the frozen block.
   const selectColumnWidth = selection ? SELECT_COLUMN_WIDTH : 0;
   const totalTableWidth = selectColumnWidth + columns.reduce((sum, column) => sum + (column.width ?? 140), 0);
 
@@ -505,17 +403,6 @@ function ExcelTable<T extends { id: string }>({
   );
 }
 
-// Selecting one row previously re-rendered every row in the table (up to
-// pageSize=100, each with as many <td> as visible columns) since selection
-// toggles a new Set reference passed straight down through ExcelTable's
-// inline `rows.map`. Splitting the row out into its own memoized component
-// means only the row(s) whose own props actually changed - isSelected,
-// rowClassName - re-render; everything else bails out on React.memo's
-// shallow prop comparison. That comparison only holds if every prop here is
-// referentially stable across a selection-only re-render: `row`/`columns`/
-// `stickyOffsets` already are (memoized upstream), and `onToggleRow` is the
-// bulk-selection hook's useCallback(..., []) - callers just need to keep
-// `onRowClick` similarly stable (see CustomersList.tsx).
 function ExcelTableRowImpl<T extends { id: string }>({
   row,
   columns,
@@ -724,7 +611,7 @@ function ColumnFilter<T extends { id: string }>({
   );
 }
 
-const EMPTY_VALUE = "—"; // em-dash, rendered muted
+const EMPTY_VALUE = "—";
 
 function formatCellValue(value: string | number | boolean | null | undefined) {
   if (typeof value === "boolean") return value ? "Yes" : "No";

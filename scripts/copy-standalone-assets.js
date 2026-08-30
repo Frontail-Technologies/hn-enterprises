@@ -1,8 +1,3 @@
-// `next build` with `output: "standalone"` produces a self-contained server
-// at .next/standalone/server.js, but deliberately leaves out `public/` and
-// `.next/static/` (they're meant to be served by a CDN/reverse proxy in a
-// typical deployment) - the Electron shell has neither, so this copies both
-// into the standalone output after every build.
 const fs = require("fs");
 const path = require("path");
 

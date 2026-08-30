@@ -60,17 +60,11 @@ interface BulkEditDialogProps {
   onSubmit: (changes: CustomerBulkChanges, changeSummary: string[]) => void;
 }
 
-// The general multi-field editor (§ Bulk Edit Is For Multi-Field Changes).
-// Every field renders collapsed to just its checkbox+label until checked -
-// the control only appears once the user opts into changing that field, so
-// the dialog stays short instead of showing 16 disabled dropdowns at once.
 export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting, onSubmit }: BulkEditDialogProps) {
   const fieldOptions = useBulkFieldOptions();
   const [checked, setChecked] = useState<Record<CustomerBulkFieldKey, boolean>>(() => emptyRecord(false));
   const [values, setValues] = useState<Record<CustomerBulkFieldKey, string>>(() => emptyRecord(""));
 
-  // Reset on open via React's "adjust state during render" pattern (see
-  // BulkRemarkDialog/BulkDeleteDialog) rather than an effect.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -80,8 +74,6 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
     }
   }
 
-  // Shared with BulkFieldControl's own siteId lookup - same query key, so
-  // react-query dedups this into a single cached fetch, not two.
   const { data: sites = [] } = useProjectSitesQuery(checked.projectId ? values.projectId : "");
 
   function toggle(field: CustomerBulkFieldKey) {
@@ -97,7 +89,6 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
     setValues((current) => ({
       ...current,
       [field]: value,
-      // Changing the project invalidates whatever site was already picked.
       ...(field === "projectId" ? { siteId: "" } : {}),
     }));
   }
@@ -105,8 +96,6 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
   const changeEntries: { field: CustomerBulkFieldKey; label: string; display: string }[] = [];
   const changes: CustomerBulkChanges = {};
   for (const field of EDITABLE_FIELDS) {
-    // Site shares the "Project / Site" group's single checkbox rather than
-    // having its own - it's enabled whenever that group is checked.
     const isEnabled = field === "siteId" ? checked.projectId : checked[field];
     if (!isEnabled) continue;
     const fragment = bulkFieldToChange(field, values[field]);

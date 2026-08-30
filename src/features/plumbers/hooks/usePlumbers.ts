@@ -49,7 +49,6 @@ export function useDeletePlumber() {
   });
 }
 
-// Only fetched while the delete dialog is open - matches the Projects delete-impact pattern.
 export function usePlumberDeleteImpactQuery(id: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [...plumberKey(id), "delete-impact"],

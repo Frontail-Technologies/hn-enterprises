@@ -24,18 +24,10 @@ export const BULK_FIELD_LABELS: Record<CustomerBulkFieldKey, string> = {
   conversionBillDone: "Conversion Bill Done",
 };
 
-// A field only "counts" (enables the submit button, appears in the live
-// summary, gets sent in the payload) once it actually has a value - a user
-// checking a box but never touching its control is a no-op, not an
-// accidental clear.
 export function isBulkFieldValueSet(rawValue: string) {
   return rawValue.trim().length > 0;
 }
 
-// Converts one field's raw control value into the properly-typed payload
-// fragment the bulk update API expects. Returns null when the field has no
-// value yet, so callers can skip it entirely (never send an empty/undefined
-// value for a field the user checked but didn't actually set).
 export function bulkFieldToChange(
   field: CustomerBulkFieldKey,
   rawValue: string,
@@ -74,10 +66,6 @@ export function bulkFieldToChange(
   }
 }
 
-// Human-readable version of a field's raw control value, for the live
-// "Changes" summary and for building specific success toasts. `siteName`
-// is passed in by the caller when formatting `siteId` (site lists are
-// fetched per-field inside BulkFieldControl, not centrally).
 export function bulkFieldDisplayValue(
   field: CustomerBulkFieldKey,
   rawValue: string,

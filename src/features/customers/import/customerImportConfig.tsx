@@ -20,11 +20,6 @@ import {
   type NormalizedImportRow,
 } from "../services/master-import.service";
 
-/** The flat, top-level fields the import editor exposes - deliberately not
- * the full nested CustomerForm (survey/GI measurements/isolation/etc.) since
- * every validation rule the import pipeline actually enforces today (required
- * project/site/customer name, required BP/TR, BP/TR duplicate, mobile format)
- * lives entirely on these fields - nothing nested is ever rejected. */
 export type CustomerImportRowData = Omit<NormalizedImportRow, "id" | "issues" | "warnings" | "isRemoved" | "rowNumber">;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest-destructure is the omit
@@ -49,11 +44,6 @@ function toDraft(row: NormalizedImportRow): ImportRowDraft<CustomerImportRowData
   };
 }
 
-// customerStatus is deliberately not shown as a preview column: it's almost
-// always blank on import (nothing in the validation pipeline rejects on it,
-// and the table already gets a merged Import Status column from the shared
-// ImportPreviewTable) - it stays fully editable in the row editor below,
-// just not given its own mostly-empty column here.
 const PREVIEW_COLUMNS: ImportPreviewColumn<CustomerImportRowData>[] = [
   { key: "projectName", label: "Project", width: 170, getValue: (row) => row.data.projectName },
   { key: "siteName", label: "Site / Area", width: 160, getValue: (row) => row.data.siteName },

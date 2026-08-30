@@ -30,9 +30,6 @@ import { cn } from "@/lib/utils";
 import { useCustomerColumnsQuery, useResetCustomerColumns, useSaveCustomerColumns } from "../hooks/useCustomerColumns";
 import type { ResolvedCustomerColumn } from "../services/customers.service";
 
-// Compact, single flat draggable list (not a side Sheet) - order + visibility
-// saved here is the SAME resolved config both the master sheet and the Excel
-// export read from (§ shared column config), so there is nothing else to sync.
 export function CustomizeColumnsDialog() {
   const [open, setOpen] = useState(false);
   const columnsQuery = useCustomerColumnsQuery();
@@ -60,8 +57,6 @@ export function CustomizeColumnsDialog() {
     );
   }, [draft, search]);
 
-  // Reordering a filtered subset would be ambiguous (its positions don't map
-  // cleanly onto the full list) - drag is only enabled with no active search.
   const dragEnabled = search.trim().length === 0;
   const activeColumn = activeKey ? draft.find((column) => column.key === activeKey) : undefined;
 

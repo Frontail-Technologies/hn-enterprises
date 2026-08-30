@@ -37,8 +37,6 @@ export function InventoryDetailPage({ id }: { id: string }) {
   const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
   const { data: customers = [], isLoading: customersLoading } = useCustomersQuery();
   const { data: projects = [] } = useProjectsQuery();
-  // Replaces the layout's generic (raw-UUID) breadcrumb segment with the
-  // material name instead of rendering a second breadcrumb on this page.
   useBreadcrumbLabel(material?.name);
 
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
@@ -52,9 +50,6 @@ export function InventoryDetailPage({ id }: { id: string }) {
     [transactions],
   );
   const storeIssues = useMemo(() => transactions.filter((row) => row.type === "issue"), [transactions]);
-  // Consumption covers both purchase-sourced and PBG-attributed consumption (§1) - the
-  // main Inventory module's Consumption Log likewise merges `consumption` +
-  // `pbg_consumption`, and this page must show the same truth.
   const consumption = useMemo(
     () => transactions.filter((row) => row.type === "consumption" || row.type === "pbg_consumption"),
     [transactions],
@@ -71,8 +66,6 @@ export function InventoryDetailPage({ id }: { id: string }) {
     () =>
       plumberBalances.map((row) => ({
         ...row,
-        // A plumber can hold multiple balances of this material split by source and
-        // project (§1) - plumberId alone collides across those rows.
         id: `${row.plumberId}-${row.source || "unspecified"}-${row.projectId || "none"}`,
         plumberName: plumberNameById.get(row.plumberId) ?? "Unknown plumber",
       })),

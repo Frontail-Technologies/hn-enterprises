@@ -1,6 +1,3 @@
-// Mirrors backend/src/modules/deletion/deletion.types.ts - kept as a small,
-// independent type file (not generated) since the two sides only need to agree on
-// shape, not share code across the JS/TS boundary.
 
 export type DeleteImpactAction = "delete" | "detach" | "preserve" | "block";
 

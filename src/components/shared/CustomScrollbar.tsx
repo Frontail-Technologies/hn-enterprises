@@ -8,15 +8,6 @@ type Orientation = "horizontal" | "vertical";
 const DEFAULT_THICKNESS = 7;
 const DEFAULT_MIN_THUMB_SIZE = 28;
 
-/**
- * A real-DOM replacement for the native track/thumb, scoped to one scrollable
- * element. Chromium doesn't reliably run custom `cursor` styling through the
- * native `::-webkit-scrollbar-thumb` hit-test path (it paints color fine,
- * but the pointer icon over the thumb is drawn by the browser's own
- * scrollbar controller and ignores CSS `cursor` in most current builds) -
- * an ordinary draggable div has no such limitation, so this is the only
- * reliable way to get a pointer/grabbing cursor on the thumb.
- */
 export function CustomScrollbar({
   targetRef,
   orientation,
@@ -28,16 +19,8 @@ export function CustomScrollbar({
   targetRef: RefObject<HTMLElement | null>;
   orientation: Orientation;
   className?: string;
-  /**
-   * "overlay" (default): absolutely positioned within a `relative` parent
-   * that matches the scrollable element's own box (e.g. a table's scroll
-   * area). "viewport": fixed to the browser viewport, for a scrollable
-   * element whose box IS the viewport (the page/`<html>` itself).
-   */
   variant?: "overlay" | "viewport";
-  /** Track/thumb thickness in px. Default matches the data-grid scrollbar; pass a smaller value for compact bars like a tab list. */
   thickness?: number;
-  /** Minimum draggable thumb length in px, regardless of how small the content ratio would make it. */
   minThumbSize?: number;
 }) {
   const [metrics, setMetrics] = useState({ scrollSize: 0, clientSize: 0, scrollPos: 0 });
@@ -62,9 +45,6 @@ export function CustomScrollbar({
     const onScroll = () => readMetrics();
     el.addEventListener("scroll", onScroll, { passive: true });
 
-    // Content can reflow (filtering, pagination, column visibility changes)
-    // without the scroll container itself resizing - watch its first child
-    // too so the thumb size/position stay accurate.
     const observer = new ResizeObserver(readMetrics);
     observer.observe(el);
     if (el.firstElementChild) observer.observe(el.firstElementChild);
@@ -148,8 +128,6 @@ export function CustomScrollbar({
         onPointerCancel={handlePointerUp}
         className={cn(
           "pointer-events-auto absolute touch-none select-none rounded-full transition-colors",
-          // Deliberately neutral, never primary - primary is reserved for
-          // interactive actions/selections, not scrollbar chrome.
           dragging ? "cursor-grabbing bg-foreground/45" : "cursor-pointer bg-foreground/25 hover:bg-foreground/40",
         )}
         style={

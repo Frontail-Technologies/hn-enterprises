@@ -328,7 +328,6 @@ function DocumentUploadDialog({
           fileUrl: result.url,
           fileName: result.fileName || current.fileName,
         }));
-        // We defer the actual save call slightly so state settles
         setTimeout(() => {
           onSave();
           setIsUploading(false);
