@@ -2,13 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { CaretDownIcon, DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
-import { ImportDialog } from "@/components/shared/ImportDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useDownloadInventoryConsumptionLog,
   useDownloadInventoryPbgConsumption,
@@ -37,8 +41,6 @@ import {
   usePlumberBalancesQuery,
   useStockBalancesQuery,
 } from "../hooks/useMaterials";
-import { useMaterialsImportPreview, useMaterialsImportConfirm } from "../hooks/useMaterialsImport";
-import type { MaterialImportRow } from "../services/materials-import.service";
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
 import {
   EMPTY_INVENTORY_FILTERS,
@@ -92,29 +94,12 @@ type TotalIssueRow = {
 
 type PlumberBalanceRow = PlumberBalance & { id: string; plumberName: string; materialName: string };
 
-const importPreviewColumns: ExcelColumn<MaterialImportRow & { id: string }>[] = [
-  { key: "name", label: "Name", width: 220, getValue: (r) => r.name },
-  { key: "category", label: "Category", width: 160, getValue: (r) => r.category },
-  { key: "unit", label: "Unit", width: 100, getValue: (r) => r.unit },
-  { key: "reorderLevel", label: "Reorder Level", width: 140, getValue: (r) => r.reorderLevel },
-  {
-    key: "status",
-    label: "Status",
-    width: 120,
-    getValue: (r) => (r.error ? "invalid" : "valid"),
-    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
-  },
-  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
-];
-
 export function InventoryPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
   const [filters, setFilters] = useState<InventoryFilterState>(EMPTY_INVENTORY_FILTERS);
   const { data: materials = [], isLoading: materialsLoading } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
-  const importPreview = useMaterialsImportPreview();
-  const importConfirm = useMaterialsImportConfirm();
   const { data: customers = [] } = useCustomersQuery();
   const { data: projects = [] } = useProjectsQuery();
 
@@ -288,10 +273,11 @@ export function InventoryPage() {
       label: "Item Name",
       width: 230,
       sticky: true,
+      grow: true,
       getValue: (row) => row.name,
       render: (row) => <span className="font-semibold text-foreground">{row.name}</span>,
     },
-    { key: "category", label: "Category", width: 150, getValue: (row) => row.category },
+    { key: "category", label: "Category", width: 150, grow: true, getValue: (row) => row.category },
     { key: "unit", label: "Unit", width: 90, getValue: (row) => row.unit },
     {
       key: "currentBalance",
@@ -326,6 +312,7 @@ export function InventoryPage() {
         label: "Item Name",
         width: 220,
         sticky: true,
+        grow: true,
         getValue: (row) => materialNameById.get(row.materialId)?.name ?? "-",
         render: (row) => (
           <span className="font-semibold text-foreground">{materialNameById.get(row.materialId)?.name ?? "-"}</span>
@@ -416,6 +403,7 @@ export function InventoryPage() {
       label: "Item Name",
       width: 240,
       sticky: true,
+      grow: true,
       getValue: (row) => row.materialName,
       render: (row) => <span className="font-semibold text-foreground">{row.materialName}</span>,
     },
@@ -437,10 +425,11 @@ export function InventoryPage() {
       label: "Plumber / Team",
       width: 180,
       sticky: true,
+      grow: true,
       getValue: (row) => row.plumberName,
       render: (row) => <span className="font-semibold text-foreground">{row.plumberName}</span>,
     },
-    { key: "materialName", label: "Material", width: 210, getValue: (row) => row.materialName },
+    { key: "materialName", label: "Material", width: 210, grow: true, getValue: (row) => row.materialName },
     { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
     { key: "project", label: "Project", width: 180, getValue: (row) => projectLabel(row.projectId, projectNameById) },
     { key: "issued", label: "Total Issued", width: 140, getValue: (row) => row.issued },
@@ -487,38 +476,41 @@ export function InventoryPage() {
         subtitle="Real-time stock, purchase, issue and plumber consumption ledger."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <ActionTooltip label="Download the full filtered dataset as an Excel file">
-              <button
-                type="button"
-                className={buttonVariants({ variant: "outline", size: "default" })}
-                onClick={handleExport}
-                disabled={isExportPending}
-              >
-                <DownloadSimpleIcon size={15} />
-                {isExportPending ? "Exporting..." : "Export Excel"}
-              </button>
-            </ActionTooltip>
+            <InventoryFilterBar
+              filters={filters}
+              onChange={setFilters}
+              projects={projects}
+              plumbers={plumbers}
+              showPlumberFilter={showPlumberFilter}
+              showMonthFilter={!MONTH_FILTER_EXCLUDED_TABS.has(activeTab)}
+            />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline">
+                    More
+                    <CaretDownIcon size={14} />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExport} disabled={isExportPending}>
+                  <DownloadSimpleIcon size={14} />
+                  {isExportPending ? "Exporting..." : "Export Excel"}
+                </DropdownMenuItem>
+                {activeTab === "stock" ? (
+                  <DropdownMenuItem onClick={() => router.push("/inventory/import")}>
+                    <UploadSimpleIcon size={14} />
+                    Import
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {activeTab === "stock" ? (
               <>
                 <MaterialCategoryDrawer />
-                <ImportDialog
-                  trigger={
-                    <Button type="button" variant="outline">
-                      <UploadSimpleIcon size={15} />
-                      Import
-                    </Button>
-                  }
-                  title="Import Materials"
-                  description="Upload an Excel file to bulk import catalog items."
-                  templateFileName="materials_template.xlsx"
-                  templateHeaders={["Name", "Category", "Unit", "Reorder Level"]}
-                  previewColumns={importPreviewColumns}
-                  isPreviewPending={importPreview.isPending}
-                  isConfirmPending={importConfirm.isPending}
-                  entityLabelPlural="Materials"
-                  onPreview={(file) => importPreview.mutateAsync(file)}
-                  onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
-                />
                 <MaterialItemDrawer />
               </>
             ) : TAB_ACTION_TYPE[activeTab] ? (
@@ -528,14 +520,6 @@ export function InventoryPage() {
         }
       />
       <InventoryTabNav activeTab={activeTab} onChange={setActiveTab} counts={counts} />
-      <InventoryFilterBar
-        filters={filters}
-        onChange={setFilters}
-        projects={projects}
-        plumbers={plumbers}
-        showPlumberFilter={showPlumberFilter}
-        showMonthFilter={!MONTH_FILTER_EXCLUDED_TABS.has(activeTab)}
-      />
 
       {activeTab === "stock" ? (
         <ExcelDataGrid
@@ -544,15 +528,16 @@ export function InventoryPage() {
           emptyTitle="No materials in the catalog yet"
           isLoading={materialsLoading}
           onRowClick={(row) => router.push(`/inventory/${row.id}`)}
+          enableFullView
         />
       ) : null}
 
       {activeTab === "purchase" ? (
-        <ExcelDataGrid columns={transactionColumns("purchase")} rows={activeTransactions} emptyTitle="No purchase records found" isLoading={transactionsLoading} />
+        <ExcelDataGrid columns={transactionColumns("purchase")} rows={activeTransactions} emptyTitle="No purchase records found" isLoading={transactionsLoading} enableFullView />
       ) : null}
 
       {activeTab === "pbgIssue" ? (
-        <ExcelDataGrid columns={transactionColumns("pbg_issue")} rows={activeTransactions} emptyTitle="No PBG issue records found" isLoading={transactionsLoading} />
+        <ExcelDataGrid columns={transactionColumns("pbg_issue")} rows={activeTransactions} emptyTitle="No PBG issue records found" isLoading={transactionsLoading} enableFullView />
       ) : null}
 
       {activeTab === "pbgConsumption" ? (
@@ -561,15 +546,16 @@ export function InventoryPage() {
           rows={activeTransactions}
           emptyTitle="No PBG consumption records found"
           isLoading={transactionsLoading}
+          enableFullView
         />
       ) : null}
 
       {activeTab === "storeIssue" ? (
-        <ExcelDataGrid columns={transactionColumns("issue")} rows={activeTransactions} emptyTitle="No store issue records found" isLoading={transactionsLoading} />
+        <ExcelDataGrid columns={transactionColumns("issue")} rows={activeTransactions} emptyTitle="No store issue records found" isLoading={transactionsLoading} enableFullView />
       ) : null}
 
       {activeTab === "totalIssue" ? (
-        <ExcelDataGrid columns={totalIssueColumns} rows={totalIssueRows} emptyTitle="No issued materials found" isLoading={transactionsLoading} />
+        <ExcelDataGrid columns={totalIssueColumns} rows={totalIssueRows} emptyTitle="No issued materials found" isLoading={transactionsLoading} enableFullView />
       ) : null}
 
       {activeTab === "plumberBalance" ? (
@@ -578,6 +564,7 @@ export function InventoryPage() {
           rows={plumberBalanceRows}
           emptyTitle="No plumber balance records found"
           isLoading={plumberBalancesLoading}
+          enableFullView
         />
       ) : null}
 
@@ -587,6 +574,7 @@ export function InventoryPage() {
           rows={consumptionLogRows}
           emptyTitle="No consumption records found"
           isLoading={consumptionLoading || pbgConsumptionLoading}
+          enableFullView
         />
       ) : null}
     </div>

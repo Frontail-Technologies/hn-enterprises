@@ -57,35 +57,37 @@ export function DocumentsPage() {
       title="Documents"
       subtitle="Central read-only view of documents uploaded on Projects and Customers."
       actions={
-        <button
-          type="button"
-          className={buttonVariants({ variant: "outline", size: "default" })}
-          onClick={() => void exportRowsToExcel("documents.xlsx", exportColumns, documents)}
-        >
-          <DownloadSimpleIcon size={15} />
-          Export Excel
-        </button>
+        <>
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search document, category or record..."
+            title="Document Filters"
+            values={filters}
+            filters={[
+              {
+                key: "module",
+                placeholder: "All Modules",
+                options: [
+                  { value: "Projects", label: "Projects" },
+                  { value: "Customers", label: "Customers" },
+                ],
+              },
+            ]}
+            onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+            onReset={() => setFilters({ search: "", module: "all" })}
+          />
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("documents.xlsx", exportColumns, documents)}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+        </>
       }
     >
-      <FilterSheetButton
-        searchKey="search"
-        searchPlaceholder="Search document, category or record..."
-        title="Document Filters"
-        values={filters}
-        filters={[
-          {
-            key: "module",
-            placeholder: "All Modules",
-            options: [
-              { value: "Projects", label: "Projects" },
-              { value: "Customers", label: "Customers" },
-            ],
-          },
-        ]}
-        onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-        onReset={() => setFilters({ search: "", module: "all" })}
-      />
-      <PaginatedDataTable data={documents} columns={columns} isLoading={isLoading} />
+      <PaginatedDataTable data={documents} columns={columns} isLoading={isLoading} enableFullView />
     </PageShell>
   );
 }

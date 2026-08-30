@@ -1,17 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, EyeIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, EyeIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
-import { ImportDialog } from "@/components/shared/ImportDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { exportRowsToExcel } from "@/lib/export-excel";
 import { resolveFileUrl } from "@/lib/upload";
@@ -38,8 +44,6 @@ import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { paymentTabs } from "../data/payments.data";
 import { useCreatePayment, useDeletePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
-import { usePaymentsImportPreview, usePaymentsImportConfirm } from "../hooks/usePaymentsImport";
-import type { PaymentImportRow } from "../services/payments-import.service";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentMode, PaymentStatus } from "../types/payment.types";
 import { formatDate, money, sum } from "../utils/format";
 import { ImageProofField } from "./shared/ImageProofField";
@@ -49,29 +53,11 @@ import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 const categories = paymentTabs as PaymentCategory[];
 const statuses: PaymentStatus[] = ["Draft", "Submitted", "Approved", "Rejected"];
 
-const importPreviewColumns: ExcelColumn<PaymentImportRow & { id: string }>[] = [
-  { key: "category", label: "Category", width: 170, getValue: (r) => r.category },
-  { key: "paidTo", label: "Paid To", width: 160, getValue: (r) => r.paidTo },
-  { key: "plumberName", label: "Plumber Name", width: 160, getValue: (r) => r.plumberName },
-  { key: "amount", label: "Amount", width: 110, getValue: (r) => r.amount },
-  { key: "paymentDate", label: "Payment Date", width: 130, getValue: (r) => r.paymentDate },
-  { key: "mode", label: "Mode", width: 120, getValue: (r) => r.mode },
-  {
-    key: "status",
-    label: "Status",
-    width: 120,
-    getValue: (r) => (r.error ? "invalid" : "valid"),
-    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
-  },
-  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
-];
-
 export function PaymentsExpensesPage() {
+  const router = useRouter();
   const [active, setActive] = useState<PaymentCategory>(categories[0]);
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
-  const importPreview = usePaymentsImportPreview();
-  const importConfirm = usePaymentsImportConfirm();
   const { data: customers = [] } = useCustomersQuery();
 
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
@@ -107,9 +93,10 @@ export function PaymentsExpensesPage() {
       key: "paidTo",
       label: "Paid To",
       width: 180,
+      grow: true,
       getValue: (row) => row.paidTo || plumberNameById.get(row.plumberId) || "-",
     },
-    { key: "address", label: "Address", width: 190, getValue: (row) => row.address || "-" },
+    { key: "address", label: "Address", width: 190, grow: true, getValue: (row) => row.address || "-" },
     { key: "customer", label: "Customer", width: 170, getValue: (row) => customerNameById.get(row.customerId) || "-" },
     { key: "amount", label: "Amount", width: 130, getValue: (row) => money(row.amount) },
     { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.paymentDate) },
@@ -144,48 +131,34 @@ export function PaymentsExpensesPage() {
         subtitle="Manage field payments, rent, material expenses and approvals."
         actions={
           <>
-            <button
-              type="button"
-              className={buttonVariants({ variant: "outline", size: "default" })}
-              onClick={() =>
-                void exportRowsToExcel(
-                  `${active.toLowerCase().replace(/\s+/g, "-")}.xlsx`,
-                  columns.filter((column) => column.key !== "actions"),
-                  data,
-                )
-              }
-            >
-              <DownloadSimpleIcon size={15} />
-              Export Excel
-            </button>
-            <ImportDialog
-              trigger={
-                <Button type="button" variant="outline">
-                  <UploadSimpleIcon size={15} />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline">
+                    More
+                    <CaretDownIcon size={14} />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() =>
+                    void exportRowsToExcel(
+                      `${active.toLowerCase().replace(/\s+/g, "-")}.xlsx`,
+                      columns.filter((column) => column.key !== "actions"),
+                      data,
+                    )
+                  }
+                >
+                  <DownloadSimpleIcon size={14} />
+                  Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/payments/import")}>
+                  <UploadSimpleIcon size={14} />
                   Import
-                </Button>
-              }
-              title="Import Payments"
-              description="Upload an Excel file to bulk import payment/expense records."
-              templateFileName="payments_template.xlsx"
-              templateHeaders={[
-                "Category",
-                "Paid To",
-                "Plumber Name",
-                "Amount",
-                "Payment Date",
-                "Mode",
-                "Purpose",
-                "Remarks",
-                "Address",
-              ]}
-              previewColumns={importPreviewColumns}
-              isPreviewPending={importPreview.isPending}
-              isConfirmPending={importConfirm.isPending}
-              entityLabelPlural="Payments"
-              onPreview={(file) => importPreview.mutateAsync(file)}
-              onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
-            />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <PaymentDrawer defaultCategory={active} />
           </>
         }
@@ -202,7 +175,7 @@ export function PaymentsExpensesPage() {
         </span>
       </div>
       <PaymentTabNav active={active} onChange={setActive} counts={categoryCounts} />
-      <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" isLoading={paymentsLoading} />
+      <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" isLoading={paymentsLoading} enableFullView />
     </div>
   );
 }
@@ -384,18 +357,13 @@ export function PaymentDrawer({
           {isPlumberCategory ? (
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">Plumber / Team</span>
-              <Select value={values.plumberId || undefined} onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select plumber / team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {plumbers.map((plumber) => (
-                    <SelectItem key={plumber.id} value={plumber.id}>
-                      {plumber.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={values.plumberId || undefined}
+                onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
+                placeholder="Select plumber / team"
+                options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+                className="w-full"
+              />
             </label>
           ) : (
             <label className="block space-y-1.5">

@@ -2,13 +2,17 @@ import { apiRequest } from "@/lib/api-client";
 
 export type UserImportRowStatus = "valid" | "warning" | "invalid";
 
-export type UserImportPreviewRow = {
-  rowNumber: number;
+export type UserImportRowData = {
   name: string;
   username: string;
   email: string;
   mobile: string;
   role: string;
+  password: string;
+};
+
+export type UserImportPreviewRow = UserImportRowData & {
+  rowNumber: number;
   error?: string;
 };
 
@@ -20,6 +24,8 @@ export type UserImportPreviewResult = {
 
 export type UserImportConfirmResult = {
   insertedCount: number;
+  imported: number;
+  failed: { tempId: string; message: string }[];
 };
 
 export const usersImportApi = {
@@ -29,6 +35,14 @@ export const usersImportApi = {
     return apiRequest<UserImportPreviewResult>("/users/import/preview", {
       method: "POST",
       body: formData,
+    });
+  },
+
+  async validateRow(data: UserImportRowData): Promise<{ error?: string }> {
+    return apiRequest<{ error?: string }>("/users/import/validate-row", {
+      method: "POST",
+      body: JSON.stringify({ data }),
+      headers: { "Content-Type": "application/json" },
     });
   },
 

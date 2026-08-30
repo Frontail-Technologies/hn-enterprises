@@ -58,12 +58,18 @@ export function SearchableSelect({
           />
         }
       >
-        <span className="truncate">
+        <span className="truncate" title={selectedOption?.label}>
           {selectedOption ? selectedOption.label : <span className="text-muted-foreground">{placeholder}</span>}
         </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-full min-w-[200px] p-0" align="start">
+      {/* `w-(--anchor-width)` matches the trigger's own measured width (the same
+          base-ui anchor pattern already used by Select/DropdownMenu) instead of a
+          bare `w-full`, which - inside a portaled, unconstrained positioner - has
+          no real reference width and falls back to sizing itself off the longest
+          option's text. min/max keep it from getting too cramped or too wide
+          regardless of what the trigger's own className sets. */}
+      <PopoverContent className="w-(--anchor-width) min-w-[200px] max-w-[400px] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -79,9 +85,11 @@ export function SearchableSelect({
                   }}
                 >
                   <Check
-                    className={cn("mr-2 h-4 w-4", value === option.value ? "opacity-100" : "opacity-0")}
+                    className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")}
                   />
-                  {option.label}
+                  <span className="truncate" title={option.label}>
+                    {option.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

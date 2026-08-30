@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -133,22 +134,14 @@ export function WageDrawer({
         <div className="flex-1 space-y-4 overflow-y-auto px-4">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Plumber / Worker</span>
-            <Select
+            <SearchableSelect
               value={values.plumberId || undefined}
               onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
+              placeholder="Select plumber"
+              options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
               disabled={Boolean(wage)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select plumber" />
-              </SelectTrigger>
-              <SelectContent>
-                {plumbers.map((plumber) => (
-                  <SelectItem key={plumber.id} value={plumber.id}>
-                    {plumber.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              className="w-full"
+            />
           </label>
 
           <label className="block space-y-1.5">

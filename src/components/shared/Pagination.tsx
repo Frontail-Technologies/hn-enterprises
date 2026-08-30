@@ -48,20 +48,22 @@ export function Pagination({
         <Button
           variant="outline"
           size="icon-sm"
+          className={cn(compact && "size-6")}
           disabled={page === 1}
           onClick={() => onPageChange(1)}
           aria-label="First page"
         >
-          <CaretDoubleLeftIcon size={14} />
+          <CaretDoubleLeftIcon size={compact ? 12 : 14} />
         </Button>
         <Button
           variant="outline"
           size="icon-sm"
+          className={cn(compact && "size-6")}
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
           aria-label="Previous page"
         >
-          <CaretLeftIcon size={14} />
+          <CaretLeftIcon size={compact ? 12 : 14} />
         </Button>
 
         {pages.map((pageNumber) => (
@@ -79,20 +81,22 @@ export function Pagination({
         <Button
           variant="outline"
           size="icon-sm"
+          className={cn(compact && "size-6")}
           disabled={page === pageCount}
           onClick={() => onPageChange(page + 1)}
           aria-label="Next page"
         >
-          <CaretRightIcon size={14} />
+          <CaretRightIcon size={compact ? 12 : 14} />
         </Button>
         <Button
           variant="outline"
           size="icon-sm"
+          className={cn(compact && "size-6")}
           disabled={page === pageCount}
           onClick={() => onPageChange(pageCount)}
           aria-label="Last page"
         >
-          <CaretDoubleRightIcon size={14} />
+          <CaretDoubleRightIcon size={compact ? 12 : 14} />
         </Button>
       </div>
     </div>

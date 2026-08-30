@@ -132,18 +132,13 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
           {values.mode === "existing" ? (
             <Field label="User">
-              <Select value={values.userId || undefined} onValueChange={(userId) => set("userId", userId ?? "")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a user without a staff record" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={values.userId || undefined}
+                onValueChange={(userId) => set("userId", userId ?? "")}
+                placeholder="Select a user without a staff record"
+                options={availableUsers.map((user) => ({ value: user.id, label: `${user.name} (${user.role})` }))}
+                className="w-full"
+              />
             </Field>
           ) : (
             <>

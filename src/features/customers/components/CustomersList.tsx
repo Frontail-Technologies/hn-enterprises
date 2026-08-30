@@ -4,16 +4,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CaretDownIcon,
   DownloadSimpleIcon,
   MagnifyingGlassIcon,
   PlusIcon,
   UploadSimpleIcon,
 } from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { PageShell } from "@/components/shared/PageShell";
-import { TablePanel } from "@/components/shared/TablePanel";
 import { exportRowsToExcel } from "@/lib/export-excel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -154,7 +160,14 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     // locked to one (§10) - the Project column would just repeat the same
     // value on every row, so it's dropped here only (never on the
     // standalone Customers page, where it's still the useful filter it always was).
-    return projectId ? columns.filter((column) => column.key !== "projectName") : columns;
+    const scoped = projectId ? columns.filter((column) => column.key !== "projectName") : columns;
+    // Freeze the first 4 customer-data columns (desktop only - ExcelDataGrid
+    // disables column stickiness on mobile on its own) so the most
+    // identifying fields stay visible while scrolling right through the wide
+    // master sheet. Positional rather than by key: `resolvedColumns` is the
+    // user's own saved order (Customize Columns can reorder/hide), so "first
+    // 4" always tracks whatever actually renders first, not a fixed key set.
+    return scoped.map((column, index) => (index < 4 ? { ...column, sticky: true } : column));
   }, [resolvedColumns, projectId]);
 
   const filteredMasterSheetRows = useMemo(() => {
@@ -205,23 +218,42 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const actions = (
     <>
+      <div className="relative w-70 shrink-0 sm:w-80">
+        <MagnifyingGlassIcon
+          size={15}
+          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          value={masterSheetSearch}
+          onChange={(event) => setMasterSheetSearch(event.target.value)}
+          placeholder="Search master sheet..."
+          className="h-9 pl-9"
+        />
+      </div>
       <CustomizeColumnsDialog />
-      <Link
-        href="/customers/import"
-        className={buttonVariants({ variant: "outline", size: "default" })}
-      >
-        <UploadSimpleIcon size={15} />
-        Import Excel
-      </Link>
-      <button
-        type="button"
-        className={buttonVariants({ variant: "outline", size: "default" })}
-        onClick={handleExportRegister}
-        disabled={downloadRegister.isPending}
-      >
-        <DownloadSimpleIcon size={15} />
-        {downloadRegister.isPending ? "Exporting..." : "Export Register"}
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button type="button" variant="outline">
+              More
+              <CaretDownIcon size={14} />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem render={<Link href="/customers/import" />}>
+            <UploadSimpleIcon size={14} />
+            Import Excel
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleExportRegister}
+            disabled={downloadRegister.isPending}
+          >
+            <DownloadSimpleIcon size={14} />
+            {downloadRegister.isPending ? "Exporting..." : "Export Register"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Link
         href={newCustomerHref}
         className={buttonVariants({ variant: "default", size: "default" })}
@@ -234,61 +266,44 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const table = (
     <>
-      <TablePanel
-        title="Customer Master Sheet"
-        subtitle="Excel-style customer master data with fixed customer columns and per-column filters."
-        toolbar={
-          <div className="relative max-w-md">
-            <MagnifyingGlassIcon
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={masterSheetSearch}
-              onChange={(event) => setMasterSheetSearch(event.target.value)}
-              placeholder="Search master sheet..."
-              className="h-9 pl-9"
-            />
-          </div>
+      <BulkActionToolbar
+        selectedCount={selection.selectedIds.size}
+        matchingCount={gridContext.filteredIds.length}
+        showSelectAllBanner={showSelectAllBanner}
+        onSelectAllMatching={() => selection.selectAllMatching(gridContext.filteredIds)}
+        onClear={selection.clear}
+        onOpenQuickAction={openQuickAction}
+        onOpenBulkEdit={() => setEditDialogOpen(true)}
+        onOpenRemark={() => setRemarkDialogOpen(true)}
+        onExportSelected={handleExportSelected}
+        onOpenDelete={() => setDeleteDialogOpen(true)}
+        canEdit={canBulkEdit}
+        canRemark={canBulkRemark}
+        canDelete={canBulkDelete}
+      />
+      <ExcelDataGrid
+        columns={masterSheetColumns}
+        rows={filteredMasterSheetRows}
+        {...(embedded
+          ? { maxHeightClassName: "h-[calc(100vh-420px)]" }
+          : { fillHeight: true, enableFullView: true })}
+        emptyTitle="No customer master records found"
+        isLoading={isLoading || columnsLoading}
+        onRowClick={handleRowClick}
+        getRowClassName={(row) =>
+          cn(
+            !realCustomerIds.has(row.customerId) && "cursor-default text-muted-foreground",
+            selection.selectedIds.has(row.id) && "bg-primary/5 hover:bg-primary/10",
+          )
         }
-      >
-        <BulkActionToolbar
-          selectedCount={selection.selectedIds.size}
-          matchingCount={gridContext.filteredIds.length}
-          showSelectAllBanner={showSelectAllBanner}
-          onSelectAllMatching={() => selection.selectAllMatching(gridContext.filteredIds)}
-          onClear={selection.clear}
-          onOpenQuickAction={openQuickAction}
-          onOpenBulkEdit={() => setEditDialogOpen(true)}
-          onOpenRemark={() => setRemarkDialogOpen(true)}
-          onExportSelected={handleExportSelected}
-          onOpenDelete={() => setDeleteDialogOpen(true)}
-          canEdit={canBulkEdit}
-          canRemark={canBulkRemark}
-          canDelete={canBulkDelete}
-        />
-        <ExcelDataGrid
-          columns={masterSheetColumns}
-          rows={filteredMasterSheetRows}
-          maxHeightClassName={embedded ? "h-[calc(100vh-420px)]" : "h-[calc(100vh-240px)]"}
-          emptyTitle="No customer master records found"
-          isLoading={isLoading || columnsLoading}
-          onRowClick={handleRowClick}
-          getRowClassName={(row) =>
-            cn(
-              !realCustomerIds.has(row.customerId) && "cursor-default text-muted-foreground",
-              selection.selectedIds.has(row.id) && "bg-primary/5 hover:bg-primary/10",
-            )
-          }
-          selection={{
-            selectedIds: selection.selectedIds,
-            onToggleRow: selection.toggleRow,
-            onTogglePage: selection.toggleAllOnPage,
-            getRowLabel: (row) => `Select ${row.values.customerName || "customer"}`,
-          }}
-          onVisibleRowsChange={setGridContext}
-        />
-      </TablePanel>
+        selection={{
+          selectedIds: selection.selectedIds,
+          onToggleRow: selection.toggleRow,
+          onTogglePage: selection.toggleAllOnPage,
+          getRowLabel: (row) => `Select ${row.values.customerName || "customer"}`,
+        }}
+        onVisibleRowsChange={setGridContext}
+      />
 
       <BulkEditDialog
         open={editDialogOpen}
@@ -339,6 +354,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
       title="Customers"
       subtitle="Manage customer connections, field assignment, meters, and stages."
       actions={actions}
+      fillHeight
     >
       {table}
     </PageShell>

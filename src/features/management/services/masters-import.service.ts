@@ -1,10 +1,13 @@
 import { apiRequest } from "@/lib/api-client";
 import type { MasterValueCategory } from "../types/masters.types";
 
-export type MasterImportPreviewRow = {
-  rowNumber: number;
+export type MasterImportRowData = {
   value: string;
   description: string;
+};
+
+export type MasterImportPreviewRow = MasterImportRowData & {
+  rowNumber: number;
   error?: string;
 };
 
@@ -16,6 +19,8 @@ export type MasterImportPreviewResult = {
 
 export type MasterImportConfirmResult = {
   insertedCount: number;
+  imported: number;
+  failed: { tempId: string; message: string }[];
 };
 
 export const masterValuesImportApi = {
@@ -26,6 +31,14 @@ export const masterValuesImportApi = {
     return apiRequest<MasterImportPreviewResult>("/masters/values/import/preview", {
       method: "POST",
       body: formData,
+    });
+  },
+
+  async validateRow(data: MasterImportRowData, category: MasterValueCategory): Promise<{ error?: string }> {
+    return apiRequest<{ error?: string }>("/masters/values/import/validate-row", {
+      method: "POST",
+      body: JSON.stringify({ data, category }),
+      headers: { "Content-Type": "application/json" },
     });
   },
 

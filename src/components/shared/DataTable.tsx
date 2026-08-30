@@ -2,6 +2,7 @@
 
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { tableDensity } from '@/components/shared/table/density'
 import { cn } from '@/lib/utils'
 import { TableEmptyRow } from './TableEmptyRow'
 import { TableLoader } from './TableLoader'
@@ -41,6 +42,13 @@ interface DataTableProps<T extends { id: string }> {
   stickyHeader?: boolean
   stickyLastColumn?: boolean
   selection?: DataTableSelection<T>
+  /**
+   * Fills the remaining height of a bounded flex ancestor (e.g.
+   * PaginatedDataTable's own Full View mode) instead of relying on the page/
+   * document to scroll - adds a bounded vertical scroll container so
+   * `stickyHeader` sticks within it rather than the whole page.
+   */
+  fillHeight?: boolean
 }
 
 export function DataTable<T extends { id: string }>({
@@ -57,6 +65,7 @@ export function DataTable<T extends { id: string }>({
   stickyHeader,
   stickyLastColumn,
   selection,
+  fillHeight = false,
 }: DataTableProps<T>) {
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0) + (selection ? 1 : 0)
   const selectableIds = selection
@@ -68,13 +77,33 @@ export function DataTable<T extends { id: string }>({
     Boolean(selection) && !allOnPageSelected && selectableIds.some((id) => selection!.selectedIds.has(id))
 
   return (
-    <div className={cn('w-full overflow-x-auto rounded-card border border-border bg-card [&_tbody_svg]:text-primary', containerClassName)}>
+    // `overflow-hidden` here only clips to the rounded corners - the actual
+    // horizontal scroll container is the one `<Table>` (ui/table.tsx)
+    // already provides internally. This div used to ALSO set
+    // `overflow-x-auto`, nesting two independent scroll containers around
+    // the same content; with both at effectively 100% width, sub-pixel
+    // rounding could make the outer one register 1px of "overflow" and show
+    // a scrollbar even when there was nothing real to scroll (the empty
+    // Store Issue table case) - a single scroll container can't do that.
+    <div
+      className={cn(
+        'w-full bg-card [&_tbody_svg]:text-primary',
+        // `fillHeight` is only ever true when a caller (PaginatedDataTable's
+        // Full View) is already providing the full-viewport outer surface -
+        // a second nested rounded/bordered card on top of that just eats
+        // space, so it goes edge-to-edge instead of stacking another shell.
+        fillHeight ? 'flex h-full min-h-0 flex-1 flex-col' : 'overflow-hidden rounded-card border border-border',
+        containerClassName,
+      )}
+    >
+      <div className={cn(fillHeight && 'min-h-0 flex-1 overflow-y-auto')}>
       <Table className={cn('min-w-full', tableClassName)}>
         <TableHeader className={cn(stickyHeader && 'sticky top-0 z-10')}>
           <TableRow className="border-b border-border bg-secondary hover:bg-secondary">
             {selection && (
-              <TableHead className={cn('w-12 pl-3 pr-0 text-center', dense && 'h-10.5')}>
+              <TableHead className={cn('w-12 pl-2.5 pr-0 text-center', dense && tableDensity.rowHeight)}>
                 <Checkbox
+                  className={tableDensity.checkboxSize}
                   checked={allOnPageSelected}
                   indeterminate={someOnPageSelected}
                   onCheckedChange={() => selection.onTogglePage(selectableIds)}
@@ -84,7 +113,14 @@ export function DataTable<T extends { id: string }>({
               </TableHead>
             )}
             {showSerialNumber && (
-              <TableHead className={cn('w-12 px-3 text-center text-xs font-semibold text-muted-foreground', dense && 'h-10.5')}>
+              <TableHead
+                className={cn(
+                  'w-12 text-center font-semibold text-muted-foreground',
+                  tableDensity.cellPaddingX,
+                  tableDensity.headerText,
+                  dense && tableDensity.rowHeight,
+                )}
+              >
                 No.
               </TableHead>
             )}
@@ -92,8 +128,10 @@ export function DataTable<T extends { id: string }>({
               <TableHead
                 key={col.key}
                 className={cn(
-                  'px-3 text-xs font-semibold text-muted-foreground',
-                  dense && 'h-10.5',
+                  tableDensity.cellPaddingX,
+                  tableDensity.headerText,
+                  'font-semibold text-muted-foreground',
+                  dense && tableDensity.rowHeight,
                   stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-secondary shadow-[-8px_0_12px_-12px_var(--foreground)]',
                   col.headerClassName ?? col.className,
                 )}
@@ -117,9 +155,12 @@ export function DataTable<T extends { id: string }>({
                 )}
             >
               {selection && (
-                <TableCell className={cn('w-12 pl-3 pr-0 text-center', dense && 'py-2.5')}>
+                <TableCell
+                  className={cn('w-12 pl-2.5 pr-0 text-center', dense && [tableDensity.cellPaddingY, tableDensity.rowHeight])}
+                >
                   {isSelectable ? (
                     <Checkbox
+                      className={tableDensity.checkboxSize}
                       checked={isRowSelected}
                       onCheckedChange={() => selection.onToggleRow(row.id)}
                       aria-label={selection.getRowLabel?.(row) ?? (isRowSelected ? 'Deselect row' : 'Select row')}
@@ -128,7 +169,14 @@ export function DataTable<T extends { id: string }>({
                 </TableCell>
               )}
               {showSerialNumber && (
-                <TableCell className={cn('w-12 px-3 text-center text-xs font-medium text-muted-foreground', dense && 'py-2.5')}>
+                <TableCell
+                  className={cn(
+                    'w-12 text-center font-medium text-muted-foreground',
+                    tableDensity.cellPaddingX,
+                    tableDensity.bodyText,
+                    dense && [tableDensity.cellPaddingY, tableDensity.rowHeight],
+                  )}
+                >
                   {serialNumberStart + index}
                 </TableCell>
               )}
@@ -136,8 +184,10 @@ export function DataTable<T extends { id: string }>({
                 <TableCell
                   key={col.key}
                   className={cn(
-                    'px-3 text-sm font-normal text-foreground',
-                    dense && 'py-2.5',
+                    tableDensity.cellPaddingX,
+                    tableDensity.bodyText,
+                    'font-normal text-foreground',
+                    dense && [tableDensity.cellPaddingY, tableDensity.rowHeight],
                     stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-card shadow-[-8px_0_12px_-12px_var(--foreground)]',
                     col.className,
                   )}
@@ -156,6 +206,7 @@ export function DataTable<T extends { id: string }>({
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   )
 }

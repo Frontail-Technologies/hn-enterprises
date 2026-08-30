@@ -1,7 +1,6 @@
 import { apiRequest } from "@/lib/api-client";
 
-export type PaymentImportRow = {
-  rowNumber: number;
+export type PaymentImportRowData = {
   category: string;
   paidTo: string;
   plumberName: string;
@@ -11,6 +10,10 @@ export type PaymentImportRow = {
   purpose: string;
   remarks: string;
   address: string;
+};
+
+export type PaymentImportRow = PaymentImportRowData & {
+  rowNumber: number;
   error?: string;
 };
 
@@ -22,6 +25,8 @@ export type PaymentImportPreviewResult = {
 
 export type PaymentImportConfirmResult = {
   insertedCount: number;
+  imported: number;
+  failed: { tempId: string; message: string }[];
 };
 
 export const paymentsImportApi = {
@@ -31,6 +36,14 @@ export const paymentsImportApi = {
     return apiRequest<PaymentImportPreviewResult>("/payments/import/preview", {
       method: "POST",
       body: formData,
+    });
+  },
+
+  async validateRow(data: PaymentImportRowData): Promise<{ error?: string }> {
+    return apiRequest<{ error?: string }>("/payments/import/validate-row", {
+      method: "POST",
+      body: JSON.stringify({ data }),
+      headers: { "Content-Type": "application/json" },
     });
   },
 

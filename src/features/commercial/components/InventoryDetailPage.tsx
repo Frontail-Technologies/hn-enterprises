@@ -224,6 +224,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={purchaseColumns}
             rows={purchases}
             maxHeightClassName="max-h-[50vh]"
+            enableFullView
             emptyTitle="No purchase rows found"
             isLoading={transactionsLoading}
           />
@@ -234,6 +235,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={storeIssueColumns}
             rows={storeIssues}
             maxHeightClassName="max-h-[50vh]"
+            enableFullView
             emptyTitle="No issue rows found"
             isLoading={transactionsLoading || plumbersLoading}
           />
@@ -244,6 +246,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={consumptionColumns}
             rows={consumption}
             maxHeightClassName="max-h-[50vh]"
+            enableFullView
             emptyTitle="No customer consumption found for this material"
             isLoading={transactionGridLoading}
           />
@@ -254,6 +257,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={plumberBalanceColumns}
             rows={plumberLedgerRows}
             maxHeightClassName="max-h-[50vh]"
+            enableFullView
             emptyTitle="No plumber balance for this material"
             isLoading={plumberBalancesLoading || plumbersLoading}
           />
@@ -264,6 +268,7 @@ export function InventoryDetailPage({ id }: { id: string }) {
             columns={transactionColumns}
             rows={transactions}
             maxHeightClassName="max-h-[50vh]"
+            enableFullView
             emptyTitle="No transactions found"
             isLoading={transactionGridLoading}
           />

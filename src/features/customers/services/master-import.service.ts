@@ -24,11 +24,13 @@ export type NormalizedImportRow = {
   gcReportNumber: string;
   conversionReportNumber: string;
   customerStatus: string;
+  customFields: Record<string, unknown>;
   issues: string[];
   warnings: string[];
+  isRemoved: boolean;
 };
 
-type BackendNormalizedImportRow = Omit<NormalizedImportRow, "id">;
+type BackendNormalizedImportRow = NormalizedImportRow;
 
 export type ImportPreviewResult = {
   batchId: string;
@@ -54,6 +56,8 @@ export type ConfirmImportResult = {
   sitesCreated: number;
   customersCreated: number;
   rowsRejected: number;
+  imported: number;
+  failed: { tempId: string; message: string }[];
 };
 
 export function getRowStatus(row: NormalizedImportRow): ImportRowStatus {
@@ -68,19 +72,29 @@ export const masterImportApi = {
   async preview(file: File): Promise<ImportPreviewResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const result = await apiRequest<BackendImportPreviewResult>("/master-import/preview", {
+    return apiRequest<BackendImportPreviewResult>("/master-import/preview", {
       method: "POST",
       body: formData,
     });
-    return {
-      ...result,
-      rows: result.rows.map((row) => ({ ...row, id: String(row.rowNumber) })),
-    };
   },
 
   async confirm(batchId: string): Promise<ConfirmImportResult> {
     return apiRequest<ConfirmImportResult>(`/master-import/${batchId}/confirm`, {
       method: "POST",
+    });
+  },
+
+  async editRow(batchId: string, rowId: string, data: Partial<NormalizedImportRow>): Promise<NormalizedImportRow> {
+    return apiRequest<NormalizedImportRow>(`/master-import/${batchId}/rows/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ data }),
+    });
+  },
+
+  async setRowRemoved(batchId: string, rowId: string, removed: boolean): Promise<NormalizedImportRow> {
+    return apiRequest<NormalizedImportRow>(`/master-import/${batchId}/rows/${rowId}/remove`, {
+      method: "PATCH",
+      body: JSON.stringify({ removed }),
     });
   },
 };

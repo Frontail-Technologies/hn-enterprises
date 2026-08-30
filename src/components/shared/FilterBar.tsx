@@ -15,6 +15,10 @@ export interface FilterConfig {
   key: string
   placeholder: string
   options: FilterOption[]
+  /** Adds a search box inside the option list - for a long/dynamic option set
+   * (Project, Customer, Supervisor, Plumber, User...). Leave unset for small
+   * fixed lists (status, category, role, module...). */
+  searchable?: boolean
 }
 
 interface FilterBarProps {

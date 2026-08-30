@@ -47,18 +47,7 @@ export function RecentActivityPage() {
     <PageShell
       title="Recent Activity"
       actions={
-        <button
-          type="button"
-          className={buttonVariants({ variant: "outline", size: "default" })}
-          onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
-        >
-          <DownloadSimpleIcon size={15} />
-          Export Excel
-        </button>
-      }
-    >
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <div className="relative min-w-0">
             <MagnifyingGlassIcon
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -70,7 +59,7 @@ export function RecentActivityPage() {
                 setFilters((current) => ({ ...current, search: event.target.value }))
               }
               placeholder="Search activity, actor, supervisor..."
-              className="h-8 w-80 max-w-full pl-9"
+              className="h-9 w-80 max-w-full pl-9"
             />
           </div>
 
@@ -80,7 +69,7 @@ export function RecentActivityPage() {
               setFilters((current) => ({ ...current, sort: value ?? "newest" }))
             }
           >
-            <SelectTrigger className="h-8 w-40">
+            <SelectTrigger className="h-9 w-40">
               <span className="truncate text-left">
                 {filters.sort === "oldest" ? "Oldest First" : "Newest First"}
               </span>
@@ -90,8 +79,19 @@ export function RecentActivityPage() {
               <SelectItem value="oldest">Oldest First</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "default" })}
+            onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
+          >
+            <DownloadSimpleIcon size={15} />
+            Export Excel
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
         <ExcelDataGrid
           columns={activityColumns}
           rows={rows}

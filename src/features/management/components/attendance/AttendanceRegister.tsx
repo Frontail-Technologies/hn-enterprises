@@ -5,7 +5,10 @@ import { cn } from "@/lib/utils";
 import type { AttendanceRecord } from "../../data/attendance.data";
 import type { RosterUser } from "../../services/users.service";
 import { AttendanceDrawer } from "./AttendanceDrawer";
-import { attendanceRegisterCellClass, getAttendanceRegisterCell } from "./attendance-utils";
+import {
+  attendanceRegisterCellClass,
+  getAttendanceRegisterCell,
+} from "./attendance-utils";
 
 export function AttendanceRegister({
   month,
@@ -77,9 +80,6 @@ export function AttendanceRegister({
           <p className="text-sm font-semibold text-foreground">
             Attendance Register
           </p>
-          <p className="text-xs text-muted-foreground">
-            Muster roll style view for {format(month, "MMMM yyyy")}
-          </p>
         </div>
       </div>
       <div className="overflow-y-auto">
@@ -99,22 +99,27 @@ export function AttendanceRegister({
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={2} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
+                    <td
+                      colSpan={2}
+                      className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center"
+                    >
                       <div className="flex items-center justify-center py-4">
                         <LoadingSpinner />
                       </div>
                     </td>
                   </tr>
-                ) : rows.map((row) => (
-                  <tr key={row.person.id} className="hover:bg-muted/25">
-                    <AttendanceBodyCell className="text-center font-medium">
-                      {row.serial}
-                    </AttendanceBodyCell>
-                    <AttendanceBodyCell className="font-medium text-foreground">
-                      {row.person.name}
-                    </AttendanceBodyCell>
-                  </tr>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <tr key={row.person.id} className="hover:bg-muted/25">
+                      <AttendanceBodyCell className="text-center font-medium">
+                        {row.serial}
+                      </AttendanceBodyCell>
+                      <AttendanceBodyCell className="font-medium text-foreground">
+                        {row.person.name}
+                      </AttendanceBodyCell>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -152,47 +157,52 @@ export function AttendanceRegister({
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={days.length + 4} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
+                    <td
+                      colSpan={days.length + 4}
+                      className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center"
+                    >
                       <div className="flex items-center justify-center py-4">
                         <LoadingSpinner />
                       </div>
                     </td>
                   </tr>
-                ) : rows.map((row) => (
-                  <tr key={row.person.id} className="hover:bg-muted/25">
-                    {row.cells.map((cell, index) => (
-                      <AttendanceBodyCell
-                        key={cell.date}
-                        className={cn(
-                          "text-center font-semibold",
-                          attendanceRegisterCellClass(cell.status),
-                        )}
-                        title={cell.status}
-                        onClick={() =>
-                          setSelectedCell({
-                            staffId: row.person.id,
-                            date: days[index],
-                            record: cell.record,
-                          })
-                        }
-                      >
-                        {cell.label}
+                ) : (
+                  rows.map((row) => (
+                    <tr key={row.person.id} className="hover:bg-muted/25">
+                      {row.cells.map((cell, index) => (
+                        <AttendanceBodyCell
+                          key={cell.date}
+                          className={cn(
+                            "text-center font-semibold",
+                            attendanceRegisterCellClass(cell.status),
+                          )}
+                          title={cell.status}
+                          onClick={() =>
+                            setSelectedCell({
+                              staffId: row.person.id,
+                              date: days[index],
+                              record: cell.record,
+                            })
+                          }
+                        >
+                          {cell.label}
+                        </AttendanceBodyCell>
+                      ))}
+                      <AttendanceBodyCell className="text-center font-semibold text-emerald-700">
+                        {row.presentDays}
                       </AttendanceBodyCell>
-                    ))}
-                    <AttendanceBodyCell className="text-center font-semibold text-emerald-700">
-                      {row.presentDays}
-                    </AttendanceBodyCell>
-                    <AttendanceBodyCell className="text-center font-semibold text-red-700">
-                      {row.absentDays}
-                    </AttendanceBodyCell>
-                    <AttendanceBodyCell className="text-center font-semibold text-muted-foreground">
-                      {row.holidays}
-                    </AttendanceBodyCell>
-                    <AttendanceBodyCell className="text-center font-semibold text-foreground">
-                      {row.payableDays}
-                    </AttendanceBodyCell>
-                  </tr>
-                ))}
+                      <AttendanceBodyCell className="text-center font-semibold text-red-700">
+                        {row.absentDays}
+                      </AttendanceBodyCell>
+                      <AttendanceBodyCell className="text-center font-semibold text-muted-foreground">
+                        {row.holidays}
+                      </AttendanceBodyCell>
+                      <AttendanceBodyCell className="text-center font-semibold text-foreground">
+                        {row.payableDays}
+                      </AttendanceBodyCell>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

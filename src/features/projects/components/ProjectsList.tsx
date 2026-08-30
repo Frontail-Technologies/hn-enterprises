@@ -3,14 +3,19 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
+import { CaretDownIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { PageShell } from "@/components/shared/PageShell";
-import { TablePanel } from "@/components/shared/TablePanel";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useBulkDeleteProjects, useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { exportRowsToExcel } from "@/lib/export-excel";
@@ -25,14 +30,14 @@ const projectMasterSheetColumns: ExcelColumn<ProjectMasterSheetRow>[] = [
   {
     key: "name",
     label: "Project Name",
-    width: 240,
+    width: 350,
     sticky: true,
     getValue: (row) => row.values.name,
   },
   {
     key: "code",
     label: "Project Code",
-    width: 150,
+    width: 260,
     sticky: true,
     getValue: (row) => row.values.code,
   },
@@ -82,14 +87,36 @@ export function ProjectsList() {
       subtitle="Manage project contracts, cities, clients, and status."
       actions={
         <>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
-          >
-            <DownloadSimpleIcon size={15} />
-            Export Excel
-          </button>
+          <div className="relative w-70 shrink-0 sm:w-80">
+            <MagnifyingGlassIcon
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search projects..."
+              className="h-9 pl-9"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
+              >
+                <DownloadSimpleIcon size={14} />
+                Export Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link
             href="/projects/new"
             className={buttonVariants({ variant: "default", size: "default" })}
@@ -99,40 +126,24 @@ export function ProjectsList() {
           </Link>
         </>
       }
+      fillHeight
     >
-      <TablePanel
-        title="Project Master Sheet"
-        subtitle="Excel-style project data with fixed project columns and per-column filters."
-        toolbar={
-          <div className="relative max-w-md">
-            <MagnifyingGlassIcon
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search projects..."
-              className="h-9 pl-9"
-            />
-          </div>
-        }
-      >
-        <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
-        <ExcelDataGrid
-          columns={projectMasterSheetColumns}
-          rows={filteredRows}
-          emptyTitle="No project master records found"
-          isLoading={isLoading}
-          onRowClick={(row) => router.push(`/projects/${row.id}`)}
-          selection={{
-            selectedIds,
-            onToggleRow: toggleRow,
-            onTogglePage: toggleAllOnPage,
-            getRowLabel: (row) => row.values.name,
-          }}
-        />
-      </TablePanel>
+      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
+      <ExcelDataGrid
+        columns={projectMasterSheetColumns}
+        rows={filteredRows}
+        emptyTitle="No project master records found"
+        isLoading={isLoading}
+        fillHeight
+        enableFullView
+        onRowClick={(row) => router.push(`/projects/${row.id}`)}
+        selection={{
+          selectedIds,
+          onToggleRow: toggleRow,
+          onTogglePage: toggleAllOnPage,
+          getRowLabel: (row) => row.values.name,
+        }}
+      />
 
       <BulkDeleteDialog
         open={deleteOpen}

@@ -1,11 +1,14 @@
 import { apiRequest } from "@/lib/api-client";
 
-export type PlumberImportRow = {
-  rowNumber: number;
+export type PlumberImportRowData = {
   name: string;
   type: string;
   contactNumber: string;
   remarks: string;
+};
+
+export type PlumberImportRow = PlumberImportRowData & {
+  rowNumber: number;
   error?: string;
 };
 
@@ -17,6 +20,8 @@ export type PlumberImportPreviewResult = {
 
 export type PlumberImportConfirmResult = {
   insertedCount: number;
+  imported: number;
+  failed: { tempId: string; message: string }[];
 };
 
 export const plumbersImportApi = {
@@ -26,6 +31,14 @@ export const plumbersImportApi = {
     return apiRequest<PlumberImportPreviewResult>("/plumbers/import/preview", {
       method: "POST",
       body: formData,
+    });
+  },
+
+  async validateRow(data: PlumberImportRowData): Promise<{ error?: string }> {
+    return apiRequest<{ error?: string }>("/plumbers/import/validate-row", {
+      method: "POST",
+      body: JSON.stringify({ data }),
+      headers: { "Content-Type": "application/json" },
     });
   },
 

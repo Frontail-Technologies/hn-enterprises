@@ -119,6 +119,35 @@ export function BillingPage() {
         actions={
           activeView === "bills" ? (
             <>
+              <FilterSheetButton
+                searchKey="search"
+                searchPlaceholder="Search bill or project..."
+                title="Billing Filters"
+                values={filters}
+                filters={[
+                  {
+                    key: "project",
+                    placeholder: "All Projects",
+                    searchable: true,
+                    options: uniqOptions(
+                      bills
+                        .map((row) => projectNameById.get(row.projectId))
+                        .filter((name): name is string => Boolean(name)),
+                    ),
+                  },
+                  {
+                    key: "status",
+                    placeholder: "All Statuses",
+                    options: uniqOptions(bills.map((row) => row.status)),
+                  },
+                ]}
+                onChange={(key, value) =>
+                  setFilters((current) => ({ ...current, [key]: value }))
+                }
+                onReset={() =>
+                  setFilters({ search: "", status: "all", project: "all" })
+                }
+              />
               <button
                 type="button"
                 className={buttonVariants({ variant: "outline", size: "default" })}
@@ -156,34 +185,6 @@ export function BillingPage() {
             </span>
           </div>
           <TableSection>
-            <FilterSheetButton
-              searchKey="search"
-              searchPlaceholder="Search bill or project..."
-              title="Billing Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "project",
-                  placeholder: "All Projects",
-                  options: uniqOptions(
-                    bills
-                      .map((row) => projectNameById.get(row.projectId))
-                      .filter((name): name is string => Boolean(name)),
-                  ),
-                },
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: uniqOptions(bills.map((row) => row.status)),
-                },
-              ]}
-              onChange={(key, value) =>
-                setFilters((current) => ({ ...current, [key]: value }))
-              }
-              onReset={() =>
-                setFilters({ search: "", status: "all", project: "all" })
-              }
-            />
             <PaginatedDataTable data={data} columns={columns} />
           </TableSection>
         </>

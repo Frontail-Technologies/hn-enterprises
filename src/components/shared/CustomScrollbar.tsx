@@ -148,7 +148,9 @@ export function CustomScrollbar({
         onPointerCancel={handlePointerUp}
         className={cn(
           "pointer-events-auto absolute touch-none select-none rounded-full transition-colors",
-          dragging ? "cursor-grabbing bg-primary" : "cursor-pointer bg-foreground/25 hover:bg-primary",
+          // Deliberately neutral, never primary - primary is reserved for
+          // interactive actions/selections, not scrollbar chrome.
+          dragging ? "cursor-grabbing bg-foreground/45" : "cursor-pointer bg-foreground/25 hover:bg-foreground/40",
         )}
         style={
           isHorizontal

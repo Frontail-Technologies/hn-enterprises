@@ -6,6 +6,7 @@ import { FunnelIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import {
   Select,
   SelectContent,
@@ -112,30 +113,13 @@ export function FilterSheetButton({
       {showInlineFilters ? (
         <>
           {filters.map((filter) => (
-            <Select
+            <FilterSelectField
               key={filter.key}
+              filter={filter}
               value={draftValues[filter.key] ?? "all"}
-              onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
-            >
-              <SelectTrigger
-                className="h-8 w-48 max-w-full"
-                title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
-              >
-                <span className="min-w-0 truncate text-left">
-                  {getFilterLabel(filter, draftValues[filter.key] ?? "all")}
-                </span>
-              </SelectTrigger>
-              <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
-                <SelectItem value="all" title={filter.placeholder}>
-                  <span className="block min-w-0 truncate">{filter.placeholder}</span>
-                </SelectItem>
-                {filter.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value} title={option.label}>
-                    <span className="block min-w-0 truncate">{option.label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => updateDraft(filter.key, value)}
+              triggerClassName="h-8 w-48 max-w-full"
+            />
           ))}
           {hasDraftChanges ? (
             <Button type="button" size="default" className="h-8" onClick={applyFilters}>
@@ -175,29 +159,12 @@ export function FilterSheetButton({
                   <Label className="text-xs font-medium text-muted-foreground">
                     {filter.placeholder}
                   </Label>
-                  <Select
+                  <FilterSelectField
+                    filter={filter}
                     value={draftValues[filter.key] ?? "all"}
-                    onValueChange={(value) => updateDraft(filter.key, value ?? "all")}
-                  >
-                    <SelectTrigger
-                      className="h-8 w-full"
-                      title={getFilterLabel(filter, draftValues[filter.key] ?? "all")}
-                    >
-                      <span className="min-w-0 truncate text-left">
-                        {getFilterLabel(filter, draftValues[filter.key] ?? "all")}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent className="w-80 max-w-[calc(100vw-2rem)]">
-                      <SelectItem value="all" title={filter.placeholder}>
-                        <span className="block min-w-0 truncate">{filter.placeholder}</span>
-                      </SelectItem>
-                      {filter.options.map((option) => (
-                        <SelectItem key={option.value} value={option.value} title={option.label}>
-                          <span className="block min-w-0 truncate">{option.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => updateDraft(filter.key, value)}
+                    triggerClassName="h-8 w-full"
+                  />
                 </div>
               ))}
 
@@ -225,4 +192,49 @@ export function FilterSheetButton({
 function getFilterLabel(filter: FilterConfig, value: string) {
   if (value === "all") return filter.placeholder;
   return filter.options.find((option) => option.value === value)?.label ?? filter.placeholder;
+}
+
+/** One filter's dropdown - a searchable combobox for `searchable` filters (a
+ * long/dynamic option list), the plain compact Select otherwise. Shared by
+ * both the inline-row and sheet layouts so they never drift out of sync. */
+function FilterSelectField({
+  filter,
+  value,
+  onChange,
+  triggerClassName,
+}: {
+  filter: FilterConfig;
+  value: string;
+  onChange: (value: string) => void;
+  triggerClassName: string;
+}) {
+  if (filter.searchable) {
+    return (
+      <SearchableSelect
+        value={value}
+        onValueChange={(next) => onChange(next || "all")}
+        placeholder={filter.placeholder}
+        className={triggerClassName}
+        options={[{ value: "all", label: filter.placeholder }, ...filter.options]}
+      />
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next ?? "all")}>
+      <SelectTrigger className={triggerClassName} title={getFilterLabel(filter, value)}>
+        <span className="min-w-0 truncate text-left">{getFilterLabel(filter, value)}</span>
+      </SelectTrigger>
+      <SelectContent className="w-72 max-w-[calc(100vw-2rem)]">
+        <SelectItem value="all" title={filter.placeholder}>
+          <span className="block min-w-0 truncate">{filter.placeholder}</span>
+        </SelectItem>
+        {filter.options.map((option) => (
+          <SelectItem key={option.value} value={option.value} title={option.label}>
+            <span className="block min-w-0 truncate">{option.label}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }

@@ -5,23 +5,22 @@ import {
   type Dispatch,
   type ReactNode,
   type SetStateAction,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import {
-  CaretLeftIcon,
-  CaretRightIcon,
-  FunnelSimpleIcon,
-} from "@phosphor-icons/react";
+import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CustomScrollbar } from "@/components/shared/CustomScrollbar";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { tableDensity } from "@/components/shared/table/density";
+import { useFullViewActive } from "@/components/shared/table/FullViewContext";
+import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
+import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
 import {
   Popover,
   PopoverContent,
@@ -34,6 +33,19 @@ export type ExcelColumn<T extends { id: string }> = {
   label: string;
   width?: number;
   sticky?: boolean;
+  /**
+   * Lets this column absorb leftover table width instead of every column
+   * rendering at exactly its configured `width` - for descriptive/free-text
+   * columns (Item Name, Category, Address...) on tables with few columns,
+   * where a fixed-width-only table would leave blank space on wide screens.
+   * `width` still applies as this column's minimum (its floor once the
+   * container is too narrow to show every column at its natural size, and
+   * the value sticky-offset math uses for any column after it). Numeric/
+   * status/unit/action columns should stay non-grow so they don't stretch
+   * to fill space pointlessly - see `docs` note in ExcelTable for the sticky
+   * interaction rule.
+   */
+  grow?: boolean;
   getValue: (row: T) => string | number | boolean | null | undefined;
   getFilterGroups?: (row: T) => string[];
   render?: (row: T) => ReactNode;
@@ -57,6 +69,21 @@ interface ExcelDataGridProps<T extends { id: string }> {
   emptyTitle?: string;
   isLoading?: boolean;
   maxHeightClassName?: string;
+  /**
+   * Fills whatever height its flex ancestor gives it instead of capping at
+   * `maxHeightClassName` - for pages that make the table the last flex-child
+   * of a viewport-bounded column (see PageShell's own `fillHeight`), so the
+   * table grows to use available space rather than a fixed vh guess. Takes
+   * priority over `maxHeightClassName` when set.
+   */
+  fillHeight?: boolean;
+  /**
+   * Adds a compact expand/collapse toggle to the grid's own top bar. When
+   * active, the grid (this same instance - no remount, no refetch) portals
+   * into an application-level Full View surface covering most of the
+   * viewport, escapable via the toggle or Escape. See FullViewPortal.
+   */
+  enableFullView?: boolean;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string | undefined;
   selection?: ExcelDataGridSelection<T>;
@@ -86,22 +113,33 @@ export function ExcelDataGrid<T extends { id: string }>({
   emptyTitle = "No records found",
   isLoading,
   maxHeightClassName = "max-h-[68vh]",
+  fillHeight = false,
+  enableFullView = false,
   onRowClick,
   getRowClassName,
   selection,
   onVisibleRowsChange,
 }: ExcelDataGridProps<T>) {
+  const [fullView, setFullView] = useState(false);
+  // True whether this grid owns the active Full View itself OR merely
+  // inherits one from an ancestor - either way, the grid should drop its own
+  // card border/rounding rather than show a redundant nested shell inside
+  // the outer full-view surface. Hook called
+  // unconditionally first, then combined - `fullView || useFullViewActive()`
+  // would skip the hook call whenever `fullView` is already true, which
+  // breaks the rules of hooks.
+  const inheritedFullView = useFullViewActive();
+  const isFullViewActive = fullView || inheritedFullView;
+  // Full View always behaves like fillHeight (it's meant to consume almost
+  // the entire viewport) regardless of what the caller passed for normal
+  // (non-full-view) sizing.
+  const effectiveFillHeight = fillHeight || isFullViewActive;
+
   const [filters, setFilters] = useState<ActiveFilters>({});
   const [page, setPage] = useState(1);
   const pageSize = 100;
-  
+
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const holdFrameRef = useRef<number | null>(null);
-  const syncingRef = useRef(false);
-  const [scrollMetrics, setScrollMetrics] = useState({
-    scrollWidth: 0,
-    clientWidth: 0,
-  });
   // Pinned/sticky columns eat a large share of the viewport on small screens, leaving little
   // room for the rest of the table, so columns aren't fixed there - the whole table just scrolls.
   const isMobile = useIsMobile();
@@ -128,17 +166,6 @@ export function ExcelDataGrid<T extends { id: string }>({
       { offsets: [], offset: selection ? SELECT_COLUMN_WIDTH : 0 },
     ).offsets;
   }, [columns, isMobile, selection]);
-  const fixedWidth = useMemo(
-    () =>
-      isMobile
-        ? 0
-        : columns.reduce(
-            (sum, column) => (column.sticky ? sum + (column.width ?? 140) : sum),
-            selection ? SELECT_COLUMN_WIDTH : 0,
-          ),
-    [columns, isMobile, selection],
-  );
-  const canScrollHorizontally = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 4;
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) =>
@@ -157,9 +184,16 @@ export function ExcelDataGrid<T extends { id: string }>({
     );
   }, [columns, filters, rows]);
 
-  useEffect(() => {
+  // Reset to page 1 whenever the active filters change - adjusted during
+  // render (React's recommended alternative to a setState-in-effect
+  // cascade) rather than in a useEffect. `filters` gets a new object
+  // reference exactly when a column filter is applied/cleared, so reference
+  // equality is the right check here.
+  const [lastFilters, setLastFilters] = useState(filters);
+  if (filters !== lastFilters) {
+    setLastFilters(filters);
     setPage(1);
-  }, [filters]);
+  }
 
   const paginatedRows = useMemo(() => {
     return filteredRows.slice((page - 1) * pageSize, page * pageSize);
@@ -195,188 +229,105 @@ export function ExcelDataGrid<T extends { id: string }>({
     onVisibleRowsChange({ filteredIds, pageIds, filterSignature });
   }, [filteredRows, paginatedRows, filterSignature, onVisibleRowsChange]);
 
-  const updateScrollMetrics = useCallback(() => {
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-
-    setScrollMetrics({
-      scrollWidth: scrollArea.scrollWidth,
-      clientWidth: scrollArea.clientWidth,
-    });
-  }, []);
-
-  useEffect(() => {
-    updateScrollMetrics();
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-
-    const observer = new ResizeObserver(updateScrollMetrics);
-    observer.observe(scrollArea);
-    return () => observer.disconnect();
-  }, [columns.length, filteredRows.length, updateScrollMetrics]);
-
-  function syncMainScrollbar(scrollLeft: number) {
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-
-    scrollArea.scrollLeft = scrollLeft;
-  }
-
-  function stopHoldScroll() {
-    if (holdFrameRef.current == null) return;
-    cancelAnimationFrame(holdFrameRef.current);
-    holdFrameRef.current = null;
-  }
-
-  function startHoldScroll(direction: "left" | "right") {
-    stopHoldScroll();
-
-    const step = () => {
-      const scrollArea = scrollAreaRef.current;
-      if (!scrollArea) return;
-
-      scrollArea.scrollBy({
-        left: direction === "left" ? -18 : 18,
-        behavior: "auto",
-      });
-      holdFrameRef.current = requestAnimationFrame(step);
-    };
-
-    holdFrameRef.current = requestAnimationFrame(step);
-  }
-
   return (
-    <div className="rounded-card border border-border bg-card flex flex-col">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border px-4 py-3 shrink-0">
-        <div className="text-xs font-medium text-muted-foreground">
-          Showing {Math.min(filteredRows.length, (page - 1) * pageSize + 1)} to {Math.min(filteredRows.length, page * pageSize)} of {filteredRows.length} filtered records {filteredRows.length !== rows.length ? `(from ${rows.length} total)` : ""}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-xs"
-              onClick={() => setPage(1)}
-              disabled={page === 1}
-            >
-              First
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-xs"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Prev
-            </Button>
-            <span className="px-2 text-xs font-medium text-muted-foreground">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-xs"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 text-xs"
-              onClick={() => setPage(totalPages)}
-              disabled={page === totalPages}
-            >
-              Last
-            </Button>
-          </div>
+    <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
+      <div
+        className={cn(
+          "flex flex-col bg-card",
+          // Full View already provides its own outer surface (see
+          // FullViewPortal) - a second nested rounded/bordered card inside
+          // it just eats space and reads as "not really full-screen", so
+          // this one goes edge-to-edge instead, whether it owns the active
+          // Full View itself or is nested inside an ancestor's.
+          isFullViewActive ? "rounded-none" : "rounded-card border border-border",
+          effectiveFillHeight && "h-full min-h-0 flex-1",
         )}
-      </div>
-      <div className={cn("group/excel-grid relative flex flex-col", maxHeightClassName)}>
-        <div
-          ref={scrollAreaRef}
-          className="min-w-0 flex-1 overflow-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <ExcelTable
-            columns={columns}
-            stickyOffsets={stickyOffsets}
-            rows={paginatedRows}
-            allRows={rows}
-            filters={filters}
-            setFilters={setFilters}
-            emptyTitle={emptyTitle}
-            isLoading={isLoading}
-            emptyColSpan={columns.length + (selection ? 1 : 0)}
-            onRowClick={onRowClick}
-            getRowClassName={getRowClassName}
-            selection={selection}
-          />
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border px-3 py-2 shrink-0">
+          <div className="text-xs font-medium text-muted-foreground">
+            Showing {Math.min(filteredRows.length, (page - 1) * pageSize + 1)} to {Math.min(filteredRows.length, page * pageSize)} of {filteredRows.length} filtered records {filteredRows.length !== rows.length ? `(from ${rows.length} total)` : ""}
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* Full View sits immediately left of pagination, in the one
+                result-count/pagination row - not floating over the table. */}
+            {enableFullView ? (
+              <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
+            ) : null}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(tableDensity.pagerButtonHeight, "px-2 text-xs")}
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(tableDensity.pagerButtonHeight, "px-2 text-xs")}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Prev
+                </Button>
+                <span className="px-2 text-xs font-medium text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(tableDensity.pagerButtonHeight, "px-2 text-xs")}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(tableDensity.pagerButtonHeight, "px-2 text-xs")}
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-
-        <CustomScrollbar targetRef={scrollAreaRef} orientation="horizontal" />
-        <CustomScrollbar targetRef={scrollAreaRef} orientation="vertical" />
-
-        {canScrollHorizontally ? (
-          <>
-            <HoldScrollButton
-              direction="left"
-              // Sticky/frozen columns (the selection checkbox, any `sticky`
-              // data column) live at left:0..fixedWidth - a flat `left-2`
-              // would sit on top of them and steal their clicks (the
-              // checkbox in particular, since it's the leftmost sticky
-              // column), so this button starts just past that frozen strip.
-              offset={fixedWidth + 8}
-              onStart={() => startHoldScroll("left")}
-              onStop={stopHoldScroll}
+        <div className={cn("group/excel-grid relative flex min-h-0 flex-col", effectiveFillHeight ? "flex-1" : maxHeightClassName)}>
+          <div
+            ref={scrollAreaRef}
+            className="min-w-0 flex-1 overflow-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <ExcelTable
+              columns={columns}
+              stickyOffsets={stickyOffsets}
+              rows={paginatedRows}
+              allRows={rows}
+              filters={filters}
+              setFilters={setFilters}
+              emptyTitle={emptyTitle}
+              isLoading={isLoading}
+              emptyColSpan={columns.length + (selection ? 1 : 0)}
+              onRowClick={onRowClick}
+              getRowClassName={getRowClassName}
+              selection={selection}
             />
-            <HoldScrollButton
-              direction="right"
-              offset={8}
-              onStart={() => startHoldScroll("right")}
-              onStop={stopHoldScroll}
-            />
-          </>
-        ) : null}
+          </div>
+
+          {/* The native horizontal scrollbar is already discoverable and
+              draggable on its own - no floating overlay arrows on top of
+              cells, in either normal or Full View mode. */}
+          <CustomScrollbar targetRef={scrollAreaRef} orientation="horizontal" />
+          <CustomScrollbar targetRef={scrollAreaRef} orientation="vertical" />
+        </div>
       </div>
-    </div>
-  );
-}
-
-function HoldScrollButton({
-  direction,
-  offset,
-  onStart,
-  onStop,
-}: {
-  direction: "left" | "right";
-  /** Pixels from that edge - the left button needs to clear the sticky/frozen columns strip. */
-  offset: number;
-  onStart: () => void;
-  onStop: () => void;
-}) {
-  const Icon = direction === "left" ? CaretLeftIcon : CaretRightIcon;
-
-  return (
-    <button
-      type="button"
-      title={`Hold to scroll ${direction}`}
-      aria-label={`Hold to scroll ${direction}`}
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        onStart();
-      }}
-      onPointerUp={onStop}
-      onPointerCancel={onStop}
-      onPointerLeave={onStop}
-      style={direction === "left" ? { left: offset } : { right: offset }}
-      className="absolute top-1/2 z-30 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-sm border border-border/70 bg-white text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-primary focus-visible:opacity-100 group-hover/excel-grid:opacity-100"
-    >
-      <Icon size={18} weight="bold" />
-    </button>
+    </FullViewPortal>
   );
 }
 
@@ -413,16 +364,64 @@ function ExcelTable<T extends { id: string }>({
   const someOnPageSelected =
     Boolean(selection) && !allOnPageSelected && pageIds.some((id) => selection!.selectedIds.has(id));
 
+  // table-layout:auto (the browser default) sizes columns by content, using
+  // `minWidth` as a floor only - a long value in any row silently blows a
+  // column past its configured `width`, which also desyncs it from the
+  // sticky-offset math below (that part already keys off `column.width`
+  // alone). `table-layout:fixed` + an explicit <colgroup> makes the
+  // configured width authoritative for both header and body cells in one
+  // place, so columns can no longer auto-expand from content and stay
+  // pixel-aligned with their own sticky offset.
+  //
+  // A plain fixed total table width (every column exactly its configured
+  // px) leaves blank space on a wide screen once density dropped column
+  // widths down - a 6-column table doesn't need to be as wide as a
+  // 20-column one. So the table itself is `width:100%` (fills the
+  // container) with `minWidth` pinned to the sum of every column's
+  // configured width (the floor at which horizontal scroll must take over).
+  // Non-grow columns keep an explicit <col width> - under table-layout:fixed
+  // that's authoritative and they can't be stretched. `grow` columns get NO
+  // <col width>, so the fixed-layout algorithm hands them 100% of whatever
+  // width is left over once every explicit column is accounted for (equally
+  // split, if more than one); their own `column.width` still applies via the
+  // cell-level `minWidth` below, so they still won't shrink under their own
+  // configured floor once the container gets tight enough to scroll.
+  //
+  // Sticky interaction: `stickyOffsets` (above) always keys off the
+  // *configured* `column.width`, never a column's actual rendered width, so
+  // a sticky column's own offset is unaffected by being `grow` too. But a
+  // LATER sticky column's offset is computed assuming every earlier column
+  // sits at its configured width - if an earlier sticky column is also
+  // `grow` (and therefore may render wider than that), a sticky column after
+  // it would visually drift from its computed offset. So `grow` is safe on
+  // any non-sticky column, and on a sticky column only when it's the last
+  // (or only) sticky column in the frozen block.
+  const selectColumnWidth = selection ? SELECT_COLUMN_WIDTH : 0;
+  const totalTableWidth = selectColumnWidth + columns.reduce((sum, column) => sum + (column.width ?? 140), 0);
+
   return (
-    <table className="min-w-full border-separate border-spacing-0 text-sm">
+    <table
+      style={{ width: "100%", minWidth: totalTableWidth, tableLayout: "fixed" }}
+      className="border-separate border-spacing-0 text-sm"
+    >
+      <colgroup>
+        {selection ? <col style={{ width: selectColumnWidth }} /> : null}
+        {columns.map((column) => (
+          <col key={column.key} style={column.grow ? undefined : { width: column.width ?? 140 }} />
+        ))}
+      </colgroup>
       <thead>
         <tr>
           {selection && (
             <th
               style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
-              className="sticky top-0 left-0 z-30 h-10.5 border-r border-b border-r-border/40 border-b-border bg-secondary pl-3 pr-0 py-2 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+              className={cn(
+                tableDensity.rowHeight,
+                "sticky top-0 left-0 z-30 border-r border-b border-r-border/40 border-b-border bg-secondary pl-2.5 pr-0 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+              )}
             >
               <Checkbox
+                className={tableDensity.checkboxSize}
                 checked={allOnPageSelected}
                 indeterminate={someOnPageSelected}
                 onCheckedChange={() => selection.onTogglePage(pageIds)}
@@ -442,7 +441,11 @@ function ExcelTable<T extends { id: string }>({
                 key={column.key}
                 style={{ minWidth: width, left: stickyOffset }}
                 className={cn(
-                  "sticky top-0 z-20 h-10.5 border-r border-b border-r-border/40 border-b-border bg-secondary px-3 py-2 text-left align-middle text-xs font-semibold text-muted-foreground",
+                  tableDensity.rowHeight,
+                  tableDensity.headerText,
+                  tableDensity.cellPaddingX,
+                  tableDensity.cellPaddingY,
+                  "sticky top-0 z-20 border-r border-b border-r-border/40 border-b-border bg-secondary text-left align-middle font-semibold text-muted-foreground",
                   isSticky && "z-30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                 )}
               >
@@ -542,10 +545,14 @@ function ExcelTableRowImpl<T extends { id: string }>({
       {hasSelection && (
         <td
           style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
-          className="sticky left-0 z-10 h-11 border-r border-b border-r-border/30 border-b-border/60 bg-secondary pl-3 pr-0 py-2 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]"
+          className={cn(
+            tableDensity.rowHeight,
+            "sticky left-0 z-10 border-r border-b border-r-border/30 border-b-border/60 bg-secondary pl-2.5 pr-0 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+          )}
           onClick={(event) => event.stopPropagation()}
         >
           <Checkbox
+            className={tableDensity.checkboxSize}
             checked={isSelected}
             onCheckedChange={() => onToggleRow?.(row.id)}
             aria-label={ariaLabel ?? (isSelected ? "Deselect row" : "Select row")}
@@ -564,7 +571,11 @@ function ExcelTableRowImpl<T extends { id: string }>({
             key={column.key}
             style={{ minWidth: width, left: stickyOffset }}
             className={cn(
-              "h-11 border-r border-b border-r-border/30 border-b-border/60 px-3 py-2 text-sm font-normal text-foreground",
+              tableDensity.rowHeight,
+              tableDensity.bodyText,
+              tableDensity.cellPaddingX,
+              tableDensity.cellPaddingY,
+              "border-r border-b border-r-border/30 border-b-border/60 font-normal text-foreground",
               isSticky && "sticky z-10 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
             )}
             title={value === EMPTY_VALUE ? undefined : value}
@@ -647,11 +658,11 @@ function ColumnFilter<T extends { id: string }>({
             type="button"
             aria-label={`Filter ${column.label}`}
             className={cn(
-              "mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
+              "inline-flex h-4.5 w-4.5 items-center justify-center rounded border border-transparent text-muted-foreground hover:border-border hover:bg-background hover:text-foreground",
               active && "border-primary/30 bg-primary/10 text-primary",
             )}
           >
-            <FunnelSimpleIcon size={13} />
+            <FunnelSimpleIcon size={12} />
           </button>
         }
       />

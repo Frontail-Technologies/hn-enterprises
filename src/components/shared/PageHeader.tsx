@@ -3,6 +3,11 @@ import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
   title: string
+  /**
+   * No longer rendered - sub-headings were removed from the app header
+   * (and, to match, from dialogs and sheets). Kept optional in the prop
+   * type only so existing callers that still pass one don't need editing.
+   */
   subtitle?: string
   /** Optional small line above the title (e.g. breadcrumb-style context). */
   eyebrow?: ReactNode
@@ -13,10 +18,10 @@ interface PageHeaderProps {
 
 /**
  * The single canonical page header for the admin dashboard.
- * Spec: title 20px/semibold, subtitle 13px/regular muted, right-aligned actions.
+ * Spec: title 20px/semibold, right-aligned actions.
  * `PageShell` renders this internally so both share one implementation.
  */
-export function PageHeader({ title, subtitle, eyebrow, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, actions, className }: PageHeaderProps) {
   return (
     <div
       className={cn(
@@ -29,9 +34,6 @@ export function PageHeader({ title, subtitle, eyebrow, actions, className }: Pag
         <h1 className="truncate text-xl font-semibold leading-tight tracking-tight text-foreground">
           {title}
         </h1>
-        {subtitle ? (
-          <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
-        ) : null}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

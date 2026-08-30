@@ -67,7 +67,7 @@ export function InventoryFilterBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-card border border-border bg-card px-3 py-2.5">
+    <div className="flex flex-wrap items-center gap-2">
       <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
         <FunnelSimpleIcon size={14} />
         Filters
@@ -77,7 +77,7 @@ export function InventoryFilterBar({
         value={filters.projectId || ""}
         onValueChange={(value) => set("projectId", value)}
         placeholder="All Projects"
-        className="h-8 w-44"
+        className="h-10 w-60"
         options={[
           { value: "", label: "All Projects" },
           { value: "unassigned", label: "Central / Unassigned" },
@@ -86,7 +86,7 @@ export function InventoryFilterBar({
       />
 
       <Select value={filters.source || "all"} onValueChange={(value) => set("source", value === "all" ? "" : (value as MaterialSource))}>
-        <SelectTrigger className="h-8 w-36">
+        <SelectTrigger className="h-10 w-36">
           <SelectValue placeholder="All Sources" />
         </SelectTrigger>
         <SelectContent>
@@ -97,7 +97,7 @@ export function InventoryFilterBar({
       </Select>
 
       {showMonthFilter ? (
-        <MonthPicker value={filters.month} onChange={(month) => set("month", month)} placeholder="All Time" className="w-36" />
+        <MonthPicker value={filters.month} onChange={(month) => set("month", month)} placeholder="All Time" className="h-10 w-52" />
       ) : null}
 
       {showPlumberFilter ? (
@@ -105,13 +105,13 @@ export function InventoryFilterBar({
           value={filters.plumberId || ""}
           onValueChange={(value) => set("plumberId", value)}
           placeholder="All Plumbers"
-          className="h-8 w-44"
+          className="h-10 w-55"
           options={[{ value: "", label: "All Plumbers" }, ...plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))]}
         />
       ) : null}
 
       {hasActiveInventoryFilters(filters) ? (
-        <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 text-xs" onClick={() => onChange(EMPTY_INVENTORY_FILTERS)}>
+        <Button type="button" variant="ghost" size="sm" className="h-10 gap-1 text-xs" onClick={() => onChange(EMPTY_INVENTORY_FILTERS)}>
           <XIcon size={13} />
           Clear
         </Button>

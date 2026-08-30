@@ -163,9 +163,13 @@ summary {
   color: currentColor !important;
 }
 
+/* Neutral, compact scrollbar everywhere a native one is still used (tables/
+   grids use CustomScrollbar or their own scoped rules instead - see
+   ExcelDataGrid/DataTable). Deliberately never primary-colored: primary is
+   reserved for interactive actions/selections, not chrome. */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -176,12 +180,22 @@ summary {
   cursor: pointer;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: color-mix(in oklch, var(--foreground) 38%, transparent);
   cursor: pointer;
 }
 ::-webkit-scrollbar-thumb:active {
-  background: color-mix(in oklch, var(--primary) 80%, black);
+  background: color-mix(in oklch, var(--foreground) 50%, transparent);
   cursor: grabbing;
+}
+
+/* Firefox has no ::-webkit-scrollbar equivalent. Deliberately NOT applied
+   globally (`*`) - scoped to the shared table/grid scroll containers that
+   still render a native scrollbar (DataTable's - ExcelDataGrid/ImportPreview
+   already replace theirs with CustomScrollbar, which is plain HTML/CSS and
+   needs no browser-specific rule at all). */
+.table-native-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
 }
 
 /* Fully hidden scrollbar for a specific horizontally-scrolling element (e.g.

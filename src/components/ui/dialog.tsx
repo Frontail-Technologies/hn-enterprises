@@ -130,20 +130,14 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   )
 }
 
-function DialogDescription({
-  className,
-  ...props
-}: DialogPrimitive.Description.Props) {
-  return (
-    <DialogPrimitive.Description
-      data-slot="dialog-description"
-      className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
+// Sub-headings were removed from dialogs (to match the app header and
+// sheet) - intentionally renders nothing. Kept as a component, not deleted,
+// so existing <DialogDescription> call sites don't need editing; base-ui
+// only wires up aria-describedby when a Description actually mounts, so an
+// always-empty one is a no-op rather than a dangling reference.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- keeps the accepted prop shape documented
+function DialogDescription(_props: DialogPrimitive.Description.Props) {
+  return null
 }
 
 export {

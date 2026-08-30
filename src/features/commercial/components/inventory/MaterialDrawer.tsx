@@ -174,61 +174,37 @@ export function MaterialDrawer({
 
   const materialField = (
     <Field label="Material">
-      <Select
+      <SearchableSelect
         value={values.materialId || undefined}
         onValueChange={(materialId) => set("materialId", materialId ?? "")}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select material" />
-        </SelectTrigger>
-        <SelectContent>
-          {materials.map((material) => (
-            <SelectItem key={material.id} value={material.id}>
-              {material.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Select material"
+        options={materials.map((material) => ({ value: material.id, label: material.name }))}
+        className="w-full"
+      />
     </Field>
   );
 
   const plumberField = (
     <Field label="Plumber / Team">
-      <Select
+      <SearchableSelect
         value={values.plumberId || undefined}
         onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select plumber / team" />
-        </SelectTrigger>
-        <SelectContent>
-          {plumbers.map((plumber) => (
-            <SelectItem key={plumber.id} value={plumber.id}>
-              {plumber.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Select plumber / team"
+        options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+        className="w-full"
+      />
     </Field>
   );
 
   const supervisorField = (
     <Field label="Supervisor">
-      <Select
+      <SearchableSelect
         value={values.supervisorId || undefined}
         onValueChange={(supervisorId) => set("supervisorId", supervisorId ?? "")}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select supervisor" />
-        </SelectTrigger>
-        <SelectContent>
-          {supervisors.map((supervisor) => (
-            <SelectItem key={supervisor.id} value={supervisor.id}>
-              {supervisor.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Select supervisor"
+        options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
+        className="w-full"
+      />
     </Field>
   );
 

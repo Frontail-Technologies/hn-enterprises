@@ -1,8 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { CaretDownIcon, DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,7 +27,6 @@ import { useBulkDeleteDynamicFields, useDynamicFieldsQuery } from "../hooks/useD
 import type { CustomField } from "../types";
 import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
 import { DynamicFieldGrid } from "./DynamicFieldGrid";
-import { DynamicFieldImport } from "./DynamicFieldImport";
 
 type StatusFilter = "All" | "Active" | "Inactive";
 
@@ -37,9 +43,9 @@ const exportColumns: ExportColumn<CustomField>[] = [
 ];
 
 export function DynamicFieldsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Active");
-  const [importOpen, setImportOpen] = useState(false);
 
   const { data: fields = [], isLoading } = useDynamicFieldsQuery(statusFilter === "All" ? undefined : statusFilter);
   const { selectedIds, toggleRow, clear } = useBulkSelection();
@@ -69,43 +75,46 @@ export function DynamicFieldsPage() {
       subtitle="Extra fields shown on the Customer form and the master-sheet import template - grouped, ordered by drag, and versioned with a safe deactivate-before-delete flow."
       actions={
         <>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("dynamic-fields.xlsx", exportColumns, filteredFields)}
-          >
-            <DownloadSimpleIcon size={15} />
-            Export Excel
-          </button>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => setImportOpen(true)}
-          >
-            <UploadSimpleIcon size={15} />
-            Import
-          </button>
+          <div className="w-56 max-w-full">
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search fields..." />
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value as StatusFilter); }}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Inactive">Inactive</SelectItem>
+              <SelectItem value="All">All Statuses</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void exportRowsToExcel("dynamic-fields.xlsx", exportColumns, filteredFields)}>
+                <DownloadSimpleIcon size={14} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dynamic-fields/import")}>
+                <UploadSimpleIcon size={14} />
+                Import
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DynamicFieldDrawer fields={fields} />
         </>
       }
       contentClassName="space-y-4"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="max-w-sm flex-1">
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search fields..." />
-        </div>
-        <Select value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value as StatusFilter); }}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Inactive">Inactive</SelectItem>
-            <SelectItem value="All">All</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <DynamicFieldGrid
         fields={filteredFields}
@@ -113,8 +122,6 @@ export function DynamicFieldsPage() {
         dragEnabled={!search.trim()}
         selection={{ selectedIds, onToggleRow: toggleRow }}
       />
-
-      <DynamicFieldImport open={importOpen} onOpenChange={setImportOpen} />
 
       <BulkDeleteDialog
         open={deleteOpen}

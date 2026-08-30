@@ -34,9 +34,15 @@ function monthOptions() {
 export function WageRegister() {
   const options = useMemo(() => monthOptions(), []);
   const [month, setMonth] = useState(options[0].value);
-  const { data: wages = [], isLoading: wagesLoading } = useWagesQuery({ month });
-  const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
-  const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
+  const { data: wages = [], isLoading: wagesLoading } = useWagesQuery({
+    month,
+  });
+  const { data: plumbers = [], isLoading: plumbersLoading } =
+    usePlumbersQuery();
+  const plumberNameById = useMemo(
+    () => new Map(plumbers.map((p) => [p.id, p.name])),
+    [plumbers],
+  );
   const isLoading = wagesLoading || plumbersLoading;
   const deleteWage = useDeleteWage();
   const downloadWageRegister = useDownloadWageRegister();
@@ -50,151 +56,237 @@ export function WageRegister() {
 
   const handleExport = () => {
     const [yearStr, monthStr] = month.split("-");
-    downloadWageRegister.mutate({ month: Number(monthStr), year: Number(yearStr) });
+    downloadWageRegister.mutate({
+      month: Number(monthStr),
+      year: Number(yearStr),
+    });
   };
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
         <span>
-          Gross wages: <span className="font-semibold text-foreground">{money(wageTotals.gross)}</span>
+          Gross wages:{" "}
+          <span className="font-semibold text-foreground">
+            {money(wageTotals.gross)}
+          </span>
         </span>
         <span>
-          Deductions: <span className="font-semibold text-foreground">{money(wageTotals.deductions)}</span>
+          Deductions:{" "}
+          <span className="font-semibold text-foreground">
+            {money(wageTotals.deductions)}
+          </span>
         </span>
         <span>
-          Net payable: <span className="font-semibold text-foreground">{money(wageTotals.net)}</span>
+          Net payable:{" "}
+          <span className="font-semibold text-foreground">
+            {money(wageTotals.net)}
+          </span>
         </span>
         <span>
-          Pending payments: <span className="font-semibold text-destructive">{wageTotals.pending}</span>
+          Pending payments:{" "}
+          <span className="font-semibold text-destructive">
+            {wageTotals.pending}
+          </span>
         </span>
       </div>
       <section className="rounded-lg border border-border/70 bg-card">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Wage Register</p>
-          <p className="text-xs text-muted-foreground">
-            Payroll-style register with attendance days, deductions and net payment.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={month} onValueChange={(value) => { if (value) setMonth(value); }}>
-            <SelectTrigger className="h-8 w-37.5 bg-card">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <WageDrawer month={month} triggerLabel="Add Wage Entry" />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={downloadWageRegister.isPending}
-            onClick={handleExport}
-          >
-            <DownloadSimpleIcon size={14} />
-            {downloadWageRegister.isPending ? "Exporting..." : "Export Wage Register"}
-          </Button>
-        </div>
-      </div>
-      <div className="overflow-y-auto">
-        <div className="flex min-w-0">
-          <div className="shrink-0 border-r border-border/70">
-            <table className="w-max border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr>
-                  <RegisterHeaderCell className="w-16 min-w-16">Sl No.</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-52 min-w-52">Name</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36">Category</RegisterHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={3} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
-                      <div className="flex items-center justify-center py-4">
-                        <LoadingSpinner />
-                      </div>
-                    </td>
-                  </tr>
-                ) : wages.map((row, index) => (
-                  <tr key={row.id} className="hover:bg-muted/25">
-                    <RegisterBodyCell className="text-center font-medium">{index + 1}</RegisterBodyCell>
-                    <RegisterBodyCell className="font-medium text-foreground">
-                      {plumberNameById.get(row.plumberId) ?? "Unknown"}
-                    </RegisterBodyCell>
-                    <RegisterBodyCell>{row.category}</RegisterBodyCell>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Wage Register
+            </p>
           </div>
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <table className="min-w-max border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Rate of Wage</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Days Worked</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Basic</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-right">Total</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-28 min-w-28 text-right">PF</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-28 min-w-28 text-right">ESIC</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Total Deduction</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-36 min-w-36 text-right">Net Payment</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-32 min-w-32 text-center">Status</RegisterHeaderCell>
-                  <RegisterHeaderCell className="w-24 min-w-24 text-center">Actions</RegisterHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={10} className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center">
-                      <div className="flex items-center justify-center py-4">
-                        <LoadingSpinner />
-                      </div>
-                    </td>
-                  </tr>
-                ) : wages.map((row) => (
-                  <tr key={row.id} className="hover:bg-muted/25">
-                    <RegisterBodyCell className="text-right">{money(row.wageRate)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-center font-medium">{row.daysWorked}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">{money(row.basic)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">{money(row.total)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">{money(row.pf)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">{money(row.esic)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right">{money(row.totalDeduction)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-right font-semibold">{money(row.netPayment)}</RegisterBodyCell>
-                    <RegisterBodyCell className="text-center">
-                      <StatusBadge status={row.status} />
-                    </RegisterBodyCell>
-                    <RegisterBodyCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <WageDrawer month={month} wage={row} icon={<NotePencilIcon size={15} />} iconOnly />
-                        <DeleteConfirmDialog
-                          itemName={`${plumberNameById.get(row.plumberId) ?? "this"} wage entry`}
-                          onConfirm={() => deleteWage.mutate(row.id)}
-                        />
-                      </div>
-                    </RegisterBodyCell>
-                  </tr>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={month}
+              onValueChange={(value) => {
+                if (value) setMonth(value);
+              }}
+            >
+              <SelectTrigger className="h-8 w-37.5 bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
                 ))}
-              </tbody>
-            </table>
+              </SelectContent>
+            </Select>
+            <WageDrawer month={month} triggerLabel="Add Wage Entry" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={downloadWageRegister.isPending}
+              onClick={handleExport}
+            >
+              <DownloadSimpleIcon size={14} />
+              {downloadWageRegister.isPending
+                ? "Exporting..."
+                : "Export Wage Register"}
+            </Button>
           </div>
         </div>
-      </div>
-    </section>
+        <div className="overflow-y-auto">
+          <div className="flex min-w-0">
+            <div className="shrink-0 border-r border-border/70">
+              <table className="w-max border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <RegisterHeaderCell className="w-16 min-w-16">
+                      Sl No.
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-52 min-w-52">
+                      Name
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-36 min-w-36">
+                      Category
+                    </RegisterHeaderCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center"
+                      >
+                        <div className="flex items-center justify-center py-4">
+                          <LoadingSpinner />
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    wages.map((row, index) => (
+                      <tr key={row.id} className="hover:bg-muted/25">
+                        <RegisterBodyCell className="text-center font-medium">
+                          {index + 1}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="font-medium text-foreground">
+                          {plumberNameById.get(row.plumberId) ?? "Unknown"}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell>{row.category}</RegisterBodyCell>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <table className="min-w-max border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <RegisterHeaderCell className="w-32 min-w-32 text-right">
+                      Rate of Wage
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-32 min-w-32 text-center">
+                      Days Worked
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-32 min-w-32 text-right">
+                      Basic
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-32 min-w-32 text-right">
+                      Total
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-28 min-w-28 text-right">
+                      PF
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-28 min-w-28 text-right">
+                      ESIC
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-36 min-w-36 text-right">
+                      Total Deduction
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-36 min-w-36 text-right">
+                      Net Payment
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-32 min-w-32 text-center">
+                      Status
+                    </RegisterHeaderCell>
+                    <RegisterHeaderCell className="w-24 min-w-24 text-center">
+                      Actions
+                    </RegisterHeaderCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={10}
+                        className="h-28 border-b border-r border-border/55 bg-card px-2 py-2 text-center"
+                      >
+                        <div className="flex items-center justify-center py-4">
+                          <LoadingSpinner />
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    wages.map((row) => (
+                      <tr key={row.id} className="hover:bg-muted/25">
+                        <RegisterBodyCell className="text-right">
+                          {money(row.wageRate)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-center font-medium">
+                          {row.daysWorked}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right">
+                          {money(row.basic)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right">
+                          {money(row.total)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right">
+                          {money(row.pf)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right">
+                          {money(row.esic)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right">
+                          {money(row.totalDeduction)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-right font-semibold">
+                          {money(row.netPayment)}
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-center">
+                          <StatusBadge status={row.status} />
+                        </RegisterBodyCell>
+                        <RegisterBodyCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <WageDrawer
+                              month={month}
+                              wage={row}
+                              icon={<NotePencilIcon size={15} />}
+                              iconOnly
+                            />
+                            <DeleteConfirmDialog
+                              itemName={`${plumberNameById.get(row.plumberId) ?? "this"} wage entry`}
+                              onConfirm={() => deleteWage.mutate(row.id)}
+                            />
+                          </div>
+                        </RegisterBodyCell>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 }
 
-function RegisterHeaderCell({ children, className }: { children: ReactNode; className?: string }) {
+function RegisterHeaderCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <th
       className={cn(
@@ -207,9 +299,20 @@ function RegisterHeaderCell({ children, className }: { children: ReactNode; clas
   );
 }
 
-function RegisterBodyCell({ children, className }: { children: ReactNode; className?: string }) {
+function RegisterBodyCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <td className={cn("h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground", className)}>
+    <td
+      className={cn(
+        "h-10 border-b border-r border-border/55 bg-card px-2 py-2 text-sm text-foreground",
+        className,
+      )}
+    >
       {children}
     </td>
   );

@@ -1,26 +1,33 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { CaretDownIcon, DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useDownloadUserRegister } from "@/features/exports/hooks/useExports";
 import { useUsersQuery } from "../hooks/useUsers";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { ROLE_TO_BACKEND, STATUS_TO_BACKEND, type User, type UserRole, type UserStatus } from "../services/users.service";
 import { UserDrawer } from "./UserDrawer";
-import { UserImportDialog } from "./staff/UserImportDialog";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { useBulkDeleteUsers, useDeleteUser, useUpdateUser, useUserDeleteImpactQuery } from "../hooks/useUsers";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
 
 export function UsersRolesPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({
     search: "",
     role: "all",
@@ -29,7 +36,6 @@ export function UsersRolesPage() {
   const { data: users = [], isLoading } = useUsersQuery();
   const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const bulkDelete = useBulkDeleteUsers();
   const downloadRegister = useDownloadUserRegister();
 
@@ -102,54 +108,60 @@ export function UsersRolesPage() {
       subtitle="Admin access management and permission control."
       actions={
         <>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={handleExportRegister}
-            disabled={downloadRegister.isPending}
-          >
-            <DownloadSimpleIcon size={15} />
-            {downloadRegister.isPending ? "Exporting..." : "Export Excel"}
-          </button>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => setImportOpen(true)}
-          >
-            <UploadSimpleIcon size={15} />
-            Import Users
-          </button>
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search user or username..."
+            title="User Filters"
+            values={filters}
+            filters={[
+              {
+                key: "role",
+                placeholder: "All Roles",
+                options: uniqOptions(users.map((row) => row.role)),
+              },
+              {
+                key: "status",
+                placeholder: "All Statuses",
+                options: uniqOptions(users.map((row) => row.status)),
+              },
+            ]}
+            onChange={(key, value) =>
+              setFilters((current) => ({ ...current, [key]: value }))
+            }
+            onReset={() => setFilters({ search: "", role: "all", status: "all" })}
+          />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportRegister} disabled={downloadRegister.isPending}>
+                <DownloadSimpleIcon size={14} />
+                {downloadRegister.isPending ? "Exporting..." : "Export Excel"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/users/import")}>
+                <UploadSimpleIcon size={14} />
+                Import Users
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <UserDrawer />
         </>
       }
     >
-      <FilterSheetButton
-        searchKey="search"
-        searchPlaceholder="Search user or username..."
-        title="User Filters"
-        values={filters}
-        filters={[
-          {
-            key: "role",
-            placeholder: "All Roles",
-            options: uniqOptions(users.map((row) => row.role)),
-          },
-          {
-            key: "status",
-            placeholder: "All Statuses",
-            options: uniqOptions(users.map((row) => row.status)),
-          },
-        ]}
-        onChange={(key, value) =>
-          setFilters((current) => ({ ...current, [key]: value }))
-        }
-        onReset={() => setFilters({ search: "", role: "all", status: "all" })}
-      />
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
         data={data}
         columns={columns}
         isLoading={isLoading}
+        enableFullView
         selection={{
           selectedIds,
           onToggleRow: toggleRow,
@@ -167,8 +179,6 @@ export function UsersRolesPage() {
         onConfirm={handleBulkDelete}
         note="Users with associated records will be skipped with an error instead of partially deleted. Your own account is never deleted even if selected."
       />
-
-      <UserImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </PageShell>
   );
 }

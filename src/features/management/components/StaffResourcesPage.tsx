@@ -105,6 +105,23 @@ export function StaffResourcesPage() {
       subtitle="Manage field supervisors — payroll details linked to their real login."
       actions={
         <>
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search supervisors or mobile..."
+            title="Supervisor Filters"
+            values={filters}
+            filters={[
+              {
+                key: "status",
+                placeholder: "All Statuses",
+                options: uniqOptions(staff.map((row) => row.status)),
+              },
+            ]}
+            onChange={(key, value) =>
+              setFilters((current) => ({ ...current, [key]: value }))
+            }
+            onReset={() => setFilters({ search: "", status: "all" })}
+          />
           <button
             type="button"
             className={buttonVariants({ variant: "outline", size: "default" })}
@@ -117,28 +134,12 @@ export function StaffResourcesPage() {
         </>
       }
     >
-      <FilterSheetButton
-        searchKey="search"
-        searchPlaceholder="Search supervisors or mobile..."
-        title="Supervisor Filters"
-        values={filters}
-        filters={[
-          {
-            key: "status",
-            placeholder: "All Statuses",
-            options: uniqOptions(staff.map((row) => row.status)),
-          },
-        ]}
-        onChange={(key, value) =>
-          setFilters((current) => ({ ...current, [key]: value }))
-        }
-        onReset={() => setFilters({ search: "", status: "all" })}
-      />
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
         data={data}
         columns={columns}
         isLoading={staffLoading}
+        enableFullView
         selection={{
           selectedIds,
           onToggleRow: toggleRow,

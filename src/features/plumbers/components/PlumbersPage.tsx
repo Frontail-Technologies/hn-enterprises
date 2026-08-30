@@ -1,18 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { ImportDialog } from "@/components/shared/ImportDialog";
-import { type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageShell } from "@/features/management/components/shared/PageShell";
 import { PaginatedDataTable } from "@/features/management/components/shared/PaginatedDataTable";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import {
@@ -22,8 +27,6 @@ import {
   usePlumbersQuery,
   useUpdatePlumber,
 } from "../hooks/usePlumbers";
-import { usePlumbersImportPreview, usePlumbersImportConfirm } from "../hooks/usePlumbersImport";
-import type { PlumberImportRow } from "../services/plumbers-import.service";
 import { PlumberDrawer } from "./PlumberDrawer";
 import type { Plumber } from "../types/plumber.types";
 
@@ -35,27 +38,11 @@ const exportColumns: ExportColumn<Plumber>[] = [
   { label: "Remarks", getValue: (row) => row.remarks },
 ];
 
-const importPreviewColumns: ExcelColumn<PlumberImportRow & { id: string }>[] = [
-  { key: "name", label: "Name", width: 220, getValue: (r) => r.name },
-  { key: "type", label: "Type", width: 130, getValue: (r) => r.type },
-  { key: "contactNumber", label: "Contact Number", width: 160, getValue: (r) => r.contactNumber },
-  { key: "remarks", label: "Remarks", width: 240, getValue: (r) => r.remarks },
-  {
-    key: "status",
-    label: "Status",
-    width: 120,
-    getValue: (r) => (r.error ? "invalid" : "valid"),
-    render: (r) => <StatusBadge status={r.error ? "Rejected" : "Approved"} />,
-  },
-  { key: "error", label: "Error", width: 260, getValue: (r) => r.error || "-" },
-];
-
 export function PlumbersPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({ search: "", type: "all", status: "all" });
   const { data: plumbers = [] } = usePlumbersQuery(filters.search || undefined);
   const [drawerState, setDrawerState] = useState<{ open: boolean; plumber?: Plumber }>({ open: false });
-  const importPreview = usePlumbersImportPreview();
-  const importConfirm = usePlumbersImportConfirm();
   const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeletePlumbers();
@@ -116,32 +103,54 @@ export function PlumbersPage() {
       subtitle="Roster of individual plumbers and named teams/crews assigned to customer connections."
       actions={
         <>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}
-          >
-            <DownloadSimpleIcon size={15} />
-            Export Excel
-          </button>
-          <ImportDialog
-            trigger={
-              <Button type="button" variant="outline">
-                <UploadSimpleIcon size={15} />
-                Import
-              </Button>
-            }
-            title="Import Plumbers"
-            description="Upload an Excel file to bulk import plumbers."
-            templateFileName="plumbers_template.xlsx"
-            templateHeaders={["Name", "Type", "Contact Number", "Remarks"]}
-            previewColumns={importPreviewColumns}
-            isPreviewPending={importPreview.isPending}
-            isConfirmPending={importConfirm.isPending}
-            entityLabelPlural="Plumbers"
-            onPreview={(file) => importPreview.mutateAsync(file)}
-            onConfirm={(validRows) => importConfirm.mutateAsync(validRows)}
+          <FilterSheetButton
+            searchKey="search"
+            searchPlaceholder="Search plumbers..."
+            title="Plumber Filters"
+            values={filters}
+            filters={[
+              {
+                key: "type",
+                placeholder: "All Types",
+                options: [
+                  { value: "individual", label: "Individual" },
+                  { value: "team", label: "Team" },
+                ],
+              },
+              {
+                key: "status",
+                placeholder: "All Statuses",
+                options: [
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" },
+                ],
+              },
+            ]}
+            onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+            onReset={() => setFilters({ search: "", type: "all", status: "all" })}
           />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}>
+                <DownloadSimpleIcon size={14} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/plumbers/import")}>
+                <UploadSimpleIcon size={14} />
+                Import
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button type="button" onClick={() => setDrawerState({ open: true })}>
             <PlusIcon size={15} />
             Add Plumber
@@ -149,36 +158,11 @@ export function PlumbersPage() {
         </>
       }
     >
-      <FilterSheetButton
-        searchKey="search"
-        searchPlaceholder="Search plumbers..."
-        title="Plumber Filters"
-        values={filters}
-        filters={[
-          {
-            key: "type",
-            placeholder: "All Types",
-            options: [
-              { value: "individual", label: "Individual" },
-              { value: "team", label: "Team" },
-            ],
-          },
-          {
-            key: "status",
-            placeholder: "All Statuses",
-            options: [
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
-            ],
-          },
-        ]}
-        onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-        onReset={() => setFilters({ search: "", type: "all", status: "all" })}
-      />
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
         data={filteredPlumbers}
         columns={columns}
+        enableFullView
         selection={{
           selectedIds,
           onToggleRow: toggleRow,

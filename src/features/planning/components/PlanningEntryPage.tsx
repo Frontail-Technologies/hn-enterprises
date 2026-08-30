@@ -11,7 +11,13 @@ import {
   CaretRightIcon,
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { PageShell } from "@/components/shared/PageShell";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
@@ -222,19 +228,7 @@ export function PlanningEntryPage() {
       title="DPR / Planning"
       subtitle="Daily planning and field progress tracking."
       actions={
-        <button
-          type="button"
-          className={buttonVariants({ variant: "outline", size: "default" })}
-          disabled={downloadSummary.isPending}
-          onClick={() => void downloadSummary.mutateAsync({ date, projectId: projectId || undefined, supervisorId: supervisorId || undefined })}
-        >
-          <DownloadSimpleIcon size={15} />
-          {downloadSummary.isPending ? "Exporting..." : "Export Excel"}
-        </button>
-      }
-    >
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 rounded-card border border-border bg-card px-3 py-2.5">
+        <>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -245,7 +239,7 @@ export function PlanningEntryPage() {
             >
               <CaretLeftIcon size={14} />
             </Button>
-            <DatePicker value={date} onChange={goToDate} className="h-8 w-40" />
+            <DatePicker value={date} onChange={goToDate} className="h-10 w-52" />
             <Button
               type="button"
               variant="outline"
@@ -260,7 +254,7 @@ export function PlanningEntryPage() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-10 text-xs"
                 onClick={() => goToDate(format(new Date(), "yyyy-MM-dd"))}
               >
                 <CalendarBlankIcon size={13} />
@@ -273,18 +267,42 @@ export function PlanningEntryPage() {
             value={projectId || ""}
             onValueChange={setProjectId}
             placeholder="All Projects"
-            className="h-8 w-48"
+            className="h-10 w-60"
             options={[{ value: "", label: "All Projects" }, ...projects.map((project) => ({ value: project.id, label: project.name }))]}
           />
           <SearchableSelect
             value={supervisorId || ""}
             onValueChange={setSupervisorId}
             placeholder="All Supervisors"
-            className="h-8 w-48"
+            className="h-10 w-55"
             options={[{ value: "", label: "All Supervisors" }, ...supervisors.map((sup) => ({ value: sup.id, label: sup.name }))]}
           />
-        </div>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline" className="h-10 w-25">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={downloadSummary.isPending}
+                onClick={() =>
+                  void downloadSummary.mutateAsync({ date, projectId: projectId || undefined, supervisorId: supervisorId || undefined })
+                }
+              >
+                <DownloadSimpleIcon size={14} />
+                {downloadSummary.isPending ? "Exporting..." : "Export Excel"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      }
+    >
+      <div className="space-y-3">
         <SummaryStrip
           plannedWork={summary.plannedWork}
           dprSubmitted={summary.dprSubmitted}

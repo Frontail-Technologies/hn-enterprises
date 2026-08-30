@@ -1,12 +1,19 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import Link from "next/link";
+import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useDownloadHolidays, useDownloadMasterValues } from "@/features/exports/hooks/useExports";
 import { Input } from "@/components/ui/input";
 import {
@@ -63,7 +70,6 @@ import {
 } from "../types/masters.types";
 import { PageShell } from "./shared/PageShell";
 import { PaginatedDataTable } from "./shared/PaginatedDataTable";
-import { MasterValueImportDrawer } from "./MasterValueImportDrawer";
 
 const statuses: MasterValueStatus[] = ["Active", "Inactive"];
 const holidayTypes: HolidayType[] = ["National", "Restricted", "Company"];
@@ -170,16 +176,37 @@ export function MastersPage() {
       }
       actions={
         <>
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={handleExport}
-            disabled={exportPending}
-          >
-            <DownloadSimpleIcon size={15} />
-            {exportPending ? "Exporting..." : "Export Excel"}
-          </button>
-          {category && <MasterValueImportDrawer category={category} />}
+          <div className="w-64 max-w-full">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={isHolidayTab ? "Search holidays..." : `Search ${activeTab.toLowerCase()}...`}
+            />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline">
+                  More
+                  <CaretDownIcon size={14} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExport} disabled={exportPending}>
+                <DownloadSimpleIcon size={14} />
+                {exportPending ? "Exporting..." : "Export Excel"}
+              </DropdownMenuItem>
+              {category && (
+                <DropdownMenuItem render={<Link href={`/masters/values/import?category=${encodeURIComponent(category)}`} />}>
+                  <UploadSimpleIcon size={14} />
+                  Import Values
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {isHolidayTab ? (
             <HolidayDrawer />
           ) : category ? (
@@ -193,13 +220,6 @@ export function MastersPage() {
           Material categories are only groups like GI Pipe, MDPE Pipe, Valve, Tools. Actual stock items are added from Inventory & Material using Add Material.
         </div>
       ) : null}
-      <div className="max-w-sm">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={isHolidayTab ? "Search holidays..." : `Search ${activeTab.toLowerCase()}...`}
-        />
-      </div>
       <BulkDeleteBar
         selectedCount={activeSelection.selectedIds.size}
         onClear={activeSelection.clear}

@@ -15,14 +15,11 @@ import {
 } from "date-fns";
 import { CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
+import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
+import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
 import { useDownloadAttendanceRegister } from "@/features/exports/hooks/useExports";
 import { cn } from "@/lib/utils";
 import { attendanceKey, useAttendanceQuery, useRosterQuery } from "../hooks/useAttendance";
@@ -41,6 +38,7 @@ export function AttendancePage() {
   const [selectedSupervisor, setSelectedSupervisor] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fullView, setFullView] = useState(false);
   const queryClient = useQueryClient();
   const monthRange = useMemo(
     () => ({
@@ -101,27 +99,17 @@ export function AttendancePage() {
     : undefined;
   const attendanceControls = (
     <div className="flex flex-wrap items-center gap-2">
-      <Select
+      <SearchableSelect
         value={selectedSupervisor}
         onValueChange={(value) => {
-          if (!value) return;
           setSelectedSupervisor(value);
           setSelectedDate(null);
           setDrawerOpen(false);
         }}
-      >
-        <SelectTrigger className="h-8 w-[190px] bg-card">
-          <SelectValue>{selectedSupervisorName}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Supervisors</SelectItem>
-          {roster.map((supervisor) => (
-            <SelectItem key={supervisor.id} value={supervisor.id}>
-              {supervisor.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="All Supervisors"
+        className="h-10 w-55 bg-card"
+        options={[{ value: "all", label: "All Supervisors" }, ...roster.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))]}
+      />
       <div className="flex items-center rounded-md border border-border bg-card">
         <Button
           type="button"
@@ -163,20 +151,20 @@ export function AttendancePage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">
-            Attendance
-          </h1>
-        </div>
-      </div>
+      <PageHeader title="Attendance" actions={attendanceControls} />
+
+      {/* Full View portals the tabs + register/calendar together (same state -
+          month, supervisor filter, view mode - untouched), hiding just the
+          page title/controls header above. */}
+      <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
+        <div className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <UnderlineTabs
           items={[{ id: "register", label: "Register View" }]}
           active={viewMode}
           onChange={(value) => setViewMode(value as AttendanceViewMode)}
         />
-        {attendanceControls}
+        <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
       </div>
 
       {loadError ? (
@@ -287,6 +275,8 @@ export function AttendancePage() {
           </div>
         </section>
       ) : null}
+        </div>
+      </FullViewPortal>
 
       <AttendanceDrawer
         key={`${selectedDate ? format(selectedDate, "yyyy-MM-dd") : "none"}-${selectedSupervisor}`}
