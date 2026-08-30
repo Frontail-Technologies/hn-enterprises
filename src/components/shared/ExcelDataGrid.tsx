@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CustomScrollbar } from "@/components/shared/CustomScrollbar";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { tableDensity } from "@/components/shared/table/density";
 import { useFullViewActive } from "@/components/shared/table/FullViewContext";
@@ -163,6 +164,20 @@ export function ExcelDataGrid<T extends { id: string }>({
     lastVisibleSignatureRef.current = signature;
     onVisibleRowsChange({ filteredIds, pageIds, filterSignature });
   }, [filteredRows, paginatedRows, filterSignature, onVisibleRowsChange]);
+
+  if (!isLoading && filteredRows.length === 0) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col bg-card",
+          isFullViewActive ? "rounded-none" : "rounded-card border border-border",
+          effectiveFillHeight && "h-full min-h-0 flex-1",
+        )}
+      >
+        <EmptyState title={emptyTitle} />
+      </div>
+    );
+  }
 
   return (
     <FullViewPortal active={fullView} onExit={() => setFullView(false)}>

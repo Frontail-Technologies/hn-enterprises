@@ -21,7 +21,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateStaff } from "../hooks/useStaff";
 import type { CreateStaffFormValues } from "../types/staff.types";
 import type { User } from "../services/users.service";
@@ -57,7 +56,6 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<CreateStaffFormValues>(emptyValues());
   const [saveError, setSaveError] = useState("");
-  const { data: projects = [] } = useProjectsQuery();
   const createStaff = useCreateStaff();
   const availableUsers = users.filter((user) => !staffedUserIds.has(user.id) && user.role === "Supervisor");
 
@@ -165,31 +163,20 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
             </>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Assigned Project">
-              <SearchableSelect
-                value={values.assignedProjectId || undefined}
-                onValueChange={(assignedProjectId) => set("assignedProjectId", assignedProjectId ?? "")}
-                placeholder="Select project"
-                options={projects.map((p) => ({ value: p.id, label: p.name }))}
-                className="w-full"
-              />
-            </Field>
-            <Field label="Salary Type">
-              <Select value={values.salaryType} onValueChange={(salaryType) => { if (salaryType) set("salaryType", salaryType as CreateStaffFormValues["salaryType"]); }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {salaryTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
+          <Field label="Salary Type">
+            <Select value={values.salaryType} onValueChange={(salaryType) => { if (salaryType) set("salaryType", salaryType as CreateStaffFormValues["salaryType"]); }}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {salaryTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Monthly Salary">

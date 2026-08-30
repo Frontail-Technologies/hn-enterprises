@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { tableDensity } from '@/components/shared/table/density'
 import { cn } from '@/lib/utils'
-import { TableEmptyRow } from './TableEmptyRow'
+import { EmptyState } from './EmptyState'
 import { TableLoader } from './TableLoader'
 
 export interface ColumnDef<T> {
@@ -66,6 +66,20 @@ export function DataTable<T extends { id: string }>({
   const someOnPageSelected =
     Boolean(selection) && !allOnPageSelected && selectableIds.some((id) => selection!.selectedIds.has(id))
 
+  if (!isLoading && data.length === 0) {
+    return (
+      <div
+        className={cn(
+          'w-full bg-card',
+          fillHeight ? 'flex h-full min-h-0 flex-1 flex-col' : 'overflow-hidden rounded-card border border-border',
+          containerClassName,
+        )}
+      >
+        <EmptyState title={emptyTitle} description={emptyDescription} />
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -122,7 +136,7 @@ export function DataTable<T extends { id: string }>({
         <TableBody>
           {isLoading ? (
             <TableLoader colSpan={visibleColumnCount} />
-          ) : data.length ? data.map((row, index) => {
+          ) : data.map((row, index) => {
             const isSelectable = selection?.isRowSelectable?.(row) ?? true
             const isRowSelected = Boolean(selection?.selectedIds.has(row.id))
             return (
@@ -175,13 +189,7 @@ export function DataTable<T extends { id: string }>({
               ))}
             </TableRow>
             )
-          }) : (
-            <TableEmptyRow
-              colSpan={visibleColumnCount}
-              title={emptyTitle}
-              description={emptyDescription}
-            />
-          )}
+          })}
         </TableBody>
       </Table>
       </div>
