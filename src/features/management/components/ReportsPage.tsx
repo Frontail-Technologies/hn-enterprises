@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 export function ReportsPage() {
   return (
     <div className="space-y-5">
-      <PageHeader title="Reports" subtitle="Operational reports and exports." />
+      <PageHeader title="Reports" />
       <div className="rounded-xl border border-border/70 bg-card p-8">
         <div className="mx-auto max-w-md text-center">
           <p className="text-base font-semibold text-foreground">

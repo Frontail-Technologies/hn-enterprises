@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeftIcon, EditIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { getReportTemplateById } from "../services/report-templates.service";
@@ -52,7 +52,7 @@ export function ReportTemplatePreviewShell({ templateId }: { templateId: ReportT
           href={`/reports/templates/${template.id}/edit`}
           className={buttonVariants({ variant: "outline" })}
         >
-          <EditIcon size={15} />
+          <PencilSimpleIcon size={15} />
           Edit Template
         </Link>
       </div>

@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api-client";
-import type { Complaint, ComplaintFormValues, ComplaintPriority, ComplaintStatus } from "../types/complaint.types";
+import type { Complaint, ComplaintCustomer, ComplaintFormValues, ComplaintPriority, ComplaintStatus } from "../types/complaint.types";
 
 type BackendComplaintPriority = "low" | "medium" | "high";
 type BackendComplaintStatus = "open" | "in_progress" | "resolved" | "closed";
@@ -30,9 +30,19 @@ const STATUS_TO_BACKEND: Record<ComplaintStatus, BackendComplaintStatus> = {
   Closed: "closed",
 };
 
+type BackendComplaintCustomer = {
+  id: string;
+  name: string | null;
+  trBpNumber: string | null;
+  mobileNumber: string | null;
+};
+
 type BackendComplaint = {
   id: string;
   customerId: string;
+  // Only present on list() rows (server-joined) - create()/update() return
+  // the raw complaint row without it.
+  customer?: BackendComplaintCustomer | null;
   title: string;
   description: string;
   priority: BackendComplaintPriority;
@@ -41,10 +51,21 @@ type BackendComplaint = {
   createdAt: string;
 };
 
+function mapComplaintCustomer(raw: BackendComplaintCustomer | null | undefined): ComplaintCustomer | undefined {
+  if (!raw) return undefined;
+  return {
+    id: raw.id,
+    name: raw.name ?? "",
+    trBpNumber: raw.trBpNumber ?? "",
+    mobileNumber: raw.mobileNumber ?? "",
+  };
+}
+
 function mapComplaint(raw: BackendComplaint): Complaint {
   return {
     id: raw.id,
     customerId: raw.customerId,
+    customer: mapComplaintCustomer(raw.customer),
     title: raw.title,
     description: raw.description,
     priority: PRIORITY_TO_FRONTEND[raw.priority] ?? "Medium",
@@ -96,6 +117,12 @@ export const complaintsApi = {
   async delete(id: string): Promise<void> {
     await apiRequest(`/complaints/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  async push(id: string): Promise<{ sent: boolean; recipientCount: number; message: string }> {
+    return apiRequest(`/complaints/${id}/push`, {
+      method: "POST",
     });
   },
 };

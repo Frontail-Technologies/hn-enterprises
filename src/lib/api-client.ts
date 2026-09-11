@@ -1,10 +1,18 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005/api";
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
 type ApiEnvelope<T> = {
   success: boolean;
   message?: string;
   code?: string;
   data?: T;
+  meta?: { pagination?: PaginationMeta };
 };
 
 type RequestOptions = RequestInit & {
@@ -25,14 +33,19 @@ export class ApiError extends Error {
 
 let refreshPromise: Promise<void> | null = null;
 
-async function parseResponse<T>(response: Response) {
+async function readEnvelope<T>(response: Response): Promise<ApiEnvelope<T>> {
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
 
   if (!response.ok || payload?.success === false) {
     throw new ApiError(payload?.message || "Request failed", response.status, payload?.code);
   }
 
-  return payload?.data as T;
+  return payload ?? { success: true };
+}
+
+async function parseResponse<T>(response: Response) {
+  const envelope = await readEnvelope<T>(response);
+  return envelope.data as T;
 }
 
 async function refreshSession() {
@@ -71,7 +84,7 @@ function redirectToLogin() {
   window.location.href = "/login";
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function fetchWithAuth(path: string, options: RequestOptions): Promise<Response> {
   const { skipRefresh, headers, ...init } = options;
   const isFormData = init.body instanceof FormData;
   const requestHeaders = {
@@ -103,8 +116,28 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       redirectToLogin();
     }
 
-    return parseResponse<T>(retry);
+    return retry;
   }
 
+  return response;
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await fetchWithAuth(path, options);
   return parseResponse<T>(response);
+}
+
+/**
+ * Same as apiRequest, but also surfaces the server's pagination meta
+ * (page/limit/total/totalPages) instead of discarding it - for genuine
+ * server-paginated lists rather than "load everything, paginate in the
+ * browser" endpoints.
+ */
+export async function apiRequestPaginated<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ data: T; pagination?: PaginationMeta }> {
+  const response = await fetchWithAuth(path, options);
+  const envelope = await readEnvelope<T>(response);
+  return { data: envelope.data as T, pagination: envelope.meta?.pagination };
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { DatePicker } from "@/components/shared/DatePicker";
 import {
   Select,
   SelectContent,
@@ -65,7 +66,8 @@ export function FilterSheetButton({
 
   const activeCount = filters.reduce((count, filter) => {
     const value = values[filter.key];
-    return value && value !== "all" ? count + 1 : count;
+    const toValue = filter.toKey ? values[filter.toKey] : undefined;
+    return (value && value !== "all") || toValue ? count + 1 : count;
   }, 0);
 
   function updateDraft(key: string, value: string) {
@@ -82,7 +84,9 @@ export function FilterSheetButton({
   function resetFilters() {
     onReset();
     setDraftValues({
-      ...Object.fromEntries(filters.map((filter) => [filter.key, "all"])),
+      ...Object.fromEntries(
+        filters.flatMap((filter) => (filter.toKey ? [[filter.key, "all"], [filter.toKey, "all"]] : [[filter.key, "all"]])),
+      ),
       ...(searchKey ? { [searchKey]: "" } : {}),
     });
     setOpen(false);
@@ -93,10 +97,13 @@ export function FilterSheetButton({
     setOpen(nextOpen);
   }
 
+  const showApply = hasDraftChanges;
+  const showReset = activeCount > 0 || Boolean(searchKey && values[searchKey]);
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div className={cn("flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center", className)}>
       {searchKey ? (
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 sm:w-72">
           <MagnifyingGlassIcon
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             size={15}
@@ -105,31 +112,54 @@ export function FilterSheetButton({
             placeholder={searchPlaceholder}
             value={values[searchKey] ?? ""}
             onChange={(event) => onChange(searchKey, event.target.value)}
-            className="h-8 w-72 max-w-full pl-9"
+            className="h-8 w-full max-w-full pl-9 sm:w-72"
           />
         </div>
       ) : null}
 
       {showInlineFilters ? (
         <>
-          {filters.map((filter) => (
-            <FilterSelectField
-              key={filter.key}
-              filter={filter}
-              value={draftValues[filter.key] ?? "all"}
-              onChange={(value) => updateDraft(filter.key, value)}
-              triggerClassName="h-8 w-48 max-w-full"
-            />
-          ))}
-          {hasDraftChanges ? (
-            <Button type="button" size="default" className="h-8" onClick={applyFilters}>
-              Apply Filters
-            </Button>
-          ) : null}
-          {activeCount > 0 || (searchKey && values[searchKey]) ? (
-            <Button type="button" variant="outline" size="default" className="h-8" onClick={resetFilters}>
-              Reset
-            </Button>
+          <div className={cn("grid gap-2 sm:contents", filters.length === 2 ? "grid-cols-2" : "grid-cols-1")}>
+            {filters.map((filter) =>
+              filter.type === "dateRange" ? (
+                <div key={filter.key} className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <DatePicker
+                    value={draftValues[filter.key] || undefined}
+                    onChange={(value) => updateDraft(filter.key, value)}
+                    placeholder="From"
+                    className="w-full sm:w-40"
+                  />
+                  <DatePicker
+                    value={filter.toKey ? draftValues[filter.toKey] || undefined : undefined}
+                    onChange={(value) => filter.toKey && updateDraft(filter.toKey, value)}
+                    placeholder="To"
+                    className="w-full sm:w-40"
+                  />
+                </div>
+              ) : (
+                <FilterSelectField
+                  key={filter.key}
+                  filter={filter}
+                  value={draftValues[filter.key] ?? "all"}
+                  onChange={(value) => updateDraft(filter.key, value)}
+                  triggerClassName="h-8 w-full max-w-full sm:w-48"
+                />
+              ),
+            )}
+          </div>
+          {showApply || showReset ? (
+            <div className={cn("grid gap-2 sm:contents", showApply && showReset ? "grid-cols-2" : "grid-cols-1")}>
+              {showApply ? (
+                <Button type="button" size="default" className="h-8" onClick={applyFilters}>
+                  Apply Filters
+                </Button>
+              ) : null}
+              {showReset ? (
+                <Button type="button" variant="outline" size="default" className="h-8" onClick={resetFilters}>
+                  Reset
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </>
       ) : (
@@ -159,12 +189,27 @@ export function FilterSheetButton({
                   <Label className="text-xs font-medium text-muted-foreground">
                     {filter.placeholder}
                   </Label>
-                  <FilterSelectField
-                    filter={filter}
-                    value={draftValues[filter.key] ?? "all"}
-                    onChange={(value) => updateDraft(filter.key, value)}
-                    triggerClassName="h-8 w-full"
-                  />
+                  {filter.type === "dateRange" ? (
+                    <div className="flex items-center gap-2">
+                      <DatePicker
+                        value={draftValues[filter.key] || undefined}
+                        onChange={(value) => updateDraft(filter.key, value)}
+                        placeholder="From"
+                      />
+                      <DatePicker
+                        value={filter.toKey ? draftValues[filter.toKey] || undefined : undefined}
+                        onChange={(value) => filter.toKey && updateDraft(filter.toKey, value)}
+                        placeholder="To"
+                      />
+                    </div>
+                  ) : (
+                    <FilterSelectField
+                      filter={filter}
+                      value={draftValues[filter.key] ?? "all"}
+                      onChange={(value) => updateDraft(filter.key, value)}
+                      triggerClassName="h-8 w-full"
+                    />
+                  )}
                 </div>
               ))}
 
@@ -205,6 +250,17 @@ function FilterSelectField({
   onChange: (value: string) => void;
   triggerClassName: string;
 }) {
+  if (filter.type === "date") {
+    return (
+      <DatePicker
+        value={value === "all" ? undefined : value}
+        onChange={onChange}
+        placeholder={filter.placeholder}
+        className={triggerClassName}
+      />
+    );
+  }
+
   if (filter.searchable) {
     return (
       <SearchableSelect

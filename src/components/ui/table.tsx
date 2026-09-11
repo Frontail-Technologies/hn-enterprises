@@ -4,9 +4,14 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerRef,
+  ...props
+}: React.ComponentProps<"table"> & { containerRef?: React.Ref<HTMLDivElement> }) {
   return (
     <div
+      ref={containerRef}
       data-slot="table-container"
       className="table-native-scrollbar relative w-full overflow-x-auto"
     >
@@ -23,7 +28,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-table-header [&_tr]:border-b [&_tr]:border-b-border", className)}
       {...props}
     />
   )
@@ -70,7 +75,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 border-r border-r-border/40 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground last:border-r-0 [&:has([role=checkbox])]:pr-0",
+        "h-10 border-r border-r-border px-2 text-left align-middle font-medium whitespace-nowrap text-foreground last:border-r-0 [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
@@ -83,7 +88,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "border-r border-r-border/30 p-2 align-middle whitespace-nowrap last:border-r-0 [&:has([role=checkbox])]:pr-0",
+        "border-r border-r-border/50 p-2 align-middle whitespace-nowrap last:border-r-0 [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

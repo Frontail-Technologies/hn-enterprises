@@ -1,16 +1,7 @@
 "use client";
 
-import { FunnelSimpleIcon, XIcon } from "@phosphor-icons/react";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterDialog } from "@/components/shared/FilterDialog";
 import { MonthPicker } from "@/components/shared/MonthPicker";
-import { Button } from "@/components/ui/button";
 import type { MaterialSource } from "../../types/material.types";
 
 export type InventoryFilterState = {
@@ -40,6 +31,11 @@ export function inventoryFiltersToDateRange(month: string) {
   return { from, to };
 }
 
+const SOURCE_OPTIONS = [
+  { value: "purchase", label: "Purchase" },
+  { value: "pbg", label: "PBG" },
+];
+
 export function InventoryFilterBar({
   filters,
   onChange,
@@ -55,60 +51,64 @@ export function InventoryFilterBar({
   showPlumberFilter: boolean;
   showMonthFilter?: boolean;
 }) {
-  function set<K extends keyof InventoryFilterState>(key: K, value: InventoryFilterState[K]) {
-    onChange({ ...filters, [key]: value });
+  const values: Record<string, string> = {
+    projectId: filters.projectId || "all",
+    source: filters.source || "all",
+    plumberId: filters.plumberId || "all",
+    month: filters.month,
+  };
+
+  function handleChange(key: string, value: string) {
+    const nextValue = value === "all" ? "" : value;
+    if (key === "projectId") onChange({ ...filters, projectId: nextValue });
+    if (key === "source") onChange({ ...filters, source: nextValue as MaterialSource | "" });
+    if (key === "plumberId") onChange({ ...filters, plumberId: nextValue });
+    if (key === "month") onChange({ ...filters, month: nextValue });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-        <FunnelSimpleIcon size={14} />
-        Filters
-      </span>
-
-      <SearchableSelect
-        value={filters.projectId || ""}
-        onValueChange={(value) => set("projectId", value)}
-        placeholder="All Projects"
-        className="h-10 w-60"
-        options={[
-          { value: "", label: "All Projects" },
-          { value: "unassigned", label: "Central / Unassigned" },
-          ...projects.map((project) => ({ value: project.id, label: project.name })),
-        ]}
-      />
-
-      <Select value={filters.source || "all"} onValueChange={(value) => set("source", value === "all" ? "" : (value as MaterialSource))}>
-        <SelectTrigger className="h-10 w-36">
-          <SelectValue placeholder="All Sources" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Sources</SelectItem>
-          <SelectItem value="purchase">Purchase</SelectItem>
-          <SelectItem value="pbg">PBG</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {showMonthFilter ? (
-        <MonthPicker value={filters.month} onChange={(month) => set("month", month)} placeholder="All Time" className="h-10 w-52" />
-      ) : null}
-
-      {showPlumberFilter ? (
-        <SearchableSelect
-          value={filters.plumberId || ""}
-          onValueChange={(value) => set("plumberId", value)}
-          placeholder="All Plumbers"
-          className="h-10 w-55"
-          options={[{ value: "", label: "All Plumbers" }, ...plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))]}
-        />
-      ) : null}
-
-      {hasActiveInventoryFilters(filters) ? (
-        <Button type="button" variant="ghost" size="sm" className="h-10 gap-1 text-xs" onClick={() => onChange(EMPTY_INVENTORY_FILTERS)}>
-          <XIcon size={13} />
-          Clear
-        </Button>
-      ) : null}
-    </div>
+    <FilterDialog
+      title="Inventory Filters"
+      filters={[
+        {
+          key: "projectId",
+          placeholder: "All Projects",
+          searchable: true,
+          options: [
+            { value: "unassigned", label: "Central / Unassigned" },
+            ...projects.map((project) => ({ value: project.id, label: project.name })),
+          ],
+        },
+        { key: "source", placeholder: "All Sources", options: SOURCE_OPTIONS },
+        ...(showPlumberFilter
+          ? [
+              {
+                key: "plumberId",
+                placeholder: "All Plumbers",
+                searchable: true,
+                options: plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name })),
+              },
+            ]
+          : []),
+      ]}
+      values={values}
+      onChange={handleChange}
+      onReset={() => onChange(EMPTY_INVENTORY_FILTERS)}
+      renderExtra={
+        showMonthFilter
+          ? ({ values: draftValues, onChange: updateDraft }) => (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Month</p>
+                <MonthPicker
+                  value={draftValues.month ?? ""}
+                  onChange={(month) => updateDraft("month", month)}
+                  placeholder="All Time"
+                  className="h-8 w-full text-sm"
+                />
+              </div>
+            )
+          : undefined
+      }
+    />
   );
 }

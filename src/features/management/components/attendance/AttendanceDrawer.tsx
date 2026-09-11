@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoTile } from "@/components/shared/InfoTile";
-import { attendanceApi } from "../../services/attendance.service";
+import { useUpsertAttendance } from "../../hooks/useAttendance";
 import type { RosterUser } from "../../services/users.service";
 import type { AttendanceRecord, AttendanceStatus } from "../../data/attendance.data";
 
@@ -35,6 +35,17 @@ function toTimeInputValue(value?: string) {
   if (meridiem.toUpperCase() === "AM" && hour === 12) hour = 0;
 
   return `${String(hour).padStart(2, "0")}:${minuteValue}`;
+}
+
+function buildLocationMapSrc(location: { latitude: number; longitude: number }) {
+  const delta = 0.006;
+  const bbox = [
+    location.longitude - delta,
+    location.latitude - delta,
+    location.longitude + delta,
+    location.latitude + delta,
+  ].join(",");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${location.latitude},${location.longitude}`;
 }
 
 export function AttendanceDrawer({
@@ -66,8 +77,7 @@ export function AttendanceDrawer({
     toTimeInputValue(record?.checkOutTime),
   );
   const [remarks, setRemarks] = useState(record?.remarks ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
+  const upsertAttendance = useUpsertAttendance();
   const location =
     typeof record?.latitude === "number" &&
     typeof record?.longitude === "number"
@@ -77,25 +87,12 @@ export function AttendanceDrawer({
   const hasLocation = Boolean(location);
   const staffName =
     record?.staffName || defaultSupervisor?.name || "Select a supervisor";
-  const mapSrc = location
-    ? (() => {
-        const delta = 0.006;
-        const bbox = [
-          location.longitude - delta,
-          location.latitude - delta,
-          location.longitude + delta,
-          location.latitude + delta,
-        ].join(",");
-        return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${location.latitude},${location.longitude}`;
-      })()
-    : null;
+  const mapSrc = location ? buildLocationMapSrc(location) : null;
 
   const handleSave = async () => {
     if (!date || !targetStaffId) return;
-    setIsSaving(true);
-    setSaveError("");
     try {
-      await attendanceApi.upsert({
+      await upsertAttendance.mutateAsync({
         userId: targetStaffId,
         date: format(date, "yyyy-MM-dd"),
         status,
@@ -105,10 +102,8 @@ export function AttendanceDrawer({
       });
       onSaved?.();
       onOpenChange(false);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Unable to save attendance");
-    } finally {
-      setIsSaving(false);
+    } catch {
+      return;
     }
   };
 
@@ -248,8 +243,10 @@ export function AttendanceDrawer({
             />
           </label>
 
-          {saveError ? (
-            <p className="text-xs text-destructive">{saveError}</p>
+          {upsertAttendance.isError ? (
+            <p className="text-xs text-destructive">
+              {upsertAttendance.error instanceof Error ? upsertAttendance.error.message : "Unable to save attendance"}
+            </p>
           ) : null}
         </div>
 
@@ -258,8 +255,8 @@ export function AttendanceDrawer({
             <SheetClose render={<Button type="button" variant="outline" />}>
               Cancel
             </SheetClose>
-            <Button type="button" onClick={handleSave} disabled={!targetStaffId || isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Button type="button" onClick={handleSave} disabled={!targetStaffId || upsertAttendance.isPending}>
+              {upsertAttendance.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </SheetFooter>

@@ -3,29 +3,22 @@
 import { useRouter } from "next/navigation";
 import { DownloadSimpleIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { exportGridToExcel, type GridCell } from "@/lib/export-excel";
+import { exportGridToExcel } from "@/lib/export-excel";
 import { useProjectQuery } from "@/features/projects/hooks/useProjects";
 import { useBillPaymentsQuery, useBillQuery, useDeleteBill, useUpdateBillPaymentStatus } from "../hooks/useBills";
-import type { BillPayment, BillPaymentStatus } from "../types/bill.types";
+import { getBillingPaymentColumns } from "../hooks/billing-payment.columns";
+import { buildInvoiceGrid } from "../mappers/billing-invoice.mapper";
+import type { BillPaymentStatus } from "../types/bill.types";
 import { formatDate, money } from "../utils/format";
-import { BillDrawer } from "./billing/BillDrawer";
-import { PaymentDrawer } from "./billing/PaymentDrawer";
+import { BillDialog } from "./billing/BillDialog";
+import { PaymentDialog } from "./billing/PaymentDialog";
 import { Panel } from "./shared/Panel";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
-
-const paymentStatuses: BillPaymentStatus[] = ["Cleared", "Pending", "Bounced"];
 
 export function BillingDetailPage({ id }: { id: string }) {
   const router = useRouter();
@@ -34,7 +27,7 @@ export function BillingDetailPage({ id }: { id: string }) {
   const { data: project } = useProjectQuery(bill?.projectId ?? "");
   const deleteMutation = useDeleteBill();
   const updatePaymentStatus = useUpdateBillPaymentStatus(id);
-  useBreadcrumbLabel(bill?.billNumber);
+  useBreadcrumbLabel(id, bill?.billNumber);
 
   if (isLoading) {
     return <PageLoading />;
@@ -44,62 +37,15 @@ export function BillingDetailPage({ id }: { id: string }) {
     return <p className="p-4 text-sm text-destructive">Unable to load this bill.</p>;
   }
 
-  const columns: ColumnDef<BillPayment>[] = [
-    { key: "paymentDate", header: "Date", render: (row) => formatDate(row.paymentDate) },
-    {
-      key: "amount",
-      header: "Amount",
-      render: (row) => <b>{money(row.amount)}</b>,
-    },
-    { key: "mode", header: "Mode" },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => (
-        <Select
-          value={row.status}
-          onValueChange={(status) => {
-            if (status && status !== row.status) {
-              updatePaymentStatus.mutate({ paymentId: row.id, status: status as BillPaymentStatus });
-            }
-          }}
-        >
-          <SelectTrigger className="h-8 w-28 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {paymentStatuses.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-    { key: "remarks", header: "Remarks" },
-  ];
+  function handleStatusChange(paymentId: string, status: BillPaymentStatus) {
+    updatePaymentStatus.mutate({ paymentId, status });
+  }
+
+  const columns = getBillingPaymentColumns({ onStatusChange: handleStatusChange });
 
   function handleDownloadInvoice() {
     if (!bill) return;
-    const bold = (value: string | number): GridCell => ({ value, bold: true });
-    const grid: GridCell[][] = [
-      [bold("INVOICE")],
-      [bold("Bill Number"), bill.billNumber, bold("Bill Date"), formatDate(bill.billDate)],
-      [bold("Project"), project?.name ?? "-", bold("Due Date"), formatDate(bill.dueDate)],
-      [bold("Status"), bill.status],
-      [bold("Total Amount"), money(bill.totalAmount), bold("Tax"), money(bill.tax)],
-      [bold("Paid Amount"), money(bill.paidAmount), bold("Pending Amount"), money(bill.pendingAmount)],
-      [],
-      [bold("Date"), bold("Amount"), bold("Mode"), bold("Status"), bold("Remarks")],
-      ...payments.map((payment) => [
-        formatDate(payment.paymentDate),
-        money(payment.amount),
-        payment.mode,
-        payment.status,
-        payment.remarks || "-",
-      ]),
-    ];
+    const grid = buildInvoiceGrid(bill, project?.name, payments);
     void exportGridToExcel(`invoice-${bill.billNumber}.xlsx`, grid);
   }
 
@@ -107,10 +53,9 @@ export function BillingDetailPage({ id }: { id: string }) {
     <div className="space-y-5">
       <PageHeader
         title={bill.billNumber}
-        subtitle={`Billing for ${project?.name ?? "project"}`}
         actions={
-          <div className="flex items-center gap-2">
-            <BillDrawer bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <BillDialog bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />
             <DeleteConfirmDialog
               itemName={`Bill ${bill.billNumber}`}
               variant="full"
@@ -141,8 +86,8 @@ export function BillingDetailPage({ id }: { id: string }) {
       <Panel
         title="Payment History"
         actions={
-          <div className="flex items-center gap-2">
-            <PaymentDrawer billId={bill.id} />
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <PaymentDialog billId={bill.id} />
             <Button type="button" variant="outline" size="sm" onClick={handleDownloadInvoice}>
               <DownloadSimpleIcon size={14} />
               Download Invoice

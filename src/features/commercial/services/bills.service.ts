@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest, apiRequestPaginated, type PaginationMeta } from "@/lib/api-client";
 import type {
   Bill,
   BillFormValues,
@@ -44,6 +44,7 @@ function toDateOnly(value: string | null | undefined) {
 type BackendBill = {
   id: string;
   projectId: string;
+  projectName?: string | null;
   billNumber: string;
   billDate: string | null;
   dueDate: string | null;
@@ -69,6 +70,7 @@ function mapBill(raw: BackendBill): Bill {
   return {
     id: raw.id,
     projectId: raw.projectId,
+    projectName: raw.projectName ?? "",
     billNumber: raw.billNumber,
     billDate: toDateOnly(raw.billDate),
     dueDate: toDateOnly(raw.dueDate),
@@ -106,16 +108,41 @@ function mapPayment(raw: BackendBillPayment): BillPayment {
   };
 }
 
+export type BillListParams = { search?: string; projectId?: string; status?: BillStatus };
+
+export type BillSummary = { billed: number; received: number; pending: number; overdue: number };
+
 export const billsApi = {
-  async list(
-    params: { search?: string; projectId?: string; status?: BillStatus } = {},
-  ): Promise<Bill[]> {
+  async list(params: BillListParams = {}): Promise<Bill[]> {
     const query = new URLSearchParams({ limit: "200" });
     if (params.search) query.set("search", params.search);
     if (params.projectId) query.set("projectId", params.projectId);
     if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
     const rows = await apiRequest<BackendBill[]>(`/bills?${query.toString()}`);
     return rows.map(mapBill);
+  },
+
+  /** Real server pagination for the main Billing screen; list() above stays for scoped consumers. */
+  async listPage(
+    params: BillListParams & { page?: number; limit?: number } = {},
+  ): Promise<{ data: Bill[]; pagination?: PaginationMeta }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    const { data, pagination } = await apiRequestPaginated<BackendBill[]>(`/bills?${query.toString()}`);
+    return { data: (data ?? []).map(mapBill), pagination };
+  },
+
+  /** Dataset-wide billing totals for the stat cards, honoring the same filters. */
+  async summary(params: BillListParams = {}): Promise<BillSummary> {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.status) query.set("status", STATUS_TO_BACKEND[params.status]);
+    return apiRequest<BillSummary>(`/bills/summary?${query.toString()}`);
   },
 
   async get(id: string): Promise<Bill> {

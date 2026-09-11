@@ -26,7 +26,7 @@ export function useCreateMasterValue(category: MasterValueCategory) {
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
       toast.success("Master value created successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create master value"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to create master value"),
   });
 }
 
@@ -38,7 +38,7 @@ export function useUpdateMasterValue(category: MasterValueCategory, id: string) 
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
       toast.success("Master value updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update master value"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update master value"),
   });
 }
 
@@ -50,7 +50,7 @@ export function useDeleteMasterValue(category: MasterValueCategory) {
       queryClient.invalidateQueries({ queryKey: masterValuesKey(category) });
       toast.success("Master value deleted successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete master value"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete master value"),
   });
 }
 
@@ -90,7 +90,7 @@ export function useCreateHoliday() {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
       toast.success("Holiday created successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create holiday"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to create holiday"),
   });
 }
 
@@ -102,7 +102,7 @@ export function useUpdateHoliday(id: string) {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
       toast.success("Holiday updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update holiday"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update holiday"),
   });
 }
 
@@ -114,7 +114,7 @@ export function useDeleteHoliday() {
       queryClient.invalidateQueries({ queryKey: holidaysKey });
       toast.success("Holiday deleted successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete holiday"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete holiday"),
   });
 }
 

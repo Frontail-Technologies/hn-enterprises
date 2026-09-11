@@ -2,22 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CaretDownIcon, DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon, SlidersHorizontalIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterDialog } from "@/components/shared/FilterDialog";
 import { PageShell } from "@/components/shared/PageShell";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
@@ -25,7 +13,7 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useBulkDeleteDynamicFields, useDynamicFieldsQuery } from "../hooks/useDynamicFields";
 import type { CustomField } from "../types";
-import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
+import { DynamicFieldDialog } from "./DynamicFieldDialog";
 import { DynamicFieldGrid } from "./DynamicFieldGrid";
 
 type StatusFilter = "All" | "Active" | "Inactive";
@@ -72,45 +60,49 @@ export function DynamicFieldsPage() {
   return (
     <PageShell
       title="Dynamic Fields"
-      subtitle="Extra fields shown on the Customer form and the master-sheet import template - grouped, ordered by drag, and versioned with a safe deactivate-before-delete flow."
+      icon={SlidersHorizontalIcon}
       actions={
         <>
-          <div className="w-56 max-w-full">
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search fields..." />
-          </div>
-          <Select value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value as StatusFilter); }}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-              <SelectItem value="All">All Statuses</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline">
-                  More
-                  <CaretDownIcon size={14} />
-                </Button>
-              }
+          <div className="relative min-w-0 sm:w-52">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search fields..."
+              className="h-8 w-full max-w-full pl-8 sm:w-52"
             />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void exportRowsToExcel("dynamic-fields.xlsx", exportColumns, filteredFields)}>
-                <DownloadSimpleIcon size={14} />
-                Export Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/dynamic-fields/import")}>
-                <UploadSimpleIcon size={14} />
-                Import
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          </div>
 
-          <DynamicFieldDrawer fields={fields} />
+          <div className="grid grid-cols-3 gap-2 sm:contents">
+            <FilterDialog
+              title="Dynamic Field Filters"
+              values={{ status: statusFilter === "All" ? "all" : statusFilter }}
+              filters={[
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: [
+                    { value: "Active", label: "Active" },
+                    { value: "Inactive", label: "Inactive" },
+                  ],
+                },
+              ]}
+              onChange={(_key, value) => setStatusFilter(value === "all" ? "All" : (value as StatusFilter))}
+              onReset={() => setStatusFilter("Active")}
+            />
+
+            <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("dynamic-fields.xlsx", exportColumns, filteredFields)}>
+              <DownloadSimpleIcon size={12} />
+              Export
+            </Button>
+
+            <Button type="button" variant="outline" size="compact" onClick={() => router.push("/dynamic-fields/import")}>
+              <UploadSimpleIcon size={12} />
+              Import
+            </Button>
+          </div>
+
+          <DynamicFieldDialog fields={fields} />
         </>
       }
       contentClassName="space-y-4"

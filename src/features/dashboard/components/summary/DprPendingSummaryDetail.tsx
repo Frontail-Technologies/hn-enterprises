@@ -9,12 +9,9 @@ import { getPeriodRange, withinRange } from "@/features/dashboard/services/dashb
 import { getAdminSummaryStatDefinition } from "@/features/dashboard/services/dashboard-summary-stats.service";
 import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
 import type { DprRecord } from "@/features/planning/types/planning.types";
-import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { SummaryStatShell } from "../SummaryStatShell";
 
-type DprRow = DprRecord & { projectName: string };
-
-const columns: ExcelColumn<DprRow>[] = [
+const columns: ExcelColumn<DprRecord>[] = [
   { key: "siteLabel", label: "Site", width: 190, sticky: true, getValue: (row) => row.siteLabel },
   { key: "projectName", label: "Project", width: 220, getValue: (row) => row.projectName },
   { key: "supervisorName", label: "Supervisor", width: 170, getValue: (row) => row.supervisorName },
@@ -30,20 +27,14 @@ const columns: ExcelColumn<DprRow>[] = [
 ];
 
 export function DprPendingSummaryDetail({ period }: { period: DashboardMetricPeriod }) {
-  const { data: projects = [], isLoading: projectsLoading } = useProjectsQuery();
   const { data: dprRecords = [], isLoading: dprLoading } = useDprRecordsQuery({});
 
   const rows = useMemo(() => {
-    const projectById = new Map(projects.map((project) => [project.id, project]));
     const range = getPeriodRange(period);
-
-    return dprRecords
-      .filter((record) => record.status !== "Approved" && withinRange(record.date, range))
-      .map((record) => ({
-        ...record,
-        projectName: projectById.get(record.projectId)?.name ?? "-",
-      }));
-  }, [dprRecords, projects, period]);
+    return dprRecords.filter(
+      (record) => record.status !== "Approved" && withinRange(record.date, range),
+    );
+  }, [dprRecords, period]);
 
   return (
     <SummaryStatShell
@@ -51,7 +42,7 @@ export function DprPendingSummaryDetail({ period }: { period: DashboardMetricPer
       searchPlaceholder="Search DPR records..."
       columns={columns}
       rows={rows}
-      isLoading={projectsLoading || dprLoading}
+      isLoading={dprLoading}
       emptyTitle="No pending DPR records found for the selected period"
     />
   );

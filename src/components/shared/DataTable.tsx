@@ -1,8 +1,11 @@
 'use client'
 
+import { useRef } from 'react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { tableDensity } from '@/components/shared/table/density'
+import { TableScrollNav } from '@/components/shared/table/TableScrollNav'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import { EmptyState } from './EmptyState'
 import { TableLoader } from './TableLoader'
@@ -39,6 +42,7 @@ interface DataTableProps<T extends { id: string }> {
   stickyLastColumn?: boolean
   selection?: DataTableSelection<T>
   fillHeight?: boolean
+  showEmptyTable?: boolean
 }
 
 export function DataTable<T extends { id: string }>({
@@ -56,7 +60,13 @@ export function DataTable<T extends { id: string }>({
   stickyLastColumn,
   selection,
   fillHeight = false,
+  showEmptyTable = false,
 }: DataTableProps<T>) {
+  // No right-pinned Actions column on mobile - see the same rule applied to
+  // EnterpriseDataGrid/ExcelDataGrid (remove-mobile-sub-navbar brief §6).
+  const isMobile = useIsMobile()
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null)
+  const effectiveStickyLastColumn = stickyLastColumn && !isMobile
   const visibleColumnCount = columns.length + (showSerialNumber ? 1 : 0) + (selection ? 1 : 0)
   const selectableIds = selection
     ? data.filter((row) => selection.isRowSelectable?.(row) ?? true).map((row) => row.id)
@@ -66,7 +76,7 @@ export function DataTable<T extends { id: string }>({
   const someOnPageSelected =
     Boolean(selection) && !allOnPageSelected && selectableIds.some((id) => selection!.selectedIds.has(id))
 
-  if (!isLoading && data.length === 0) {
+  if (!isLoading && data.length === 0 && !showEmptyTable) {
     return (
       <div
         className={cn(
@@ -83,15 +93,15 @@ export function DataTable<T extends { id: string }>({
   return (
     <div
       className={cn(
-        'w-full bg-card [&_tbody_svg]:text-primary',
+        'group/data-table relative w-full bg-card [&_tbody_svg]:text-primary',
         fillHeight ? 'flex h-full min-h-0 flex-1 flex-col' : 'overflow-hidden rounded-card border border-border',
         containerClassName,
       )}
     >
       <div className={cn(fillHeight && 'min-h-0 flex-1 overflow-y-auto')}>
-      <Table className={cn('min-w-full', tableClassName)}>
+      <Table containerRef={scrollAreaRef} className={cn('min-w-full', tableClassName)}>
         <TableHeader className={cn(stickyHeader && 'sticky top-0 z-10')}>
-          <TableRow className="border-b border-border bg-secondary hover:bg-secondary">
+          <TableRow className="border-b border-border hover:bg-table-header">
             {selection && (
               <TableHead className={cn('w-12 pl-2.5 pr-0 text-center', dense && tableDensity.rowHeight)}>
                 <Checkbox
@@ -124,7 +134,7 @@ export function DataTable<T extends { id: string }>({
                   tableDensity.headerText,
                   'font-semibold text-muted-foreground',
                   dense && tableDensity.rowHeight,
-                  stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-secondary shadow-[-8px_0_12px_-12px_var(--foreground)]',
+                  effectiveStickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-table-header shadow-[-8px_0_12px_-12px_var(--foreground)]',
                   col.headerClassName ?? col.className,
                 )}
               >
@@ -143,7 +153,7 @@ export function DataTable<T extends { id: string }>({
             <TableRow
               key={row.id}
               className={cn(
-                'border-b border-border/60 bg-card transition-colors last:border-0 hover:bg-muted/35',
+                'group border-b border-border bg-card transition-colors last:border-0 hover:bg-muted/60',
                 )}
             >
               {selection && (
@@ -180,7 +190,7 @@ export function DataTable<T extends { id: string }>({
                     tableDensity.bodyText,
                     'font-normal text-foreground',
                     dense && [tableDensity.cellPaddingY, tableDensity.rowHeight],
-                    stickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-card shadow-[-8px_0_12px_-12px_var(--foreground)]',
+                    effectiveStickyLastColumn && index === columns.length - 1 && 'sticky right-0 z-[1] bg-card group-hover:bg-muted/60 shadow-[-8px_0_12px_-12px_var(--foreground)]',
                     col.className,
                   )}
                 >
@@ -193,6 +203,7 @@ export function DataTable<T extends { id: string }>({
         </TableBody>
       </Table>
       </div>
+      <TableScrollNav scrollRef={scrollAreaRef} group="data-table" />
     </div>
   )
 }

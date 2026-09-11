@@ -8,7 +8,6 @@ export function SettingsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Settings"
-        subtitle="Company profile, workflow defaults and integrations."
       />
       <section className="grid gap-4 xl:grid-cols-3">
         <SettingsPanel

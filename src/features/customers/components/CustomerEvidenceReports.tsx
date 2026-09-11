@@ -18,7 +18,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -28,10 +27,17 @@ import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { FormField } from "@/components/shared/FormField";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { resolveFileUrl } from "@/lib/upload";
-import { useDeleteCustomerDocument } from "../hooks/useCustomers";
+import { useDeleteCustomerDocument } from "../queries/useCustomerDocuments";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
@@ -187,7 +193,7 @@ export function CustomerEvidencePanel({
   );
 }
 
-import { useCustomerDocumentCategories } from "../services/customers.service";
+import { useCustomerFieldOptions } from "../hooks/useCustomerFieldOptions";
 
 function CustomerEvidenceUpload({
   open,
@@ -210,7 +216,7 @@ function CustomerEvidenceUpload({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const customerEvidenceCategories = useCustomerDocumentCategories();
+  const { documentCategories: customerEvidenceCategories } = useCustomerFieldOptions();
 
   const resetForm = () => {
     setCategory("LMC / Site Evidence");
@@ -272,16 +278,16 @@ function CustomerEvidenceUpload({
         supporting files.
       </p>
 
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="!w-[min(32rem,calc(100vw-1rem))] !max-w-none gap-0 border-l-0 shadow-none">
-          <SheetHeader className="border-b border-border/70 px-5 py-4">
-            <SheetTitle>Upload Evidence</SheetTitle>
-            <SheetDescription>
-              Keep this simple: select category, attach photos, add
-              reference/date if needed.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
+            <DialogTitle>Upload Evidence</DialogTitle>
+            <DialogDescription>
+              Select a category, attach photos, and add a reference/date if
+              needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <FormField label="Category">
               <SearchableSelect
                 value={category}
@@ -327,7 +333,7 @@ function CustomerEvidenceUpload({
               <p className="text-xs text-destructive">{saveError}</p>
             ) : null}
           </div>
-          <SheetFooter className="flex-row justify-end border-t border-border/70 px-5 py-4">
+          <DialogFooter className="border-t border-border/70 px-5 py-4">
             <Button
               type="button"
               variant="outline"
@@ -342,9 +348,9 @@ function CustomerEvidenceUpload({
             >
               {isSaving ? "Saving..." : "Save Evidence"}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SectionCard>
   );
 }

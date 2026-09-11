@@ -70,6 +70,59 @@ export type MaterialTransaction = {
   correctionReason: string;
   isReversed: boolean;
   isCorrected: boolean;
+  /** Server-joined display labels - no need to load the full plumbers/projects/customers/materials lists to resolve these. */
+  plumberName: string;
+  projectName: string;
+  customerName: string;
+  materialName: string;
+};
+
+export type MaterialOverview = {
+  material: Material;
+  summary: {
+    availableQty: number;
+    receivedQty: number;
+    issuedQty: number;
+    consumedQty: number;
+    returnedQty: number;
+    plumberBalanceCount: number;
+  };
+};
+
+export type InventoryDetailTab = "purchase" | "storeIssue" | "consumption" | "plumberLedger" | "transactions";
+
+/** InventoryPage's tab-count badges - one COUNT/GROUP BY per domain type, never the underlying rows. */
+export type InventoryOverview = {
+  stockCount: number;
+  purchaseCount: number;
+  pbgIssueCount: number;
+  pbgConsumptionCount: number;
+  storeIssueCount: number;
+  totalIssueCount: number;
+  plumberBalanceCount: number;
+  plumberConsumptionCount: number;
+};
+
+/** InventoryPage's "Total Issue" tab - one row per material, computed server-side (SUM/COUNT/MAX, GROUP BY materialId). */
+export type TotalIssueSummaryRow = {
+  id: string;
+  materialId: string;
+  materialName: string;
+  unit: string;
+  totalIssued: number;
+  transactionCount: number;
+  lastIssueDate: string;
+};
+
+/** ProjectDetail → Materials tab summary - one whole-project row per material. */
+export type ProjectMaterialUsageRow = {
+  id: string;
+  materialId: string;
+  name: string;
+  unit: string;
+  issued: number;
+  consumed: number;
+  returned: number;
 };
 
 export type StockBalance = {
@@ -139,4 +192,8 @@ export type PlumberBalance = {
   returned: number;
   adjusted: number;
   balance: number;
+  /** Server-joined - no need to load the full plumbers/projects/materials lists to resolve these. */
+  plumberName: string;
+  projectName: string;
+  materialName: string;
 };

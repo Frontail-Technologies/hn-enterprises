@@ -1,28 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NotePencilIcon, WarningIcon } from "@phosphor-icons/react";
+import { NotePencilIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useComplaintsQuery } from "@/features/complaints/hooks/useComplaints";
 import type { Complaint } from "@/features/complaints/types/complaint.types";
 import { formatDate } from "@/features/complaints/utils/format";
-import { ComplaintDrawer } from "@/features/complaints/components/complaints/ComplaintDrawer";
+import { ComplaintDialog } from "@/features/complaints/components/complaints/ComplaintDialog";
 import { ComplaintPriorityBadge } from "@/features/complaints/components/complaints/ComplaintPriorityBadge";
-import { PaginatedDataTable } from "@/features/complaints/components/shared/PaginatedDataTable";
+import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Input } from "@/components/ui/input";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { useDeleteComplaint } from "@/features/complaints/hooks/useComplaints";
 
 export function CustomerComplaintsPanel({ customerId }: { customerId: string }) {
-  const { data: allComplaints = [], isLoading } = useComplaintsQuery();
+  const { data: complaints = [], isLoading } = useComplaintsQuery({ customerId });
   const deleteComplaint = useDeleteComplaint();
   const [search, setSearch] = useState("");
-
-  const complaints = useMemo(() => {
-    return allComplaints.filter((c: Complaint) => c.customerId === customerId);
-  }, [allComplaints, customerId]);
 
   const data = useMemo(() => {
     const s = search.toLowerCase();
@@ -53,7 +49,7 @@ export function CustomerComplaintsPanel({ customerId }: { customerId: string }) 
       className: "w-24",
       render: (row) => (
         <div className="flex items-center gap-1">
-          <ComplaintDrawer
+          <ComplaintDialog
             complaint={row}
             preselectedCustomerId={customerId}
             triggerLabel="Edit Complaint"
@@ -78,7 +74,7 @@ export function CustomerComplaintsPanel({ customerId }: { customerId: string }) 
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-[300px]"
         />
-        <ComplaintDrawer
+        <ComplaintDialog
           preselectedCustomerId={customerId}
           triggerLabel="Raise Complaint"
         />

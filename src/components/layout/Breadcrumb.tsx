@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { CaretRightIcon as CaretRight } from '@phosphor-icons/react'
 
 import { ROUTE_LABELS } from '@/constants/navigation'
-import { useBreadcrumbLastLabel } from './BreadcrumbLabelContext'
+import { useBreadcrumbLabels } from './BreadcrumbLabelContext'
 
 export function Breadcrumb() {
   const pathname = usePathname()
-  const lastLabelOverride = useBreadcrumbLastLabel()
+  const labelOverrides = useBreadcrumbLabels()
   const segments = pathname.split('/').filter(Boolean)
 
   if (segments.length <= 1) return null
@@ -18,9 +18,7 @@ export function Breadcrumb() {
     const href = '/' + segments.slice(0, idx + 1).join('/')
     const isLast = idx === segments.length - 1
     const label =
-      isLast && lastLabelOverride
-        ? lastLabelOverride
-        : (ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '))
+      labelOverrides[seg] ?? ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ')
     return { href, label, isLast }
   })
 

@@ -18,9 +18,10 @@ export function useCreateComplaint() {
     mutationFn: (values: ComplaintFormValues) => complaintsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Complaint recorded successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to record complaint"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to record complaint"),
   });
 }
 
@@ -30,9 +31,10 @@ export function useUpdateComplaint(id: string) {
     mutationFn: (values: Partial<ComplaintFormValues>) => complaintsApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Complaint updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update complaint"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update complaint"),
   });
 }
 
@@ -44,6 +46,23 @@ export function useDeleteComplaint() {
       queryClient.invalidateQueries({ queryKey: complaintsKey });
       toast.success("Complaint deleted successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete complaint"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete complaint"),
+  });
+}
+
+export function usePushComplaintNotification() {
+  return useMutation({
+    mutationFn: (id: string) => complaintsApi.push(id),
+    onSuccess: (result) => {
+      if (result.sent) {
+        toast.success(result.message || "Complaint notification sent");
+      } else {
+        // Zero recipients is not an error - it's a real, meaningful state
+        // (no active supervisor accounts exist at all). Complaints are
+        // broadcast to every active supervisor, not scoped to a project.
+        toast.warning(result.message || "No active supervisor accounts exist to notify.");
+      }
+    },
+    onError: (error: Error) => toast.error(error?.message || "Failed to send complaint notification"),
   });
 }

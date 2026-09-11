@@ -1,14 +1,15 @@
-import type { ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "./PageHeader";
 
 interface PageShellProps {
   title: string;
-  subtitle?: string;
+  icon?: ElementType;
   eyebrow?: ReactNode;
   actions?: ReactNode;
   toolbar?: ReactNode;
   tabs?: ReactNode;
+  hideTitle?: boolean;
   children: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -17,11 +18,12 @@ interface PageShellProps {
 
 export function PageShell({
   title,
-  subtitle,
+  icon,
   eyebrow,
   actions,
   toolbar,
   tabs,
+  hideTitle = false,
   children,
   className,
   contentClassName,
@@ -31,13 +33,17 @@ export function PageShell({
     <div
       className={cn(
         "space-y-4",
-        fillHeight && "md:flex md:h-[calc(100dvh-4.5rem)] md:flex-col md:space-y-3",
+        fillHeight && "md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-3",
         className,
       )}
     >
       <header className={cn("space-y-3", fillHeight && "md:shrink-0 md:space-y-2")}>
-        <PageHeader title={title} subtitle={subtitle} eyebrow={eyebrow} actions={actions} />
-        {tabs ? <div className="border-b border-border">{tabs}</div> : null}
+        {hideTitle ? (
+          actions ? <div className="flex justify-end">{actions}</div> : null
+        ) : (
+          <PageHeader title={title} icon={icon} eyebrow={eyebrow} actions={actions} />
+        )}
+        {tabs ?? null}
         {toolbar ? <div>{toolbar}</div> : null}
       </header>
 

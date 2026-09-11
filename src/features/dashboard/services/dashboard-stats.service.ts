@@ -1,5 +1,5 @@
 import type { Customer } from "@/features/customers/types/customer.types";
-import { deriveLmcPipeCurrentStage } from "@/features/customers/services/customers.service";
+import { deriveLmcPipeCurrentStage } from "@/features/customers/model/lmc-pipeline.rules";
 
 export type DashboardStatKey =
   | "total-customers"
@@ -35,7 +35,6 @@ export type DashboardStatRow = {
   address: string;
   projectName: string;
   siteArea: string;
-  supervisor: string;
   status: string;
   [key: string]: string;
 };
@@ -204,7 +203,6 @@ function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
     address: connection.fullAddress || "-",
     projectName: customer.projectName,
     siteArea: customer.siteArea,
-    supervisor: connection.supervisorName,
     status: customer.status,
     city: customer.city,
     connectionType: connection.connectionType,
@@ -235,7 +233,7 @@ function buildRow(customer: Customer, key: DashboardStatKey): DashboardStatRow {
       onHoldPipe?.remarks ||
       billing.remark ||
       "-",
-    assignedTo: connection.supervisorName || connection.plumberName || "-",
+    assignedTo: connection.plumberName || "-",
     gcCompletedOn: formatDateOrDash(audit?.gcCompletedOn),
     valveChamberCompletedOn: formatDateOrDash(audit?.valveChamberCompletedOn),
     preCommissioningCompletedOn: formatDateOrDash(audit?.preCommissioningCompletedOn),
@@ -263,10 +261,6 @@ function formatDateOrDash(value: string | null | undefined) {
 function latestDate(dates: (string | null | undefined)[]) {
   const valid = dates.filter((d): d is string => Boolean(d)).sort();
   return valid.length ? valid[valid.length - 1] : null;
-}
-
-function hasDocument(customer: Customer, category: string) {
-  return customer.documents.some((document) => document.category === category);
 }
 
 function getBillingStatus(customer: Customer) {

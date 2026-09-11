@@ -1,17 +1,22 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest, apiRequestPaginated, type PaginationMeta } from "@/lib/api-client";
 import { appendEvidenceArray, type ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import type {
   CorrectMaterialTransactionInput,
+  InventoryDetailTab,
+  InventoryOverview,
   Material,
   MaterialFormValues,
+  MaterialOverview,
   MaterialSource,
   MaterialTransaction,
   MaterialTransactionFormValues,
   MaterialTransactionLinkType,
   MaterialTransactionType,
   PlumberBalance,
+  ProjectMaterialUsageRow,
   StockBalance,
+  TotalIssueSummaryRow,
 } from "../types/material.types";
 
 type BackendMaterialStatus = "active" | "low_stock" | "out_of_stock";
@@ -65,6 +70,10 @@ type BackendMaterialTransaction = {
   correctionReason: string | null;
   isReversed?: boolean;
   isCorrected?: boolean;
+  plumberName: string | null;
+  projectName: string | null;
+  customerName: string | null;
+  materialName: string | null;
 };
 
 type BackendPlumberBalance = {
@@ -77,6 +86,41 @@ type BackendPlumberBalance = {
   returned: number;
   adjusted: number;
   balance: number;
+  plumberName: string;
+  projectName: string;
+  materialName: string;
+};
+
+type BackendMaterialOverview = {
+  material: BackendMaterial;
+  summary: {
+    availableQty: number;
+    receivedQty: number;
+    issuedQty: number;
+    consumedQty: number;
+    returnedQty: number;
+    plumberBalanceCount: number;
+  };
+};
+
+type BackendInventoryOverview = {
+  stockCount: number;
+  purchaseCount: number;
+  pbgIssueCount: number;
+  pbgConsumptionCount: number;
+  storeIssueCount: number;
+  totalIssueCount: number;
+  plumberBalanceCount: number;
+  plumberConsumptionCount: number;
+};
+
+type BackendTotalIssueSummaryRow = {
+  materialId: string;
+  materialName: string;
+  unit: string;
+  totalIssued: number;
+  transactionCount: number;
+  lastIssueDate: string;
 };
 
 function mapMaterial(raw: BackendMaterial): Material {
@@ -134,6 +178,29 @@ function mapTransaction(raw: BackendMaterialTransaction): MaterialTransaction {
     correctionReason: raw.correctionReason ?? "",
     isReversed: raw.isReversed ?? false,
     isCorrected: raw.isCorrected ?? false,
+    plumberName: raw.plumberName ?? "",
+    projectName: raw.projectName ?? "",
+    customerName: raw.customerName ?? "",
+    materialName: raw.materialName ?? "",
+  };
+}
+
+function mapOverview(raw: BackendMaterialOverview): MaterialOverview {
+  return {
+    material: mapMaterial(raw.material),
+    summary: raw.summary,
+  };
+}
+
+function mapTotalIssueSummaryRow(raw: BackendTotalIssueSummaryRow): TotalIssueSummaryRow {
+  return {
+    id: raw.materialId,
+    materialId: raw.materialId,
+    materialName: raw.materialName,
+    unit: raw.unit,
+    totalIssued: Number(raw.totalIssued),
+    transactionCount: Number(raw.transactionCount),
+    lastIssueDate: raw.lastIssueDate ? raw.lastIssueDate.slice(0, 10) : "",
   };
 }
 
@@ -208,6 +275,37 @@ export const materialsApi = {
     return apiRequest<DeleteImpactResult>(`/materials/${id}/delete-impact`);
   },
 
+  async getOverview(id: string): Promise<MaterialOverview> {
+    const raw = await apiRequest<BackendMaterialOverview>(`/materials/${id}/overview`);
+    return mapOverview(raw);
+  },
+
+  /**
+   * Tab-scoped, genuinely server-paginated transaction fetch for
+   * InventoryDetail - only the active tab's own domain type set, not the
+   * whole material's history filtered client-side.
+   */
+  async listDetailTransactions(
+    id: string,
+    params: {
+      tab: Exclude<InventoryDetailTab, "plumberLedger">;
+      page?: number;
+      limit?: number;
+      from?: string;
+      to?: string;
+    },
+  ): Promise<{ rows: MaterialTransaction[]; pagination?: PaginationMeta }> {
+    const query = new URLSearchParams({ tab: params.tab });
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    const { data, pagination } = await apiRequestPaginated<BackendMaterialTransaction[]>(
+      `/materials/${id}/transactions?${query.toString()}`,
+    );
+    return { rows: (data ?? []).map(mapTransaction), pagination };
+  },
+
   async listTransactions(
     params: {
       materialId?: string;
@@ -268,6 +366,74 @@ export const materialsApi = {
     if (params.projectId) query.set("projectId", params.projectId);
     const qs = query.toString();
     return apiRequest<StockBalance[]>(`/materials/stock-balances${qs ? `?${qs}` : ""}`);
+  },
+
+  async getInventoryOverview(
+    params: { source?: MaterialSource; projectId?: string; plumberId?: string; from?: string; to?: string } = {},
+  ): Promise<InventoryOverview> {
+    const query = new URLSearchParams();
+    if (params.source) query.set("source", params.source);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.plumberId) query.set("plumberId", params.plumberId);
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    const qs = query.toString();
+    return apiRequest<BackendInventoryOverview>(`/inventory/overview${qs ? `?${qs}` : ""}`);
+  },
+
+  async totalIssueSummary(
+    params: { source?: MaterialSource; projectId?: string; from?: string; to?: string } = {},
+  ): Promise<TotalIssueSummaryRow[]> {
+    const query = new URLSearchParams();
+    if (params.source) query.set("source", params.source);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    const qs = query.toString();
+    const rows = await apiRequest<BackendTotalIssueSummaryRow[]>(`/materials/total-issue${qs ? `?${qs}` : ""}`);
+    return rows.map(mapTotalIssueSummaryRow);
+  },
+
+  /** Whole-project per-material usage (issued/consumed/returned), GROUP BY server-side. */
+  async projectUsageSummary(projectId: string): Promise<ProjectMaterialUsageRow[]> {
+    return apiRequest<ProjectMaterialUsageRow[]>(`/materials/project-usage?projectId=${encodeURIComponent(projectId)}`);
+  },
+
+  /**
+   * Genuinely server-paginated transaction fetch for InventoryPage's
+   * transaction tabs - a single type or a comma-joined type set (for the
+   * Consumption Log tab, which merges consumption + pbg_consumption into
+   * one query instead of two + a client-side merge/sort). Distinct from
+   * listTransactions() above (flat, limit 200), which stays as-is for its
+   * other existing callers (e.g. ProjectMaterialsTab).
+   */
+  async listTransactionsPage(
+    params: {
+      type?: MaterialTransactionType;
+      types?: MaterialTransactionType[];
+      source?: MaterialSource;
+      plumberId?: string;
+      projectId?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<{ rows: MaterialTransaction[]; pagination?: PaginationMeta }> {
+    const query = new URLSearchParams();
+    if (params.type) query.set("type", params.type);
+    if (params.types?.length) query.set("types", params.types.join(","));
+    if (params.source) query.set("source", params.source);
+    if (params.plumberId) query.set("plumberId", params.plumberId);
+    if (params.projectId) query.set("projectId", params.projectId);
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    const { data, pagination } = await apiRequestPaginated<BackendMaterialTransaction[]>(
+      `/materials/transactions?${query.toString()}`,
+    );
+    return { rows: (data ?? []).map(mapTransaction), pagination };
   },
 
   async reverseTransaction(id: string, reason: string): Promise<MaterialTransaction> {

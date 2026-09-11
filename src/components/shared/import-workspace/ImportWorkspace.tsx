@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ArrowLeftIcon, CaretRightIcon, CheckCircleIcon, DownloadSimpleIcon, FileCsvIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
@@ -59,11 +59,6 @@ export function ImportWorkspace<TData>({
 
   return (
     <div className={cn("flex flex-col gap-3", VIEWPORT_HEIGHT_CLASS)}>
-      {/* Compact header: one back affordance beside the title (not a
-          breadcrumb AND a "Back to X" button), filename as small secondary
-          text under the title (not a standalone row), and only the
-          secondary/low-priority actions here - the primary "Import" action
-          lives in the sticky footer below so it doesn't compete with these. */}
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           {backHref ? (
@@ -91,14 +86,15 @@ export function ImportWorkspace<TData>({
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {config.onDownloadTemplate ? (
-            <button
+            <Button
               type="button"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              variant="outline"
+              size="sm"
               onClick={config.onDownloadTemplate}
             >
               <DownloadSimpleIcon size={14} />
               Download Template
-            </button>
+            </Button>
           ) : null}
           {isPreview ? (
             <Button
@@ -187,12 +183,6 @@ export function ImportWorkspace<TData>({
             {workspace.commitError ? <p className="shrink-0 text-sm text-destructive">{workspace.commitError}</p> : null}
             {workspace.rowActionError ? <p className="shrink-0 text-sm text-destructive">{workspace.rowActionError}</p> : null}
 
-            {/* Filter tabs are the one primary summary (All/Ready/Rejected
-                with counts) - no separate stats row duplicating the same
-                numbers. Removed/already-imported, which the tabs don't
-                cover, ride along on the same row only when there's
-                something to say; the Full View toggle sits at the far end,
-                matching where it stays after entering Full View too. */}
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
               <ImportFilterTabs active={workspace.filter} onChange={workspace.setFilter} summary={workspace.summary} />
               <div className="flex items-center gap-3">
@@ -214,10 +204,6 @@ export function ImportWorkspace<TData>({
               fillHeight
             />
 
-            {/* Sticky action area - stays reachable without scrolling back
-                to the top, and never overlays the table (it's a normal
-                flex/sticky sibling that reserves its own space, not a
-                floating overlay). */}
             <div className="sticky bottom-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
               <span className="text-sm text-muted-foreground">
                 <b className="text-foreground">{workspace.summary.ready}</b> row{workspace.summary.ready === 1 ? "" : "s"} ready

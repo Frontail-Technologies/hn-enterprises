@@ -12,13 +12,6 @@ export type BulkQuickAction = {
 
 export const BULK_ASSIGN_ACTIONS: BulkQuickAction[] = [
   {
-    field: "supervisorId",
-    menuLabel: "Supervisor",
-    title: "Assign Supervisor",
-    actionLabel: (count) => `Assign to ${count} Customer${count === 1 ? "" : "s"}`,
-    note: "Existing supervisor values will be replaced.",
-  },
-  {
     field: "plumberId",
     menuLabel: "Plumber",
     title: "Assign Plumber",
@@ -112,15 +105,6 @@ export function buildBulkQuickSuccessMessage(
   fieldOptions: ReturnType<typeof useBulkFieldOptions>,
 ): string {
   const plural = count === 1 ? "" : "s";
-
-  if (action.field === "supervisorId") {
-    return changes.supervisorId === null
-      ? `${count} customer${plural} unassigned from their supervisor.`
-      : `${count} customer${plural} assigned to ${
-          fieldOptions.supervisors.find((supervisor) => supervisor.id === changes.supervisorId)?.name ??
-          "the selected supervisor"
-        }.`;
-  }
 
   if (action.field === "plumberId") {
     return changes.plumberId === null

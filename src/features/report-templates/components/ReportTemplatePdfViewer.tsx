@@ -3,7 +3,7 @@
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { DownloadIcon, PrinterIcon } from "lucide-react";
+import { DownloadSimpleIcon, PrinterIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useReportTemplateData } from "../hooks/useReportTemplateData";
@@ -64,7 +64,7 @@ export function ReportTemplatePdfViewer({ template }: { template: ReportTemplate
           >
             {({ loading }) => (
               <>
-                <DownloadIcon size={15} />
+                <DownloadSimpleIcon size={15} />
                 {loading ? "Preparing..." : "Download PDF"}
               </>
             )}

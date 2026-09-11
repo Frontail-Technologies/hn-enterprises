@@ -17,8 +17,8 @@ function Checkbox({
         "peer flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input bg-card outline-none transition-colors",
         "hover:border-primary/60",
         "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-        "data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground",
-        "data-[indeterminate]:border-primary data-[indeterminate]:bg-primary data-[indeterminate]:text-primary-foreground",
+        "data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground data-[checked]:[&_svg]:stroke-primary-foreground",
+        "data-[indeterminate]:border-primary data-[indeterminate]:bg-primary data-[indeterminate]:text-primary-foreground data-[indeterminate]:[&_svg]:stroke-primary-foreground",
         "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
         className
       )}
@@ -26,12 +26,12 @@ function Checkbox({
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className="flex items-center justify-center text-current"
+        className="flex items-center justify-center text-primary-foreground"
       >
         {props.indeterminate ? (
-          <MinusIcon className="size-3" strokeWidth={3} />
+          <MinusIcon className="size-3" strokeWidth={3} stroke="currentColor" />
         ) : (
-          <CheckIcon className="size-3" strokeWidth={3} />
+          <CheckIcon className="size-3" strokeWidth={3} stroke="currentColor" />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

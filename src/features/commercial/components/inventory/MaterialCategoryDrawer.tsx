@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/shared/FormField";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -16,16 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { useCreateMasterValue } from "@/features/management/hooks/useMasters";
 import type { MasterValueFormValues } from "@/features/management/types/masters.types";
-
-function Field({ label, children, helper }: { label: string; children: React.ReactNode; helper?: string }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-      {helper ? <span className="block text-[11px] text-muted-foreground">{helper}</span> : null}
-    </label>
-  );
-}
 
 export function MaterialCategoryDrawer() {
   const [open, setOpen] = useState(false);
@@ -57,8 +48,8 @@ export function MaterialCategoryDrawer() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        <PlusIcon size={15} className="mr-1.5" />
+      <DialogTrigger render={<Button type="button" variant="outline" size="compact" />}>
+        <PlusIcon size={13} className="mr-1.5" />
         Add Category
       </DialogTrigger>
       <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
@@ -67,12 +58,12 @@ export function MaterialCategoryDrawer() {
           <DialogDescription>Create a new category for grouping materials.</DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <Field label="Category Name">
+          <FormField label="Category Name">
             <Input value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} placeholder="e.g. GI Pipe" />
-          </Field>
-          <Field label="Description (Optional)">
+          </FormField>
+          <FormField label="Description (Optional)">
             <Input value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Category description" />
-          </Field>
+          </FormField>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
         <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">

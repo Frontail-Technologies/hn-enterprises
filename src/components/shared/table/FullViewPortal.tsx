@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { FullViewProvider } from "./FullViewContext";
-
-const TRANSITION_MS = 180;
 
 export function FullViewPortal({
   active,
@@ -18,62 +16,29 @@ export function FullViewPortal({
   children: ReactNode;
   className?: string;
 }) {
-  const [mounted, setMounted] = useState(active);
-  const [visible, setVisible] = useState(active);
-
-  if (active && !mounted) setMounted(true);
-  if (!active && visible) setVisible(false);
-
-  useEffect(() => {
-    if (!mounted || !active) return undefined;
-    const raf = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(raf);
-  }, [active, mounted]);
-
-  useEffect(() => {
-    if (mounted && active) return undefined;
-    if (!mounted) return undefined;
-    const timeout = setTimeout(() => setMounted(false), TRANSITION_MS);
-    return () => clearTimeout(timeout);
-  }, [active, mounted]);
-
-  useEffect(() => {
-    if (!mounted) return undefined;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onExit();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mounted, onExit]);
-
   return (
     <FullViewProvider active={active}>
-      {mounted
-        ? createPortal(
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Full view"
-              className={cn(
-                "fixed inset-0 z-40 flex flex-col overflow-hidden bg-background p-2",
-                "transition-[opacity,transform] duration-180 ease-out motion-reduce:transition-none motion-reduce:duration-0",
-                visible ? "scale-100 opacity-100" : "scale-[0.985] opacity-0",
-                className,
-              )}
-            >
-              {children}
-            </div>,
-            document.body,
-          )
-        : children}
+      {active ? (
+        <Dialog
+          open={active}
+          onOpenChange={(open) => {
+            if (!open) onExit();
+          }}
+        >
+          <DialogContent
+            aria-label="Full view"
+            showCloseButton={false}
+            className={cn(
+              "top-0 left-0 z-50 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-background p-2 text-foreground shadow-none duration-150 data-open:zoom-in-100 data-closed:zoom-out-100 sm:max-w-none",
+              className,
+            )}
+          >
+            {children}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        children
+      )}
     </FullViewProvider>
   );
 }

@@ -1,4 +1,3 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -29,74 +28,84 @@ export function DashboardPeriodFilter({
   onMonthChange,
   onYearChange,
 }: DashboardPeriodFilterProps) {
-  const selectedMonthLabel =
-    monthOptions.find((option) => option.value === month)?.label ?? "Select month";
+  const selectedMonthLabel = monthOptions.find((option) => option.value === month)?.label ?? "Month";
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Tabs value={value} onValueChange={(v) => v && onChange(v as DashboardPeriod)}>
-        <TabsList className="h-9">
-          {dashboardPeriods.map((period) => (
-            <TabsTrigger
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="grid grid-cols-3 gap-1.5 sm:contents">
+        {dashboardPeriods.map((period) => {
+          const isActive = value === period.value;
+          return (
+            <button
               key={period.value}
-              value={period.value}
-              className="px-3 text-xs data-active:bg-primary data-active:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+              type="button"
+              onClick={() => onChange(period.value)}
+              className={cn(
+                "flex h-8 w-full items-center justify-center rounded-md border px-3 text-xs font-medium transition-colors sm:w-auto",
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground shadow-subtle"
+                  : "border-border bg-card text-muted-foreground hover:border-border-strong hover:text-foreground",
+              )}
             >
               {period.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+            </button>
+          );
+        })}
+      </div>
 
-      <Select
-        value={month}
-        onValueChange={(nextMonth) => {
-          if (!nextMonth) return;
-          onMonthChange(nextMonth);
-          onChange("custom-month");
-        }}
-      >
-        <SelectTrigger
-          className={cn(
-            "h-9 w-[132px] bg-card text-xs",
-            value === "custom-month" && "border-primary/60 text-primary ring-1 ring-primary/20",
-          )}
+      <div className="grid grid-cols-2 gap-1.5 sm:contents">
+        <Select
+          value={month}
+          onValueChange={(nextMonth) => {
+            if (!nextMonth) return;
+            onMonthChange(nextMonth);
+            onChange("custom-month");
+          }}
         >
-          <SelectValue placeholder="Select month">{selectedMonthLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {monthOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            size="sm"
+            className={cn(
+              "w-full text-xs hover:border-border-strong sm:w-24",
+              value === "custom-month" && "border-primary/50 text-primary",
+            )}
+          >
+            <SelectValue placeholder="Month">{selectedMonthLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select
-        value={year}
-        onValueChange={(nextYear) => {
-          if (!nextYear) return;
-          onYearChange(nextYear);
-          onChange("custom-year");
-        }}
-      >
-        <SelectTrigger
-          className={cn(
-            "h-9 w-[104px] bg-card text-xs",
-            value === "custom-year" && "border-primary/60 text-primary ring-1 ring-primary/20",
-          )}
+        <Select
+          value={year}
+          onValueChange={(nextYear) => {
+            if (!nextYear) return;
+            onYearChange(nextYear);
+            onChange("custom-year");
+          }}
         >
-          <SelectValue placeholder="Year" />
-        </SelectTrigger>
-        <SelectContent>
-          {yearOptions.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            size="sm"
+            className={cn(
+              "w-full text-xs hover:border-border-strong sm:w-20",
+              value === "custom-year" && "border-primary/50 text-primary",
+            )}
+          >
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {yearOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

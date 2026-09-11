@@ -39,9 +39,9 @@ export function InventoryActions({ material }: { material: Material }) {
   return (
     <div className="flex items-center gap-1.5">
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button type="button" />}>
+        <DropdownMenuTrigger render={<Button type="button" size="compact" />}>
           Add Transaction
-          <CaretDownIcon size={14} />
+          <CaretDownIcon size={12} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52">
           {TRANSACTION_MENU.map((item) => (
@@ -63,10 +63,6 @@ export function InventoryActions({ material }: { material: Material }) {
         />
       ))}
 
-      {/* Hard-delete is already blocked server-side once a material has transaction
-          history (FK restrict) - this is realistically only reachable for a material
-          created by mistake, so it stays a destructive action behind confirmation
-          rather than gaining a separate deactivate/status lifecycle. */}
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="More actions" />}>
           <DotsThreeVerticalIcon size={16} />

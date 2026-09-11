@@ -1,5 +1,9 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckSquare, Square, List } from "@phosphor-icons/react";
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CheckSquareIcon, SquareIcon, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import type { DashboardMetric } from "../data/dashboard.data";
 
 export function DashboardMetricFilter({
@@ -11,45 +15,54 @@ export function DashboardMetricFilter({
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <Popover>
-      <PopoverTrigger
-        className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+    <>
+      <Button
+        type="button"
+        variant="default"
+        size="compact"
+        className="w-full sm:w-auto"
+        onClick={() => setOpen(true)}
       >
-        <List size={16} />
-        <span>Customize Stats</span>
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-64 p-2">
-        <div className="mb-2 px-2 text-sm font-semibold text-foreground">
-          Select Stats to Display
-        </div>
-        <div className="flex max-h-[300px] flex-col gap-0.5 overflow-y-auto">
-          {metrics.map((metric) => {
-            const isSelected = selectedIds.includes(metric.id);
-            return (
-              <button
-                key={metric.id}
-                type="button"
-                onClick={() => {
-                  if (isSelected) {
-                    onChange(selectedIds.filter((id) => id !== metric.id));
-                  } else {
-                    onChange([...selectedIds, metric.id]);
-                  }
-                }}
-                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-              >
-                {isSelected ? (
-                  <CheckSquare size={16} className="shrink-0 text-primary" weight="fill" />
-                ) : (
-                  <Square size={16} className="shrink-0 text-muted-foreground" />
-                )}
-                <span className="truncate">{metric.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+        <SlidersHorizontalIcon size={14} className="size-3.5" />
+        <span>Customize</span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="gap-0 overflow-hidden rounded-xl! p-0 sm:max-w-sm">
+          <DialogHeader className="border-b border-border p-4 pb-3">
+            <DialogTitle>Customize stats</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto p-2">
+            {metrics.map((metric) => {
+              const isSelected = selectedIds.includes(metric.id);
+              return (
+                <button
+                  key={metric.id}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      onChange(selectedIds.filter((id) => id !== metric.id));
+                    } else {
+                      onChange([...selectedIds, metric.id]);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-body-small transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
+                >
+                  {isSelected ? (
+                    <CheckSquareIcon size={16} className="shrink-0 text-primary" weight="fill" />
+                  ) : (
+                    <SquareIcon size={16} className="shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{metric.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -6,17 +6,24 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import type { Payment } from "@/features/commercial/types/payment.types";
 import { formatDate, money } from "@/features/commercial/utils/format";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
 import type { DashboardMetricPeriod } from "@/features/dashboard/data/dashboard.data";
 import { getPeriodRange, withinRange } from "@/features/dashboard/services/dashboard.selectors";
 import { getAdminSummaryStatDefinition } from "@/features/dashboard/services/dashboard-summary-stats.service";
 import { SummaryStatShell } from "../SummaryStatShell";
 
-type PaymentRow = Payment & { customerName: string };
-
-const columns: ExcelColumn<PaymentRow>[] = [
+const columns: ExcelColumn<Payment>[] = [
   { key: "paidTo", label: "Paid To", width: 190, sticky: true, getValue: (row) => row.paidTo },
-  { key: "customerName", label: "Customer", width: 190, getValue: (row) => row.customerName },
+  {
+    key: "customerName",
+    label: "Customer",
+    width: 200,
+    getValue: (row) =>
+      row.customerName
+        ? row.customerTrBpNumber
+          ? `${row.customerName} (${row.customerTrBpNumber})`
+          : row.customerName
+        : "-",
+  },
   { key: "category", label: "Category", width: 180, getValue: (row) => row.category },
   { key: "purpose", label: "Purpose", width: 220, getValue: (row) => row.purpose },
   { key: "amount", label: "Amount", width: 140, getValue: (row) => money(row.amount) },
@@ -40,32 +47,18 @@ export function MonthlyExpensesSummaryDetail({
   city: string;
   period: DashboardMetricPeriod;
 }) {
-  const { data: customers = [], isLoading: customersLoading } = useCustomersQuery({
+  // Payments are server-scoped by project + customer city and carry
+  // customerName/customerTrBpNumber - no full customer list needed.
+  const { data: payments = [], isLoading } = usePaymentsQuery({
     projectId: projectId === "all" ? undefined : projectId,
+    city: city === "all" ? undefined : city,
+    status: "Approved",
   });
-  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-
-  const scopedCustomers = useMemo(
-    () => customers.filter((customer) => city === "all" || customer.city === city),
-    [customers, city],
-  );
 
   const rows = useMemo(() => {
-    const customerById = new Map(scopedCustomers.map((customer) => [customer.id, customer]));
     const range = getPeriodRange(period);
-
-    return payments
-      .filter(
-        (payment) =>
-          customerById.has(payment.customerId) &&
-          payment.status === "Approved" &&
-          withinRange(payment.paymentDate, range),
-      )
-      .map((payment) => ({
-        ...payment,
-        customerName: customerById.get(payment.customerId)?.customerConnection.customerName ?? "-",
-      }));
-  }, [payments, scopedCustomers, period]);
+    return payments.filter((payment) => payment.customerId && withinRange(payment.paymentDate, range));
+  }, [payments, period]);
 
   return (
     <SummaryStatShell
@@ -73,7 +66,7 @@ export function MonthlyExpensesSummaryDetail({
       searchPlaceholder="Search expenses..."
       columns={columns}
       rows={rows}
-      isLoading={customersLoading || paymentsLoading}
+      isLoading={isLoading}
       emptyTitle="No approved expenses found for the selected period"
     />
   );

@@ -1,5 +1,4 @@
 import { apiRequest } from "@/lib/api-client";
-import type { DeleteImpactResult } from "@/components/shared/delete-impact.types";
 import {
   ROLE_TO_BACKEND,
   ROLE_TO_FRONTEND,
@@ -188,20 +187,8 @@ export const staffApi = {
     return mapStaff(raw);
   },
 
-  async delete(id: string): Promise<void> {
-    await apiRequest(`/staff/${id}`, {
-      method: "DELETE",
-    });
-  },
-
-  async getDeleteImpact(id: string): Promise<DeleteImpactResult> {
-    return apiRequest<DeleteImpactResult>(`/staff/${id}/delete-impact`);
-  },
-
-  async bulkDelete(ids: string[]): Promise<{ count: number }> {
-    return apiRequest<{ count: number }>("/staff/bulk/delete", {
-      method: "POST",
-      body: JSON.stringify({ ids }),
-    });
-  },
+  // No delete/deleteImpact/bulkDelete here anymore - deleting a staff-linked
+  // supervisor goes through the canonical user hard-delete endpoints
+  // (usersApi.delete/getDeleteImpact/bulkDelete, keyed by staff.userId).
+  // See remove-staff-block brief §8.
 };

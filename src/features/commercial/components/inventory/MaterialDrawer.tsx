@@ -1,9 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
 import { PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { FormField } from "@/components/shared/FormField";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,11 +27,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
+import { buildMaterialTransactionSchema } from "../../schemas/material-transaction.schema";
 import type {
   AdjustmentDirection,
   MaterialSource,
@@ -36,8 +40,6 @@ import type {
   MaterialTransactionType,
 } from "../../types/material.types";
 import { ImageProofField } from "../shared/ImageProofField";
-
-const SOURCE_REQUIRED_TYPES: MaterialTransactionType[] = ["issue", "return", "adjustment"];
 
 const TYPE_LABELS: Record<MaterialTransactionType, string> = {
   purchase: "Add Purchase",
@@ -88,15 +90,6 @@ function emptyValues(): MaterialTransactionFormValues {
   };
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
-}
-
 export function MaterialDrawer({
   type,
   triggerLabel,
@@ -118,159 +111,195 @@ export function MaterialDrawer({
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
-  const [values, setValues] = useState<MaterialTransactionFormValues>(emptyValues());
-  const [saveError, setSaveError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const { data: materials = [] } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
-  const { data: customers = [] } = useCustomersQuery();
+  const { options: customerOptions, isLoading: customersLoading, onSearchChange: onCustomerSearchChange } =
+    useCustomerSelectorOptions();
   const { data: projects = [] } = useProjectsQuery();
   const createTransaction = useCreateMaterialTransaction(type);
   const label = triggerLabel ?? TYPE_LABELS[type];
-  const needsSource = SOURCE_REQUIRED_TYPES.includes(type);
 
-  function set<K extends keyof MaterialTransactionFormValues>(key: K, value: MaterialTransactionFormValues[K]) {
-    setValues((current) => ({ ...current, [key]: value }));
-  }
+  const form = useForm<MaterialTransactionFormValues>({
+    resolver: zodResolver(buildMaterialTransactionSchema(type)),
+    defaultValues: emptyValues(),
+  });
+  const { control, register, handleSubmit, reset, formState } = form;
+  const validationMessage = Object.values(formState.errors)[0]?.message as string | undefined;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setValues(emptyValues());
-      setSaveError("");
+      reset(emptyValues());
+      setSubmitError("");
     }
     if (controlledOnOpenChange) controlledOnOpenChange(nextOpen);
     else setUncontrolledOpen(nextOpen);
   }
 
-  async function handleSave() {
-    if (!values.materialId || !values.quantity || Number(values.quantity) <= 0) {
-      setSaveError("Material and a valid quantity are required");
-      return;
-    }
-    if (needsSource && !values.source) {
-      setSaveError("Material source (Purchase or PBG) is required");
-      return;
-    }
-    if (type === "adjustment" && !values.direction) {
-      setSaveError("Adjustment direction (In or Out) is required");
-      return;
-    }
-    setSaveError("");
+  const onSubmit = handleSubmit(async (values) => {
+    setSubmitError("");
     try {
       await createTransaction.mutateAsync(values);
       handleOpenChange(false);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Unable to save transaction");
+      setSubmitError(error instanceof Error ? error.message : "Unable to save transaction");
     }
-  }
+  });
 
   const materialField = (
-    <Field label="Material">
-      <SearchableSelect
-        value={values.materialId || undefined}
-        onValueChange={(materialId) => set("materialId", materialId ?? "")}
-        placeholder="Select material"
-        options={materials.map((material) => ({ value: material.id, label: material.name }))}
-        className="w-full"
+    <FormField label="Material">
+      <Controller
+        control={control}
+        name="materialId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(materialId) => field.onChange(materialId ?? "")}
+            placeholder="Select material"
+            options={materials.map((material) => ({ value: material.id, label: material.name }))}
+            className="w-full"
+          />
+        )}
       />
-    </Field>
+    </FormField>
   );
 
   const plumberField = (
-    <Field label="Plumber / Team">
-      <SearchableSelect
-        value={values.plumberId || undefined}
-        onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
-        placeholder="Select plumber / team"
-        options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
-        className="w-full"
+    <FormField label="Plumber / Team">
+      <Controller
+        control={control}
+        name="plumberId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(plumberId) => field.onChange(plumberId ?? "")}
+            placeholder="Select plumber / team"
+            options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+            className="w-full"
+          />
+        )}
       />
-    </Field>
+    </FormField>
   );
 
   const supervisorField = (
-    <Field label="Supervisor">
-      <SearchableSelect
-        value={values.supervisorId || undefined}
-        onValueChange={(supervisorId) => set("supervisorId", supervisorId ?? "")}
-        placeholder="Select supervisor"
-        options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
-        className="w-full"
+    <FormField label="Supervisor">
+      <Controller
+        control={control}
+        name="supervisorId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(supervisorId) => field.onChange(supervisorId ?? "")}
+            placeholder="Select supervisor"
+            options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
+            className="w-full"
+          />
+        )}
       />
-    </Field>
+    </FormField>
   );
 
   const addressField = (
-    <Field label="Address">
-      <Input value={values.address} onChange={(event) => set("address", event.target.value)} placeholder="Site / delivery address" />
-    </Field>
+    <FormField label="Address">
+      <Input {...register("address")} placeholder="Site / delivery address" />
+    </FormField>
   );
 
   const customerField = (
-    <Field label="Customer / BP No.">
-      <SearchableSelect
-        value={values.customerId || undefined}
-        onValueChange={(customerId) => set("customerId", customerId ?? "")}
-        placeholder="Select customer"
-        options={customers.map(c => ({ value: c.id, label: `${c.customerConnection.customerName} (${c.customerConnection.trBpNo})` }))}
-        className="w-full"
+    <FormField label="Customer / BP No.">
+      <Controller
+        control={control}
+        name="customerId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(customerId) => field.onChange(customerId ?? "")}
+            placeholder="Select customer"
+            searchPlaceholder="Search by name, BR/TR or mobile..."
+            options={customerOptions}
+            isLoading={customersLoading}
+            onSearchChange={onCustomerSearchChange}
+            className="w-full"
+          />
+        )}
       />
-    </Field>
+    </FormField>
   );
 
   const sourceField = (
-    <Field label="Material Source">
-      <Select value={values.source || undefined} onValueChange={(source) => set("source", (source as MaterialSource) ?? "")}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select source" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="purchase">Purchase</SelectItem>
-          <SelectItem value="pbg">PBG</SelectItem>
-        </SelectContent>
-      </Select>
-    </Field>
+    <FormField label="Material Source">
+      <Controller
+        control={control}
+        name="source"
+        render={({ field }) => (
+          <Select value={field.value || undefined} onValueChange={(source) => field.onChange((source as MaterialSource) ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="purchase">Purchase</SelectItem>
+              <SelectItem value="pbg">PBG</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </FormField>
   );
 
   const directionField = (
-    <Field label="Direction">
-      <Select
-        value={values.direction || undefined}
-        onValueChange={(direction) => set("direction", (direction as AdjustmentDirection) ?? "")}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select direction" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="in">In (adds to balance)</SelectItem>
-          <SelectItem value="out">Out (reduces balance)</SelectItem>
-        </SelectContent>
-      </Select>
-    </Field>
+    <FormField label="Direction">
+      <Controller
+        control={control}
+        name="direction"
+        render={({ field }) => (
+          <Select value={field.value || undefined} onValueChange={(direction) => field.onChange((direction as AdjustmentDirection) ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select direction" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="in">In (adds to balance)</SelectItem>
+              <SelectItem value="out">Out (reduces balance)</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </FormField>
   );
 
   const projectField = (
-    <Field label="Project (optional)">
-      <SearchableSelect
-        value={values.projectId || undefined}
-        onValueChange={(projectId) => set("projectId", projectId ?? "")}
-        placeholder="Select project"
-        options={projects.map((project) => ({ value: project.id, label: project.name }))}
-        className="w-full"
+    <FormField label="Project (optional)">
+      <Controller
+        control={control}
+        name="projectId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(projectId) => field.onChange(projectId ?? "")}
+            placeholder="Select project"
+            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+            className="w-full"
+          />
+        )}
       />
-    </Field>
+    </FormField>
   );
 
   const quantityField = (labelText: string) => (
-    <Field label={labelText}>
-      <Input type="number" value={values.quantity} onChange={(event) => set("quantity", event.target.value)} />
-    </Field>
+    <FormField label={labelText}>
+      <Input type="number" {...register("quantity")} />
+    </FormField>
   );
 
   const dateField = (labelText: string) => (
-    <Field label={labelText}>
-      <DatePicker value={values.transactionDate} onChange={(value) => set("transactionDate", value)} />
-    </Field>
+    <FormField label={labelText}>
+      <Controller
+        control={control}
+        name="transactionDate"
+        render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} />}
+      />
+    </FormField>
   );
 
   return (
@@ -279,9 +308,10 @@ export function MaterialDrawer({
         <ActionTooltip label={label}>
           <DialogTrigger
             render={
-              <button
+              <Button
                 type="button"
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                variant="ghost"
+                size="icon-sm"
                 aria-label={label}
               />
             }
@@ -290,8 +320,8 @@ export function MaterialDrawer({
           </DialogTrigger>
         </ActionTooltip>
       ) : (
-        <DialogTrigger render={<Button type="button" variant={variant} />}>
-          {icon ?? <PlusIcon size={15} />}
+        <DialogTrigger render={<Button type="button" variant={variant} size="compact" />}>
+          {icon ?? <PlusIcon size={13} />}
           {label}
         </DialogTrigger>
       )}
@@ -306,77 +336,69 @@ export function MaterialDrawer({
 
           {type === "purchase" ? (
             <>
-              <Field label="Invoice / Reference No.">
-                <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
-              <Field label="Vendor Name">
-                <Input value={values.vendorName} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              <FormField label="Invoice / Reference No.">
+                <Input {...register("referenceNo")} />
+              </FormField>
+              <FormField label="Vendor Name">
+                <Input {...register("vendorName")} />
+              </FormField>
               {projectField}
               {dateField("Purchase Date")}
               {quantityField("Quantity")}
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Rate">
-                  <Input type="number" value={values.rate} onChange={(event) => set("rate", event.target.value)} />
-                </Field>
-                <Field label="Bill Amount">
-                  <Input
-                    type="number"
-                    value={values.billAmount}
-                    onChange={(event) => set("billAmount", event.target.value)}
-                  />
-                </Field>
+                <FormField label="Rate">
+                  <Input type="number" {...register("rate")} />
+                </FormField>
+                <FormField label="Bill Amount">
+                  <Input type="number" {...register("billAmount")} />
+                </FormField>
               </div>
             </>
           ) : null}
 
           {type === "pbg_issue" ? (
             <>
-              <Field label="SIV No.">
-                <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              <FormField label="SIV No.">
+                <Input {...register("referenceNo")} />
+              </FormField>
               {supervisorField}
               {projectField}
               {dateField("Issue Date")}
               {quantityField("Quantity")}
-              <Field label="Vendor Name">
-                <Input value={values.vendorName} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              <FormField label="Vendor Name">
+                <Input {...register("vendorName")} />
+              </FormField>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Vehicle No.">
-                  <Input value={values.vehicleNo} onChange={(event) => set("vehicleNo", event.target.value)} />
-                </Field>
-                <Field label="Vehicle Quantity">
-                  <Input
-                    type="number"
-                    value={values.vehicleQty}
-                    onChange={(event) => set("vehicleQty", event.target.value)}
-                  />
-                </Field>
+                <FormField label="Vehicle No.">
+                  <Input {...register("vehicleNo")} />
+                </FormField>
+                <FormField label="Vehicle Quantity">
+                  <Input type="number" {...register("vehicleQty")} />
+                </FormField>
               </div>
             </>
           ) : null}
 
           {type === "pbg_consumption" ? (
             <>
-              <Field label="RA Bill No.">
-                <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              <FormField label="RA Bill No.">
+                <Input {...register("referenceNo")} />
+              </FormField>
               {customerField}
               {plumberField}
               {dateField("Consumption Date")}
               {quantityField("Total Consumption")}
-              <Field label="Vendor Name">
-                <Input value={values.vendorName} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              <FormField label="Vendor Name">
+                <Input {...register("vendorName")} />
+              </FormField>
             </>
           ) : null}
 
           {type === "issue" ? (
             <>
-              <Field label="Slip No.">
-                <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              <FormField label="Slip No.">
+                <Input {...register("referenceNo")} />
+              </FormField>
               {sourceField}
               {dateField("Issue Date")}
               {plumberField}
@@ -389,28 +411,34 @@ export function MaterialDrawer({
 
           {type === "return" ? (
             <>
-              <Field label="Return No.">
-                <Input value={values.referenceNo} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              <FormField label="Return No.">
+                <Input {...register("referenceNo")} />
+              </FormField>
               {sourceField}
               {dateField("Return Date")}
               {plumberField}
               {addressField}
               {quantityField("Return Quantity")}
-              <Field label="Condition">
-                <Select value={values.condition} onValueChange={(condition) => set("condition", condition ?? "Reusable")}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Reusable", "Damaged", "Scrap", "Review"].map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <FormField label="Condition">
+                <Controller
+                  control={control}
+                  name="condition"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(condition) => field.onChange(condition ?? "Reusable")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Reusable", "Damaged", "Scrap", "Review"].map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </FormField>
             </>
           ) : null}
 
@@ -420,23 +448,26 @@ export function MaterialDrawer({
               {sourceField}
               {directionField}
               {quantityField("Adjustment Quantity")}
-              <Field label="Adjustment Type">
-                <Select
-                  value={values.adjustmentType}
-                  onValueChange={(adjustmentType) => set("adjustmentType", adjustmentType ?? "Correction")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Correction", "Damaged", "Lost", "Found", "Manual Adjustment"].map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <FormField label="Adjustment Type">
+                <Controller
+                  control={control}
+                  name="adjustmentType"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(adjustmentType) => field.onChange(adjustmentType ?? "Correction")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Correction", "Damaged", "Lost", "Found", "Manual Adjustment"].map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </FormField>
             </>
           ) : null}
 
@@ -446,36 +477,40 @@ export function MaterialDrawer({
               {addressField}
               {plumberField}
               {supervisorField}
-              <Field label="Report No.">
-                <Input value={values.reportNo} onChange={(event) => set("reportNo", event.target.value)} />
-              </Field>
+              <FormField label="Report No.">
+                <Input {...register("reportNo")} />
+              </FormField>
               {dateField("Consumption Date")}
               {quantityField("Used Quantity")}
             </>
           ) : null}
 
-          <ImageProofField
-            label="Proof / Receipt Photo"
-            description="Upload bill, slip, handover proof or site photo."
-            images={values.evidence}
-            onChange={(evidence) => set("evidence", evidence)}
-            module="inventory"
+          <Controller
+            control={control}
+            name="evidence"
+            render={({ field }) => (
+              <ImageProofField
+                label="Proof / Receipt Photo"
+                description="Upload bill, slip, handover proof or site photo."
+                images={field.value}
+                onChange={field.onChange}
+                module="inventory"
+              />
+            )}
           />
 
-          <Field label="Remarks">
-            <Textarea
-              value={values.remarks}
-              onChange={(event) => set("remarks", event.target.value)}
-              className="min-h-20"
-            />
-          </Field>
+          <FormField label="Remarks">
+            <Textarea {...register("remarks")} className="min-h-20" />
+          </FormField>
 
-          {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
+          {validationMessage || submitError ? (
+            <p className="text-xs text-destructive">{validationMessage || submitError}</p>
+          ) : null}
         </div>
 
         <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
-          <Button type="button" onClick={handleSave} disabled={createTransaction.isPending}>
+          <Button type="button" onClick={() => void onSubmit()} disabled={createTransaction.isPending}>
             {createTransaction.isPending ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>

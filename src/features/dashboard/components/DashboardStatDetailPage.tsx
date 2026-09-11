@@ -2,22 +2,26 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowLeftIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
+import { ExcelDataGrid } from "@/components/shared/ExcelDataGrid";
+import { Pagination } from "@/components/shared/Pagination";
 import { PageShell } from "@/components/shared/PageShell";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import {
   type DashboardStatKey,
-  type DashboardStatRow,
   getDashboardStatDefinition,
   getDashboardStatRows,
 } from "@/features/dashboard/services/dashboard-stats.service";
-import { formatDate } from "@/features/commercial/utils/format";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { getDashboardStatColumns } from "@/features/dashboard/columns/dashboard-stat.columns";
+import { findTrustedZeroCount } from "@/features/dashboard/model/dashboard-stat-cache.model";
+import { customersApi } from "@/features/customers/api/customers.api";
+import { useCustomersListQuery } from "@/features/customers/queries/useCustomersQuery";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { exportRowsToExcel } from "@/lib/export-excel";
+
+const PAGE_SIZE = 50;
 
 export function DashboardStatDetailPage({
   statKey,
@@ -29,49 +33,74 @@ export function DashboardStatDetailPage({
   city?: string;
 }) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+  const debouncedSearch = useDebouncedValue(search, 300);
   const definition = getDashboardStatDefinition(statKey);
-  const { data: customers = [], isLoading } = useCustomersQuery({
-    projectId: projectId === "all" ? undefined : projectId,
-    city: city === "all" ? undefined : city,
-    statKey,
-  });
+  const queryClient = useQueryClient();
+  const knownZero = useMemo(
+    () => findTrustedZeroCount(queryClient, statKey, projectId, city),
+    [queryClient, statKey, projectId, city],
+  );
 
-  const rows = useMemo(() => getDashboardStatRows(statKey, customers), [customers, statKey]);
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) =>
-      Object.values(row).join(" ").toLowerCase().includes(query),
-    );
-  }, [rows, search]);
-  const columns = useMemo(() => getColumns(statKey), [statKey]);
+  const scopedProjectId = projectId === "all" ? undefined : projectId;
+  const scopedCity = city === "all" ? undefined : city;
+  const queryParams = {
+    projectId: scopedProjectId,
+    city: scopedCity,
+    statKey,
+    search: debouncedSearch || undefined,
+    page,
+    limit: PAGE_SIZE,
+  };
+
+  const { data: result, isLoading } = useCustomersListQuery(queryParams, { enabled: !knownZero });
+  const customers = useMemo(() => result?.data ?? [], [result]);
+  const pagination = result?.pagination;
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  const rows = useMemo(
+    () => (knownZero ? [] : getDashboardStatRows(statKey, customers)),
+    [knownZero, customers, statKey],
+  );
+  const columns = useMemo(() => getDashboardStatColumns(statKey), [statKey]);
+
+  async function handleExport() {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const total = pagination?.total ?? rows.length;
+      const { data } = await customersApi.listPaginated({
+        ...queryParams,
+        page: 1,
+        limit: Math.max(total, 1),
+      });
+      await exportRowsToExcel(
+        `${statKey}.xlsx`,
+        columns.filter((column) => column.key !== "actions"),
+        getDashboardStatRows(statKey, data),
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <PageShell
       title={definition.title}
-      subtitle={`${filteredRows.length} of ${rows.length} records`}
       actions={
         <>
-          <Link
-            href="/dashboard"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
+          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
             <ArrowLeftIcon size={14} />
             Back
           </Link>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() =>
-              void exportRowsToExcel(
-                `${statKey}.xlsx`,
-                columns.filter((column) => column.key !== "actions"),
-                filteredRows,
-              )
-            }
-          >
+          <Button type="button" size="sm" disabled={isExporting || knownZero} onClick={handleExport}>
             <DownloadSimpleIcon size={14} />
-            Export Excel
+            {isExporting ? "Exporting..." : "Export Excel"}
           </Button>
         </>
       }
@@ -79,306 +108,29 @@ export function DashboardStatDetailPage({
     >
       <Input
         value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search BP/TR, customer, site, supervisor..."
+        onChange={(event) => handleSearchChange(event.target.value)}
+        placeholder="Search customer, BR/TR, mobile..."
         className="h-8 w-96 max-w-full"
       />
 
       <ExcelDataGrid
         columns={columns}
-        rows={filteredRows}
-        emptyTitle="No matching records found"
+        rows={rows}
+        emptyTitle={knownZero ? `No records for ${definition.title}` : "No matching records found"}
         isLoading={isLoading}
         maxHeightClassName="max-h-[68vh]"
       />
+      {pagination && pagination.total > 0 ? (
+        <Pagination
+          compact
+          page={pagination.page}
+          pageCount={Math.max(1, pagination.totalPages)}
+          totalItems={pagination.total}
+          startItem={(pagination.page - 1) * pagination.limit + 1}
+          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
+          onPageChange={setPage}
+        />
+      ) : null}
     </PageShell>
   );
-}
-
-function getColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] {
-  const identityColumns: ExcelColumn<DashboardStatRow>[] = [
-    {
-      key: "bpTrNo",
-      label: "BP / TR No.",
-      width: 150,
-      sticky: true,
-      getValue: (row) => row.bpTrNo,
-      render: (row) => (
-        <Link
-          href={`/customers/${row.customerId}/edit`}
-          className="font-semibold text-foreground hover:text-primary"
-        >
-          {row.bpTrNo}
-        </Link>
-      ),
-    },
-    {
-      key: "customerName",
-      label: "Customer",
-      width: 190,
-      sticky: true,
-      getValue: (row) => row.customerName,
-      render: (row) => (
-        <Link
-          href={`/customers/${row.customerId}/edit`}
-          className="font-semibold text-foreground hover:text-primary"
-        >
-          {row.customerName}
-        </Link>
-      ),
-    },
-    { key: "siteArea", label: "Site", width: 160, getValue: (row) => row.siteArea },
-    { key: "address", label: "Address", width: 220, getValue: (row) => row.address },
-    { key: "mobileNo", label: "Phone", width: 130, getValue: (row) => row.mobileNo },
-  ];
-
-  const actionColumn: ExcelColumn<DashboardStatRow> = {
-    key: "actions",
-    label: "Action",
-    width: 110,
-    getValue: () => "Edit",
-    render: (row) => (
-      <Link
-        href={`/customers/${row.customerId}/edit`}
-        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-primary")}
-      >
-        <PencilSimpleIcon size={14} />
-        Edit
-      </Link>
-    ),
-  };
-
-  if (statKey === "survey-done") {
-    return [
-      ...identityColumns,
-      { key: "surveyId", label: "Survey ID", width: 140, getValue: (row) => row.surveyId },
-      { key: "surveyDate", label: "Survey Date", width: 130, getValue: (row) => formatMaybeDate(row.surveyDate) },
-      { key: "surveyor", label: "Surveyor", width: 160, getValue: (row) => row.surveyor },
-      {
-        key: "workableStatus",
-        label: "Workable",
-        width: 160,
-        getValue: (row) => row.workableStatus,
-        render: (row) => <StatusBadge status={row.workableStatus} />,
-      },
-      {
-        key: "approvalStatus",
-        label: "Approval",
-        width: 150,
-        getValue: (row) => row.approvalStatus,
-        render: (row) => <StatusBadge status={row.approvalStatus} />,
-      },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "gi-done") {
-    return [
-      ...identityColumns,
-      { key: "giDate", label: "GI Date", width: 130, getValue: (row) => formatMaybeDate(row.giDate) },
-      { key: "totalGi", label: "Total GI", width: 130, getValue: (row) => row.totalGi },
-      { key: "giReportNo", label: "GI Report No.", width: 170, getValue: (row) => row.giReportNo },
-      { key: "giBillDone", label: "GI Bill", width: 120, getValue: (row) => row.giBillDone },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "gc-done") {
-    return [
-      ...identityColumns,
-      { key: "gcReportNo", label: "GC Report No.", width: 170, getValue: (row) => row.gcReportNo },
-      {
-        key: "gcStatus",
-        label: "GC Status",
-        width: 140,
-        getValue: (row) => row.gcStatus,
-        render: (row) => <StatusBadge status={row.gcStatus} />,
-      },
-      { key: "gcBillDone", label: "GC Bill", width: 120, getValue: (row) => row.gcBillDone },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "conversion-done") {
-    return [
-      ...identityColumns,
-      { key: "conversionDate", label: "Conversion Date", width: 150, getValue: (row) => formatMaybeDate(row.conversionDate) },
-      { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
-      { key: "regulatorNo", label: "Regulator No.", width: 150, getValue: (row) => row.regulatorNo },
-      { key: "meterReading", label: "Meter Reading", width: 140, getValue: (row) => row.meterReading },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "jmr-done") {
-    return [
-      ...identityColumns,
-      { key: "giReportNo", label: "JMR / GI Report No.", width: 180, getValue: (row) => row.giReportNo },
-      { key: "jmrDone", label: "JMR Done", width: 130, getValue: (row) => row.jmrDone },
-      { key: "jmrSubmittedInPbg", label: "Submitted in PBG", width: 160, getValue: (row) => row.jmrSubmittedInPbg },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "gi-bill-done" || statKey === "gc-bill-done" || statKey === "conversion-bill-done") {
-    return [
-      ...identityColumns,
-      { key: "giBillDone", label: "GI Bill", width: 120, getValue: (row) => row.giBillDone },
-      { key: "gcBillDone", label: "GC Bill", width: 120, getValue: (row) => row.gcBillDone },
-      { key: "conversionBillDone", label: "Conversion Bill", width: 150, getValue: (row) => row.conversionBillDone },
-      {
-        key: "billingStatus",
-        label: "Billing Status",
-        width: 150,
-        getValue: (row) => row.billingStatus,
-        render: (row) => <StatusBadge status={row.billingStatus} />,
-      },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "connection-remark") {
-    return [
-      ...identityColumns,
-      { key: "reworkModule", label: "Module", width: 130, getValue: (row) => row.reworkModule },
-      { key: "reworkIssue", label: "Issue / Remark", width: 320, getValue: (row) => row.reworkIssue },
-      { key: "assignedTo", label: "Assigned To", width: 160, getValue: (row) => row.assignedTo },
-      {
-        key: "approvalStatus",
-        label: "Status",
-        width: 150,
-        getValue: (row) => row.approvalStatus || row.status,
-        render: (row) => <StatusBadge status={row.approvalStatus || row.status} />,
-      },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "commissioning") {
-    return [
-      ...identityColumns,
-      { key: "commissioningDate", label: "Commissioning Date", width: 170, getValue: (row) => formatMaybeDate(row.commissioningDate) },
-      { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "valve-chamber-done") {
-    return [
-      ...identityColumns,
-      { key: "valveChamberCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.valveChamberCompletedOn) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "pre-commissioning-done") {
-    return [
-      ...identityColumns,
-      { key: "preCommissioningCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.preCommissioningCompletedOn) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "pole-marker-done") {
-    return [
-      ...identityColumns,
-      { key: "poleMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.poleMarkerCompletedOn) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "route-marker-done") {
-    return [
-      ...identityColumns,
-      { key: "routeMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.routeMarkerCompletedOn) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "connection-done") {
-    return [
-      ...identityColumns,
-      { key: "connectionCompletedOn", label: "Connection Completed On", width: 190, getValue: (row) => formatMaybeDate(row.connectionCompletedOn) },
-      { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "site-expenses-done") {
-    return [
-      ...identityColumns,
-      { key: "siteExpensesCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.siteExpensesCompletedOn) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "laying-done") {
-    return [
-      ...identityColumns,
-      { key: "layingDate", label: "Laying Date", width: 150, getValue: (row) => formatMaybeDate(row.layingDate) },
-      { key: "pipeSummary", label: "Pipe Summary", width: 220, getValue: (row) => row.pipeSummary },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "flushing-testing-done") {
-    return [
-      ...identityColumns,
-      { key: "testingDate", label: "Testing Date", width: 150, getValue: (row) => formatMaybeDate(row.testingDate) },
-      { key: "purgingDate", label: "Purging Date", width: 150, getValue: (row) => formatMaybeDate(row.purgingDate) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "complaint-customer") {
-    return [
-      ...identityColumns,
-      {
-        key: "complaintStatus",
-        label: "Complaint Status",
-        width: 160,
-        getValue: (row) => row.complaintStatus,
-        render: (row) => <StatusBadge status={row.complaintStatus} />,
-      },
-      { key: "complaintDate", label: "Complaint Date", width: 150, getValue: (row) => formatMaybeDate(row.complaintDate) },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "customer-resolved") {
-    return [
-      ...identityColumns,
-      { key: "resolvedDate", label: "Resolved Date", width: 150, getValue: (row) => formatMaybeDate(row.resolvedDate) },
-      { key: "resolutionRemark", label: "Resolution Remark", width: 260, getValue: (row) => row.resolutionRemark },
-      actionColumn,
-    ];
-  }
-
-  if (statKey === "total-connection-remark") {
-    return [
-      ...identityColumns,
-      { key: "connectionRemark", label: "Connection Remark", width: 300, getValue: (row) => row.connectionRemark },
-      actionColumn,
-    ];
-  }
-
-  return [
-    ...identityColumns,
-    { key: "projectName", label: "Project", width: 230, getValue: (row) => row.projectName },
-    { key: "city", label: "City", width: 120, getValue: (row) => row.city },
-    { key: "connectionType", label: "Connection Type", width: 150, getValue: (row) => row.connectionType },
-    {
-      key: "status",
-      label: "Status",
-      width: 140,
-      getValue: (row) => row.status,
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    actionColumn,
-  ];
-}
-
-function formatMaybeDate(value: string) {
-  if (!value || value === "-") return "-";
-  return formatDate(value);
 }

@@ -41,21 +41,52 @@
   --color-status-purple: var(--status-purple);
   --color-status-purple-fg: var(--status-purple-foreground);
   --color-status-purple-bg: var(--status-purple-bg);
+
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-strong: var(--border-strong);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary-action: var(--secondary-action);
+  --color-secondary-action-foreground: var(--secondary-action-foreground);
+  --color-table-header: var(--table-header);
+  --color-table-header-foreground: var(--table-header-foreground);
+  --color-table-border: var(--table-border);
+  --color-table-hover: var(--table-hover);
+  --color-table-selected: var(--table-selected);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-foreground: var(--info-foreground);
+
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
-  /* Radius scale (HN design system):
-     - badges/tags:            radius-md  = 6px
-     - buttons/inputs/selects: radius-lg  = 8px  (also small icon containers)
-     - cards/panels:           radius-card = 10px */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 2px);
   --radius-card: 0.625rem;
+  --radius-dialog: 0.875rem;
+
+  --shadow-subtle: 0 1px 2px 0
+    color-mix(in oklch, var(--foreground) 6%, transparent);
+  --shadow-floating: 0 8px 24px -8px
+    color-mix(in oklch, var(--foreground) 18%, transparent);
+
+  --control-height-compact: 1.75rem;
+  --control-height-default: 2.25rem;
 }
 
 :root {
-  /* Warm off-white app background (~#FAF8F4) */
   --background: oklch(97.8% 0.005 85);
   --foreground: oklch(24% 0.058 246);
   --card: oklch(100% 0 0);
@@ -64,8 +95,7 @@
   --popover-foreground: oklch(24% 0.058 246);
   --primary: oklch(69% 0.19 48);
   --primary-foreground: oklch(1 0 0);
-  /* Subtle secondary surface (~#F8F5F0) */
-  --secondary: oklch(96.6% 0.007 82);
+  --secondary: oklch(98.403% 0.01457 80.636);
   --secondary-foreground: oklch(29% 0.057 246);
   --muted: oklch(96.3% 0.007 82);
   --muted-foreground: oklch(45% 0.047 246);
@@ -73,11 +103,16 @@
   --accent-foreground: oklch(41% 0.13 46);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
-  /* Subtle warm neutral border (~#E8E2D9) */
   --border: oklch(90.6% 0.01 80);
+  --border-strong: oklch(82% 0.012 80);
   --input: oklch(90.6% 0.01 80);
   --ring: oklch(69% 0.19 48);
   --radius: 0.5rem;
+
+  --surface: var(--card);
+  --surface-muted: var(--secondary);
+  --surface-hover: var(--muted);
+
   --status-success: oklch(0.527 0.154 150.069);
   --status-success-foreground: oklch(0.452 0.124 151.328);
   --status-success-bg: oklch(0.982 0.018 155.826);
@@ -90,6 +125,46 @@
   --status-purple: oklch(62% 0.18 34);
   --status-purple-foreground: oklch(42% 0.145 34);
   --status-purple-bg: oklch(97% 0.025 62);
+
+  --success: var(--status-success);
+  --success-soft: var(--status-success-bg);
+  --success-foreground: var(--status-success-foreground);
+  --warning: var(--status-warning);
+  --warning-soft: var(--status-warning-bg);
+  --warning-foreground: var(--status-warning-foreground);
+  --danger: var(--destructive);
+  --danger-soft: color-mix(in oklch, var(--destructive) 12%, var(--card));
+  --danger-foreground: var(--destructive);
+  --info: var(--status-info);
+  --info-soft: var(--status-info-bg);
+  --info-foreground: var(--status-info-foreground);
+
+  /*
+   * Secondary-action navy: backs `Button variant="secondary"` app-wide (the
+   * ONE secondary-action semantic - see button.tsx; there is no separate
+   * "accent-navy" variant). Reuses the sidebar navy value via a dedicated
+   * alias. This intentionally does NOT touch `--secondary`/`--secondary-
+   * foreground`, the pre-existing warm near-white neutral-surface tokens.
+   * Nothing renders `bg-secondary`/`text-secondary-foreground` directly
+   * anymore - table/badge/panel surfaces consume their own dedicated
+   * tokens (`--table-header`, `--surface-muted`, badge `--muted`) below,
+   * which happen to share `--secondary`'s value today but can diverge
+   * from it independently in future.
+   */
+  --secondary-action: oklch(31% 0.105 253);
+  --secondary-action-foreground: oklch(97% 0.012 255);
+
+  /*
+   * Table surfaces: decoupled from `--secondary` (the neutral-surface
+   * token) so a future change to one never silently affects the other.
+   * Values are unchanged from what tables already rendered.
+   */
+  --table-header: var(--secondary);
+  --table-header-foreground: var(--muted-foreground);
+  --table-border: var(--border);
+  --table-hover: var(--muted);
+  --table-selected: var(--primary-soft);
+
   --sidebar: var(--sidebar-bg);
   --sidebar-bg: oklch(31% 0.105 253);
   --sidebar-foreground: oklch(97% 0.012 255);
@@ -115,15 +190,7 @@
 
 html {
   scroll-behavior: smooth;
-  /* The page's own scroll uses CustomScrollbar (DashboardLayout) instead of
-     the native scrollbar, so its cursor can actually change on hover/drag -
-     hide the native one here only, every other scrollable element in the
-     app keeps the native scrollbar + the color-only treatment below. */
-  scrollbar-width: none;
-}
-
-html::-webkit-scrollbar {
-  display: none;
+  /* scrollbar-width: none; */
 }
 
 body {
@@ -144,7 +211,6 @@ a {
   text-decoration: none;
 }
 
-
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),
 [role="menuitem"]:not([aria-disabled="true"]),
@@ -163,49 +229,33 @@ summary {
   color: currentColor !important;
 }
 
-/* Neutral, compact scrollbar everywhere a native one is still used (tables/
-   grids use CustomScrollbar or their own scoped rules instead - see
-   ExcelDataGrid/DataTable). Deliberately never primary-colored: primary is
-   reserved for interactive actions/selections, not chrome. */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--foreground) 22%, transparent);
-  border-radius: 9999px;
-  cursor: pointer;
+  background: var(--foreground) / 0.2;
+  background: color-mix(in oklch, var(--foreground), transparent 80%);
+  border-radius: 0px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklch, var(--foreground) 38%, transparent);
-  cursor: pointer;
-}
-::-webkit-scrollbar-thumb:active {
-  background: color-mix(in oklch, var(--foreground) 50%, transparent);
-  cursor: grabbing;
+  background: color-mix(in oklch, var(--foreground), transparent 70%);
 }
 
-/* Firefox has no ::-webkit-scrollbar equivalent. Deliberately NOT applied
-   globally (`*`) - scoped to the shared table/grid scroll containers that
-   still render a native scrollbar (DataTable's - ExcelDataGrid/ImportPreview
-   already replace theirs with CustomScrollbar, which is plain HTML/CSS and
-   needs no browser-specific rule at all). */
-.table-native-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+.dark ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--foreground), transparent 80%);
 }
 
-/* Fully hidden scrollbar for a specific horizontally-scrolling element (e.g.
-   ScrollableTabsList) - a dedicated, unlayered rule rather than Tailwind's
-   `scrollbar-none` utility, which only sets `scrollbar-width: none` and
-   never touches ::-webkit-scrollbar at all, or arbitrary-variant classes,
-   which compile inside Tailwind's utilities layer and can lose to any
-   unlayered rule (like the ::-webkit-scrollbar block above) touching the
-   same pseudo-element on a property it does declare. This rule is written
-   directly, outside any layer, so there's no ambiguity either way. */
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--foreground), transparent 70%);
+}
+
 .scrollbar-hidden {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -220,4 +270,58 @@ summary {
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+@utility text-page-title {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+@utility text-section-title {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+@utility text-card-title {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+@utility text-body {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+@utility text-body-small {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+
+@utility text-meta {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+@utility text-table-header {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+}
+
+@utility text-table-body {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--foreground);
 }

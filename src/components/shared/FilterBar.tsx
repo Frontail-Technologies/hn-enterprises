@@ -16,6 +16,15 @@ export interface FilterConfig {
   placeholder: string
   options: FilterOption[]
   searchable?: boolean
+  /**
+   * Defaults to "select". "date" renders the canonical DatePicker instead of
+   * a free-text input. "dateRange" renders From/To DatePickers - `key` holds
+   * the "from" value and `toKey` (required for this type) holds the "to"
+   * value. Values are always "yyyy-MM-dd" strings, matching the backend's
+   * date query format.
+   */
+  type?: 'select' | 'date' | 'dateRange'
+  toKey?: string
 }
 
 interface FilterBarProps {

@@ -8,7 +8,7 @@ import { useBillsQuery } from "@/features/commercial/hooks/useBills";
 import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
 import { getBillHref } from "@/features/commercial/utils/billing.utils";
 import { formatDate, money } from "@/features/commercial/utils/format";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useCustomersQuery } from "@/features/customers/queries/useCustomersQuery";
 import { getAdminSummaryStatDefinition } from "@/features/dashboard/services/dashboard-summary-stats.service";
 import { SummaryStatShell } from "../SummaryStatShell";
 
@@ -28,7 +28,7 @@ const columns: ExcelColumn<PendingApprovalRow>[] = [
   {
     key: "reference",
     label: "Reference",
-    width: 200,
+    width: 220,
     sticky: true,
     getValue: (row) => row.reference,
     render: (row) => (
@@ -50,39 +50,44 @@ const columns: ExcelColumn<PendingApprovalRow>[] = [
 ];
 
 export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: string; city: string }) {
-  const { data: customers = [], isLoading: customersLoading } = useCustomersQuery({
-    projectId: projectId === "all" ? undefined : projectId,
-  });
-  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
-    projectId: projectId === "all" ? undefined : projectId,
-  });
+  const scopedProjectId = projectId === "all" ? undefined : projectId;
+  const scopedCity = city === "all" ? undefined : city;
 
-  const scopedCustomers = useMemo(
-    () => customers.filter((customer) => city === "all" || customer.city === city),
-    [customers, city],
-  );
+  // Server-scoped: only customers with a pending survey approval, in this
+  // project/city - not the full customer table.
+  const { data: pendingSurveyCustomers = [], isLoading: customersLoading } = useCustomersQuery({
+    projectId: scopedProjectId,
+    city: scopedCity,
+    statKey: "pending-survey-approval",
+  });
+  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery({
+    projectId: scopedProjectId,
+    city: scopedCity,
+    status: "Submitted",
+  });
+  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
+    projectId: scopedProjectId,
+    status: "Submitted",
+  });
 
   const rows = useMemo<PendingApprovalRow[]>(() => {
-    const scopedCustomerIds = new Set(scopedCustomers.map((customer) => customer.id));
-
-    const surveyRows: PendingApprovalRow[] = scopedCustomers
-      .filter((customer) =>
-        ["Submitted", "In Review", "Sent Back"].includes(customer.survey?.approvalStatus ?? ""),
-      )
-      .map((customer) => ({
+    const surveyRows: PendingApprovalRow[] = pendingSurveyCustomers.map((customer) => {
+      const name = customer.customerConnection.customerName;
+      const trBp = customer.customerConnection.trBpNo;
+      return {
         id: `survey-${customer.id}`,
         type: "Survey",
-        reference: customer.customerConnection.customerName,
+        reference: trBp ? `${name} (${trBp})` : name,
         detail: customer.siteArea,
         amount: "-",
         status: customer.survey?.approvalStatus ?? "-",
         date: customer.survey?.surveyDate ?? "",
         actionHref: `/customers/${customer.id}/edit`,
-      }));
+      };
+    });
 
     const paymentRows: PendingApprovalRow[] = payments
-      .filter((payment) => scopedCustomerIds.has(payment.customerId) && payment.status === "Submitted")
+      .filter((payment) => payment.customerId)
       .map((payment) => ({
         id: `payment-${payment.id}`,
         type: "Payment",
@@ -94,25 +99,21 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
         actionHref: "/payments",
       }));
 
-    const billRows: PendingApprovalRow[] = bills
-      // Project scope already applied server-side. Bills have no customer
-      // link, so they aren't further scoped by the city filter.
-      .filter((bill) => bill.status === "Submitted")
-      .map((bill) => ({
-        id: `bill-${bill.id}`,
-        type: "Bill",
-        reference: bill.billNumber,
-        detail: bill.dueDate ? `Due ${formatDate(bill.dueDate)}` : "-",
-        amount: money(bill.totalAmount),
-        status: bill.status,
-        date: bill.billDate,
-        actionHref: getBillHref(bill),
-      }));
+    const billRows: PendingApprovalRow[] = bills.map((bill) => ({
+      id: `bill-${bill.id}`,
+      type: "Bill",
+      reference: bill.billNumber,
+      detail: bill.dueDate ? `Due ${formatDate(bill.dueDate)}` : "-",
+      amount: money(bill.totalAmount),
+      status: bill.status,
+      date: bill.billDate,
+      actionHref: getBillHref(bill),
+    }));
 
     return [...surveyRows, ...paymentRows, ...billRows].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-  }, [scopedCustomers, payments, bills, city]);
+  }, [pendingSurveyCustomers, payments, bills]);
 
   return (
     <SummaryStatShell

@@ -1,4 +1,4 @@
-import { customersApi } from "@/features/customers/services/customers.service";
+import { customersApi } from "@/features/customers/api/customers.api";
 import type { Customer } from "@/features/customers/types/customer.types";
 import type {
   PdfTableRow,

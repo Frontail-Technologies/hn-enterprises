@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/FormField";
 import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
 import { exportColumnTemplate } from "@/lib/export-excel";
+import { customersKey } from "../queries/customer.query-keys";
 import type {
   ImportFieldError,
   ImportPreviewColumn,
@@ -13,7 +15,7 @@ import type {
   RowEditorProps,
   RowValidationResult,
 } from "@/components/shared/import-workspace";
-import { buildCustomerMasterSheetColumns } from "../services/customers.service";
+import { buildCustomerMasterSheetColumns } from "../config/customer-columns";
 import {
   getRowStatus,
   masterImportApi,
@@ -88,12 +90,12 @@ function CustomerImportRowEditor({ data, onChange, errors }: RowEditorProps<Cust
         </ul>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Project" field="projectName" data={data} onChange={onChange} required />
+        <TextField label="Project" field="projectName" data={data} onChange={onChange} />
         <TextField label="Project Code" field="projectCode" data={data} onChange={onChange} />
         <TextField label="City" field="city" data={data} onChange={onChange} />
-        <TextField label="Site / Area" field="siteName" data={data} onChange={onChange} required />
+        <TextField label="Site / Area" field="siteName" data={data} onChange={onChange} />
         <TextField label="Site Code" field="siteCode" data={data} onChange={onChange} />
-        <TextField label="Customer Name" field="customerName" data={data} onChange={onChange} required />
+        <TextField label="Customer Name" field="customerName" data={data} onChange={onChange} />
         <TextField label="TR/BP Number" field="trBpNumber" data={data} onChange={onChange} required />
         <TextField label="Mobile Number" field="mobileNumber" data={data} onChange={onChange} />
         <TextField label="Address" field="fullAddress" data={data} onChange={onChange} />
@@ -101,7 +103,6 @@ function CustomerImportRowEditor({ data, onChange, errors }: RowEditorProps<Cust
         <TextField label="House Type" field="houseType" data={data} onChange={onChange} />
         <TextField label="Scheme" field="scheme" data={data} onChange={onChange} />
         <TextField label="Plumber" field="plumberName" data={data} onChange={onChange} />
-        <TextField label="Supervisor" field="supervisorName" data={data} onChange={onChange} />
         <TextField label="Customer Status" field="customerStatus" data={data} onChange={onChange} />
         <TextField label="Report No. - GI" field="giReportNumber" data={data} onChange={onChange} />
         <TextField label="Report No. - GC" field="gcReportNumber" data={data} onChange={onChange} />
@@ -113,6 +114,7 @@ function CustomerImportRowEditor({ data, onChange, errors }: RowEditorProps<Cust
 
 export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportRowData> {
   const { data: activeCustomFields = [] } = useDynamicFieldsQuery("Active");
+  const queryClient = useQueryClient();
 
   return useMemo<ImportWorkspaceConfig<CustomerImportRowData>>(() => {
     const masterColumns = buildCustomerMasterSheetColumns(activeCustomFields);
@@ -155,8 +157,12 @@ export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportR
       async commit(_rows, batchId) {
         if (!batchId) throw new Error("Missing import batch");
         const result = await masterImportApi.confirm(batchId);
+        // Scoped to the customers namespace only - not a whole-QueryClient
+        // reset. Runs even on a partial failure, since any successfully
+        // imported rows already changed the underlying dataset.
+        void queryClient.invalidateQueries({ queryKey: customersKey });
         return { imported: result.imported, failed: result.failed };
       },
     };
-  }, [activeCustomFields]);
+  }, [activeCustomFields, queryClient]);
 }

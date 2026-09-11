@@ -37,7 +37,6 @@ export function SummaryStatShell<T extends { id: string }>({
   return (
     <PageShell
       title={title}
-      subtitle={`${filteredRows.length} of ${rows.length} records`}
       actions={
         <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
           <ArrowLeftIcon size={14} />

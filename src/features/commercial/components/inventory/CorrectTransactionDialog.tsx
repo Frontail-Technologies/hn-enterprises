@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { FormField } from "@/components/shared/FormField";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
@@ -37,15 +38,6 @@ import type {
 } from "../../types/material.types";
 
 const SOURCE_REQUIRED_TYPES = ["issue", "return", "adjustment"];
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
-}
 
 function prefill(transaction: MaterialTransaction): CorrectMaterialTransactionInput {
   return {
@@ -80,7 +72,8 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
   const [error, setError] = useState("");
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
-  const { data: customers = [] } = useCustomersQuery();
+  const { options: customerOptions, isLoading: customersLoading, onSearchChange: onCustomerSearchChange } =
+    useCustomerSelectorOptions(values.customerId);
   const { data: projects = [] } = useProjectsQuery();
   const correctTransaction = useCorrectMaterialTransaction();
   const needsSource = SOURCE_REQUIRED_TYPES.includes(transaction.type);
@@ -126,7 +119,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
   const type = transaction.type;
 
   const sourceField = (
-    <Field label="Material Source">
+    <FormField label="Material Source">
       <Select value={values.source || undefined} onValueChange={(source) => set("source", (source as MaterialSource) ?? "")}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select source" />
@@ -136,11 +129,11 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
           <SelectItem value="pbg">PBG</SelectItem>
         </SelectContent>
       </Select>
-    </Field>
+    </FormField>
   );
 
   const directionField = (
-    <Field label="Direction">
+    <FormField label="Direction">
       <Select value={values.direction || undefined} onValueChange={(direction) => set("direction", (direction as AdjustmentDirection) ?? "")}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select direction" />
@@ -150,11 +143,11 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
           <SelectItem value="out">Out (reduces balance)</SelectItem>
         </SelectContent>
       </Select>
-    </Field>
+    </FormField>
   );
 
   const projectField = (
-    <Field label="Project">
+    <FormField label="Project">
       <SearchableSelect
         value={values.projectId || undefined}
         onValueChange={(projectId) => set("projectId", projectId ?? "")}
@@ -162,11 +155,11 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
         options={projects.map((project) => ({ value: project.id, label: project.name }))}
         className="w-full"
       />
-    </Field>
+    </FormField>
   );
 
   const plumberField = (
-    <Field label="Plumber / Team">
+    <FormField label="Plumber / Team">
       <SearchableSelect
         value={values.plumberId || undefined}
         onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
@@ -174,11 +167,11 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
         options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
         className="w-full"
       />
-    </Field>
+    </FormField>
   );
 
   const supervisorField = (
-    <Field label="Supervisor">
+    <FormField label="Supervisor">
       <SearchableSelect
         value={values.supervisorId || undefined}
         onValueChange={(supervisorId) => set("supervisorId", supervisorId ?? "")}
@@ -186,37 +179,40 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
         options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
         className="w-full"
       />
-    </Field>
+    </FormField>
   );
 
   const customerField = (
-    <Field label="Customer / BP No.">
+    <FormField label="Customer / BP No.">
       <SearchableSelect
         value={values.customerId || undefined}
         onValueChange={(customerId) => set("customerId", customerId ?? "")}
         placeholder="Select customer"
-        options={customers.map((c) => ({ value: c.id, label: `${c.customerConnection.customerName} (${c.customerConnection.trBpNo})` }))}
+        searchPlaceholder="Search by name, BR/TR or mobile..."
+        options={customerOptions}
+        isLoading={customersLoading}
+        onSearchChange={onCustomerSearchChange}
         className="w-full"
       />
-    </Field>
+    </FormField>
   );
 
   const addressField = (
-    <Field label="Address">
+    <FormField label="Address">
       <Input value={values.address ?? ""} onChange={(event) => set("address", event.target.value)} />
-    </Field>
+    </FormField>
   );
 
   const quantityField = (
-    <Field label="Quantity">
+    <FormField label="Quantity">
       <Input type="number" value={values.quantity ?? ""} onChange={(event) => set("quantity", event.target.value)} />
-    </Field>
+    </FormField>
   );
 
   const dateField = (
-    <Field label="Date">
+    <FormField label="Date">
       <DatePicker value={values.transactionDate} onChange={(value) => set("transactionDate", value)} />
-    </Field>
+    </FormField>
   );
 
   return (
@@ -241,69 +237,69 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
 
           {type === "purchase" ? (
             <>
-              <Field label="Invoice / Reference No.">
+              <FormField label="Invoice / Reference No.">
                 <Input value={values.referenceNo ?? ""} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
-              <Field label="Vendor Name">
+              </FormField>
+              <FormField label="Vendor Name">
                 <Input value={values.vendorName ?? ""} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              </FormField>
               {projectField}
               {dateField}
               {quantityField}
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Rate">
+                <FormField label="Rate">
                   <Input type="number" value={values.rate ?? ""} onChange={(event) => set("rate", event.target.value)} />
-                </Field>
-                <Field label="Bill Amount">
+                </FormField>
+                <FormField label="Bill Amount">
                   <Input type="number" value={values.billAmount ?? ""} onChange={(event) => set("billAmount", event.target.value)} />
-                </Field>
+                </FormField>
               </div>
             </>
           ) : null}
 
           {type === "pbg_issue" ? (
             <>
-              <Field label="SIV No.">
+              <FormField label="SIV No.">
                 <Input value={values.referenceNo ?? ""} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              </FormField>
               {supervisorField}
               {projectField}
               {dateField}
               {quantityField}
-              <Field label="Vendor Name">
+              <FormField label="Vendor Name">
                 <Input value={values.vendorName ?? ""} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              </FormField>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Vehicle No.">
+                <FormField label="Vehicle No.">
                   <Input value={values.vehicleNo ?? ""} onChange={(event) => set("vehicleNo", event.target.value)} />
-                </Field>
-                <Field label="Vehicle Quantity">
+                </FormField>
+                <FormField label="Vehicle Quantity">
                   <Input type="number" value={values.vehicleQty ?? ""} onChange={(event) => set("vehicleQty", event.target.value)} />
-                </Field>
+                </FormField>
               </div>
             </>
           ) : null}
 
           {type === "pbg_consumption" ? (
             <>
-              <Field label="RA Bill No.">
+              <FormField label="RA Bill No.">
                 <Input value={values.referenceNo ?? ""} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              </FormField>
               {customerField}
               {plumberField}
               {dateField}
               {quantityField}
-              <Field label="Vendor Name">
+              <FormField label="Vendor Name">
                 <Input value={values.vendorName ?? ""} onChange={(event) => set("vendorName", event.target.value)} />
-              </Field>
+              </FormField>
             </>
           ) : null}
 
           {type === "issue" ? (
             <>
-              <Field label="Slip No.">
+              <FormField label="Slip No.">
                 <Input value={values.referenceNo ?? ""} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              </FormField>
               {sourceField}
               {dateField}
               {plumberField}
@@ -316,15 +312,15 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
 
           {type === "return" ? (
             <>
-              <Field label="Return No.">
+              <FormField label="Return No.">
                 <Input value={values.referenceNo ?? ""} onChange={(event) => set("referenceNo", event.target.value)} />
-              </Field>
+              </FormField>
               {sourceField}
               {dateField}
               {plumberField}
               {addressField}
               {quantityField}
-              <Field label="Condition">
+              <FormField label="Condition">
                 <Select value={values.condition ?? "Reusable"} onValueChange={(condition) => set("condition", condition ?? "Reusable")}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -337,7 +333,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
                     ))}
                   </SelectContent>
                 </Select>
-              </Field>
+              </FormField>
             </>
           ) : null}
 
@@ -347,7 +343,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
               {sourceField}
               {directionField}
               {quantityField}
-              <Field label="Adjustment Type">
+              <FormField label="Adjustment Type">
                 <Select
                   value={values.adjustmentType ?? "Correction"}
                   onValueChange={(adjustmentType) => set("adjustmentType", adjustmentType ?? "Correction")}
@@ -363,7 +359,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
                     ))}
                   </SelectContent>
                 </Select>
-              </Field>
+              </FormField>
             </>
           ) : null}
 
@@ -373,26 +369,26 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
               {addressField}
               {plumberField}
               {supervisorField}
-              <Field label="Report No.">
+              <FormField label="Report No.">
                 <Input value={values.reportNo ?? ""} onChange={(event) => set("reportNo", event.target.value)} />
-              </Field>
+              </FormField>
               {dateField}
               {quantityField}
             </>
           ) : null}
 
-          <Field label="Remarks">
+          <FormField label="Remarks">
             <Textarea value={values.remarks ?? ""} onChange={(event) => set("remarks", event.target.value)} className="min-h-16" />
-          </Field>
+          </FormField>
 
-          <Field label="Correction Reason (required)">
+          <FormField label="Correction Reason (required)">
             <Textarea
               value={values.correctionReason}
               onChange={(event) => set("correctionReason", event.target.value)}
               className="min-h-16"
               placeholder="Why is this transaction being corrected?"
             />
-          </Field>
+          </FormField>
 
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>

@@ -4,15 +4,16 @@ import type { ReactElement } from "react";
 import { TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface DeleteConfirmDialogProps {
@@ -23,6 +24,19 @@ interface DeleteConfirmDialogProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: ReactElement;
   className?: string;
+  /**
+   * Async-safe confirm mode - only takes effect in controlled mode (isOpen/
+   * onOpenChange supplied). AlertDialogAction is a plain Close trigger: it
+   * closes the instant it's clicked, with no idea whether onConfirm's async
+   * work later succeeds or fails. While isConfirming is true, the confirm
+   * button instead renders as a plain (non-closing) button showing a
+   * "Deleting..." state, both buttons are disabled (no double-submit, no
+   * dismiss mid-delete), and closing is left entirely to the caller - call
+   * onOpenChange(false) yourself once your onConfirm has actually resolved.
+   * Every uncontrolled consumer (isOpen left undefined) is completely
+   * unaffected - same AlertDialogAction, same immediate-close behavior.
+   */
+  isConfirming?: boolean;
 }
 
 export function DeleteConfirmDialog({
@@ -33,13 +47,16 @@ export function DeleteConfirmDialog({
   onOpenChange,
   trigger,
   className,
+  isConfirming = false,
 }: DeleteConfirmDialogProps) {
+  const isControlled = isOpen !== undefined;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={isConfirming ? undefined : onOpenChange}>
       {trigger ? (
-        <DialogTrigger render={trigger} />
+        <AlertDialogTrigger render={trigger} />
       ) : isOpen === undefined ? (
-        <DialogTrigger
+        <AlertDialogTrigger
           render={
             variant === "icon" ? (
               <Button
@@ -61,22 +78,26 @@ export function DeleteConfirmDialog({
         >
           <TrashIcon size={variant === "icon" ? 13 : 14} />
           {variant === "full" ? "Delete" : null}
-        </DialogTrigger>
+        </AlertDialogTrigger>
       ) : null}
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Delete {itemName}?</DialogTitle>
-          <DialogDescription>
+      <AlertDialogContent className="sm:max-w-sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {itemName}?</AlertDialogTitle>
+          <AlertDialogDescription>
             This action cannot be undone. <strong>{itemName}</strong> will be permanently removed.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
-          <DialogClose render={<Button type="button" variant="destructive" onClick={onConfirm} />}>
-            Delete
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isControlled && isConfirming}>Cancel</AlertDialogCancel>
+          {isControlled ? (
+            <Button type="button" variant="destructive" onClick={onConfirm} disabled={isConfirming}>
+              {isConfirming ? "Deleting..." : "Delete"}
+            </Button>
+          ) : (
+            <AlertDialogAction onClick={onConfirm}>Delete</AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

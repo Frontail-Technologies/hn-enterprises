@@ -27,10 +27,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useCustomerColumnsQuery, useResetCustomerColumns, useSaveCustomerColumns } from "../hooks/useCustomerColumns";
-import type { ResolvedCustomerColumn } from "../services/customers.service";
+import { useCustomerColumnsQuery, useResetCustomerColumns, useSaveCustomerColumns } from "../queries/useCustomerColumns";
+import type { ResolvedCustomerColumn } from "../config/customer-columns";
 
-export function CustomizeColumnsDialog() {
+export function CustomizeColumnsDialog({
+  triggerClassName,
+  iconClassName,
+}: {
+  triggerClassName?: string;
+  iconClassName?: string;
+} = {}) {
   const [open, setOpen] = useState(false);
   const columnsQuery = useCustomerColumnsQuery();
   const saveColumns = useSaveCustomerColumns();
@@ -91,8 +97,8 @@ export function CustomizeColumnsDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        <GearSixIcon size={15} />
+      <DialogTrigger render={<Button type="button" variant="outline" className={triggerClassName} />}>
+        <GearSixIcon size={12} className={iconClassName} />
         Columns
       </DialogTrigger>
       <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">

@@ -14,12 +14,12 @@ export function FullViewToggleButton({
     <Button
       type="button"
       variant="ghost"
-      size="icon-sm"
+      size="icon-xs"
       aria-label={label}
       title={label}
       onClick={onToggle}
     >
-      {active ? <CornersInIcon size={15} /> : <CornersOutIcon size={15} />}
+      {active ? <CornersInIcon size={13} /> : <CornersOutIcon size={13} />}
     </Button>
   );
 }

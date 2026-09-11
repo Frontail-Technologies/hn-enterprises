@@ -88,9 +88,10 @@ function mapUser(raw: BackendUser): User {
 }
 
 export const usersApi = {
-  async list(params: { role?: string } = {}): Promise<RosterUser[]> {
+  async list(params: { role?: string; status?: BackendStatus } = {}): Promise<RosterUser[]> {
     const query = new URLSearchParams();
     if (params.role) query.set("role", params.role);
+    if (params.status) query.set("status", params.status);
     const qs = query.toString();
     return apiRequest<RosterUser[]>(`/users${qs ? `?${qs}` : ""}`);
   },

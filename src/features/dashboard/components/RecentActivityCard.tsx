@@ -10,17 +10,17 @@ interface RecentActivityCardProps {
 }
 
 const TYPE_ICON_CLASSES: Record<ActivityType, string> = {
-  Work: "text-status-info-fg",
-  Survey: "text-status-purple-fg",
-  DPR: "text-status-warning-fg",
-  Billing: "text-status-success-fg",
-  System: "text-status-neutral-fg",
+  Work: "bg-info-soft text-info-foreground",
+  Survey: "bg-status-purple-bg text-status-purple-fg",
+  DPR: "bg-warning-soft text-warning-foreground",
+  Billing: "bg-success-soft text-success-foreground",
+  System: "bg-surface-muted text-muted-foreground",
 };
 
 export function RecentActivityCard({ items }: RecentActivityCardProps) {
   return (
     <Card>
-      <CardHeader className="border-b border-border/60 pb-2.5">
+      <CardHeader className="border-b border-border pb-3">
         <CardTitle>Recent Activity</CardTitle>
         <CardAction>
           <Link href="/activity" className={buttonVariants({ variant: "link", size: "sm" })}>
@@ -30,38 +30,33 @@ export function RecentActivityCard({ items }: RecentActivityCardProps) {
       </CardHeader>
       <CardContent>
         {items.length ? (
-          <div className="space-y-2">
+          <div className="relative space-y-2.5 before:absolute before:top-1 before:bottom-1 before:left-3.25 before:w-px before:bg-border">
             {items.map((activity, index) => {
               const Icon = activity.icon;
 
               return (
                 <div
                   key={("id" in activity ? String(activity.id) : "") || `${activity.title}-${activity.time}-${index}`}
-                  className={cn(
-                    "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg px-3 py-2.5",
-                    index % 2 === 0 ? "bg-muted/40" : "bg-transparent",
-                  )}
+                  className="relative flex items-center gap-3 pl-0"
                 >
-                  <div
+                  <span
                     className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-md bg-card ring-1 ring-border/70",
+                      "relative z-10 flex size-6.5 shrink-0 items-center justify-center rounded-full ring-2 ring-card",
                       TYPE_ICON_CLASSES[activity.type],
                     )}
                   >
                     <Icon size={13} weight="bold" />
-                  </div>
-                  <p className="min-w-0 text-xs font-medium leading-snug text-foreground">
+                  </span>
+                  <p className="min-w-0 flex-1 truncate text-body-small font-semibold text-foreground">
                     {activity.title}
                   </p>
-                  <span className="whitespace-nowrap text-[11px] font-medium text-muted-foreground">
-                    {activity.time}
-                  </span>
+                  <span className="shrink-0 text-meta text-muted-foreground/70 whitespace-nowrap">{activity.time}</span>
                 </div>
               );
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No recent activity.</p>
+          <p className="py-6 text-center text-body-small text-muted-foreground">No recent activity.</p>
         )}
       </CardContent>
     </Card>

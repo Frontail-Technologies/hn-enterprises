@@ -2,194 +2,216 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { type ColumnDef } from "@/components/shared/DataTable";
+import { format, subMonths } from "date-fns";
+import { CoinsIcon, DownloadSimpleIcon, HourglassIcon, ReceiptIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
+import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
+import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Pagination } from "@/components/shared/Pagination";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
+import { useDownloadWageRegister } from "@/features/exports/hooks/useExports";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { billingTabs } from "../data/bills.data";
 import type { BillingView } from "../types/commercial.types";
-import type { Bill } from "../types/bill.types";
-import { useBillsQuery } from "../hooks/useBills";
-import { formatDate, money, sum, uniqOptions } from "../utils/format";
+import type { Bill, BillStatus } from "../types/bill.types";
+import { useBillsPageQuery, useBillsSummaryQuery } from "../hooks/useBills";
+import { billsApi } from "../services/bills.service";
+import { formatDate, money } from "../utils/format";
 import { getBillHref } from "../utils/billing.utils";
-import { BillDrawer } from "./billing/BillDrawer";
+import { BillDialog } from "./billing/BillDialog";
 import { BillingActions } from "./billing/BillingActions";
+import { WageDialog } from "./billing/WageDialog";
 import { WageRegister } from "./billing/WageRegister";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
-import { TableSection } from "./shared/TableSection";
+
+const PAGE_SIZE = 50;
+const BILL_STATUSES: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
+
+function monthOptions() {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, index) => {
+    const date = subMonths(now, index);
+    return { value: format(date, "yyyy-MM"), label: format(date, "MMMM yyyy") };
+  });
+}
 
 export function BillingPage() {
   const [activeView, setActiveView] = useState<BillingView>("wages");
-  const { data: bills = [] } = useBillsQuery();
-  const { data: projects = [] } = useProjectsQuery();
-  const projectNameById = useMemo(() => new Map(projects.map((project) => [project.id, project.name])), [projects]);
-  const totals = {
-    billed: sum(bills.map((bill) => bill.totalAmount)),
-    received: sum(bills.map((bill) => bill.paidAmount)),
-    pending: sum(bills.map((bill) => bill.pendingAmount)),
-    overdue: sum(
-      bills
-        .filter((bill) => bill.status === "Overdue")
-        .map((bill) => bill.pendingAmount),
-    ),
+  const wageMonthOptions = useMemo(() => monthOptions(), []);
+  const [wageMonth, setWageMonth] = useState(wageMonthOptions[0].value);
+  const downloadWageRegister = useDownloadWageRegister();
+
+  const [filters, setFilters] = useState({ search: "", status: "all", project: "all" });
+  const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const listParams = {
+    search: filters.search || undefined,
+    status: filters.status !== "all" ? (filters.status as BillStatus) : undefined,
+    projectId: filters.project !== "all" ? filters.project : undefined,
   };
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "all",
-    project: "all",
-  });
-  const data = useMemo(() => {
-    const search = filters.search.toLowerCase();
-    return bills.filter((row) => {
-      const projectName = projectNameById.get(row.projectId) ?? "";
-      return (
-        (!search || [row.billNumber, projectName].join(" ").toLowerCase().includes(search)) &&
-        (filters.status === "all" || row.status === filters.status) &&
-        (filters.project === "all" || projectName === filters.project)
-      );
-    });
-  }, [bills, filters, projectNameById]);
+
+  const { data: pageResult, isLoading } = useBillsPageQuery({ ...listParams, page, limit: PAGE_SIZE });
+  const bills = useMemo(() => pageResult?.data ?? [], [pageResult]);
+  const pagination = pageResult?.pagination;
+
+  const { data: totals } = useBillsSummaryQuery(listParams);
+
+  // Projects list is a bounded filter selector here (not a label map - the
+  // bill row's project name is server-joined).
+  const { data: projects = [] } = useProjectsQuery();
+  const projectOptions = useMemo(
+    () => projects.map((project) => ({ value: project.id, label: project.name })),
+    [projects],
+  );
+
+  function updateFilter(key: string, value: string) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
+
   const columns: ColumnDef<Bill>[] = [
     {
       key: "billNumber",
       header: "Bill Number",
       render: (row) => (
-        <Link
-          href={getBillHref(row)}
-          className="font-semibold text-foreground hover:text-primary"
-        >
+        <Link href={getBillHref(row)} className="font-semibold text-foreground hover:text-primary">
           {row.billNumber}
         </Link>
       ),
     },
-    {
-      key: "project",
-      header: "Project",
-      render: (row) => (
-        <p className="font-medium text-foreground">{projectNameById.get(row.projectId) ?? "-"}</p>
-      ),
-    },
-    {
-      key: "billDate",
-      header: "Bill Date",
-      render: (row) => formatDate(row.billDate),
-    },
-    {
-      key: "totalAmount",
-      header: "Total Amount",
-      render: (row) => money(row.totalAmount),
-    },
-    {
-      key: "paidAmount",
-      header: "Paid Amount",
-      render: (row) => money(row.paidAmount),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-32",
-      render: (row) => <BillingActions bill={row} />,
-    },
+    { key: "project", header: "Project", render: (row) => <p className="font-medium text-foreground">{row.projectName || "-"}</p> },
+    { key: "billDate", header: "Bill Date", render: (row) => formatDate(row.billDate) },
+    { key: "totalAmount", header: "Total Amount", render: (row) => money(row.totalAmount) },
+    { key: "paidAmount", header: "Paid Amount", render: (row) => money(row.paidAmount) },
+    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+    { key: "actions", header: "Actions", className: "w-32", render: (row) => <BillingActions bill={row} /> },
   ];
 
   const exportColumns: ExportColumn<Bill>[] = [
     { label: "Bill Number", getValue: (row) => row.billNumber },
-    { label: "Project", getValue: (row) => projectNameById.get(row.projectId) ?? "-" },
+    { label: "Project", getValue: (row) => row.projectName || "-" },
     { label: "Bill Date", getValue: (row) => formatDate(row.billDate) },
     { label: "Total Amount", getValue: (row) => row.totalAmount },
     { label: "Paid Amount", getValue: (row) => row.paidAmount },
     { label: "Status", getValue: (row) => row.status },
   ];
 
+  async function handleExportBills() {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      // Exports ALL bills matching the current filters, not just the loaded page.
+      const total = pagination?.total ?? bills.length;
+      const { data: allRows } = await billsApi.listPage({ ...listParams, page: 1, limit: Math.max(total, 1) });
+      await exportRowsToExcel("bills.xlsx", exportColumns, allRows);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  function handleExportWageRegister() {
+    const [yearStr, monthStr] = wageMonth.split("-");
+    downloadWageRegister.mutate({ month: Number(monthStr), year: Number(yearStr) });
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="Billing"
-        subtitle="Track bills, invoices and received payments."
+        icon={ReceiptIcon}
         actions={
           activeView === "bills" ? (
             <>
               <FilterSheetButton
                 searchKey="search"
-                searchPlaceholder="Search bill or project..."
+                searchPlaceholder="Search bill number..."
                 title="Billing Filters"
                 values={filters}
                 filters={[
-                  {
-                    key: "project",
-                    placeholder: "All Projects",
-                    searchable: true,
-                    options: uniqOptions(
-                      bills
-                        .map((row) => projectNameById.get(row.projectId))
-                        .filter((name): name is string => Boolean(name)),
-                    ),
-                  },
-                  {
-                    key: "status",
-                    placeholder: "All Statuses",
-                    options: uniqOptions(bills.map((row) => row.status)),
-                  },
+                  { key: "project", placeholder: "All Projects", searchable: true, options: projectOptions },
+                  { key: "status", placeholder: "All Statuses", options: BILL_STATUSES.map((s) => ({ value: s, label: s })) },
                 ]}
-                onChange={(key, value) =>
-                  setFilters((current) => ({ ...current, [key]: value }))
-                }
-                onReset={() =>
-                  setFilters({ search: "", status: "all", project: "all" })
-                }
+                onChange={updateFilter}
+                onReset={() => {
+                  setFilters({ search: "", status: "all", project: "all" });
+                  setPage(1);
+                }}
               />
-              <button
-                type="button"
-                className={buttonVariants({ variant: "outline", size: "default" })}
-                onClick={() => void exportRowsToExcel("bills.xlsx", exportColumns, data)}
-              >
-                <DownloadSimpleIcon size={15} />
-                Export Excel
-              </button>
-              <BillDrawer triggerLabel="Create Bill" />
+              <div className="grid grid-cols-2 gap-2 sm:contents">
+                <Button type="button" variant="outline" size="compact" disabled={isExporting} onClick={handleExportBills}>
+                  <DownloadSimpleIcon size={12} />
+                  {isExporting ? "Exporting..." : "Export Excel"}
+                </Button>
+                <BillDialog triggerLabel="Create Bill" />
+              </div>
             </>
           ) : (
-            <BillDrawer triggerLabel="Create Bill" />
+            <>
+              <Select value={wageMonth} onValueChange={(value) => value && setWageMonth(value)}>
+                <SelectTrigger className="w-full bg-card sm:w-37.5" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {wageMonthOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="grid grid-cols-2 gap-2 sm:contents">
+                <WageDialog month={wageMonth} triggerLabel="Add Wage Entry" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="compact"
+                  disabled={downloadWageRegister.isPending}
+                  onClick={handleExportWageRegister}
+                >
+                  <DownloadSimpleIcon size={12} />
+                  {downloadWageRegister.isPending ? "Exporting..." : "Export Wage Register"}
+                </Button>
+              </div>
+            </>
           )
         }
       />
-      <UnderlineTabs
-        items={billingTabs}
-        active={activeView}
-        onChange={(id) => setActiveView(id as BillingView)}
-      />
+      <UnderlineTabs items={billingTabs} active={activeView} onChange={(id) => setActiveView(id as BillingView)} />
       {activeView === "bills" ? (
         <>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
-            <span>
-              Total billed: <span className="font-semibold text-foreground">{money(totals.billed)}</span>
-            </span>
-            <span>
-              Received: <span className="font-semibold text-foreground">{money(totals.received)}</span>
-            </span>
-            <span>
-              Pending: <span className="font-semibold text-foreground">{money(totals.pending)}</span>
-            </span>
-            <span>
-              Overdue: <span className="font-semibold text-destructive">{money(totals.overdue)}</span>
-            </span>
-          </div>
-          <TableSection>
-            <PaginatedDataTable data={data} columns={columns} />
-          </TableSection>
+          <CompactStatGrid columns={4}>
+            <DashboardStatCard label="Total Billed" value={money(totals?.billed ?? 0)} icon={ReceiptIcon} tone="info" dense />
+            <DashboardStatCard label="Received" value={money(totals?.received ?? 0)} icon={CoinsIcon} tone="success" dense />
+            <DashboardStatCard label="Pending" value={money(totals?.pending ?? 0)} icon={HourglassIcon} tone="warning" dense />
+            <DashboardStatCard label="Overdue" value={money(totals?.overdue ?? 0)} icon={WarningCircleIcon} tone="danger" dense />
+          </CompactStatGrid>
+          <DataTable columns={columns} data={bills} isLoading={isLoading} emptyTitle="No bills found" />
+          {pagination && pagination.total > 0 ? (
+            <Pagination
+              compact
+              page={pagination.page}
+              pageCount={Math.max(1, pagination.totalPages)}
+              totalItems={pagination.total}
+              startItem={(pagination.page - 1) * pagination.limit + 1}
+              endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
+              onPageChange={setPage}
+            />
+          ) : null}
         </>
       ) : (
-        <WageRegister />
+        <WageRegister month={wageMonth} />
       )}
     </div>
   );

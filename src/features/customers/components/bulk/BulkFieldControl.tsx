@@ -8,7 +8,7 @@ import {
   connectionTypeOptions,
   customerStatusOptions,
   paymentStatusOptions,
-} from "../../services/customers.service";
+} from "../../config/customer-options";
 import type { CustomerBulkFieldKey } from "../../types/customer-bulk.types";
 import type { useBulkFieldOptions } from "../../hooks/useBulkFieldOptions";
 
@@ -39,23 +39,10 @@ interface BulkFieldControlProps {
 }
 
 export function BulkFieldControl({ field, value, onChange, fieldOptions, relatedProjectId }: BulkFieldControlProps) {
-  const { projects, plumbers, supervisors, schemes, houseTypes } = fieldOptions;
+  const { projects, plumbers, schemes, houseTypes } = fieldOptions;
   const { data: sites = [] } = useProjectSitesQuery(field === "siteId" ? relatedProjectId ?? "" : "");
 
   switch (field) {
-    case "supervisorId":
-      return (
-        <SearchableSelect
-          value={value || undefined}
-          onValueChange={onChange}
-          placeholder="Select supervisor"
-          options={[
-            { value: BULK_CLEAR_VALUE, label: "— Clear supervisor —" },
-            ...supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name })),
-          ]}
-        />
-      );
-
     case "plumberId":
       return (
         <SearchableSelect

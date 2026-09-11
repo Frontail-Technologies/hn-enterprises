@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { EditIcon, EyeIcon, FileTextIcon } from "lucide-react";
+import { EyeIcon, FileTextIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
 import { reportTemplates } from "../services/report-templates.service";
 
 export function ReportTemplatesPage() {
-  const { data: customers = [], isLoading } = useCustomersQuery();
   const [customerId, setCustomerId] = useState("");
+  const { options, isLoading, onSearchChange } = useCustomerSelectorOptions(customerId);
 
   const query = customerId ? `?customerId=${customerId}` : "";
 
@@ -34,11 +34,11 @@ export function ReportTemplatesPage() {
         <SearchableSelect
           value={customerId}
           onValueChange={setCustomerId}
-          placeholder={isLoading ? "Loading customers..." : "Select a customer"}
-          options={customers.map(c => ({
-            value: c.id,
-            label: `${c.customerConnection.customerName} : ${c.customerConnection.trBpNo}`
-          }))}
+          placeholder="Select a customer"
+          searchPlaceholder="Search by name, BR/TR or mobile..."
+          options={options}
+          isLoading={isLoading}
+          onSearchChange={onSearchChange}
           className="mt-3 h-9 w-full max-w-sm bg-card text-sm"
         />
       </div>
@@ -75,7 +75,7 @@ export function ReportTemplatesPage() {
                 href={`/reports/templates/${template.id}/edit${query}`}
                 className={buttonVariants({ variant: "ghost", size: "sm" })}
               >
-                <EditIcon size={14} />
+                <PencilSimpleIcon size={14} />
                 Edit
               </Link>
             </div>

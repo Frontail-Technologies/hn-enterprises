@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { DownloadSimpleIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { ClockCounterClockwiseIcon, DownloadSimpleIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { Pagination } from "@/components/shared/Pagination";
 import { PageShell } from "@/components/shared/PageShell";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,116 +14,124 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useRecentActivityQuery } from "@/features/dashboard/queries/useRecentActivityQuery";
+import type { RecentActivityRow } from "@/features/dashboard/services/recent-activity.api";
 import {
-  buildActivities,
-  getActivityRows,
-  type ActivityFilters,
-  type DashboardActivity,
-} from "@/features/dashboard/services/activity.service";
-import { usePaymentsQuery } from "@/features/commercial/hooks/usePayments";
-import { useDprRecordsQuery } from "@/features/planning/hooks/usePlanning";
-import { useWorkProgressListQuery } from "@/features/work-progress/hooks/useWorkProgress";
-import { useAuditLogsQuery } from "@/features/management/hooks/useAuditLogs";
+  activityActorLabel,
+  activityCustomerLabel,
+  activityRowClass,
+  activityTypeLabel,
+} from "@/features/dashboard/services/recent-activity.presentation";
 import { exportRowsToExcel } from "@/lib/export-excel";
 
-const initialFilters: ActivityFilters = {
-  search: "",
-  sort: "newest",
-};
+const PAGE_SIZE = 50;
 
 export function RecentActivityPage() {
-  const [filters, setFilters] = useState<ActivityFilters>(initialFilters);
-  const { data: workProgress = [], isLoading: workProgressLoading } = useWorkProgressListQuery({ limit: 100 });
-  const { data: dprRecords = [], isLoading: dprLoading } = useDprRecordsQuery({});
-  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
-  const { data: auditLogs = [], isLoading: auditLogsLoading } = useAuditLogsQuery();
-  const isLoading = workProgressLoading || dprLoading || paymentsLoading || auditLogsLoading;
-  const activities = useMemo(
-    () => buildActivities({ workProgress, dprRecords, payments, auditLogs }),
-    [workProgress, dprRecords, payments, auditLogs],
-  );
-  const rows = useMemo(() => getActivityRows(activities, filters), [activities, filters]);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: result, isLoading } = useRecentActivityQuery({
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    sort,
+  });
+  const rows = useMemo(() => result?.data ?? [], [result]);
+  const pagination = result?.pagination;
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function handleSortChange(value: "newest" | "oldest") {
+    setSort(value);
+    setPage(1);
+  }
 
   return (
     <PageShell
       title="Recent Activity"
+      icon={ClockCounterClockwiseIcon}
       actions={
         <>
-          <div className="relative min-w-0">
+          <div className="relative min-w-0 sm:w-80">
             <MagnifyingGlassIcon
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               size={15}
             />
             <Input
-              value={filters.search}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, search: event.target.value }))
-              }
-              placeholder="Search activity, actor, supervisor..."
-              className="h-9 w-80 max-w-full pl-9"
+              value={search}
+              onChange={(event) => handleSearchChange(event.target.value)}
+              placeholder="Search activity, actor, customer..."
+              className="h-8 w-full max-w-full pl-9 sm:w-80"
             />
           </div>
 
-          <Select
-            value={filters.sort}
-            onValueChange={(value) =>
-              setFilters((current) => ({ ...current, sort: value ?? "newest" }))
-            }
-          >
-            <SelectTrigger className="h-9 w-40">
-              <span className="truncate text-left">
-                {filters.sort === "oldest" ? "Oldest First" : "Newest First"}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest First</SelectItem>
-              <SelectItem value="oldest">Oldest First</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <Select value={sort} onValueChange={(value) => handleSortChange((value as "newest" | "oldest") ?? "newest")}>
+              <SelectTrigger className="w-full sm:w-40" size="sm">
+                <span className="truncate text-left">{sort === "oldest" ? "Oldest First" : "Newest First"}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
-          >
-            <DownloadSimpleIcon size={15} />
-            Export Excel
-          </button>
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
+            >
+              <DownloadSimpleIcon size={12} />
+              Export Excel
+            </Button>
+          </div>
         </>
       }
+      fillHeight
     >
-      <div className="space-y-3">
-        <ExcelDataGrid
-          columns={activityColumns}
-          rows={rows}
-          emptyTitle="No activity found"
-          isLoading={isLoading}
-          getRowClassName={(row) => {
-            if (row.type === "Work") return "bg-status-info/10 hover:bg-status-info/20";
-            if (row.type === "Survey") return "bg-status-purple/10 hover:bg-status-purple/20";
-            if (row.type === "DPR") return "bg-status-warning/10 hover:bg-status-warning/20";
-            if (row.type === "Billing") return "bg-status-success/10 hover:bg-status-success/20";
-            return undefined;
-          }}
-          maxHeightClassName="h-[calc(100vh-170px)]"
+      <ExcelDataGrid
+        columns={activityColumns}
+        rows={rows}
+        emptyTitle="No activity found"
+        isLoading={isLoading}
+        getRowClassName={activityRowClass}
+        fillHeight
+        enableFullView
+      />
+      {pagination && pagination.total > 0 ? (
+        <Pagination
+          compact
+          page={pagination.page}
+          pageCount={Math.max(1, pagination.totalPages)}
+          totalItems={pagination.total}
+          startItem={(pagination.page - 1) * pagination.limit + 1}
+          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
+          onPageChange={setPage}
         />
-      </div>
+      ) : null}
     </PageShell>
   );
 }
 
-const activityColumns: ExcelColumn<DashboardActivity>[] = [
+const activityColumns: ExcelColumn<RecentActivityRow>[] = [
   {
-    key: "dateTime",
+    key: "occurredAt",
     label: "Date / Time",
     width: 160,
     sticky: true,
-    getValue: (row) => formatActivityDate(row.dateTime),
+    getValue: (row) => formatActivityDate(row.occurredAt),
   },
   {
     key: "title",
     label: "Activity",
-    width: 260,
+    width: 240,
     sticky: true,
     getValue: (row) => row.title,
   },
@@ -130,19 +139,25 @@ const activityColumns: ExcelColumn<DashboardActivity>[] = [
     key: "type",
     label: "Type",
     width: 110,
-    getValue: (row) => row.type,
+    getValue: (row) => activityTypeLabel(row.type),
   },
   {
     key: "actor",
     label: "Actor",
-    width: 170,
-    getValue: (row) => (row.supervisor && row.supervisor !== "-" ? row.supervisor : row.actor),
+    width: 200,
+    getValue: (row) => activityActorLabel(row),
+  },
+  {
+    key: "customer",
+    label: "Customer",
+    width: 220,
+    getValue: (row) => activityCustomerLabel(row),
   },
   {
     key: "project",
     label: "Project",
-    width: 220,
-    getValue: (row) => row.project,
+    width: 180,
+    getValue: (row) => row.project?.name || "—",
   },
   {
     key: "description",
@@ -152,8 +167,8 @@ const activityColumns: ExcelColumn<DashboardActivity>[] = [
   },
 ];
 
-function formatActivityDate(dateTime: string) {
-  const date = new Date(dateTime.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return dateTime || "-";
+function formatActivityDate(occurredAt: string) {
+  const date = new Date(occurredAt.replace(" ", "T"));
+  if (Number.isNaN(date.getTime())) return occurredAt || "—";
   return format(date, "dd MMM yyyy, hh:mm a");
 }

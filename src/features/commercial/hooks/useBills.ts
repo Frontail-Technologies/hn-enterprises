@@ -1,18 +1,33 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { billsApi } from "../services/bills.service";
-import type { BillFormValues, BillPaymentFormValues, BillPaymentStatus, BillStatus } from "../types/bill.types";
+import { billsApi, type BillListParams } from "../services/bills.service";
+import type { BillFormValues, BillPaymentFormValues, BillPaymentStatus } from "../types/bill.types";
 
 const billsKey = ["bills"] as const;
 const billKey = (id: string) => ["bills", id] as const;
 const paymentsKey = (billId: string) => ["bills", billId, "payments"] as const;
 
-export function useBillsQuery(
-  params: { search?: string; projectId?: string; status?: BillStatus } = {},
-) {
+export function useBillsQuery(params: BillListParams = {}) {
   return useQuery({
     queryKey: [...billsKey, params],
     queryFn: () => billsApi.list(params),
+  });
+}
+
+/** Paginated main Billing list - keeps the previous page while the next loads. */
+export function useBillsPageQuery(params: BillListParams & { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: [...billsKey, "list", params],
+    queryFn: () => billsApi.listPage(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Dataset-wide billing totals for the stat cards. */
+export function useBillsSummaryQuery(params: BillListParams = {}) {
+  return useQuery({
+    queryKey: [...billsKey, "summary", params],
+    queryFn: () => billsApi.summary(params),
   });
 }
 
@@ -32,7 +47,7 @@ export function useCreateBill() {
       queryClient.invalidateQueries({ queryKey: billsKey });
       toast.success("Bill created successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create bill"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to create bill"),
   });
 }
 
@@ -45,7 +60,7 @@ export function useUpdateBill(id: string) {
       queryClient.invalidateQueries({ queryKey: billKey(id) });
       toast.success("Bill updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update bill"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update bill"),
   });
 }
 
@@ -79,7 +94,7 @@ export function useCreateBillPayment(billId: string) {
       queryClient.invalidateQueries({ queryKey: billsKey });
       toast.success("Payment recorded successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to record payment"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to record payment"),
   });
 }
 

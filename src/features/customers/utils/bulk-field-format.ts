@@ -1,4 +1,4 @@
-import { STATUS_TO_BACKEND } from "../services/customers.service";
+import { STATUS_TO_BACKEND } from "../mappers/customer.mapper";
 import { BULK_CLEAR_VALUE, BULK_YES_VALUE, isBulkBooleanField } from "../components/bulk/BulkFieldControl";
 import type { CustomerBulkChanges, CustomerBulkFieldKey } from "../types/customer-bulk.types";
 import type { useBulkFieldOptions } from "../hooks/useBulkFieldOptions";
@@ -6,7 +6,6 @@ import type { useBulkFieldOptions } from "../hooks/useBulkFieldOptions";
 type BulkFieldOptions = ReturnType<typeof useBulkFieldOptions>;
 
 export const BULK_FIELD_LABELS: Record<CustomerBulkFieldKey, string> = {
-  supervisorId: "Supervisor",
   plumberId: "Plumber",
   projectId: "Project",
   siteId: "Site / Area",
@@ -39,8 +38,6 @@ export function bulkFieldToChange(
   }
 
   switch (field) {
-    case "supervisorId":
-      return { supervisorId: rawValue === BULK_CLEAR_VALUE ? null : rawValue };
     case "plumberId":
       return { plumberId: rawValue === BULK_CLEAR_VALUE ? null : rawValue };
     case "siteId":
@@ -77,8 +74,6 @@ export function bulkFieldDisplayValue(
   if (isBulkBooleanField(field)) return rawValue === BULK_YES_VALUE ? "Yes" : "No";
 
   switch (field) {
-    case "supervisorId":
-      return fieldOptions.supervisors.find((supervisor) => supervisor.id === rawValue)?.name ?? rawValue;
     case "plumberId":
       return fieldOptions.plumbers.find((plumber) => plumber.id === rawValue)?.name ?? rawValue;
     case "projectId":

@@ -7,7 +7,7 @@ import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate, formatDateTime } from "../utils/format";
 import { useStaffMemberQuery } from "../hooks/useStaff";
-import { PageShell } from "./shared/PageShell";
+import { PageShell } from "@/components/shared/PageShell";
 import { PageLoading } from "@/components/shared/PageLoading";
 
 export function StaffDetailPage({ id }: { id: string }) {
@@ -15,7 +15,10 @@ export function StaffDetailPage({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <PageShell title="Supervisor Details" subtitle="View employee and payment details.">
+      <PageShell
+        title="Supervisor Details"
+        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
+      >
         <PageLoading className="min-h-24 rounded-md bg-muted/30" />
       </PageShell>
     );
@@ -23,7 +26,10 @@ export function StaffDetailPage({ id }: { id: string }) {
 
   if (isError || !staffMember) {
     return (
-      <PageShell title="Supervisor Details" subtitle="View employee and payment details.">
+      <PageShell
+        title="Supervisor Details"
+        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
+      >
         <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">
           Supervisor record not found.
         </div>
@@ -37,7 +43,6 @@ export function StaffDetailPage({ id }: { id: string }) {
   return (
     <PageShell
       title={staffMember.name}
-      subtitle={staffMember.role}
       actions={
         <Link
           href={`/staff/${staffMember.id}/edit`}
@@ -47,6 +52,7 @@ export function StaffDetailPage({ id }: { id: string }) {
           Edit Supervisor
         </Link>
       }
+      contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
     >
       <div className="space-y-4">
         <section className="rounded-md border border-border/70 bg-background p-4">

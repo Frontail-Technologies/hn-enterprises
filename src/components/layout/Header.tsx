@@ -19,7 +19,6 @@ export function Header() {
 
   return (
     <header className="h-12 bg-card border-b border-border/70 flex items-center px-3 gap-3 sticky top-0 z-30">
-      {/* Hamburger */}
       <Button
         variant="ghost"
         size="icon"
@@ -30,14 +29,11 @@ export function Header() {
         <List size={18} weight="bold" />
       </Button>
 
-      {/* Breadcrumb */}
       <div className="flex-1 min-w-0">
         <Breadcrumb />
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1 shrink-0">
-        {/* Notification Bell */}
         <Button
           variant="ghost"
           size="icon"
@@ -45,11 +41,9 @@ export function Header() {
           aria-label="Notifications"
         >
           <Bell size={18} />
-          {/* Notification dot — uses primary brand color */}
           <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full border-2 border-card" />
         </Button>
 
-        {/* User display */}
         <div className="hidden sm:flex items-center gap-1.5 pl-2 ml-1 border-l border-border/70">
           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-xs font-semibold text-primary">{initials}</span>

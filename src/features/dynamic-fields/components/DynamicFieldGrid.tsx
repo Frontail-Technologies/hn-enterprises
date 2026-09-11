@@ -16,7 +16,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import { DotsSixVerticalIcon, PauseCircleIcon, PlayCircleIcon, TrashIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -33,7 +33,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
 import { useDeleteDynamicField, useReorderDynamicFields, useSetDynamicFieldStatus } from "../hooks/useDynamicFields";
 import type { CustomField } from "../types";
-import { DynamicFieldDrawer } from "./DynamicFieldDrawer";
+import { DynamicFieldDialog } from "./DynamicFieldDialog";
 
 type GroupedFields = Record<string, CustomField[]>;
 
@@ -170,7 +170,7 @@ export function DynamicFieldGrid({
       onDragEnd={handleDragEnd}
     >
       <div className="overflow-hidden rounded-lg border border-border/70 bg-white">
-        <div className={cn("grid gap-2 border-b border-border/70 bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground", gridTemplate)}>
+        <div className={cn("grid gap-2 border-b border-border/70 bg-table-header px-3 py-2 text-xs font-semibold text-muted-foreground", gridTemplate)}>
           <span />
           {selection && <span />}
           <span>Label</span>
@@ -281,40 +281,43 @@ function FieldRow({
       <span className="text-center text-xs text-muted-foreground">{field.required ? "Yes" : "No"}</span>
       <StatusBadge status={field.status} className="justify-self-center" />
       <div className="flex items-center justify-end gap-1">
-        <DynamicFieldDrawer field={field} fields={allFields} iconOnly />
+        <DynamicFieldDialog field={field} fields={allFields} iconOnly />
         {field.status === "Active" ? (
           <ActionTooltip label="Deactivate">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={`Deactivate ${field.label}`}
-              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
               onClick={() => setStatus.mutate({ id: field.id, status: "Inactive" })}
               disabled={setStatus.isPending}
             >
               <PauseCircleIcon size={15} />
-            </button>
+            </Button>
           </ActionTooltip>
         ) : (
           <>
             <ActionTooltip label="Activate">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label={`Activate ${field.label}`}
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
                 onClick={() => setStatus.mutate({ id: field.id, status: "Active" })}
                 disabled={setStatus.isPending}
               >
                 <PlayCircleIcon size={15} className="text-status-success-fg" />
-              </button>
+              </Button>
             </ActionTooltip>
             <Dialog>
               <ActionTooltip label="Permanently delete">
                 <DialogTrigger
                   render={
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label={`Permanently delete ${field.label}`}
-                      className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
                     />
                   }
                 >

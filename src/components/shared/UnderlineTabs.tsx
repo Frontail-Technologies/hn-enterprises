@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function UnderlineTabs({
   items,
@@ -10,22 +10,14 @@ export function UnderlineTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => onChange(item.id)}
-          className={cn(
-            "h-9 w-fit shrink-0 cursor-pointer border-b-2 px-0.5 text-sm font-medium transition-colors",
-            active === item.id
-              ? "border-b-primary text-primary font-semibold"
-              : "border-b-transparent text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
+    <Tabs value={active} onValueChange={(value) => value && onChange(String(value))} className="min-w-0">
+      <TabsList variant="line" className="w-full min-w-0 max-w-full">
+        {items.map((item) => (
+          <TabsTrigger key={item.id} value={item.id}>
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

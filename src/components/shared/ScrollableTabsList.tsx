@@ -57,7 +57,7 @@ export function ScrollableTabsList({ children, className }: { children: ReactNod
   const showChevrons = canScrollLeft || canScrollRight;
 
   return (
-    <div className={cn("relative flex min-w-0 items-center", className)}>
+    <div className={cn("relative flex min-w-0 items-center gap-1 border-b border-border", className)}>
       {showChevrons ? (
         <TabChevron direction="left" disabled={!canScrollLeft} onClick={() => scrollByTabs("left")} />
       ) : null}
@@ -67,21 +67,15 @@ export function ScrollableTabsList({ children, className }: { children: ReactNod
           ref={scrollRef}
           className="scrollbar-hidden flex overflow-x-auto overflow-y-hidden scroll-smooth"
         >
-          {/* TabsList's own `line` variant bakes in `overflow-x-auto` (see
-              tabs.tsx) - left alone it becomes a second, independently
-              scrolling element nested inside this one, with no scrollbar
-              hiding of its own. `overflow: visible` is set via inline style,
-              not a class, so it can't lose to that variant class through
-              Tailwind's merge/cascade-layer ordering - this scrollRef div
-              must be the only element that actually scrolls. */}
-          <TabsList variant="line" className="flex w-max min-w-full justify-start gap-6 p-0" style={{ overflow: "visible" }}>
+          <TabsList
+            variant="line"
+            className="flex w-max min-w-full flex-nowrap justify-start border-b-0"
+            style={{ overflow: "visible" }}
+          >
             {children}
           </TabsList>
         </div>
 
-        {/* Edge fades hint at clipped content without covering label text -
-            they sit just inside the scroll track, matching the chevron gate,
-            and never render when nothing's cut off. */}
         {canScrollLeft ? (
           <div
             aria-hidden
@@ -121,7 +115,7 @@ function TabChevron({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        "flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
         direction === "left" ? "mr-1" : "ml-1",
         disabled && "pointer-events-none opacity-30",
       )}

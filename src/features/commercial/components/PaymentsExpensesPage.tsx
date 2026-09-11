@@ -2,156 +2,129 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, EyeIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { ActionButton } from "@/components/shared/ActionButton";
-import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { DatePicker } from "@/components/shared/DatePicker";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { CaretDownIcon, CheckCircleIcon, CurrencyInrIcon, DownloadSimpleIcon, PaperPlaneTiltIcon, UploadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
+import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
+import { ExcelDataGrid } from "@/components/shared/ExcelDataGrid";
+import { FilterDialog } from "@/components/shared/FilterDialog";
+import type { FilterConfig } from "@/components/shared/FilterBar";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Pagination } from "@/components/shared/Pagination";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { exportRowsToExcel } from "@/lib/export-excel";
-import { resolveFileUrl } from "@/lib/upload";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { cn } from "@/lib/utils";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
+import { exportRowsToExcel } from "@/lib/export-excel";
+import { formatCompactCount } from "@/lib/format";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
 import { paymentTabs } from "../data/payments.data";
-import { useCreatePayment, useDeletePayment, usePaymentsQuery, useUpdatePayment } from "../hooks/usePayments";
-import type { Payment, PaymentCategory, PaymentFormValues, PaymentMode, PaymentStatus } from "../types/payment.types";
-import { formatDate, money, sum } from "../utils/format";
-import { ImageProofField } from "./shared/ImageProofField";
-
-import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
+import { usePaymentsPageQuery, usePaymentsSummaryQuery } from "../hooks/usePayments";
+import { usePaymentsColumns } from "../hooks/usePaymentsColumns";
+import { paymentsApi } from "../services/payments.service";
+import type { PaymentCategory, PaymentStatus } from "../types/payment.types";
+import { money } from "../utils/format";
+import { PaymentDialog } from "./PaymentDialog";
 
 const categories = paymentTabs as PaymentCategory[];
-const statuses: PaymentStatus[] = ["Draft", "Submitted", "Approved", "Rejected"];
+const PAGE_SIZE = 50;
+
+const dateFilters: FilterConfig[] = [
+  { key: "from", toKey: "to", type: "dateRange", placeholder: "Date", options: [] },
+];
 
 export function PaymentsExpensesPage() {
   const router = useRouter();
   const [active, setActive] = useState<PaymentCategory>(categories[0]);
-  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
+  const [dateRange, setDateRange] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const from = dateRange.from && dateRange.from !== "all" ? dateRange.from : undefined;
+  const to = dateRange.to && dateRange.to !== "all" ? dateRange.to : undefined;
+
+  const { data: pageResult, isLoading: paymentsLoading } = usePaymentsPageQuery({
+    category: active,
+    from,
+    to,
+    page,
+    limit: PAGE_SIZE,
+  });
+  const data = useMemo(() => pageResult?.data ?? [], [pageResult]);
+  const pagination = pageResult?.pagination;
+
+  // Dataset-wide (respects the date filter, ignores the category tab) - the
+  // stat cards and tab badges are whole-dataset figures, not page figures.
+  const { data: summary } = usePaymentsSummaryQuery({ from, to });
+
   const { data: plumbers = [] } = usePlumbersQuery();
-  const { data: customers = [] } = useCustomersQuery();
-
   const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
-  const customerNameById = useMemo(
-    () => new Map(customers.map((c) => [c.id, c.customerConnection.customerName])),
-    [customers],
-  );
 
-  const monthlyTotal = sum(payments.filter((row) => row.status === "Approved").map((row) => row.amount));
-  const data = payments.filter((row) => row.category === active);
-  const submittedCount = payments.filter((row) => row.status === "Submitted").length;
-  const draftOrRejectedCount = payments.filter((row) => row.status === "Draft" || row.status === "Rejected").length;
-
+  const statusTotal = (status: PaymentStatus) => summary?.statusBreakdown.find((row) => row.status === status);
+  const monthlyTotal = statusTotal("Approved")?.total ?? 0;
+  const submittedCount = statusTotal("Submitted")?.count ?? 0;
+  const draftOrRejectedCount = (statusTotal("Draft")?.count ?? 0) + (statusTotal("Rejected")?.count ?? 0);
   const categoryCounts = useMemo(() => {
     const counts: Partial<Record<PaymentCategory, number>> = {};
-    for (const row of payments) {
-      counts[row.category] = (counts[row.category] ?? 0) + 1;
-    }
+    for (const row of summary?.categoryBreakdown ?? []) counts[row.category] = row.count;
     return counts;
-  }, [payments]);
+  }, [summary]);
 
-  const columns: ExcelColumn<Payment>[] = [
-    {
-      key: "id",
-      label: "Entry ID",
-      width: 130,
-      sticky: true,
-      getValue: (row) => row.id.slice(0, 8).toUpperCase(),
-      render: (row) => <span className="font-semibold text-foreground">{row.id.slice(0, 8).toUpperCase()}</span>,
-    },
-    { key: "category", label: "Category", width: 190, getValue: (row) => row.category },
-    {
-      key: "paidTo",
-      label: "Paid To",
-      width: 180,
-      grow: true,
-      getValue: (row) => row.paidTo || plumberNameById.get(row.plumberId) || "-",
-    },
-    { key: "address", label: "Address", width: 190, grow: true, getValue: (row) => row.address || "-" },
-    { key: "customer", label: "Customer", width: 170, getValue: (row) => customerNameById.get(row.customerId) || "-" },
-    { key: "amount", label: "Amount", width: 130, getValue: (row) => money(row.amount) },
-    { key: "date", label: "Date", width: 130, getValue: (row) => formatDate(row.paymentDate) },
-    { key: "mode", label: "Payment Mode", width: 150, getValue: (row) => row.mode },
-    {
-      key: "status",
-      label: "Status",
-      width: 140,
-      getValue: (row) => row.status,
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "evidence",
-      label: "Attachment",
-      width: 140,
-      getValue: (row) => row.evidence.length,
-      render: (row) => (row.evidence.length ? <span className="font-medium text-primary">{row.evidence.length} file(s)</span> : "-"),
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      width: 100,
-      getValue: () => "Actions",
-      render: (row) => <PaymentActions payment={row} />,
-    },
-  ];
+  const columns = usePaymentsColumns({ plumberNameById });
+
+  function handleCategoryChange(next: PaymentCategory) {
+    setActive(next);
+    setPage(1);
+  }
+
+  function handleDateChange(key: string, value: string) {
+    setDateRange((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
+
+  async function handleExport() {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      // Exports ALL rows matching the current category + date filter, not just
+      // the loaded page - bounded by the filtered total.
+      const total = pagination?.total ?? data.length;
+      const { data: allRows } = await paymentsApi.listPage({ category: active, from, to, page: 1, limit: Math.max(total, 1) });
+      await exportRowsToExcel(
+        `${active.toLowerCase().replace(/\s+/g, "-")}.xlsx`,
+        columns.filter((column) => column.key !== "actions"),
+        allRows,
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Payments & Expenses"
-        subtitle="Manage field payments, rent, material expenses and approvals."
+        icon={CurrencyInrIcon}
         actions={
-          <>
+          <div className="grid grid-cols-2 gap-2 sm:contents">
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" size="compact">
                     More
-                    <CaretDownIcon size={14} />
+                    <CaretDownIcon size={12} />
                   </Button>
                 }
               />
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    void exportRowsToExcel(
-                      `${active.toLowerCase().replace(/\s+/g, "-")}.xlsx`,
-                      columns.filter((column) => column.key !== "actions"),
-                      data,
-                    )
-                  }
-                >
+                <DropdownMenuItem disabled={isExporting} onClick={handleExport}>
                   <DownloadSimpleIcon size={14} />
-                  Export Excel
+                  {isExporting ? "Exporting..." : "Export Excel"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push("/payments/import")}>
                   <UploadSimpleIcon size={14} />
@@ -159,322 +132,57 @@ export function PaymentsExpensesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <PaymentDrawer defaultCategory={active} />
-          </>
+            <PaymentDialog defaultCategory={active} />
+          </div>
         }
       />
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
-        <span>
-          Approved this month: <span className="font-semibold text-foreground">{money(monthlyTotal)}</span>
-        </span>
-        <span>
-          Submitted: <span className="font-semibold text-foreground">{submittedCount}</span>
-        </span>
-        <span>
-          Draft / Rejected: <span className="font-semibold text-destructive">{draftOrRejectedCount}</span>
-        </span>
+      <CompactStatGrid columns={3}>
+        <DashboardStatCard label="Approved This Month" value={money(monthlyTotal)} icon={CheckCircleIcon} tone="success" dense />
+        <DashboardStatCard label="Submitted" value={formatCompactCount(submittedCount)} icon={PaperPlaneTiltIcon} tone="info" dense />
+        <DashboardStatCard label="Draft / Rejected" value={formatCompactCount(draftOrRejectedCount)} icon={WarningCircleIcon} tone="danger" dense />
+      </CompactStatGrid>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Tabs value={active} onValueChange={(value) => value && handleCategoryChange(value as PaymentCategory)} className="min-w-0 flex-1">
+          <ScrollableTabsList>
+            {categories.map((tab) => (
+              <TabsTrigger key={tab} value={tab} className="shrink-0">
+                <span className="whitespace-nowrap">{tab}</span>
+                <span
+                  title={(categoryCounts[tab] ?? 0).toLocaleString("en-IN")}
+                  className={cn(
+                    "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                    tab === active ? "bg-white/20 text-primary-foreground" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {formatCompactCount(categoryCounts[tab] ?? 0)}
+                </span>
+              </TabsTrigger>
+            ))}
+          </ScrollableTabsList>
+        </Tabs>
+        <FilterDialog
+          filters={dateFilters}
+          values={dateRange}
+          onChange={handleDateChange}
+          onReset={() => {
+            setDateRange({});
+            setPage(1);
+          }}
+          title="Filter by Date"
+        />
       </div>
-      <PaymentTabNav active={active} onChange={setActive} counts={categoryCounts} />
       <ExcelDataGrid columns={columns} rows={data} emptyTitle="No expenses found" isLoading={paymentsLoading} enableFullView />
-    </div>
-  );
-}
-
-function PaymentActions({ payment }: { payment: Payment }) {
-  const href = resolveFileUrl(payment.evidence[0]?.fileUrl);
-  const deletePayment = useDeletePayment();
-  return (
-    <div className="flex items-center gap-1">
-      <ActionButton label="View" icon={<EyeIcon size={15} />} href={href} disabled={!href} />
-      <PaymentDrawer payment={payment} iconOnly />
-      <DeleteConfirmDialog
-        itemName={payment.paidTo || payment.purpose || "this entry"}
-        onConfirm={() => deletePayment.mutate(payment.id)}
-      />
-    </div>
-  );
-}
-
-function emptyValues(defaultCategory: PaymentCategory, defaultProjectId = ""): PaymentFormValues {
-  return {
-    category: defaultCategory,
-    plumberId: "",
-    paidTo: "",
-    siteId: "",
-    address: "",
-    customerId: "",
-    projectId: defaultProjectId,
-    amount: "",
-    paymentDate: new Date().toISOString().slice(0, 10),
-    mode: "Cash",
-    status: "Draft",
-    purpose: "",
-    remarks: "",
-    evidence: [],
-  };
-}
-
-function valuesFromPayment(payment: Payment): PaymentFormValues {
-  return {
-    category: payment.category,
-    plumberId: payment.plumberId,
-    paidTo: payment.paidTo,
-    siteId: payment.siteId,
-    address: payment.address,
-    customerId: payment.customerId,
-    projectId: payment.projectId,
-    amount: String(payment.amount),
-    paymentDate: payment.paymentDate,
-    mode: payment.mode,
-    status: payment.status,
-    purpose: payment.purpose,
-    remarks: payment.remarks,
-    evidence: payment.evidence,
-  };
-}
-
-export function PaymentDrawer({
-  payment,
-  defaultCategory,
-  defaultProjectId,
-  defaultProjectName,
-  iconOnly = false,
-}: {
-  payment?: Payment;
-  defaultCategory?: PaymentCategory;
-  defaultProjectId?: string;
-  defaultProjectName?: string;
-  iconOnly?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<PaymentFormValues>(
-    payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0], defaultProjectId),
-  );
-  const [saveError, setSaveError] = useState("");
-  const { data: paymentModes = [] } = useMasterValuesQuery("Payment Types");
-  const { data: plumbers = [] } = usePlumbersQuery();
-  const createPayment = useCreatePayment();
-  const updatePayment = useUpdatePayment(payment?.id ?? "");
-  const isSaving = createPayment.isPending || updatePayment.isPending;
-  const isPlumberCategory = values.category === "Plumber Payments";
-  const label = payment ? "Edit" : "Add Payment / Expense";
-
-  function set<K extends keyof PaymentFormValues>(key: K, value: PaymentFormValues[K]) {
-    setValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) {
-      setValues(
-        payment ? valuesFromPayment(payment) : emptyValues(defaultCategory ?? categories[0], defaultProjectId),
-      );
-      setSaveError("");
-    }
-    setOpen(nextOpen);
-  }
-
-  async function handleSave() {
-    if (!values.amount || Number(values.amount) <= 0) {
-      setSaveError("Enter a valid amount");
-      return;
-    }
-    setSaveError("");
-    try {
-      if (payment) {
-        await updatePayment.mutateAsync(values);
-      } else {
-        await createPayment.mutateAsync(values);
-      }
-      setOpen(false);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Unable to save payment");
-    }
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      {iconOnly ? (
-        <ActionTooltip label={label}>
-          <SheetTrigger
-            render={
-              <button
-                type="button"
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-                aria-label={label}
-              />
-            }
-          >
-            <NotePencilIcon size={15} />
-          </SheetTrigger>
-        </ActionTooltip>
-      ) : (
-        <SheetTrigger render={<Button type="button" />}>
-          <PlusIcon size={15} />
-          {label}
-        </SheetTrigger>
-      )}
-      <SheetContent className="w-full border-border bg-card sm:max-w-md">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>{payment ? "Edit Payment / Expense" : "Add Payment / Expense"}</SheetTitle>
-          <SheetDescription>Record payment, receipt and approval information.</SheetDescription>
-        </SheetHeader>
-
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
-          {defaultProjectId && defaultProjectName ? (
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
-              <span className="text-muted-foreground">Project</span>
-              <span className="font-semibold text-foreground">{defaultProjectName}</span>
-            </div>
-          ) : null}
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Category</span>
-            <Select
-              value={values.category}
-              onValueChange={(category) => {
-                if (category) set("category", category as PaymentCategory);
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Purpose / What Bought</span>
-            <Input value={values.purpose} onChange={(event) => set("purpose", event.target.value)} placeholder="E.g. Pipe clamp purchase" />
-          </label>
-
-          {isPlumberCategory ? (
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Plumber / Team</span>
-              <SearchableSelect
-                value={values.plumberId || undefined}
-                onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
-                placeholder="Select plumber / team"
-                options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
-                className="w-full"
-              />
-            </label>
-          ) : (
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Payee</span>
-              <Input value={values.paidTo} onChange={(event) => set("paidTo", event.target.value)} placeholder="Person or vendor name" />
-            </label>
-          )}
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Address</span>
-            <Input value={values.address} onChange={(event) => set("address", event.target.value)} placeholder="Site / work address (optional)" />
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Amount</span>
-              <Input type="number" value={values.amount} onChange={(event) => set("amount", event.target.value)} />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Date</span>
-              <DatePicker value={values.paymentDate} onChange={(value) => set("paymentDate", value)} />
-            </label>
-          </div>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Payment Mode</span>
-            <SearchableSelect
-              value={values.mode}
-              onValueChange={(mode) => set("mode", mode)}
-              options={paymentModes.map((mode) => ({ value: mode.value, label: mode.value }))}
-              placeholder="Select payment mode"
-            />
-          </label>
-
-          <ImageProofField
-            label="Receipt / Photo"
-            description="Upload payment proof, expense bill or receipt image."
-            images={values.evidence}
-            onChange={(evidence) => set("evidence", evidence)}
-            module="expenses"
-          />
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Status</span>
-            <Select value={values.status} onValueChange={(status) => { if (status) set("status", status as PaymentStatus); }}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Remarks</span>
-            <Textarea value={values.remarks} onChange={(event) => set("remarks", event.target.value)} className="min-h-20" />
-          </label>
-
-          {saveError ? <p className="text-xs text-destructive">{saveError}</p> : null}
-        </div>
-
-        <SheetFooter className="border-t border-border/70">
-          <div className="flex items-center justify-end gap-2">
-            <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
-            <Button type="button" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function PaymentTabNav({
-  active,
-  onChange,
-  counts,
-}: {
-  active: PaymentCategory;
-  onChange: (tab: PaymentCategory) => void;
-  counts: Partial<Record<PaymentCategory, number>>;
-}) {
-  return (
-    <div className="flex min-w-0 gap-6 overflow-x-auto border-b border-border/70">
-      {categories.map((tab) => (
-        <button
-          key={tab}
-          type="button"
-          onClick={() => onChange(tab)}
-          className={cn(
-            "inline-flex h-10 w-fit shrink-0 cursor-pointer items-center gap-2 border-b-2 px-0.5 text-sm font-medium transition-colors",
-            active === tab
-              ? "border-b-primary text-primary font-semibold"
-              : "border-b-transparent text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <span>{tab}</span>
-          <span
-            className={cn(
-              "rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
-              active === tab ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-            )}
-          >
-            {counts[tab] ?? 0}
-          </span>
-        </button>
-      ))}
+      {pagination && pagination.total > 0 ? (
+        <Pagination
+          compact
+          page={pagination.page}
+          pageCount={Math.max(1, pagination.totalPages)}
+          totalItems={pagination.total}
+          startItem={(pagination.page - 1) * pagination.limit + 1}
+          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
+          onPageChange={setPage}
+        />
+      ) : null}
     </div>
   );
 }

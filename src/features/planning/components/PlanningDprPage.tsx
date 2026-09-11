@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { FilePdfIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,14 @@ import { PageShell } from "@/components/shared/PageShell";
 import { DprGeneratedPreview } from "./DprGeneratedPreview";
 import { useDprRecordsQuery } from "../hooks/usePlanning";
 import { PageLoading } from "@/components/shared/PageLoading";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export function PlanningDprPage() {
   const searchParams = useSearchParams();
@@ -42,9 +51,8 @@ export function PlanningDprPage() {
   return (
     <PageShell
       title="DPR"
-      subtitle={`${supervisorName} - ${customerName} - ${siteLabel}`}
       actions={
-        <>
+        <div className={cn("grid gap-2 sm:contents", record ? "grid-cols-2" : "grid-cols-1")}>
           <Link
             href={`/planning/plan?supervisorId=${supervisorId}&customerId=${customerId}&date=${date}`}
             className={buttonVariants({ variant: "outline" })}
@@ -57,11 +65,19 @@ export function PlanningDprPage() {
               Generate DPR
             </Button>
           ) : null}
-        </>
+        </div>
       }
     >
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-lg border border-border/70 bg-card px-3 py-2">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Supervisor</p>
+            <p className="text-sm font-semibold text-foreground">{supervisorName}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Customer</p>
+            <p className="text-sm font-semibold text-foreground">{customerName}</p>
+          </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">DPR Date</p>
             <p className="text-sm font-semibold text-foreground">{date}</p>
@@ -87,40 +103,38 @@ export function PlanningDprPage() {
                   Compact entry view for selected supervisor and site.
                 </p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-secondary/80 text-xs font-semibold text-muted-foreground">
-                      <th className="border border-border/60 px-3 py-2 text-left">Task</th>
-                      <th className="w-28 border border-border/60 px-3 py-2 text-left">Planned</th>
-                      <th className="w-32 border border-border/60 px-3 py-2 text-left">Completed</th>
-                      <th className="w-56 border border-border/60 px-3 py-2 text-left">Plumber / Labour</th>
-                      <th className="w-72 border border-border/60 px-3 py-2 text-left">Delay Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.map((task) => (
-                      <tr key={task.id} className="bg-card">
-                        <td className="border border-border/55 px-3 py-2 font-medium text-foreground">
-                          {task.label}
-                        </td>
-                        <td className="border border-border/55 px-3 py-2 text-center">
-                          {task.plannedQty || "-"}
-                        </td>
-                        <td className="border border-border/55 px-3 py-2 text-center">
-                          {task.completedQty || "-"}
-                        </td>
-                        <td className="border border-border/55 px-3 py-2">
-                          {task.worker || "-"}
-                        </td>
-                        <td className="border border-border/55 px-3 py-2">
-                          {task.delayReason || "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table className="min-w-[980px]">
+                <TableHeader>
+                  <TableRow className="bg-table-header/80 text-xs font-semibold text-muted-foreground">
+                    <TableHead>Task</TableHead>
+                    <TableHead className="w-28">Planned</TableHead>
+                    <TableHead className="w-32">Completed</TableHead>
+                    <TableHead className="w-56">Plumber / Labour</TableHead>
+                    <TableHead className="w-72">Delay Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tasks.map((task) => (
+                    <TableRow key={task.id} className="bg-card">
+                      <TableCell className="whitespace-normal font-medium text-foreground">
+                        {task.label}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {task.plannedQty || "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {task.completedQty || "-"}
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        {task.worker || "-"}
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        {task.delayReason || "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </section>
 
             <div className="rounded-lg border border-border/70 bg-card px-3 py-2">

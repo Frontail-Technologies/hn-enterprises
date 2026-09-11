@@ -51,7 +51,6 @@ export function LoginForm() {
         </Alert>
       )}
 
-      {/* Username */}
       <div className="space-y-1.5">
         <Label htmlFor="username" className="text-sm font-medium text-foreground">
           Username
@@ -69,7 +68,6 @@ export function LoginForm() {
         )}
       </div>
 
-      {/* Password */}
       <div className="space-y-1.5">
         <Label htmlFor="password" className="text-sm font-medium text-foreground">
           Password
@@ -98,7 +96,6 @@ export function LoginForm() {
         )}
       </div>
 
-      {/* Submit */}
       <Button
         type="submit"
         disabled={isSubmitting}

@@ -30,7 +30,11 @@ export function DetailHeader({
             </div>
           ) : null}
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </header>
   );

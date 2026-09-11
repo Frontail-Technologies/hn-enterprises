@@ -1,16 +1,31 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { paymentsApi } from "../services/payments.service";
-import type { PaymentCategory, PaymentFormValues, PaymentStatus } from "../types/payment.types";
+import { paymentsApi, type PaymentListParams } from "../services/payments.service";
+import type { PaymentFormValues } from "../types/payment.types";
 
 const paymentsKey = ["payments"] as const;
 
-export function usePaymentsQuery(
-  params: { category?: PaymentCategory; status?: PaymentStatus; search?: string; projectId?: string } = {},
-) {
+export function usePaymentsQuery(params: PaymentListParams = {}) {
   return useQuery({
     queryKey: [...paymentsKey, params],
     queryFn: () => paymentsApi.list(params),
+  });
+}
+
+/** Paginated main Payments & Expenses list - keeps the previous page while the next loads. */
+export function usePaymentsPageQuery(params: PaymentListParams & { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: [...paymentsKey, "list", params],
+    queryFn: () => paymentsApi.listPage(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Dataset-wide totals + per-category / per-status breakdown for the stat cards and tab badges. */
+export function usePaymentsSummaryQuery(params: PaymentListParams = {}) {
+  return useQuery({
+    queryKey: [...paymentsKey, "summary", params],
+    queryFn: () => paymentsApi.summary(params),
   });
 }
 
@@ -20,9 +35,10 @@ export function useCreatePayment() {
     mutationFn: (values: PaymentFormValues) => paymentsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Payment recorded successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to record payment"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to record payment"),
   });
 }
 
@@ -32,9 +48,10 @@ export function useUpdatePayment(id: string) {
     mutationFn: (values: PaymentFormValues) => paymentsApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Payment updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update payment"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update payment"),
   });
 }
 
@@ -46,6 +63,6 @@ export function useDeletePayment() {
       queryClient.invalidateQueries({ queryKey: paymentsKey });
       toast.success("Payment deleted");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete payment"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete payment"),
   });
 }

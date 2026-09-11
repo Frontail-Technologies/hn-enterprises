@@ -13,11 +13,10 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
+import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
 import { useDownloadAttendanceRegister } from "@/features/exports/hooks/useExports";
@@ -34,7 +33,7 @@ export function AttendancePage() {
   const [calendarMonth, setCalendarMonth] = useState(() =>
     startOfMonth(new Date()),
   );
-  const [viewMode, setViewMode] = useState<AttendanceViewMode>("register");
+  const [viewMode] = useState<AttendanceViewMode>("register");
   const [selectedSupervisor, setSelectedSupervisor] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -98,7 +97,7 @@ export function AttendancePage() {
       )
     : undefined;
   const attendanceControls = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       <SearchableSelect
         value={selectedSupervisor}
         onValueChange={(value) => {
@@ -107,22 +106,23 @@ export function AttendancePage() {
           setDrawerOpen(false);
         }}
         placeholder="All Supervisors"
-        className="h-10 w-55 bg-card"
+        className="h-8 w-full bg-card sm:w-55"
         options={[{ value: "all", label: "All Supervisors" }, ...roster.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))]}
       />
-      <div className="flex items-center rounded-md border border-border bg-card">
+      <div className="flex w-full items-center rounded-md border border-border bg-card sm:w-auto">
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon-compact"
           onClick={() => setCalendarMonth((current) => subMonths(current, 1))}
         >
-          <CaretLeftIcon size={15} />
+          <CaretLeftIcon size={14} />
         </Button>
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="compact"
+          className="flex-1 sm:flex-none"
           onClick={() => setCalendarMonth(startOfMonth(new Date()))}
         >
           {format(calendarMonth, "MMM yyyy")}
@@ -130,20 +130,20 @@ export function AttendancePage() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon-compact"
           onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
         >
-          <CaretRightIcon size={15} />
+          <CaretRightIcon size={14} />
         </Button>
       </div>
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        size="compact"
         disabled={downloadAttendanceRegister.isPending}
         onClick={handleExportRegister}
       >
-        <DownloadSimpleIcon size={14} />
+        <DownloadSimpleIcon size={12} />
         {downloadAttendanceRegister.isPending ? "Exporting..." : "Export Register"}
       </Button>
     </div>
@@ -151,19 +151,11 @@ export function AttendancePage() {
 
   return (
     <div className="space-y-3">
-      <PageHeader title="Attendance" actions={attendanceControls} />
+      <PageHeader title="Attendance" icon={CalendarBlankIcon} actions={attendanceControls} />
 
-      {/* Full View portals the tabs + register/calendar together (same state -
-          month, supervisor filter, view mode - untouched), hiding just the
-          page title/controls header above. */}
       <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
         <div className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <UnderlineTabs
-          items={[{ id: "register", label: "Register View" }]}
-          active={viewMode}
-          onChange={(value) => setViewMode(value as AttendanceViewMode)}
-        />
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
       </div>
 
@@ -199,7 +191,7 @@ export function AttendancePage() {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-7 overflow-hidden rounded-md border border-border/70 bg-secondary text-xs font-semibold text-muted-foreground">
+          <div className="grid grid-cols-7 overflow-hidden rounded-md border border-border/70 bg-table-header text-xs font-semibold text-muted-foreground">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
                 key={day}
@@ -286,7 +278,6 @@ export function AttendancePage() {
         record={selectedRecord}
         selectedSupervisor={selectedSupervisor}
         roster={roster}
-        onSaved={refetchRecords}
       />
     </div>
   );

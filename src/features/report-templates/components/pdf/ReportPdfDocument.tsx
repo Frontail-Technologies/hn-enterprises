@@ -611,6 +611,7 @@ function GcReport({ data }: { data: ReportTemplateData }) {
           {data.gcEvidenceImages && data.gcEvidenceImages.length > 0 ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
               {data.gcEvidenceImages.map((src, index) => (
+                // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image renders into a PDF, not the DOM; its ImageProps type has no alt field to satisfy
                 <Image key={index} src={src} style={{ width: 140, height: 140, objectFit: "contain" }} />
               ))}
             </View>

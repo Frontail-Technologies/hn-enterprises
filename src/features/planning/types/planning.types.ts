@@ -60,6 +60,8 @@ export type DprRecord = {
   customerName: string;
   customerTrBpNo: string;
   projectId: string;
+  /** Server-joined from projects - no need to load the full projects list to resolve this. */
+  projectName: string;
   siteId: string;
   siteLabel: string;
   supervisorId: string;

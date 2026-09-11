@@ -3,16 +3,30 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 type BreadcrumbLabelContextValue = {
-  label: string | null;
-  setLabel: (label: string | null) => void;
+  labels: Record<string, string>;
+  setLabel: (segment: string, label: string | null) => void;
 };
 
 const BreadcrumbLabelContext = createContext<BreadcrumbLabelContextValue | null>(null);
 
 export function BreadcrumbLabelProvider({ children }: { children: ReactNode }) {
-  const [label, setLabel] = useState<string | null>(null);
+  const [labels, setLabels] = useState<Record<string, string>>({});
+
+  function setLabel(segment: string, label: string | null) {
+    setLabels((current) => {
+      if (label == null) {
+        if (!(segment in current)) return current;
+        const next = { ...current };
+        delete next[segment];
+        return next;
+      }
+      if (current[segment] === label) return current;
+      return { ...current, [segment]: label };
+    });
+  }
+
   return (
-    <BreadcrumbLabelContext.Provider value={{ label, setLabel }}>
+    <BreadcrumbLabelContext.Provider value={{ labels, setLabel }}>
       {children}
     </BreadcrumbLabelContext.Provider>
   );
@@ -24,15 +38,17 @@ function useBreadcrumbLabelContext() {
   return context;
 }
 
-export function useBreadcrumbLastLabel() {
-  return useBreadcrumbLabelContext().label;
+export function useBreadcrumbLabels() {
+  return useBreadcrumbLabelContext().labels;
 }
 
-export function useBreadcrumbLabel(label: string | null | undefined) {
+export function useBreadcrumbLabel(segment: string | null | undefined, label: string | null | undefined) {
   const { setLabel } = useBreadcrumbLabelContext();
 
   useEffect(() => {
-    setLabel(label ?? null);
-    return () => setLabel(null);
-  }, [label, setLabel]);
+    if (!segment) return;
+    setLabel(segment, label ?? null);
+    return () => setLabel(segment, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segment, label]);
 }

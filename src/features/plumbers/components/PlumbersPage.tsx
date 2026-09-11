@@ -2,22 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon, NotePencilIcon, PlusIcon, UploadSimpleIcon, WrenchIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
-import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
+import { FilterDialog } from "@/components/shared/FilterDialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { PageShell } from "@/features/management/components/shared/PageShell";
-import { PaginatedDataTable } from "@/features/management/components/shared/PaginatedDataTable";
+import { PageShell } from "@/components/shared/PageShell";
+import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import {
@@ -27,7 +22,7 @@ import {
   usePlumbersQuery,
   useUpdatePlumber,
 } from "../hooks/usePlumbers";
-import { PlumberDrawer } from "./PlumberDrawer";
+import { PlumberDialog } from "./PlumberDialog";
 import type { Plumber } from "../types/plumber.types";
 
 const exportColumns: ExportColumn<Plumber>[] = [
@@ -100,63 +95,63 @@ export function PlumbersPage() {
   return (
     <PageShell
       title="Plumbers"
-      subtitle="Roster of individual plumbers and named teams/crews assigned to customer connections."
+      icon={WrenchIcon}
       actions={
         <>
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search plumbers..."
-            title="Plumber Filters"
-            values={filters}
-            filters={[
-              {
-                key: "type",
-                placeholder: "All Types",
-                options: [
-                  { value: "individual", label: "Individual" },
-                  { value: "team", label: "Team" },
-                ],
-              },
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: [
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                ],
-              },
-            ]}
-            onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-            onReset={() => setFilters({ search: "", type: "all", status: "all" })}
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline">
-                  More
-                  <CaretDownIcon size={14} />
-                </Button>
-              }
+          <div className="relative min-w-0 sm:w-52">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
+            <Input
+              placeholder="Search plumbers..."
+              value={filters.search}
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+              className="h-8 w-full max-w-full pl-8 sm:w-52"
             />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}>
-                <DownloadSimpleIcon size={14} />
-                Export Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/plumbers/import")}>
-                <UploadSimpleIcon size={14} />
-                Import
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          </div>
 
-          <Button type="button" onClick={() => setDrawerState({ open: true })}>
-            <PlusIcon size={15} />
+          <div className="grid grid-cols-3 gap-2 sm:contents">
+            <FilterDialog
+              title="Plumber Filters"
+              values={filters}
+              filters={[
+                {
+                  key: "type",
+                  placeholder: "All Types",
+                  options: [
+                    { value: "individual", label: "Individual" },
+                    { value: "team", label: "Team" },
+                  ],
+                },
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: [
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ],
+                },
+              ]}
+              onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+              onReset={() => setFilters((current) => ({ ...current, type: "all", status: "all" }))}
+            />
+
+            <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}>
+              <DownloadSimpleIcon size={12} />
+              Export
+            </Button>
+
+            <Button type="button" variant="outline" size="compact" onClick={() => router.push("/plumbers/import")}>
+              <UploadSimpleIcon size={12} />
+              Import
+            </Button>
+          </div>
+
+          <Button type="button" size="compact" onClick={() => setDrawerState({ open: true })}>
+            <PlusIcon size={13} />
             Add Plumber
           </Button>
         </>
       }
+      contentClassName="space-y-3"
     >
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
@@ -181,7 +176,7 @@ export function PlumbersPage() {
         note="Plumbers with associated records (e.g. wage records) will be skipped with an error instead of partially deleted."
       />
 
-      <PlumberDrawer
+      <PlumberDialog
         key={drawerState.plumber?.id ?? "new"}
         open={drawerState.open}
         onOpenChange={(open) => setDrawerState((current) => ({ ...current, open }))}
@@ -198,42 +193,28 @@ function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
   const deleteImpact = usePlumberDeleteImpactQuery(plumber.id, { enabled: open });
 
   return (
-    <DeleteImpactDialog
+    <DeleteImpactAction
       open={open}
       onOpenChange={setOpen}
-      trigger={
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Delete ${plumber.name}`}
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        >
-          <TrashIcon size={13} />
-        </Button>
-      }
+      itemName={plumber.name}
       entityTypeLabel="Plumber"
       impact={deleteImpact.data}
-      isLoading={deleteImpact.isLoading}
-      isError={deleteImpact.isError}
-      onRetry={() => void deleteImpact.refetch()}
-      isConfirming={deletePlumber.isPending}
-      onConfirm={async () => {
-        await deletePlumber.mutateAsync(plumber.id);
-        setOpen(false);
-      }}
-      isArchiving={deactivatePlumber.isPending}
-      archiveLabel="Deactivate Plumber"
-      onArchive={async () => {
-        await deactivatePlumber.mutateAsync({
+      isImpactLoading={deleteImpact.isLoading}
+      isImpactError={deleteImpact.isError}
+      onRetryImpact={() => void deleteImpact.refetch()}
+      isDeleting={deletePlumber.isPending}
+      onDelete={() => deletePlumber.mutateAsync(plumber.id)}
+      isDeactivating={deactivatePlumber.isPending}
+      deactivateLabel="Deactivate Plumber"
+      onDeactivate={() =>
+        deactivatePlumber.mutateAsync({
           name: plumber.name,
           type: plumber.type,
           contactNumber: plumber.contactNumber,
           status: "inactive",
           remarks: plumber.remarks,
-        });
-        setOpen(false);
-      }}
+        })
+      }
     />
   );
 }

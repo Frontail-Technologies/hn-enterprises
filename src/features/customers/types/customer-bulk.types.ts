@@ -1,5 +1,4 @@
 export type CustomerBulkChanges = {
-  supervisorId?: string | null;
   plumberId?: string | null;
   projectId?: string;
   siteId?: string | null;
@@ -20,7 +19,6 @@ export type CustomerBulkChanges = {
 export type CustomerBulkResult = { count: number };
 
 export type CustomerBulkFieldKey =
-  | "supervisorId"
   | "plumberId"
   | "projectId"
   | "siteId"

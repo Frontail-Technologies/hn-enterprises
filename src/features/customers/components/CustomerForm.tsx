@@ -1,90 +1,47 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ImageSquareIcon, TrashIcon } from "@phosphor-icons/react";
+import { TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { DatePicker } from "@/components/shared/DatePicker";
-import { FormField } from "@/components/shared/FormField";
-import {
-  ImageUploadPreview,
-  type ImagePreviewItem,
-} from "@/components/shared/ImageUploadPreview";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { SectionCard } from "@/components/shared/SectionCard";
-import { SegmentedDigitInput } from "@/components/shared/SegmentedDigitInput";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
-import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
-  billingCompletionFields,
-  deriveLmcPipeCurrentStage,
-  useCommissioningConversionFields,
-  useCustomerConnectionFields,
-  customerStatusOptions,
-  defaultCustomerFormValues,
-  deriveLmcOverallStatus,
-  emptyCustomerSurvey,
+  customFieldsToFieldDefinitions,
   fittingAccessoryFields,
   giMeasurementFields,
   isolationValveFields,
-  lmcPipeRecordFields,
-  lmcPipelineFields,
   mdpeFittingFields,
-  surveyApprovalStatusOptions,
-  surveyConditionStatusOptions,
-  surveyWorkableStatusOptions,
-  type FieldDefinition,
-  type LmcCivilWork,
-  type LmcPipeEditableFields,
-} from "../services/customers.service";
-import { useCreateCustomer, useCustomerQuery, useUpdateCustomer, useDeleteCustomer, useCustomerDeleteImpactQuery } from "../hooks/useCustomers";
-import { customersApi } from "../services/customers.service";
+} from "../config/customer-fields";
+import { lmcPipelineFields } from "../config/lmc-fields";
+import { defaultCustomerFormValues } from "../model/customer.defaults";
+import { pickCivilFields } from "../model/lmc-pipeline.rules";
+import { useCustomerFieldOptions } from "../hooks/useCustomerFieldOptions";
+import { buildCustomerFormSchema } from "../schemas/customer-form.schema";
+import { useCustomerQuery, useCustomerDeleteImpactQuery } from "../queries/useCustomersQuery";
+import { useDeleteCustomer, useSaveCustomerWithPipeRecords, useUpdateCustomer } from "../queries/useCustomerMutations";
+import { useCreateCustomerDocument } from "../queries/useCustomerDocuments";
+import { customersApi } from "../api/customers.api";
+import { CustomerBasicSection } from "./form/CustomerBasicSection";
+import { CustomerFieldGroupSection } from "./form/CustomerFieldGroupSection";
+import { CustomerSurveySection } from "./form/CustomerSurveySection";
+import { LmcPipelineForm } from "./lmc/LmcPipelineForm";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
+import { CustomerNotesPanel } from "./CustomerNotesPanel";
+import { CustomerProgressMilestones } from "./detail/CustomerProgressMilestones";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { SectionCard } from "@/components/shared/SectionCard";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
-import type {
-  CustomerFormValues,
-  CustomerSectionCompletion,
-  CustomerSurvey,
-  CustomerSurveyPhoto,
-  LmcEvidenceFile,
-  LmcPipeSizeRecord,
-  LmcPipelineWork,
-} from "../types/customer.types";
+import type { CustomerCompletionAudit, CustomerFormValues, CustomerSectionCompletion } from "../types/customer.types";
 
 interface CustomerFormProps {
   mode: "create" | "edit";
@@ -109,46 +66,62 @@ export function CustomerForm({ mode, customerId }: CustomerFormProps) {
       initialValues={customer ?? defaultCustomerFormValues}
       defaultProjectId={isEdit ? undefined : defaultProjectId}
       completion={isEdit ? customer?.sectionCompletion : undefined}
+      audit={isEdit ? customer?.completionAudit : undefined}
     />
   );
 }
 
+/**
+ * The form body: RHF/FormProvider setup, tab/section composition, save
+ * orchestration, and the delete/cancel/submit action bar (§1 of the
+ * Checkpoint B brief). Section implementations live in `components/form/*`
+ * and `components/lmc/LmcPipelineForm`; they read/write form state through
+ * `useFormContext` off the `FormProvider` below instead of being handed
+ * `control`/`setValue`/callback props individually.
+ */
 function CustomerFormFields({
   mode,
   customerId,
   initialValues,
   defaultProjectId,
   completion,
+  audit,
 }: {
   mode: "create" | "edit";
   customerId?: string;
   initialValues: CustomerFormValues;
   defaultProjectId?: string;
   completion?: CustomerSectionCompletion;
+  audit?: CustomerCompletionAudit;
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
-  const customerConnectionFields = useCustomerConnectionFields();
-  const commissioningConversionFields = useCommissioningConversionFields();
-  const [values, setValues] = useState<CustomerFormValues>(initialValues);
+  const { customerConnectionFields, commissioningConversionFields, billingCompletionFields } =
+    useCustomerFieldOptions();
+  const schema = useMemo(() => buildCustomerFormSchema(mode), [mode]);
+  const form = useForm<CustomerFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: initialValues,
+  });
+  const { control, handleSubmit, setValue } = form;
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: projects = [] } = useProjectsQuery();
 
+  const watchedProjectId = useWatch({ control, name: "projectId" });
   const [appliedDefaultProjectId, setAppliedDefaultProjectId] = useState<string | undefined>(undefined);
-  if (defaultProjectId && defaultProjectId !== appliedDefaultProjectId && projects.length > 0 && !values.projectId) {
+  if (defaultProjectId && defaultProjectId !== appliedDefaultProjectId && projects.length > 0 && !watchedProjectId) {
     const project = projects.find((item) => item.id === defaultProjectId);
     if (project) {
       setAppliedDefaultProjectId(defaultProjectId);
-      setValues((current) => ({ ...current, projectId: project.id, projectName: project.name }));
+      setValue("projectId", project.id);
+      setValue("projectName", project.name);
     }
   }
   const { data: plumbers = [] } = usePlumbersQuery();
-  const { data: supervisors = [] } = useRosterQuery("supervisor");
-  const createCustomer = useCreateCustomer();
-  const updateCustomer = useUpdateCustomer(customerId ?? "");
+  const saveCustomer = useSaveCustomerWithPipeRecords(mode, customerId);
   const archiveCustomer = useUpdateCustomer(customerId ?? "");
   const deleteCustomer = useDeleteCustomer();
-  const mutation = isEdit ? updateCustomer : createCustomer;
+  const createDocument = useCreateCustomerDocument(customerId ?? "");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteImpact = useCustomerDeleteImpactQuery(customerId ?? "", { enabled: deleteDialogOpen });
   const { user } = useAuth();
@@ -174,19 +147,16 @@ function CustomerFormFields({
 
   const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
 
-  const handleSave = async () => {
-    if (
-      !values.customerConnection.customerName.trim() ||
-      !values.projectId ||
-      (!isEdit && !values.customerConnection.plumberId)
-    )
-      return;
-
+  const onSubmit = handleSubmit(async (values) => {
     setUploadError("");
 
     try {
-      const saved = await mutation.mutateAsync(values);
-
+      /**
+       * Save orchestration (§9): one atomic customer+pipe-records call
+       * (replacing the old create/update-then-loop-upsert 3-call sequence),
+       * then a document-upload loop (file upload lifecycle genuinely stays
+       * separate), then navigate. This is a 2-phase flow, down from 3.
+       */
       const editedPipeRecords = values.lmcPipelineWork.pipeRecords.filter(
         (record) =>
           record.lengthMetres || record.layingDate || record.testingDate || record.purgingDate ||
@@ -194,13 +164,18 @@ function CustomerFormFields({
           record.layingStatus !== "Not Started" || record.testingStatus !== "Not Started" || record.purgingStatus !== "Not Started",
       );
 
-      for (const record of editedPipeRecords) {
+      const saved = await saveCustomer.mutateAsync({ values, pipeRecords: editedPipeRecords });
+
+      const recordsWithNewEvidence = editedPipeRecords.filter((record) =>
+        record.evidence.some((item) => item.file),
+      );
+      for (const record of recordsWithNewEvidence) {
         await customersApi.upsertLmcPipeRecord(saved.id, record);
       }
 
       const newDocuments = values.documents.filter((doc) => doc.id.startsWith("cust-evidence-"));
       for (const doc of newDocuments) {
-        await customersApi.createDocument(saved.id, doc);
+        await createDocument.mutateAsync(doc);
       }
 
       router.push(`/customers/${saved.id}`);
@@ -208,21 +183,27 @@ function CustomerFormFields({
       console.error("[CustomerForm] save failed", { customerId, error });
       setUploadError(error instanceof Error ? error.message : "Unable to save customer");
     }
-  };
+  });
+
+  // useWatch (not the form's `watch()` function) so the value is derived via
+  // subscription rather than a non-memoizable function reference - defaultValues
+  // is always the full CustomerFormValues shape, so the deep-partial inference
+  // here is a typing artifact only.
+  const values = useWatch({ control }) as CustomerFormValues;
+
+  useBreadcrumbLabel(customerId, values.customerConnection?.customerName);
 
   return (
     <div>
-      <PageHeader title={isEdit ? "Edit Customer" : "Create Customer"} />
-
-      <form
-        className="pb-28"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSave();
-        }}
-      >
-        <Tabs defaultValue="customer" className="flex flex-col gap-3">
-          <div className="border-b border-border/70">
+      <FormProvider {...form}>
+        <form
+          className="pb-28"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onSubmit();
+          }}
+        >
+          <Tabs defaultValue="customer" className="flex flex-col gap-3">
             <ScrollableTabsList>
               <FormTab value="customer">Customer Details</FormTab>
               <FormTab value="survey">Survey</FormTab>
@@ -233,7 +214,9 @@ function CustomerFormFields({
               <FormTab value="civil">Civil Work</FormTab>
               <FormTab value="mdpe">MDPE Fittings</FormTab>
               <FormTab value="commissioning">Meter & Commissioning</FormTab>
+              {isEdit && customerId && <FormTab value="milestones">Progress Milestones</FormTab>}
               <FormTab value="billing">Billing & Remarks</FormTab>
+              {isEdit && customerId && <FormTab value="notes">Notes</FormTab>}
               <FormTab value="images">Images / Evidence</FormTab>
               <FormTab value="reports">Reports</FormTab>
               {Object.keys(customFieldGroups).sort().map((group) => (
@@ -241,805 +224,181 @@ function CustomerFormFields({
               ))}
               {isEdit && <FormTab value="complaints">Complaints</FormTab>}
             </ScrollableTabsList>
-          </div>
 
-          <TabsContent value="customer">
-            <SectionCard title="Customer & Connection Details">
-              <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <FormField label="Project">
-                  {defaultProjectId && !isEdit ? (
-                    <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                      {values.projectName || "-"}
-                    </div>
-                  ) : (
-                    <SearchableSelect
-                      value={values.projectId || undefined}
-                      onValueChange={(projectId) => {
-                        const project = projectOptions.find((item) => item.value === projectId);
-                        setValues((current) => ({
-                          ...current,
-                          projectId: projectId ?? "",
-                          projectName: project?.label ?? "",
-                        }));
-                      }}
-                      placeholder="Select project"
-                      options={projectOptions}
-                      className="w-full"
-                    />
-                  )}
-                </FormField>
-                <FormField label="Assigned Plumber">
-                  <SearchableSelect
-                    value={values.customerConnection.plumberId || undefined}
-                    onValueChange={(plumberId) => {
-                      const plumber = plumbers.find((item) => item.id === plumberId);
-                      setValues((current) => ({
-                        ...current,
-                        customerConnection: {
-                          ...current.customerConnection,
-                          plumberId: plumberId ?? "",
-                          plumberName: plumber?.name ?? "",
-                        },
-                      }));
-                    }}
-                    placeholder="Select plumber"
-                    options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
-                    className="w-full"
-                  />
-                </FormField>
-                <FormField label="Assigned Supervisor">
-                  <SearchableSelect
-                    value={values.customerConnection.supervisorId || undefined}
-                    onValueChange={(supervisorId) => {
-                      const supervisor = supervisors.find((item) => item.id === supervisorId);
-                      setValues((current) => ({
-                        ...current,
-                        customerConnection: {
-                          ...current.customerConnection,
-                          supervisorId: supervisorId ?? "",
-                          supervisorName: supervisor?.name ?? "",
-                        },
-                      }));
-                    }}
-                    placeholder="Select supervisor"
-                    options={supervisors.map((supervisor) => ({ value: supervisor.id, label: supervisor.name }))}
-                    className="w-full"
-                  />
-                </FormField>
-                <FormField label="Customer Status">
-                  <Select value={values.status} onValueChange={(status) => setValues((current) => ({ ...current, status: (status ?? "Draft") as CustomerFormValues["status"] }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customerStatusOptions.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              </div>
-              <SectionFields
-                fields={customerConnectionFields}
-                values={values.customerConnection}
-                onChange={(next) => setValues((current) => ({ ...current, customerConnection: next }))}
+            <TabsContent value="customer">
+              <CustomerBasicSection
+                isEdit={isEdit}
+                defaultProjectId={defaultProjectId}
+                currentProjectName={values.projectName}
+                projectOptions={projectOptions}
+                plumbers={plumbers}
+                customerConnectionFields={customerConnectionFields}
               />
-            </SectionCard>
-          </TabsContent>
-          <TabsContent value="survey">
-            <CustomerSurveyEditor
-              survey={values.survey ?? emptyCustomerSurvey}
-              onChange={(survey) => setValues((current) => ({ ...current, survey }))}
-              customerId={customerId}
-              requiredFields={completion?.survey.requiredFields}
-            />
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="gi">
-            <SectionCard title="GI Installation Measurements">
-              <SectionFields
-                fields={giMeasurementFields}
-                values={values.giMeasurements}
-                onChange={(next) => setValues((current) => ({ ...current, giMeasurements: next }))}
+            <TabsContent value="survey">
+              <CustomerSurveySection customerId={customerId} requiredFields={completion?.survey.requiredFields} />
+            </TabsContent>
+
+            <TabsContent value="gi">
+              <CustomerFieldGroupSection title="GI Installation Measurements" name="giMeasurements" fields={giMeasurementFields} />
+            </TabsContent>
+
+            <TabsContent value="isolation">
+              <CustomerFieldGroupSection title="Isolation Valves & Regulators" name="valvesRegulators" fields={isolationValveFields} />
+            </TabsContent>
+
+            <TabsContent value="fittings">
+              <CustomerFieldGroupSection title="Fittings & Accessories" name="fittingsAccessories" fields={fittingAccessoryFields} />
+            </TabsContent>
+
+            <TabsContent value="lmc">
+              <Controller
+                control={control}
+                name="lmcPipelineWork"
+                render={({ field }) => (
+                  <LmcPipelineForm values={field.value} onChange={field.onChange} customerId={customerId} />
+                )}
               />
-            </SectionCard>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="isolation">
-            <SectionCard title="Isolation Valves & Regulators">
-              <SectionFields
-                fields={isolationValveFields}
-                values={values.valvesRegulators}
-                onChange={(next) => setValues((current) => ({ ...current, valvesRegulators: next }))}
-              />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="fittings">
-            <SectionCard title="Fittings & Accessories">
-              <SectionFields
-                fields={fittingAccessoryFields}
-                values={values.fittingsAccessories}
-                onChange={(next) => setValues((current) => ({ ...current, fittingsAccessories: next }))}
-              />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="lmc">
-            <LmcPipelineEditor
-              values={values.lmcPipelineWork}
-              onChange={(next) => setValues((current) => ({ ...current, lmcPipelineWork: next }))}
-              customerId={customerId}
-            />
-          </TabsContent>
-          <TabsContent value="civil">
-            <SectionCard title="Civil / Surface Work">
-              <SectionFields
+            <TabsContent value="civil">
+              <CustomerFieldGroupSection
+                title="Civil / Surface Work"
+                name="lmcPipelineWork"
                 fields={lmcPipelineFields}
-                values={pickCivilFields(values.lmcPipelineWork)}
-                onChange={(next) =>
-                  setValues((current) => ({
-                    ...current,
-                    lmcPipelineWork: { ...current.lmcPipelineWork, ...next },
-                  }))
-                }
+                pick={pickCivilFields}
+                merge={(value, next) => ({ ...value, ...next })}
               />
-            </SectionCard>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="mdpe">
-            <SectionCard title="MDPE Fittings">
-              <SectionFields
-                fields={mdpeFittingFields}
-                values={values.mdpeFittings}
-                onChange={(next) => setValues((current) => ({ ...current, mdpeFittings: next }))}
-              />
-            </SectionCard>
-          </TabsContent>
+            <TabsContent value="mdpe">
+              <CustomerFieldGroupSection title="MDPE Fittings" name="mdpeFittings" fields={mdpeFittingFields} />
+            </TabsContent>
 
-          <TabsContent value="commissioning">
-            <SectionCard title="Commissioning & Conversion">
-              <SectionFields
+            <TabsContent value="commissioning">
+              <CustomerFieldGroupSection
+                title="Commissioning & Conversion"
+                name="commissioningConversion"
                 fields={commissioningConversionFields}
-                values={values.commissioningConversion}
                 requiredFields={completion?.commissioning.requiredFields}
-                onChange={(next) => setValues((current) => ({ ...current, commissioningConversion: next }))}
               />
-            </SectionCard>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="billing">
-            <SectionCard title="Billing & Completion Status">
-              <SectionFields
-                fields={billingCompletionFields}
-                values={values.billingCompletion}
-                onChange={(next) => setValues((current) => ({ ...current, billingCompletion: next }))}
-              />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="images">
-            <CustomerEvidencePanel
-              survey={values.survey}
-              lmcPipelineWork={values.lmcPipelineWork}
-              documents={values.documents}
-              editable
-              onDocumentsChange={(documents) =>
-                setValues((current) => ({ ...current, documents }))
-              }
-              customerId={customerId}
-            />
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "", updatedDate: "" } : undefined} />
-          </TabsContent>
-
-          {Object.entries(customFieldGroups).map(([group, fields]) => {
-            const fieldDefinitions: FieldDefinition<Record<string, string | boolean>>[] = fields.map((f: any) => ({
-              key: f.key,
-              label: f.label,
-              input: f.valueType === "Text" ? "text" :
-                     f.valueType === "Number" ? "number" :
-                     f.valueType === "Date" ? "date" :
-                     f.valueType === "Dropdown" ? "select" : "text",
-              options: f.valueType === "Dropdown" ? f.dropdownOptions : undefined,
-              readOnly: !isAdmin && f.supervisorAccess === "Supervisor Can View",
-            }));
-
-            return (
-              <TabsContent key={`content-custom-${group}`} value={`custom-${group}`}>
-                <SectionCard title={group}>
-                  <SectionFields
-                    fields={fieldDefinitions}
-                    values={(values.customFields ?? {}) as Record<string, string | boolean>}
-                    onChange={(next) => setValues((current) => ({ ...current, customFields: next }))}
-                  />
+            {isEdit && customerId && (
+              <TabsContent value="milestones">
+                <SectionCard title="Progress Milestones">
+                  <CustomerProgressMilestones customerId={customerId} completion={completion} audit={audit} />
                 </SectionCard>
               </TabsContent>
-            );
-          })}
+            )}
 
-          {isEdit && customerId && (
-            <TabsContent value="complaints">
-              <CustomerComplaintsPanel customerId={customerId} />
+            <TabsContent value="billing">
+              <CustomerFieldGroupSection title="Billing & Completion Status" name="billingCompletion" fields={billingCompletionFields} />
             </TabsContent>
-          )}
-        </Tabs>
 
-        {uploadError ? <p className="mt-3 text-sm text-destructive">{uploadError}</p> : null}
-        {mutation.isError ? (
-          <p className="mt-3 text-sm text-destructive">
-            {mutation.error instanceof Error ? mutation.error.message : "Unable to save customer"}
-          </p>
-        ) : null}
+            {isEdit && customerId && (
+              <TabsContent value="notes">
+                <CustomerNotesPanel customerId={customerId} />
+              </TabsContent>
+            )}
 
-        <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
-          {isEdit && customerId && (
-            <DeleteImpactDialog
-              open={deleteDialogOpen}
-              onOpenChange={setDeleteDialogOpen}
-              trigger={
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
-                >
-                  <TrashIcon size={14} />
-                  Delete
-                </Button>
-              }
-              entityTypeLabel="Customer"
-              impact={deleteImpact.data}
-              isLoading={deleteImpact.isLoading}
-              isError={deleteImpact.isError}
-              onRetry={() => void deleteImpact.refetch()}
-              isConfirming={deleteCustomer.isPending}
-              onConfirm={async () => {
-                await deleteCustomer.mutateAsync(customerId);
-                setDeleteDialogOpen(false);
-                router.push("/customers");
-              }}
-              isArchiving={archiveCustomer.isPending}
-              onArchive={async () => {
-                await archiveCustomer.mutateAsync({ ...values, status: "Archived" });
-                setDeleteDialogOpen(false);
-                router.push(`/customers/${customerId}`);
-              }}
-            />
-          )}
-          <Link
-            href={isEdit && customerId ? `/customers/${customerId}` : "/customers"}
-            className={buttonVariants({ variant: "outline", size: "default" })}
-          >
-            Cancel
-          </Link>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Save Customer"}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-}
+            <TabsContent value="images">
+              <Controller
+                control={control}
+                name="documents"
+                render={({ field }) => (
+                  <CustomerEvidencePanel
+                    survey={values.survey}
+                    lmcPipelineWork={values.lmcPipelineWork}
+                    documents={field.value}
+                    editable
+                    onDocumentsChange={field.onChange}
+                    customerId={customerId}
+                  />
+                )}
+              />
+            </TabsContent>
 
-function CustomerSurveyEditor({
-  survey,
-  onChange,
-  customerId,
-  requiredFields,
-}: {
-  survey: CustomerSurvey;
-  onChange: (survey: CustomerSurvey) => void;
-  customerId?: string;
-  requiredFields?: string[];
-}) {
-  const update = <K extends keyof CustomerSurvey>(key: K, value: CustomerSurvey[K]) => {
-    onChange({ ...survey, [key]: value });
-  };
-  const isRequired = (key: string) => requiredFields?.includes(key) ?? false;
+            <TabsContent value="reports">
+              <CustomerReportsPanel customerId={customerId} customer={customerId ? { ...values, id: customerId, createdDate: "", updatedDate: "" } : undefined} />
+            </TabsContent>
 
-  return (
-    <div className="space-y-4">
-      <SectionCard
-        title="Survey"
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={survey.workableStatus} />
-            <StatusBadge status={survey.approvalStatus} />
-          </div>
-        }
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <TextField label="Survey ID" value={survey.surveyId} onChange={(value) => update("surveyId", value)} />
-          <FormField label="Survey Date" required={isRequired("surveyDate")}>
-            <DatePicker value={survey.surveyDate} onChange={(value) => update("surveyDate", value)} className="w-full" />
-          </FormField>
-          <TextField label="Assigned Surveyor" value={survey.assignedSurveyor} onChange={(value) => update("assignedSurveyor", value)} />
-          <FormField label="Approval Status">
-            <CustomerSelect
-              value={survey.approvalStatus}
-              options={surveyApprovalStatusOptions}
-              placeholder="Select approval status"
-              onChange={(value) => update("approvalStatus", value as CustomerSurvey["approvalStatus"])}
-            />
-          </FormField>
-          <TextField label="Submitted By" value={survey.submittedBy} onChange={(value) => update("submittedBy", value)} />
-          <FormField label="Submission Date / Time">
-            <DatePicker value={survey.submissionDate} onChange={(value) => update("submissionDate", value)} className="w-full" />
-          </FormField>
-          <TextField label="Latitude" type="number" value={String(survey.latitude || "")} onChange={(value) => update("latitude", Number(value) || 0)} />
-          <TextField label="Longitude" type="number" value={String(survey.longitude || "")} onChange={(value) => update("longitude", Number(value) || 0)} />
-          <TextField label="Capture Accuracy" value={survey.captureAccuracy} onChange={(value) => update("captureAccuracy", value)} />
-        </div>
-      </SectionCard>
-
-      <SectionCard title={isRequired("workableStatus") ? "Workable Status *" : "Workable Status"}>
-        <div className="grid gap-3 md:grid-cols-3">
-          {surveyWorkableStatusOptions.map((status) => (
-            <button
-              key={status}
-              type="button"
-              className={`rounded-sm border px-3 py-3 text-left transition ${
-                survey.workableStatus === status
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
-              }`}
-              onClick={() => update("workableStatus", status)}
-            >
-              <span className="block text-sm font-semibold">{status}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">Survey assessment</span>
-            </button>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Site Conditions">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <FormField label="Site Accessibility">
-            <CustomerSelect
-              value={survey.siteAccessibility}
-              options={surveyConditionStatusOptions}
-              placeholder="Select site accessibility"
-              onChange={(value) => update("siteAccessibility", value as CustomerSurvey["siteAccessibility"])}
-            />
-          </FormField>
-          <FormField label="Meter Placement">
-            <CustomerSelect
-              value={survey.meterPlacement}
-              options={surveyConditionStatusOptions}
-              placeholder="Select meter placement"
-              onChange={(value) => update("meterPlacement", value as CustomerSurvey["meterPlacement"])}
-            />
-          </FormField>
-          <FormField label="Pipeline Route">
-            <CustomerSelect
-              value={survey.pipelineRoute}
-              options={surveyConditionStatusOptions}
-              placeholder="Select pipeline route"
-              onChange={(value) => update("pipelineRoute", value as CustomerSurvey["pipelineRoute"])}
-            />
-          </FormField>
-          <FormField label="Civil Work Required">
-            <CustomerSelect
-              value={survey.civilWorkRequired || "No"}
-              options={["Yes", "No"]}
-              placeholder="Select civil work"
-              onChange={(value) => update("civilWorkRequired", value)}
-            />
-          </FormField>
-          <FormField label="Expected Resolution Date">
-            <DatePicker value={survey.expectedResolutionDate} onChange={(value) => update("expectedResolutionDate", value)} className="w-full" />
-          </FormField>
-        </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <FormField label="Initial Measurements">
-            <Textarea value={survey.initialMeasurements} onChange={(event) => update("initialMeasurements", event.target.value)} rows={3} />
-          </FormField>
-          <FormField label="Obstacles / Remarks">
-            <Textarea value={survey.obstaclesRemarks} onChange={(event) => update("obstaclesRemarks", event.target.value)} rows={3} />
-          </FormField>
-          <FormField label="Reason">
-            <Textarea value={survey.reason} onChange={(event) => update("reason", event.target.value)} rows={3} />
-          </FormField>
-          <FormField label="Recommended Action">
-            <Textarea value={survey.recommendedAction} onChange={(event) => update("recommendedAction", event.target.value)} rows={3} />
-          </FormField>
-          <FormField label="Survey Notes">
-            <Textarea value={survey.notes} onChange={(event) => update("notes", event.target.value)} rows={3} />
-          </FormField>
-          <FormField label="Approval Comments">
-            <Textarea value={survey.approvalComments} onChange={(event) => update("approvalComments", event.target.value)} rows={3} />
-          </FormField>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Survey Photos">
-        <ImageUploadPreview
-          images={surveyPhotosToImages(survey.evidence)}
-          onChange={(images) => update("evidence", imagesToSurveyPhotos(images))}
-          module="customers"
-          recordId={customerId}
-        />
-      </SectionCard>
-    </div>
-  );
-}
-
-function CustomerSelect({
-  value,
-  options,
-  placeholder,
-  onChange,
-}: {
-  value: string;
-  options: readonly string[];
-  placeholder: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Select value={value || undefined} onValueChange={(next) => onChange(next ?? "")}>
-      <SelectTrigger className="w-full min-w-0">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function surveyPhotosToImages(photos: CustomerSurveyPhoto[]): ImagePreviewItem[] {
-  return photos.map((photo) => ({
-    id: photo.id,
-    label: photo.label,
-    fileName: photo.fileName,
-    fileUrl: photo.fileUrl,
-    previewUrl: photo.previewUrl,
-    status: photo.status ?? (photo.fileUrl ? "uploaded" : undefined),
-    file: photo.file,
-  }));
-}
-
-function imagesToSurveyPhotos(images: ImagePreviewItem[]): CustomerSurveyPhoto[] {
-  return images.map((image) => ({
-    id: image.id,
-    label: image.label,
-    caption: image.label,
-    fileName: image.fileName,
-    fileUrl: image.fileUrl,
-    previewUrl: image.previewUrl,
-    status: image.status,
-    file: image.file,
-  }));
-}
-function LmcPipelineEditor({
-  values,
-  onChange,
-  customerId,
-}: {
-  values: LmcPipelineWork;
-  onChange: (values: LmcPipelineWork) => void;
-  customerId?: string;
-}) {
-  const [editingPipeId, setEditingPipeId] = useState<string | null>(null);
-  const editingPipe = values.pipeRecords.find((record) => record.id === editingPipeId) ?? null;
-  const overallStatus = deriveLmcOverallStatus(values.pipeRecords);
-  const pipeInputFields = lmcPipeRecordFields.filter(
-    (field) => field.key !== "evidence",
-  ) as FieldDefinition<Omit<LmcPipeEditableFields, "evidence">>[];
-
-  const updatePipeRecord = (nextRecord: LmcPipeSizeRecord) => {
-    onChange({
-      ...values,
-      pipeRecords: values.pipeRecords.map((record) =>
-        record.id === nextRecord.id ? nextRecord : record,
-      ),
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <SectionCard
-        title="Pipe Size Records"
-        action={<StatusBadge status={overallStatus} />}
-      >
-        <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50 bg-muted/35 hover:bg-muted/35">
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Pipe Size</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Length</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Laying Date</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Testing Date</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Purging Date</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Current Stage</TableHead>
-                <TableHead className="h-8 px-3 text-xs font-semibold text-muted-foreground">Evidence</TableHead>
-                <TableHead className="h-8 px-3 text-right text-xs font-semibold text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {values.pipeRecords.map((record) => (
-                <TableRow
-                  key={record.id}
-                  className="cursor-pointer border-border/45 bg-card hover:bg-muted/30"
-                  onClick={() => setEditingPipeId(record.id)}
-                >
-                  <TableCell className="px-3 py-2 font-semibold text-foreground">{record.pipeSize}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground">{record.lengthMetres || "-"}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground">{record.layingDate || "-"}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground">{record.testingDate || "-"}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground">{record.purgingDate || "-"}</TableCell>
-                  <TableCell className="px-3 py-2"><StatusBadge status={deriveLmcPipeCurrentStage(record)} /></TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground">
-                    <EvidenceSummary files={record.evidence} />
-                  </TableCell>
-                  <TableCell className="px-3 py-2 text-right">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditingPipeId(record.id)}>
-                      Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-
-      <Sheet open={Boolean(editingPipe)} onOpenChange={(open) => !open && setEditingPipeId(null)}>
-        <SheetContent className="!w-[min(56rem,calc(100vw-1rem))] !max-w-none gap-0 overflow-x-hidden border-l-0 shadow-none">
-          {editingPipe ? (
-            <>
-              <SheetHeader className="bg-muted/20 px-5 py-4">
-                <SheetTitle>Edit {editingPipe.pipeSize} Pipe</SheetTitle>
-                <SheetDescription>
-                  Update this pipe sub-record inside the same LMC record.
-                </SheetDescription>
-              </SheetHeader>
-              <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
-                <SectionFields
-                  fields={pipeInputFields}
-                  values={pickPipeEditableFields(editingPipe)}
-                  onChange={(next) => updatePipeRecord({ ...editingPipe, ...next })}
-                  gridClassName="grid gap-4"
+            {Object.entries(customFieldGroups).map(([group, fields]) => (
+              <TabsContent key={`content-custom-${group}`} value={`custom-${group}`}>
+                <CustomerFieldGroupSection
+                  title={group}
+                  name="customFields"
+                  fields={customFieldsToFieldDefinitions(fields, { isAdmin })}
+                  pick={(value) => (value ?? {}) as Record<string, string | boolean>}
                 />
-                <div className="mt-4">
-                  <FormField label="Evidence Images">
-                    <ImageUploadPreview
-                      key={editingPipe.id}
-                      className="min-w-0"
-                      images={evidenceFilesToImages(editingPipe.evidence)}
-                      onChange={(images) =>
-                        updatePipeRecord({
-                          ...editingPipe,
-                          evidence: imagesToEvidenceFiles(images),
-                        })
-                      }
-                      module="customers"
-                      recordId={customerId}
-                    />
-                  </FormField>
-                </div>
-              </div>
-              <SheetFooter className="bg-card/95 px-5 py-4">
-                <Button type="button" onClick={() => setEditingPipeId(null)}>
-                  Done
-                </Button>
-              </SheetFooter>
-            </>
+              </TabsContent>
+            ))}
+
+            {isEdit && customerId && (
+              <TabsContent value="complaints">
+                <CustomerComplaintsPanel customerId={customerId} />
+              </TabsContent>
+            )}
+          </Tabs>
+
+          {uploadError ? <p className="mt-3 text-sm text-destructive">{uploadError}</p> : null}
+          {saveCustomer.isError ? (
+            <p className="mt-3 text-sm text-destructive">
+              {saveCustomer.error instanceof Error ? saveCustomer.error.message : "Unable to save customer"}
+            </p>
           ) : null}
-        </SheetContent>
-      </Sheet>
 
+          <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
+            {isEdit && customerId && (
+              <DeleteImpactDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  >
+                    <TrashIcon size={14} />
+                    Delete
+                  </Button>
+                }
+                entityTypeLabel="Customer"
+                impact={deleteImpact.data}
+                isLoading={deleteImpact.isLoading}
+                isError={deleteImpact.isError}
+                onRetry={() => void deleteImpact.refetch()}
+                isConfirming={deleteCustomer.isPending}
+                onConfirm={async () => {
+                  await deleteCustomer.mutateAsync(customerId);
+                  setDeleteDialogOpen(false);
+                  router.push("/customers");
+                }}
+                isArchiving={archiveCustomer.isPending}
+                onArchive={async () => {
+                  await archiveCustomer.mutateAsync({ ...values, status: "Archived" });
+                  setDeleteDialogOpen(false);
+                  router.push(`/customers/${customerId}`);
+                }}
+              />
+            )}
+            <Link
+              href={isEdit && customerId ? `/customers/${customerId}` : "/customers"}
+              className={buttonVariants({ variant: "outline", size: "default" })}
+            >
+              Cancel
+            </Link>
+            <Button type="submit" disabled={saveCustomer.isPending}>
+              {saveCustomer.isPending ? "Saving..." : isEdit ? "Save Changes" : "Save Customer"}
+            </Button>
+          </div>
+        </form>
+      </FormProvider>
     </div>
   );
 }
 
-function pickPipeEditableFields(record: LmcPipeSizeRecord): Omit<LmcPipeEditableFields, "evidence"> {
-  return {
-    lengthMetres: record.lengthMetres,
-    layingDate: record.layingDate,
-    testingDate: record.testingDate,
-    purgingDate: record.purgingDate,
-    layingStatus: record.layingStatus,
-    testingStatus: record.testingStatus,
-    purgingStatus: record.purgingStatus,
-    jointFittingDetails: record.jointFittingDetails,
-    remarks: record.remarks,
-  };
-}
-
-function EvidenceSummary({ files }: { files: LmcEvidenceFile[] }) {
-  if (!files.length) return <span>-</span>;
-
-  return (
-    <span className="inline-flex items-center justify-end gap-1.5">
-      <ImageSquareIcon size={15} className="text-primary" />
-      <span>{files.length} image{files.length > 1 ? "s" : ""}</span>
-    </span>
-  );
-}
-
-function evidenceFilesToImages(files: LmcEvidenceFile[]): ImagePreviewItem[] {
-  return files.map((file) => ({
-    id: file.id,
-    label: file.label,
-    fileName: file.fileName,
-    fileUrl: file.fileUrl,
-    previewUrl: file.previewUrl,
-    status: file.status ?? (file.fileUrl ? "uploaded" : undefined),
-    file: file.file,
-  }));
-}
-
-function imagesToEvidenceFiles(images: ImagePreviewItem[]): LmcEvidenceFile[] {
-  return images.map((image) => ({
-    id: image.id,
-    label: image.label,
-    fileName: image.fileName,
-    fileUrl: image.fileUrl,
-    previewUrl: image.previewUrl,
-    status: image.status,
-    file: image.file,
-  }));
-}
-
-function pickCivilFields(values: LmcPipelineWork): LmcCivilWork {
-  return {
-    fourMetresUnderGc: values.fourMetresUnderGc,
-    fourMetresAboveGc: values.fourMetresAboveGc,
-    tfHalfInch: values.tfHalfInch,
-    tfOneInch: values.tfOneInch,
-    pcc: values.pcc,
-    rccNalaCrossing: values.rccNalaCrossing,
-    paverBlocks: values.paverBlocks,
-    malua: values.malua,
-    hardRock: values.hardRock,
-  };
-}
-
-function FormTab({ value, children }: { value: string; children: React.ReactNode }) {
-  return (
-    <TabsTrigger
-      value={value}
-      className="h-10 flex-none cursor-pointer justify-start rounded-none px-0.5 py-0 font-medium"
-    >
-      {children}
-    </TabsTrigger>
-  );
-}
-
-function SectionFields<T extends Record<string, string | boolean>>({
-  fields,
-  values,
-  onChange,
-  requiredFields,
-  gridClassName = "grid gap-4 md:grid-cols-2 xl:grid-cols-3",
-}: {
-  fields: FieldDefinition<T>[];
-  values: T;
-  onChange: (values: T) => void;
-  requiredFields?: string[];
-  gridClassName?: string;
-}) {
-  return (
-    <div className={gridClassName}>
-      {fields.map((field) => (
-        <MasterField
-          key={String(field.key)}
-          field={field}
-          value={values[field.key]}
-          required={requiredFields?.includes(String(field.key)) ?? false}
-          onChange={(value) => onChange({ ...values, [field.key]: value })}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MasterField<T extends Record<string, string | boolean>>({
-  field,
-  value,
-  onChange,
-  required,
-}: {
-  field: FieldDefinition<T>;
-  value: string | boolean;
-  onChange: (value: string | boolean) => void;
-  required?: boolean;
-}) {
-  if (field.input === "textarea") {
-    return (
-      <FormField label={field.label} required={required} className="md:col-span-2 xl:col-span-3">
-        <Textarea
-          value={String(value ?? "")}
-          onChange={(event) => onChange(event.target.value)}
-          rows={3}
-          disabled={field.readOnly}
-        />
-      </FormField>
-    );
-  }
-
-  if (field.input === "date") {
-    return (
-      <FormField label={field.label} required={required}>
-        <DatePicker value={String(value ?? "")} onChange={onChange} className="w-full min-w-0" />
-      </FormField>
-    );
-  }
-
-  if (field.input === "meter") {
-    return (
-      <FormField label={field.label} required={required}>
-        <SegmentedDigitInput value={String(value ?? "")} onChange={onChange} digits={field.digits} />
-      </FormField>
-    );
-  }
-
-  if (field.input === "select") {
-    return (
-      <FormField label={field.label} required={required}>
-        <SearchableSelect
-          value={String(value || "")}
-          options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
-          placeholder={`Select ${field.label.toLowerCase()}`}
-          onValueChange={(next) => onChange(next ?? "")}
-        />
-      </FormField>
-    );
-  }
-
-  if (field.input === "boolean") {
-    return (
-      <FormField label={field.label} required={required}>
-        <Select value={value ? "Yes" : "No"} onValueChange={(next) => onChange(next === "Yes")}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
-    );
-  }
-
-  return (
-    <TextField
-      label={field.label}
-      required={required}
-      type={field.input === "number" ? "number" : "text"}
-      value={String(value ?? "")}
-      onChange={onChange}
-      disabled={field.readOnly}
-    />
-  );
-}
-
-function TextField({
-  label,
-  value,
-  onChange,
-  type = "text",
-  disabled = false,
-  required = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  disabled?: boolean;
-  required?: boolean;
-}) {
-  return (
-    <FormField label={label} required={required}>
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
-    </FormField>
-  );
+function FormTab({ value, children }: { value: string; children: ReactNode }) {
+  return <TabsTrigger value={value}>{children}</TabsTrigger>;
 }

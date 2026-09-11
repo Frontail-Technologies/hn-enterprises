@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DownloadSimpleIcon, EyeIcon } from "@phosphor-icons/react";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
@@ -12,8 +12,8 @@ import { resolveFileUrl } from "@/lib/upload";
 import { useDocumentsQuery } from "../hooks/useDocuments";
 import type { DocumentModule, DocumentRow } from "../services/documents.service";
 import { formatDate } from "../utils/format";
-import { PageShell } from "./shared/PageShell";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
+import { PageShell } from "@/components/shared/PageShell";
+import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 
 const exportColumns: ExportColumn<DocumentRow>[] = [
   { label: "Document Name", getValue: (row) => row.name },
@@ -55,7 +55,6 @@ export function DocumentsPage() {
   return (
     <PageShell
       title="Documents"
-      subtitle="Central read-only view of documents uploaded on Projects and Customers."
       actions={
         <>
           <FilterSheetButton
@@ -76,16 +75,18 @@ export function DocumentsPage() {
             onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
             onReset={() => setFilters({ search: "", module: "all" })}
           />
-          <button
+          <Button
             type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
+            variant="outline"
+            size="compact"
             onClick={() => void exportRowsToExcel("documents.xlsx", exportColumns, documents)}
           >
-            <DownloadSimpleIcon size={15} />
+            <DownloadSimpleIcon size={12} />
             Export Excel
-          </button>
+          </Button>
         </>
       }
+      contentClassName="space-y-3"
     >
       <PaginatedDataTable data={documents} columns={columns} isLoading={isLoading} enableFullView />
     </PageShell>
@@ -98,25 +99,24 @@ function DocumentActions({ document }: { document: DocumentRow }) {
   return (
     <div className="flex items-center gap-1">
       <ActionTooltip label="Preview">
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        <Button
+          variant="ghost"
+          size="icon-sm"
           aria-label={`Preview ${document.name}`}
+          render={<a href={href} target="_blank" rel="noopener noreferrer" />}
         >
           <EyeIcon size={15} />
-        </a>
+        </Button>
       </ActionTooltip>
       <ActionTooltip label="Download">
-        <a
-          href={href}
-          download={document.name}
-          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+        <Button
+          variant="ghost"
+          size="icon-sm"
           aria-label={`Download ${document.name}`}
+          render={<a href={href} download={document.name} />}
         >
           <DownloadSimpleIcon size={15} />
-        </a>
+        </Button>
       </ActionTooltip>
     </div>
   );

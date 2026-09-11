@@ -1,27 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import { useState } from "react";
+import { ArrowsClockwiseIcon, DownloadSimpleIcon, PackageIcon, TrayArrowDownIcon, TrayArrowUpIcon, ArrowUUpLeftIcon } from "@phosphor-icons/react";
+import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
+import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
+import { ExcelDataGrid } from "@/components/shared/ExcelDataGrid";
+import { Pagination } from "@/components/shared/Pagination";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { exportRowsToExcel } from "@/lib/export-excel";
-import { useCustomersQuery } from "@/features/customers/hooks/useCustomers";
-import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
-import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
-import { formatDate, projectLabel, sourceLabel } from "../utils/format";
-import { useMaterialQuery, useMaterialTransactionsQuery, usePlumberBalancesQuery } from "../hooks/useMaterials";
-import type { MaterialTransaction } from "../types/material.types";
+import { formatCompactCount } from "@/lib/format";
+import { useInventoryDetailColumns } from "../hooks/inventory-detail.columns";
+import { plumberLedgerRows as buildPlumberLedgerRows } from "../mappers/inventory-detail.mapper";
+import {
+  useMaterialDetailTransactionsQuery,
+  useMaterialOverviewQuery,
+  useMaterialPlumberLedgerQuery,
+} from "../hooks/useMaterials";
+import type { InventoryDetailTab } from "../types/material.types";
 import { InventoryActions } from "./inventory/InventoryActions";
 import { StockStatus } from "./inventory/StockStatus";
-import { TransactionRowActions } from "./inventory/TransactionRowActions";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 
-type DetailTab = "purchase" | "storeIssue" | "consumption" | "plumberLedger" | "transactions";
+const PAGE_SIZE = 50;
 
-const detailTabs: { id: DetailTab; label: string }[] = [
+const detailTabs: { id: InventoryDetailTab; label: string }[] = [
   { id: "purchase", label: "Purchase / PBG Received" },
   { id: "storeIssue", label: "Store Issue Book" },
   { id: "consumption", label: "Customer / BP Consumption" },
@@ -30,171 +35,101 @@ const detailTabs: { id: DetailTab; label: string }[] = [
 ];
 
 export function InventoryDetailPage({ id }: { id: string }) {
-  const [activeTab, setActiveTab] = useState<DetailTab>("purchase");
-  const { data: material, isLoading, isError } = useMaterialQuery(id);
-  const { data: transactions = [], isLoading: transactionsLoading } = useMaterialTransactionsQuery({ materialId: id });
-  const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery({ materialId: id });
-  const { data: plumbers = [], isLoading: plumbersLoading } = usePlumbersQuery();
-  const { data: customers = [], isLoading: customersLoading } = useCustomersQuery();
-  const { data: projects = [] } = useProjectsQuery();
-  useBreadcrumbLabel(material?.name);
+  const [activeTab, setActiveTab] = useState<InventoryDetailTab>("purchase");
+  const [page, setPage] = useState(1);
 
-  const plumberNameById = useMemo(() => new Map(plumbers.map((p) => [p.id, p.name])), [plumbers]);
-  const projectNameById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
-  const customerNameById = useMemo(
-    () => new Map(customers.map((c) => [c.id, c.customerConnection.customerName])),
-    [customers],
-  );
-  const purchases = useMemo(
-    () => transactions.filter((row) => row.type === "purchase" || row.type === "pbg_issue"),
-    [transactions],
-  );
-  const storeIssues = useMemo(() => transactions.filter((row) => row.type === "issue"), [transactions]);
-  const consumption = useMemo(
-    () => transactions.filter((row) => row.type === "consumption" || row.type === "pbg_consumption"),
-    [transactions],
-  );
+  // Each tab is its own independently-paginated dataset, so switching tabs
+  // starts back at page 1.
+  function handleTabChange(tab: InventoryDetailTab) {
+    setActiveTab(tab);
+    setPage(1);
+  }
 
-  const receivedQty = purchases.reduce((sum, row) => sum + row.quantity, 0);
-  const issuedQty = storeIssues.reduce((sum, row) => sum + row.quantity, 0);
-  const consumedQty = consumption.reduce((sum, row) => sum + row.quantity, 0);
-  const returnedQty = transactions
-    .filter((row) => row.type === "return")
-    .reduce((sum, row) => sum + row.quantity, 0);
+  const { data: overview, isLoading, isError } = useMaterialOverviewQuery(id);
+  const material = overview?.material;
+  useBreadcrumbLabel(id, material?.name);
 
-  const plumberLedgerRows = useMemo(
-    () =>
-      plumberBalances.map((row) => ({
-        ...row,
-        id: `${row.plumberId}-${row.source || "unspecified"}-${row.projectId || "none"}`,
-        plumberName: plumberNameById.get(row.plumberId) ?? "Unknown plumber",
-      })),
-    [plumberBalances, plumberNameById],
+  const isListableTab = activeTab !== "plumberLedger";
+  const { data: transactionsResult, isLoading: transactionsLoading } = useMaterialDetailTransactionsQuery(
+    id,
+    { tab: isListableTab ? activeTab : "transactions", page, limit: PAGE_SIZE },
+    isListableTab,
   );
+  const transactionRows = transactionsResult?.rows ?? [];
+  const pagination = transactionsResult?.pagination;
 
-  const transactionGridLoading = transactionsLoading || plumbersLoading || customersLoading;
+  const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = useMaterialPlumberLedgerQuery(
+    id,
+    activeTab === "plumberLedger",
+  );
+  const plumberLedgerRows = buildPlumberLedgerRows(plumberBalances);
+
+  const { purchaseColumns, storeIssueColumns, transactionColumns, consumptionColumns, plumberBalanceColumns } =
+    useInventoryDetailColumns({ material });
 
   if (isLoading) {
     return <PageLoading />;
   }
 
-  if (isError || !material) {
+  if (isError || !material || !overview) {
     return <p className="p-4 text-sm text-destructive">Unable to load this material.</p>;
   }
 
-  const actionsColumn: ExcelColumn<MaterialTransaction> = {
-    key: "actions",
-    label: "Actions",
-    width: 140,
-    getValue: () => "",
-    render: (row) => (
-      <TransactionRowActions
-        transaction={row}
-        lookups={{
-          materialName: material.name,
-          plumberName: plumberNameById.get(row.plumberId),
-          supervisorName: row.supervisorName,
-          customerName: customerNameById.get(row.customerId),
-          projectName: projectNameById.get(row.projectId),
-        }}
-      />
-    ),
+  const { summary } = overview;
+
+  const columnsByTab: Record<Exclude<InventoryDetailTab, "plumberLedger">, typeof purchaseColumns> = {
+    purchase: purchaseColumns,
+    storeIssue: storeIssueColumns,
+    consumption: consumptionColumns,
+    transactions: transactionColumns,
   };
 
-  const purchaseColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "type", label: "Type", width: 130, sticky: true, getValue: (row) => (row.type === "pbg_issue" ? "PBG Issue" : "Purchase") },
-    { key: "vendor", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "rate", label: "Rate", width: 110, getValue: (row) => row.rate ?? "-" },
-    { key: "billAmount", label: "Bill Amount", width: 140, getValue: (row) => row.billAmount ?? "-" },
-    { key: "referenceNo", label: "Reference No.", width: 150, getValue: (row) => row.referenceNo },
-    actionsColumn,
-  ];
+  const emptyTitleByTab: Record<InventoryDetailTab, string> = {
+    purchase: "No purchase rows found",
+    storeIssue: "No issue rows found",
+    consumption: "No customer consumption found for this material",
+    plumberLedger: "No plumber balance for this material",
+    transactions: "No transactions found",
+  };
 
-  const storeIssueColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "slipNo", label: "Slip No.", width: 130, sticky: true, getValue: (row) => row.referenceNo },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
-    { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabel(row.projectId, projectNameById) },
-    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
-    actionsColumn,
-  ];
-
-  const transactionColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "type", label: "Type", width: 150, sticky: true, getValue: (row) => row.type },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "plumber", label: "Plumber", width: 160, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
-    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
-    { key: "customer", label: "Customer", width: 190, getValue: (row) => customerNameById.get(row.customerId) ?? "-" },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabel(row.projectId, projectNameById) },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
-    actionsColumn,
-  ];
-
-  const consumptionColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "customer", label: "Customer", width: 190, sticky: true, getValue: (row) => customerNameById.get(row.customerId) ?? "-" },
-    { key: "usedQty", label: "Used Qty", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabel(row.projectId, projectNameById) },
-    { key: "plumber", label: "Plumber", width: 150, getValue: (row) => plumberNameById.get(row.plumberId) ?? "-" },
-    { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
-    { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    actionsColumn,
-  ];
-
-  const plumberBalanceColumns: ExcelColumn<(typeof plumberLedgerRows)[number]>[] = [
-    { key: "plumberName", label: "Plumber / Team", width: 170, sticky: true, getValue: (row) => row.plumberName },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabel(row.projectId, projectNameById) },
-    { key: "issued", label: "Total Issued", width: 130, getValue: (row) => row.issued },
-    { key: "consumed", label: "Consumed", width: 120, getValue: (row) => row.consumed },
-    { key: "returned", label: "Returned", width: 120, getValue: (row) => row.returned },
-    { key: "adjusted", label: "Adjusted", width: 120, getValue: (row) => row.adjusted },
-    { key: "balance", label: "Balance", width: 120, getValue: (row) => row.balance },
-  ];
+  function handleExport() {
+    if (activeTab === "plumberLedger") {
+      void exportRowsToExcel(`${material?.name}-plumber-ledger.xlsx`, plumberBalanceColumns, plumberLedgerRows);
+      return;
+    }
+    // Exports exactly what's currently loaded for this tab (the current
+    // page), never a silently-truncated "everything" - see item 11 of the
+    // API optimization batch. For a multi-page tab that's the current page
+    // only, which the filename makes explicit.
+    const suffix = pagination && pagination.totalPages > 1 ? `-page-${pagination.page}` : "";
+    void exportRowsToExcel(`${material?.name}-${activeTab}${suffix}.xlsx`, columnsByTab[activeTab], transactionRows);
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
         title={material.name}
-        subtitle={`${material.category || "Uncategorised"} / ${material.unit}`}
         actions={
-          <>
-            <button
-              type="button"
-              className={buttonVariants({ variant: "outline", size: "default" })}
-              onClick={() => void exportRowsToExcel(`${material.name}-transactions.xlsx`, transactionColumns, transactions)}
-            >
-              <DownloadSimpleIcon size={15} />
-              Export Excel
-            </button>
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <Button type="button" variant="outline" size="compact" onClick={handleExport}>
+              <DownloadSimpleIcon size={12} />
+              {activeTab !== "plumberLedger" && pagination && pagination.totalPages > 1
+                ? "Export Current Page"
+                : "Export Excel"}
+            </Button>
             <InventoryActions material={material} />
-          </>
+          </div>
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-card border border-border bg-card sm:grid-cols-5 sm:divide-y-0">
-          {[
-            { label: "Available", value: `${material.currentBalance} ${material.unit}` },
-            { label: "Received", value: receivedQty || 0 },
-            { label: "Issued", value: issuedQty || 0 },
-            { label: "Consumed", value: consumedQty || 0 },
-            { label: "Returned", value: returnedQty || 0 },
-          ].map((stat) => (
-            <div key={stat.label} className="px-3.5 py-2.5">
-              <p className="text-[11px] font-medium text-muted-foreground">{stat.label}</p>
-              <p className="text-base font-semibold text-foreground">{stat.value}</p>
-            </div>
-          ))}
-        </div>
+      <section className="space-y-3">
+        <CompactStatGrid columns={5}>
+          <DashboardStatCard label="Available" value={`${formatCompactCount(summary.availableQty)} ${material.unit}`} icon={PackageIcon} tone="primary" dense />
+          <DashboardStatCard label="Received" value={formatCompactCount(summary.receivedQty)} icon={TrayArrowDownIcon} tone="info" dense />
+          <DashboardStatCard label="Issued" value={formatCompactCount(summary.issuedQty)} icon={TrayArrowUpIcon} tone="warning" dense />
+          <DashboardStatCard label="Consumed" value={formatCompactCount(summary.consumedQty)} icon={ArrowsClockwiseIcon} tone="danger" dense />
+          <DashboardStatCard label="Returned" value={formatCompactCount(summary.returnedQty)} icon={ArrowUUpLeftIcon} tone="success" dense />
+        </CompactStatGrid>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-card border border-border bg-card px-3.5 py-2.5 text-xs">
           <StockStatus row={material} />
           <span className="text-muted-foreground">
@@ -204,46 +139,13 @@ export function InventoryDetailPage({ id }: { id: string }) {
             Reorder Level: <b className="font-semibold text-foreground">{material.reorderLevel}</b>
           </span>
           <span className="text-muted-foreground">
-            Plumber Balances: <b className="font-semibold text-foreground">{plumberLedgerRows.length}</b>
+            Plumber Balances: <b className="font-semibold text-foreground">{summary.plumberBalanceCount}</b>
           </span>
         </div>
       </section>
 
       <div className="space-y-3">
-        <UnderlineTabs items={detailTabs} active={activeTab} onChange={(tab) => setActiveTab(tab as DetailTab)} />
-
-        {activeTab === "purchase" ? (
-          <ExcelDataGrid
-            columns={purchaseColumns}
-            rows={purchases}
-            maxHeightClassName="max-h-[50vh]"
-            enableFullView
-            emptyTitle="No purchase rows found"
-            isLoading={transactionsLoading}
-          />
-        ) : null}
-
-        {activeTab === "storeIssue" ? (
-          <ExcelDataGrid
-            columns={storeIssueColumns}
-            rows={storeIssues}
-            maxHeightClassName="max-h-[50vh]"
-            enableFullView
-            emptyTitle="No issue rows found"
-            isLoading={transactionsLoading || plumbersLoading}
-          />
-        ) : null}
-
-        {activeTab === "consumption" ? (
-          <ExcelDataGrid
-            columns={consumptionColumns}
-            rows={consumption}
-            maxHeightClassName="max-h-[50vh]"
-            enableFullView
-            emptyTitle="No customer consumption found for this material"
-            isLoading={transactionGridLoading}
-          />
-        ) : null}
+        <UnderlineTabs items={detailTabs} active={activeTab} onChange={(tab) => handleTabChange(tab as InventoryDetailTab)} />
 
         {activeTab === "plumberLedger" ? (
           <ExcelDataGrid
@@ -251,21 +153,32 @@ export function InventoryDetailPage({ id }: { id: string }) {
             rows={plumberLedgerRows}
             maxHeightClassName="max-h-[50vh]"
             enableFullView
-            emptyTitle="No plumber balance for this material"
-            isLoading={plumberBalancesLoading || plumbersLoading}
+            emptyTitle={emptyTitleByTab.plumberLedger}
+            isLoading={plumberBalancesLoading}
           />
-        ) : null}
-
-        {activeTab === "transactions" ? (
-          <ExcelDataGrid
-            columns={transactionColumns}
-            rows={transactions}
-            maxHeightClassName="max-h-[50vh]"
-            enableFullView
-            emptyTitle="No transactions found"
-            isLoading={transactionGridLoading}
-          />
-        ) : null}
+        ) : (
+          <>
+            <ExcelDataGrid
+              columns={columnsByTab[activeTab]}
+              rows={transactionRows}
+              maxHeightClassName="max-h-[50vh]"
+              enableFullView
+              emptyTitle={emptyTitleByTab[activeTab]}
+              isLoading={transactionsLoading}
+            />
+            {pagination && pagination.total > 0 ? (
+              <Pagination
+                compact
+                page={pagination.page}
+                pageCount={Math.max(1, pagination.totalPages)}
+                totalItems={pagination.total}
+                startItem={(pagination.page - 1) * pagination.limit + 1}
+                endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
+                onPageChange={setPage}
+              />
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );

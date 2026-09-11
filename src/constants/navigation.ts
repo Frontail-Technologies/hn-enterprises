@@ -6,6 +6,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   customers: "Customers",
   reports: "Reports Center",
   planning: "DPR / Planning",
+  complaints: "Complaints",
   plan: "Planning",
   dpr: "DPR",
   inventory: "Inventory & Material",
@@ -42,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "projects", label: "Projects", icon: "Buildings", href: "/projects" },
       { id: "customers", label: "Customers", icon: "Users", href: "/customers" },
+      { id: "complaints", label: "Complaints", icon: "Warning", href: "/complaints" },
       { id: "planning", label: "DPR / Planning", icon: "ClipboardText", href: "/planning" },
     ],
   },

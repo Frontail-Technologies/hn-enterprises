@@ -3,10 +3,18 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeftIcon, EyeIcon, SaveIcon } from "lucide-react";
+import { ArrowLeftIcon, EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useReportTemplateData } from "../hooks/useReportTemplateData";
 import { getReportTemplateById } from "../services/report-templates.service";
@@ -81,7 +89,7 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
             Preview
           </Link>
           <Button onClick={handleSave}>
-            <SaveIcon size={15} />
+            <FloppyDiskIcon size={15} />
             Save Template
           </Button>
         </div>
@@ -158,44 +166,42 @@ export function ReportTemplateEditPage({ templateId }: { templateId: ReportTempl
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] border-collapse text-sm">
-              <thead className="bg-muted/60 text-xs font-semibold text-muted-foreground">
-                <tr>
-                  <th className="border-b border-r border-border px-3 py-2 text-left">Section</th>
-                  <th className="border-b border-r border-border px-3 py-2 text-left">Paper Label</th>
-                  <th className="border-b border-r border-border px-3 py-2 text-left">Data Mapping</th>
-                  <th className="border-b border-border px-3 py-2 text-left">Sample Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayRows.map((row) => (
-                  <tr key={row.id} className="align-top">
-                    <td className="w-[160px] border-b border-r border-border px-3 py-2 text-xs font-medium text-muted-foreground">
-                      {row.section}
-                    </td>
-                    <td className="w-[240px] border-b border-r border-border px-3 py-2">
-                      <Input
-                        value={row.label}
-                        onChange={(event) => updateRow(row.id, "label", event.target.value)}
-                        className="h-8"
-                      />
-                    </td>
-                    <td className="w-[280px] border-b border-r border-border px-3 py-2">
-                      <Input
-                        value={row.source}
-                        onChange={(event) => updateRow(row.id, "source", event.target.value)}
-                        className="h-8"
-                      />
-                    </td>
-                    <td className="border-b border-border px-3 py-2 text-sm text-foreground">
-                      {row.sample || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="min-w-[880px]">
+            <TableHeader className="bg-muted/60 text-xs font-semibold text-muted-foreground">
+              <TableRow>
+                <TableHead>Section</TableHead>
+                <TableHead>Paper Label</TableHead>
+                <TableHead>Data Mapping</TableHead>
+                <TableHead>Sample Value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayRows.map((row) => (
+                <TableRow key={row.id} className="align-top">
+                  <TableCell className="w-[160px] whitespace-normal text-xs font-medium text-muted-foreground">
+                    {row.section}
+                  </TableCell>
+                  <TableCell className="w-[240px]">
+                    <Input
+                      value={row.label}
+                      onChange={(event) => updateRow(row.id, "label", event.target.value)}
+                      className="h-8"
+                    />
+                  </TableCell>
+                  <TableCell className="w-[280px]">
+                    <Input
+                      value={row.source}
+                      onChange={(event) => updateRow(row.id, "source", event.target.value)}
+                      className="h-8"
+                    />
+                  </TableCell>
+                  <TableCell className="whitespace-normal text-sm text-foreground">
+                    {row.sample || "-"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </section>
       </div>
     </div>

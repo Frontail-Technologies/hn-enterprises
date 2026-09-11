@@ -29,6 +29,18 @@ const ACTION_META: Record<DeleteImpactAction, { label: string; badgeVariant: "de
 
 const DEFAULT_HIGH_IMPACT_THRESHOLD = 10;
 
+/**
+ * Two genuinely different actions can share this dialog's impact-preview
+ * mechanics: a real permanent delete, or (e.g. staff -> linked login) an
+ * action that only deactivates the underlying record. Defaults to "Delete"
+ * so every existing consumer is unaffected; pass "Deactivate" only where the
+ * confirmed action truly does not remove the row.
+ */
+const ACTION_COPY: Record<"Delete" | "Deactivate", { verb: string; ing: string; ed: string }> = {
+  Delete: { verb: "Delete", ing: "Deleting", ed: "deleted" },
+  Deactivate: { verb: "Deactivate", ing: "Deactivating", ed: "deactivated" },
+};
+
 export type DeleteImpactDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +56,12 @@ export type DeleteImpactDialogProps = {
   isArchiving?: boolean;
   archiveLabel?: string;
   highImpactThreshold?: number;
+  /** Optional reassurance/consequence note shown above the dependency list when the entity can be deleted (e.g. "Historical records will be preserved"). */
+  note?: ReactElement | string;
+  /** "Delete" (default) for a real permanent delete, "Deactivate" when the confirmed action only deactivates the underlying record. */
+  actionLabel?: "Delete" | "Deactivate";
+  /** Overrides the auto-generated confirm button text (e.g. "Delete Permanently") when the default "Delete {entityTypeLabel}[& Related Data]" phrasing isn't right for this entity. */
+  confirmLabel?: string;
 };
 
 export function DeleteImpactDialog({
@@ -61,7 +79,11 @@ export function DeleteImpactDialog({
   isArchiving = false,
   archiveLabel,
   highImpactThreshold = DEFAULT_HIGH_IMPACT_THRESHOLD,
+  note,
+  actionLabel = "Delete",
+  confirmLabel,
 }: DeleteImpactDialogProps) {
+  const action = ACTION_COPY[actionLabel];
   const [confirmText, setConfirmText] = useState("");
 
   function handleOpenChange(nextOpen: boolean) {
@@ -84,19 +106,21 @@ export function DeleteImpactDialog({
   }
 
   const entityLabel = impact?.entity.label;
-  const deleteCtaLabel = impact && impact.totalAffected > 0 ? `Delete ${entityTypeLabel} & Related Data` : `Delete ${entityTypeLabel}`;
+  const deleteCtaLabel =
+    confirmLabel ??
+    (impact && impact.totalAffected > 0 ? `${action.verb} ${entityTypeLabel} & Related Data` : `${action.verb} ${entityTypeLabel}`);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger ? <DialogTrigger render={trigger} /> : null}
       <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
         <DialogHeader className="shrink-0 border-b border-border/70 p-4">
-          <DialogTitle>Delete {entityLabel ? `"${entityLabel}"` : entityTypeLabel}?</DialogTitle>
+          <DialogTitle>{action.verb} {entityLabel ? `"${entityLabel}"` : entityTypeLabel}?</DialogTitle>
           <DialogDescription>
             {isLoading
               ? "Checking what's linked to this record..."
               : impact?.canDelete === false
-                ? `This ${entityTypeLabel.toLowerCase()} cannot be deleted directly.`
+                ? `This ${entityTypeLabel.toLowerCase()} cannot be ${action.ed} directly.`
                 : "Review what this will affect before confirming."}
           </DialogDescription>
         </DialogHeader>
@@ -125,6 +149,9 @@ export function DeleteImpactDialog({
             </Alert>
           ) : impact ? (
             <>
+              {impact.canDelete && note ? (
+                <p className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">{note}</p>
+              ) : null}
               {impact.blockers.length > 0 ? (
                 <Alert variant="destructive">
                   <WarningCircleIcon />
@@ -177,7 +204,7 @@ export function DeleteImpactDialog({
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
           {impact?.canDelete ? (
             <Button type="button" variant="destructive" onClick={handleConfirm} disabled={!canConfirm}>
-              {isConfirming ? "Deleting..." : deleteCtaLabel}
+              {isConfirming ? `${action.ing}...` : deleteCtaLabel}
             </Button>
           ) : null}
         </DialogFooter>

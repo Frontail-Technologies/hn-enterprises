@@ -7,11 +7,13 @@ export function FormField({
   children,
   className,
   required,
+  helper,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
   required?: boolean;
+  helper?: string;
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -20,6 +22,7 @@ export function FormField({
         {required ? <span className="ml-0.5 text-destructive">*</span> : null}
       </Label>
       {children}
+      {helper ? <span className="block text-[11px] text-muted-foreground">{helper}</span> : null}
     </div>
   );
 }

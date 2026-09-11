@@ -15,13 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { CustomScrollbar } from "@/components/shared/CustomScrollbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { tableDensity } from "@/components/shared/table/density";
 import { useFullViewActive } from "@/components/shared/table/FullViewContext";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
+import { TableScrollNav } from "@/components/shared/table/TableScrollNav";
 import {
   Popover,
   PopoverContent,
@@ -194,8 +194,6 @@ export function ExcelDataGrid<T extends { id: string }>({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            {/* Full View sits immediately left of pagination, in the one
-                result-count/pagination row - not floating over the table. */}
             {enableFullView ? (
               <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
             ) : null}
@@ -247,11 +245,12 @@ export function ExcelDataGrid<T extends { id: string }>({
         <div className={cn("group/excel-grid relative flex min-h-0 flex-col", effectiveFillHeight ? "flex-1" : maxHeightClassName)}>
           <div
             ref={scrollAreaRef}
-            className="min-w-0 flex-1 overflow-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="min-w-0 flex-1 overflow-auto will-change-scroll"
           >
             <ExcelTable
               columns={columns}
               stickyOffsets={stickyOffsets}
+              isMobile={isMobile}
               rows={paginatedRows}
               allRows={rows}
               filters={filters}
@@ -264,12 +263,7 @@ export function ExcelDataGrid<T extends { id: string }>({
               selection={selection}
             />
           </div>
-
-          {/* The native horizontal scrollbar is already discoverable and
-              draggable on its own - no floating overlay arrows on top of
-              cells, in either normal or Full View mode. */}
-          <CustomScrollbar targetRef={scrollAreaRef} orientation="horizontal" />
-          <CustomScrollbar targetRef={scrollAreaRef} orientation="vertical" />
+          <TableScrollNav scrollRef={scrollAreaRef} group="excel-grid" />
         </div>
       </div>
     </FullViewPortal>
@@ -279,6 +273,7 @@ export function ExcelDataGrid<T extends { id: string }>({
 function ExcelTable<T extends { id: string }>({
   columns,
   stickyOffsets,
+  isMobile,
   rows,
   allRows,
   filters,
@@ -292,6 +287,7 @@ function ExcelTable<T extends { id: string }>({
 }: {
   columns: ExcelColumn<T>[];
   stickyOffsets: Array<number | undefined>;
+  isMobile: boolean;
   rows: T[];
   allRows: T[];
   filters: ActiveFilters;
@@ -327,10 +323,11 @@ function ExcelTable<T extends { id: string }>({
         <tr>
           {selection && (
             <th
-              style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
+              style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: isMobile ? undefined : 0 }}
               className={cn(
                 tableDensity.rowHeight,
-                "sticky top-0 left-0 z-30 border-r border-b border-r-border/40 border-b-border bg-secondary pl-2.5 pr-0 text-center align-middle shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+                "top-0 z-30 border-r border-b border-r-border/40 border-b-border bg-table-header pl-2.5 pr-0 text-center align-middle",
+                isMobile ? "sticky" : "sticky left-0 shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
               )}
             >
               <Checkbox
@@ -358,8 +355,8 @@ function ExcelTable<T extends { id: string }>({
                   tableDensity.headerText,
                   tableDensity.cellPaddingX,
                   tableDensity.cellPaddingY,
-                  "sticky top-0 z-20 border-r border-b border-r-border/40 border-b-border bg-secondary text-left align-middle font-semibold text-muted-foreground",
-                  isSticky && "z-30 bg-secondary text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+                  "sticky top-0 z-20 border-r border-b border-r-border/40 border-b-border bg-table-header text-left align-middle font-semibold text-muted-foreground",
+                  isSticky && "z-30 bg-table-header text-foreground shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -385,8 +382,8 @@ function ExcelTable<T extends { id: string }>({
       <tbody>
         {isLoading ? (
           <tr>
-            <td colSpan={emptyColSpan} className="px-3 py-10 text-center">
-              <LoadingSpinner size="sm" />
+            <td colSpan={emptyColSpan} className="px-3 py-16 text-center">
+              <LoadingSpinner size="lg" />
             </td>
           </tr>
         ) : rows.length ? (
@@ -396,6 +393,7 @@ function ExcelTable<T extends { id: string }>({
               row={row}
               columns={columns}
               stickyOffsets={stickyOffsets}
+              isMobile={isMobile}
               rowClassName={getRowClassName?.(row)}
               isSelected={Boolean(selection?.selectedIds.has(row.id))}
               ariaLabel={selection?.getRowLabel?.(row)}
@@ -422,6 +420,7 @@ function ExcelTableRowImpl<T extends { id: string }>({
   row,
   columns,
   stickyOffsets,
+  isMobile,
   rowClassName,
   isSelected,
   ariaLabel,
@@ -431,6 +430,7 @@ function ExcelTableRowImpl<T extends { id: string }>({
   row: T;
   columns: ExcelColumn<T>[];
   stickyOffsets: Array<number | undefined>;
+  isMobile: boolean;
   rowClassName?: string;
   isSelected: boolean;
   ariaLabel?: string;
@@ -446,10 +446,11 @@ function ExcelTableRowImpl<T extends { id: string }>({
     >
       {hasSelection && (
         <td
-          style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: 0 }}
+          style={{ minWidth: SELECT_COLUMN_WIDTH, width: SELECT_COLUMN_WIDTH, left: isMobile ? undefined : 0 }}
           className={cn(
             tableDensity.rowHeight,
-            "sticky left-0 z-10 border-r border-b border-r-border/30 border-b-border/60 bg-secondary pl-2.5 pr-0 text-center group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+            "border-r border-b border-r-border/30 border-b-border/60 bg-card pl-2.5 pr-0 text-center group-hover/excel-row:bg-table-hover",
+            isMobile ? undefined : "sticky left-0 z-10 shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
           )}
           onClick={(event) => event.stopPropagation()}
         >
@@ -478,7 +479,7 @@ function ExcelTableRowImpl<T extends { id: string }>({
               tableDensity.cellPaddingX,
               tableDensity.cellPaddingY,
               "border-r border-b border-r-border/30 border-b-border/60 font-normal text-foreground",
-              isSticky && "sticky z-10 bg-secondary font-semibold group-hover/excel-row:bg-secondary shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
+              isSticky && "sticky z-10 bg-card font-semibold group-hover/excel-row:bg-table-hover shadow-[6px_0_12px_-12px_hsl(var(--foreground))]",
             )}
             title={value === EMPTY_VALUE ? undefined : value}
           >

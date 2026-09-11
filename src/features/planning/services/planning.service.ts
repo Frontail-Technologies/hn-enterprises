@@ -126,6 +126,7 @@ function mapDprRecord(raw: BackendDprRecord): DprRecord {
     customerName: raw.customer?.name ?? "",
     customerTrBpNo: raw.customer?.trBpNumber ?? "",
     projectId: raw.projectId,
+    projectName: raw.project?.name ?? "",
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
     supervisorId: raw.supervisorId,

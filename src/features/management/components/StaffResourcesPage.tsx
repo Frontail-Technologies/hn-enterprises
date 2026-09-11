@@ -2,24 +2,25 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DownloadSimpleIcon, EyeIcon, NotePencilIcon, TrashIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, EyeIcon, MagnifyingGlassIcon, NotePencilIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { FilterDialog } from "@/components/shared/FilterDialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useStaffQuery, useDeleteStaff, useStaffDeleteImpactQuery, useBulkDeleteStaff } from "../hooks/useStaff";
-import { useUsersQuery } from "../hooks/useUsers";
+import { useStaffQuery } from "../hooks/useStaff";
+import { useBulkDeleteUsers, useDeleteUser, useUserDeleteImpactQuery, useUsersQuery } from "../hooks/useUsers";
 import type { Staff } from "../types/staff.types";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { StaffDrawer } from "./StaffDrawer";
-import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
-import { PageShell } from "./shared/PageShell";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
+import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
+import { PageShell } from "@/components/shared/PageShell";
+import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 
 const exportColumns: ExportColumn<Staff>[] = [
   { label: "Name", getValue: (row) => row.name },
@@ -38,10 +39,16 @@ export function StaffResourcesPage() {
   const { data: users = [] } = useUsersQuery();
   const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const bulkDelete = useBulkDeleteStaff();
+  const bulkDelete = useBulkDeleteUsers();
+  // Selection is keyed by staff.id (the table's row identity); the canonical
+  // delete workflow operates on the linked user id (remove-staff-block brief §8).
+  const userIdByStaffId = useMemo(() => new Map(staff.map((row) => [row.id, row.userId])), [staff]);
 
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    const userIds = Array.from(selectedIds)
+      .map((staffId) => userIdByStaffId.get(staffId))
+      .filter((id): id is string => Boolean(id));
+    await bulkDelete.mutateAsync(userIds);
     setDeleteOpen(false);
     clear();
   }
@@ -102,37 +109,49 @@ export function StaffResourcesPage() {
   return (
     <PageShell
       title="Supervisors"
-      subtitle="Manage field supervisors — payroll details linked to their real login."
+      icon={UsersThreeIcon}
       actions={
         <>
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search supervisors or mobile..."
-            title="Supervisor Filters"
-            values={filters}
-            filters={[
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: uniqOptions(staff.map((row) => row.status)),
-              },
-            ]}
-            onChange={(key, value) =>
-              setFilters((current) => ({ ...current, [key]: value }))
-            }
-            onReset={() => setFilters({ search: "", status: "all" })}
-          />
-          <button
-            type="button"
-            className={buttonVariants({ variant: "outline", size: "default" })}
-            onClick={() => void exportRowsToExcel("supervisors.xlsx", exportColumns, data)}
-          >
-            <DownloadSimpleIcon size={15} />
-            Export Excel
-          </button>
+          <div className="relative min-w-0 sm:w-64">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
+            <Input
+              placeholder="Search supervisors or mobile..."
+              value={filters.search}
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+              className="h-8 w-full max-w-full pl-8 sm:w-64"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <FilterDialog
+              title="Supervisor Filters"
+              values={filters}
+              filters={[
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: uniqOptions(staff.map((row) => row.status)),
+                },
+              ]}
+              onChange={(key, value) =>
+                setFilters((current) => ({ ...current, [key]: value }))
+              }
+              onReset={() => setFilters((current) => ({ ...current, status: "all" }))}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              onClick={() => void exportRowsToExcel("supervisors.xlsx", exportColumns, data)}
+            >
+              <DownloadSimpleIcon size={12} />
+              Export
+            </Button>
+          </div>
           <StaffDrawer users={users} staffedUserIds={staffedUserIds} />
         </>
       }
+      contentClassName="space-y-3"
     >
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
@@ -156,7 +175,7 @@ export function StaffResourcesPage() {
         entityLabelPlural="Supervisors"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
-        note="This deactivates the linked login, matching the existing single-record delete - it does not erase the supervisor record."
+        note="This permanently removes each account and its current staff profile, and clears any active site assignments. Historical activity, audit records and payroll/business history are preserved."
       />
     </PageShell>
   );
@@ -164,34 +183,33 @@ export function StaffResourcesPage() {
 
 function StaffDeleteAction({ staff }: { staff: Staff }) {
   const [open, setOpen] = useState(false);
-  const deleteStaff = useDeleteStaff();
-  const deleteImpact = useStaffDeleteImpactQuery(staff.id, { enabled: open });
+  // Canonical user hard-delete workflow, keyed by the linked user id - the
+  // same one Users & Roles uses (remove-staff-block brief §8). There is no
+  // staff-scoped delete anymore: deleting here permanently removes the
+  // account, and the current staff profile goes with it automatically
+  // (staff.userId is ON DELETE CASCADE).
+  const deleteUser = useDeleteUser();
+  const deleteImpact = useUserDeleteImpactQuery(staff.userId, { enabled: open });
+
+  const activeAssignments = deleteImpact.data?.dependencies.find((d) => d.key === "activeSiteAssignments");
+  const note = activeAssignments && activeAssignments.count > 0
+    ? `This will remove the user account, remove the current staff profile, and release the email/mobile/login identifiers for reuse. Historical activity, audit records and payroll/business history will be preserved. This supervisor's ${activeAssignments.count} active site assignment${activeAssignments.count === 1 ? "" : "s"} will become Unassigned.`
+    : "This will remove the user account, remove the current staff profile, and release the email/mobile/login identifiers for reuse. Historical activity, audit records and payroll/business history will be preserved.";
 
   return (
-    <DeleteImpactDialog
+    <DeleteImpactAction
       open={open}
       onOpenChange={setOpen}
-      trigger={
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Delete ${staff.name}`}
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        >
-          <TrashIcon size={13} />
-        </Button>
-      }
+      itemName={staff.name}
       entityTypeLabel="Supervisor"
+      note={note}
+      confirmLabel="Delete Permanently"
       impact={deleteImpact.data}
-      isLoading={deleteImpact.isLoading}
-      isError={deleteImpact.isError}
-      onRetry={() => void deleteImpact.refetch()}
-      isConfirming={deleteStaff.isPending}
-      onConfirm={async () => {
-        await deleteStaff.mutateAsync(staff.id);
-        setOpen(false);
-      }}
+      isImpactLoading={deleteImpact.isLoading}
+      isImpactError={deleteImpact.isError}
+      onRetryImpact={() => void deleteImpact.refetch()}
+      isDeleting={deleteUser.isPending}
+      onDelete={() => deleteUser.mutateAsync(staff.userId)}
     />
   );
 }

@@ -6,4 +6,11 @@ export const tableDensity = {
   cellPaddingY: "py-1.5",
   checkboxSize: "size-3.5",
   pagerButtonHeight: "h-7",
+  headerBg: "bg-surface-muted",
+  headerText2: "text-foreground/75",
+  pinnedBodyBg: "bg-surface",
+  cellDividerColor: "border-border",
+  rowBottomBorder: "border-b-border",
+  pinnedRegionDivider: "border-border",
+  hoverBg: "hover:bg-surface-hover",
 } as const;

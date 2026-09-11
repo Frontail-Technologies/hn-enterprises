@@ -12,6 +12,12 @@ export function projectLabel(projectId: string | "" | null | undefined, projectN
   return projectNameById.get(projectId) ?? "Central / Unassigned";
 }
 
+/** Same fallback semantics as projectLabel, sourced from a server-joined name instead of a client-built id->name Map. */
+export function projectLabelFromName(projectId: string | "" | null | undefined, projectName: string | "" | null | undefined) {
+  if (!projectId) return "Central / Unassigned";
+  return projectName || "Central / Unassigned";
+}
+
 export function computeStockStatus(balance: number, reorderLevel: number): MaterialStatus {
   if (balance <= 0) return "Out of Stock";
   if (balance <= reorderLevel) return "Low Stock";

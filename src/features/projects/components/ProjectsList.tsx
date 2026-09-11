@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CaretDownIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
+import { BuildingsIcon, CaretDownIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -84,10 +84,10 @@ export function ProjectsList() {
   return (
     <PageShell
       title="Projects"
-      subtitle="Manage project contracts, cities, clients, and status."
+      icon={BuildingsIcon}
       actions={
         <>
-          <div className="relative w-70 shrink-0 sm:w-80">
+          <div className="relative min-w-0 sm:w-80 sm:shrink-0">
             <MagnifyingGlassIcon
               size={15}
               className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
@@ -96,34 +96,36 @@ export function ProjectsList() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search projects..."
-              className="h-9 pl-9"
+              className="h-8 w-full pl-9"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline">
-                  More
-                  <CaretDownIcon size={14} />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
-              >
-                <DownloadSimpleIcon size={14} />
-                Export Excel
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Link
-            href="/projects/new"
-            className={buttonVariants({ variant: "default", size: "default" })}
-          >
-            <PlusIcon size={15} />
-            New Project
-          </Link>
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline" size="compact">
+                    More
+                    <CaretDownIcon size={12} />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
+                >
+                  <DownloadSimpleIcon size={14} />
+                  Export Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link
+              href="/projects/new"
+              className={buttonVariants({ variant: "default", size: "compact" })}
+            >
+              <PlusIcon size={13} />
+              New Project
+            </Link>
+          </div>
         </>
       }
       fillHeight

@@ -14,9 +14,9 @@ export function BulkDeleteBar({ selectedCount, onClear, onDelete, label = "Delet
   if (selectedCount === 0) return null;
 
   return (
-    <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-primary/5 px-4 py-2.5">
+    <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-2.5 shadow-subtle">
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <span>{selectedCount} selected</span>
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{selectedCount} selected</span>
         <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={onClear}>
           <XIcon size={13} />
           Clear

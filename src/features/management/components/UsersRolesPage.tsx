@@ -2,29 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CaretDownIcon, DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon, UploadSimpleIcon, UserGearIcon } from "@phosphor-icons/react";
 import { type ColumnDef } from "@/components/shared/DataTable";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { FilterDialog } from "@/components/shared/FilterDialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useDownloadUserRegister } from "@/features/exports/hooks/useExports";
 import { useUsersQuery } from "../hooks/useUsers";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { ROLE_TO_BACKEND, STATUS_TO_BACKEND, type User, type UserRole, type UserStatus } from "../services/users.service";
-import { UserDrawer } from "./UserDrawer";
-import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
-import { useBulkDeleteUsers, useDeleteUser, useUpdateUser, useUserDeleteImpactQuery } from "../hooks/useUsers";
-import { PageShell } from "./shared/PageShell";
-import { PaginatedDataTable } from "./shared/PaginatedDataTable";
+import { UserDialog } from "./UserDialog";
+import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
+import { useBulkDeleteUsers, useDeleteUser, useUserDeleteImpactQuery } from "../hooks/useUsers";
+import { PageShell } from "@/components/shared/PageShell";
+import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 
 export function UsersRolesPage() {
   const router = useRouter();
@@ -93,7 +88,7 @@ export function UsersRolesPage() {
       className: "w-24",
       render: (row) => (
         <div className="flex items-center gap-1">
-          <UserDrawer user={row} iconOnly />
+          <UserDialog user={row} iconOnly />
           <UserDeleteAction user={row} />
         </div>
       ),
@@ -102,56 +97,56 @@ export function UsersRolesPage() {
   return (
     <PageShell
       title="Users & Roles"
-      subtitle="Admin access management and permission control."
+      icon={UserGearIcon}
       actions={
         <>
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search user or username..."
-            title="User Filters"
-            values={filters}
-            filters={[
-              {
-                key: "role",
-                placeholder: "All Roles",
-                options: uniqOptions(users.map((row) => row.role)),
-              },
-              {
-                key: "status",
-                placeholder: "All Statuses",
-                options: uniqOptions(users.map((row) => row.status)),
-              },
-            ]}
-            onChange={(key, value) =>
-              setFilters((current) => ({ ...current, [key]: value }))
-            }
-            onReset={() => setFilters({ search: "", role: "all", status: "all" })}
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline">
-                  More
-                  <CaretDownIcon size={14} />
-                </Button>
-              }
+          <div className="relative min-w-0 sm:w-60">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
+            <Input
+              placeholder="Search user or username..."
+              value={filters.search}
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+              className="h-8 w-full max-w-full pl-8 sm:w-60"
             />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportRegister} disabled={downloadRegister.isPending}>
-                <DownloadSimpleIcon size={14} />
-                {downloadRegister.isPending ? "Exporting..." : "Export Excel"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/users/import")}>
-                <UploadSimpleIcon size={14} />
-                Import Users
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          </div>
 
-          <UserDrawer />
+          <div className="grid grid-cols-3 gap-2 sm:contents">
+            <FilterDialog
+              title="User Filters"
+              values={filters}
+              filters={[
+                {
+                  key: "role",
+                  placeholder: "All Roles",
+                  options: uniqOptions(users.map((row) => row.role)),
+                },
+                {
+                  key: "status",
+                  placeholder: "All Statuses",
+                  options: uniqOptions(users.map((row) => row.status)),
+                },
+              ]}
+              onChange={(key, value) =>
+                setFilters((current) => ({ ...current, [key]: value }))
+              }
+              onReset={() => setFilters((current) => ({ ...current, role: "all", status: "all" }))}
+            />
+
+            <Button type="button" variant="outline" size="compact" onClick={handleExportRegister} disabled={downloadRegister.isPending}>
+              <DownloadSimpleIcon size={12} />
+              {downloadRegister.isPending ? "Exporting..." : "Export"}
+            </Button>
+
+            <Button type="button" variant="outline" size="compact" onClick={() => router.push("/users/import")}>
+              <UploadSimpleIcon size={12} />
+              Import
+            </Button>
+          </div>
+
+          <UserDialog />
         </>
       }
+      contentClassName="space-y-3"
     >
       <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
       <PaginatedDataTable
@@ -183,47 +178,30 @@ export function UsersRolesPage() {
 function UserDeleteAction({ user }: { user: User }) {
   const [open, setOpen] = useState(false);
   const deleteUser = useDeleteUser();
-  const deactivateUser = useUpdateUser(user.id);
   const deleteImpact = useUserDeleteImpactQuery(user.id, { enabled: open });
 
+  // No dependency ever blocks this anymore (remove-staff-block brief §7) -
+  // there is deliberately no "Deactivate" fallback action here; a forced
+  // deactivate-instead-of-delete path no longer applies to any user.
+  const activeAssignments = deleteImpact.data?.dependencies.find((d) => d.key === "activeSiteAssignments");
+  const note = activeAssignments && activeAssignments.count > 0
+    ? `This will remove the user account, remove the current staff profile (if any), and release the email/mobile/login identifiers for reuse. Historical activity, audit records and payroll/business history will be preserved. This user's ${activeAssignments.count} active site assignment${activeAssignments.count === 1 ? "" : "s"} will become Unassigned.`
+    : "This will remove the user account, remove the current staff profile (if any), and release the email/mobile/login identifiers for reuse. Historical activity, audit records and payroll/business history will be preserved.";
+
   return (
-    <DeleteImpactDialog
+    <DeleteImpactAction
       open={open}
       onOpenChange={setOpen}
-      trigger={
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Delete ${user.name}`}
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        >
-          <TrashIcon size={13} />
-        </Button>
-      }
+      itemName={user.name}
       entityTypeLabel="User"
       impact={deleteImpact.data}
-      isLoading={deleteImpact.isLoading}
-      isError={deleteImpact.isError}
-      onRetry={() => void deleteImpact.refetch()}
-      isConfirming={deleteUser.isPending}
-      onConfirm={async () => {
-        await deleteUser.mutateAsync(user.id);
-        setOpen(false);
-      }}
-      isArchiving={deactivateUser.isPending}
-      archiveLabel="Deactivate User"
-      onArchive={async () => {
-        await deactivateUser.mutateAsync({
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          mobile: user.mobile,
-          role: user.role,
-          status: "Inactive",
-        });
-        setOpen(false);
-      }}
+      note={note}
+      confirmLabel="Delete Permanently"
+      isImpactLoading={deleteImpact.isLoading}
+      isImpactError={deleteImpact.isError}
+      onRetryImpact={() => void deleteImpact.refetch()}
+      isDeleting={deleteUser.isPending}
+      onDelete={() => deleteUser.mutateAsync(user.id)}
     />
   );
 }

@@ -19,7 +19,7 @@ export function useCreateAnnouncement() {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement created successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to create announcement"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to create announcement"),
   });
 }
 
@@ -31,7 +31,7 @@ export function useUpdateAnnouncement(id: string) {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement updated successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to update announcement"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to update announcement"),
   });
 }
 
@@ -49,7 +49,7 @@ export function usePublishAnnouncement() {
         );
       }
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to publish announcement"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to publish announcement"),
   });
 }
 
@@ -67,7 +67,7 @@ export function useRepublishAnnouncement() {
         );
       }
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to re-push announcement"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to re-push announcement"),
   });
 }
 
@@ -79,7 +79,7 @@ export function useDeleteAnnouncement() {
       queryClient.invalidateQueries({ queryKey: announcementsKey });
       toast.success("Announcement deleted successfully");
     },
-    onError: (error: any) => toast.error(error?.message || "Failed to delete announcement"),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete announcement"),
   });
 }
 

@@ -10,9 +10,18 @@ const buttonVariants = cva(
       variant: {
         default: "app-primary-action bg-primary text-white hover:bg-primary/80 hover:text-white",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-card hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        /**
+         * Secondary ACTION button: navy/blue, backed by `--secondary-action`.
+         * Deliberately NOT backed by `--secondary`/`bg-secondary` - that
+         * token is a separate warm neutral-surface color used app-wide for
+         * non-Button surfaces (table headers, badges, sticky columns, etc.,
+         * see globals.css and grep for `bg-secondary`). Repointing this
+         * variant to `--secondary-action` keeps that neutral-surface token
+         * completely unchanged everywhere else it's used.
+         */
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary-action text-secondary-action-foreground hover:bg-[color-mix(in_oklch,var(--secondary-action),white_14%)] aria-expanded:bg-secondary-action aria-expanded:text-secondary-action-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
@@ -22,10 +31,13 @@ const buttonVariants = cva(
       size: {
         default:
           "h-9 gap-2 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+        compact:
+          "h-8 gap-1.5 rounded-md px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         icon: "size-8",
+        "icon-compact": "size-8 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":

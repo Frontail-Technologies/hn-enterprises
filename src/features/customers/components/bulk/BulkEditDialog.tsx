@@ -24,7 +24,6 @@ import type { CustomerBulkChanges, CustomerBulkFieldKey } from "../../types/cust
 import { BulkFieldControl } from "./BulkFieldControl";
 
 const EDITABLE_FIELDS: CustomerBulkFieldKey[] = [
-  "supervisorId",
   "plumberId",
   "projectId",
   "siteId",
@@ -128,14 +127,6 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           <BulkEditSection title="Assignment">
-            <BulkFieldRow label="Supervisor" checked={checked.supervisorId} onToggle={() => toggle("supervisorId")}>
-              <BulkFieldControl
-                field="supervisorId"
-                value={values.supervisorId}
-                onChange={(value) => setValue("supervisorId", value)}
-                fieldOptions={fieldOptions}
-              />
-            </BulkFieldRow>
             <BulkFieldRow label="Plumber" checked={checked.plumberId} onToggle={() => toggle("plumberId")}>
               <BulkFieldControl
                 field="plumberId"

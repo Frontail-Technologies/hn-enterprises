@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { tabItemClassName } from "@/components/shared/tabs/tab-style";
 
 export type SectionAnchorTabItem = {
   href: string;
@@ -43,12 +44,12 @@ export function SectionAnchorTabs({
   return (
     <nav
       className={cn(
-        "sticky top-[0px] z-40 -mx-1 overflow-x-auto  bg-background px-1 backdrop-blur",
+        "sticky top-0 z-40 -mx-1 overflow-x-auto overflow-y-hidden bg-background px-1 backdrop-blur",
         className,
       )}
       aria-label="Section navigation"
     >
-      <div className="flex w-max min-w-full items-center gap-6">
+      <div className="flex w-max min-w-full items-center gap-1 border-b border-border">
         {items.map((item) => {
           const active = activeHref === item.href;
 
@@ -61,7 +62,7 @@ export function SectionAnchorTabs({
               }}
               data-active={active}
               onClick={() => setActiveHref(item.href)}
-              className="inline-flex h-10 shrink-0 items-center border-b-2 border-b-transparent px-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:border-b-primary data-[active=true]:font-semibold data-[active=true]:text-primary"
+              className={tabItemClassName(active)}
             >
               {item.label}
             </Link>

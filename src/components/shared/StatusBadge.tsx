@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 
@@ -54,14 +55,16 @@ const STATUS_GROUP: Record<StatusValue, StatusGroup> = {
 }
 
 
-const GROUP_CLASSES: Record<StatusGroup, string> = {
-  success:     'bg-status-success-bg text-status-success-fg border-status-success/20',
-  warning:     'bg-status-warning-bg text-status-warning-fg border-status-warning/20',
-  primary:     'bg-primary/10 text-accent-foreground border-primary/20',
-  info:        'bg-status-info-bg text-status-info-fg border-status-info/20',
-  purple:      'bg-status-purple-bg text-status-purple-fg border-status-purple/20',
-  destructive: 'bg-destructive/10 text-destructive border-destructive/20',
-  neutral:     'bg-muted text-muted-foreground border-border',
+type GroupBadgeVariant = 'success' | 'warning' | 'primary' | 'info' | 'purple' | 'destructive' | 'secondary'
+
+const GROUP_VARIANT: Record<StatusGroup, { variant: GroupBadgeVariant; border?: string }> = {
+  success:     { variant: 'success' },
+  warning:     { variant: 'warning' },
+  primary:     { variant: 'primary' },
+  info:        { variant: 'info' },
+  purple:      { variant: 'purple' },
+  destructive: { variant: 'destructive', border: 'border-destructive/20' },
+  neutral:     { variant: 'secondary', border: 'border-border' },
 }
 
 interface StatusBadgeProps {
@@ -71,17 +74,11 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const group = STATUS_GROUP[status as StatusValue] ?? 'neutral'
-  const colorClasses = GROUP_CLASSES[group]
+  const { variant, border } = GROUP_VARIANT[group]
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center text-xs font-medium px-2 py-0.5 border rounded-full',
-        colorClasses,
-        className
-      )}
-    >
+    <Badge variant={variant} className={cn(border, className)}>
       {status}
-    </span>
+    </Badge>
   )
 }

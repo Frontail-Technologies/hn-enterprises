@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { RowSelectionState } from "@tanstack/react-table";
 
 export function useBulkCustomerSelection(filterSignature: string) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const seenSignature = useRef<string | null>(null);
 
   useEffect(() => {
@@ -13,39 +14,41 @@ export function useBulkCustomerSelection(filterSignature: string) {
     if (seenSignature.current === filterSignature) return;
     seenSignature.current = filterSignature;
 
-    setSelectedIds((current) => {
-      if (current.size === 0) return current;
+    setRowSelection((current) => {
+      if (Object.keys(current).length === 0) return current;
       toast.info("Selection cleared because filters changed.");
-      return new Set();
+      return {};
     });
   }, [filterSignature]);
 
+  const selectedIds = useMemo(() => new Set(Object.keys(rowSelection)), [rowSelection]);
+
   const toggleRow = useCallback((id: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+    setRowSelection((current) => {
+      const next = { ...current };
+      if (next[id]) delete next[id];
+      else next[id] = true;
       return next;
     });
   }, []);
 
   const toggleAllOnPage = useCallback((pageIds: string[]) => {
-    setSelectedIds((current) => {
-      const allSelected = pageIds.length > 0 && pageIds.every((id) => current.has(id));
-      const next = new Set(current);
+    setRowSelection((current) => {
+      const allSelected = pageIds.length > 0 && pageIds.every((id) => current[id]);
+      const next = { ...current };
       for (const id of pageIds) {
-        if (allSelected) next.delete(id);
-        else next.add(id);
+        if (allSelected) delete next[id];
+        else next[id] = true;
       }
       return next;
     });
   }, []);
 
   const selectAllMatching = useCallback((filteredIds: string[]) => {
-    setSelectedIds(new Set(filteredIds));
+    setRowSelection(Object.fromEntries(filteredIds.map((id) => [id, true as const])));
   }, []);
 
-  const clear = useCallback(() => setSelectedIds(new Set()), []);
+  const clear = useCallback(() => setRowSelection({}), []);
 
-  return { selectedIds, toggleRow, toggleAllOnPage, selectAllMatching, clear };
+  return { selectedIds, rowSelection, setRowSelection, toggleRow, toggleAllOnPage, selectAllMatching, clear };
 }

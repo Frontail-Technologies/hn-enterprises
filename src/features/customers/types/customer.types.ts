@@ -85,8 +85,6 @@ export type CustomerConnectionDetails = {
   scheme: string;
   plumberId: string;
   plumberName: string;
-  supervisorId: string;
-  supervisorName: string;
   jobCardDone: string;
   connectionType: ConnectionType;
   houseType: string;
@@ -351,4 +349,11 @@ export type CustomerDocument = {
   uploadedOn: string;
   uploadedBy: string;
   status: StatusValue;
+};
+
+export type CustomerNote = {
+  id: string;
+  note: string;
+  createdAt: string;
+  authorName: string | null;
 };

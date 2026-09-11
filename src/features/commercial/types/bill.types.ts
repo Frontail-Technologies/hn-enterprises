@@ -5,6 +5,8 @@ export type PaymentMode = string;
 export type Bill = {
   id: string;
   projectId: string;
+  /** Server-joined from projects - no need to load the full projects list to resolve this. */
+  projectName: string;
   billNumber: string;
   billDate: string;
   dueDate: string;
