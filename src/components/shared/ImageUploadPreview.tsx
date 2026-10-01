@@ -42,7 +42,7 @@ export async function flushImageUploads(
   const uploaded = await Promise.all(
     pending.map(async (item) => {
       try {
-        const result = await uploadFile(item.file!, module, recordId);
+        const result = await uploadFile(item.file!, module, recordId, item.fileName);
         return { ...item, fileUrl: result.url, status: "uploaded" as const, file: undefined };
       } catch {
         return { ...item, status: "error" as const };
@@ -114,7 +114,7 @@ export function ImageUploadPreview({
   async function runUpload(item: ImagePreviewItem) {
     if (!item.file) return;
     try {
-      const uploaded = await uploadFile(item.file, module, recordId);
+      const uploaded = await uploadFile(item.file, module, recordId, item.fileName);
       update(
         itemsRef.current.map((current) =>
           current.id === item.id
@@ -134,11 +134,17 @@ export function ImageUploadPreview({
     if (inputRef.current) inputRef.current.value = "";
     if (!nextFiles.length) return;
 
+    const stamp = Date.now();
     const staged = nextFiles.map((file, index) => {
+      const extMatch = /\.[^.]+$/.exec(file.name);
+      const ext = extMatch ? extMatch[0] : "";
       const preview: ImagePreviewItem = {
-        id: `img-${Date.now()}-${index}`,
+        id: `img-${stamp}-${index}`,
         label: file.name.replace(/\.[^.]+$/, ""),
-        fileName: file.name,
+        // Semantic, non-identifying name sent to the server - mirrors the mobile
+        // app's upload naming (evidence-<timestamp>-<index>.ext) instead of the
+        // raw OS filename. The user-facing `label` keeps the friendly default.
+        fileName: `${module}-${stamp}-${index}${ext}`,
         previewUrl: URL.createObjectURL(file),
         uploadedOn: new Date().toISOString(),
         status: "staged",
@@ -236,7 +242,6 @@ export function ImageUploadPreview({
                   aria-label="Image label"
                 />
                 <AttachmentDescription className="mt-0">
-                  {item.fileName}
                   {item.status === "staged" ? (
                     <span className="ml-1.5 text-primary">Ready to save</span>
                   ) : null}

@@ -15,6 +15,7 @@ import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FilterDialog } from "@/components/shared/FilterDialog";
+import { PageLoading } from "@/components/shared/PageLoading";
 import { PageShell } from "@/components/shared/PageShell";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { formatCompactCount } from "@/lib/format";
@@ -152,7 +153,7 @@ export function PlanningEntryPage() {
 
         <section className="overflow-hidden rounded-lg border border-border/70 bg-card">
           {isLoading ? (
-            <p className="px-3 py-6 text-sm text-muted-foreground">Loading...</p>
+            <PageLoading className="min-h-24" />
           ) : isError ? (
             <div className="flex items-center justify-between gap-2 px-3 py-6">
               <p className="text-sm text-destructive">Unable to load planning data for this date.</p>

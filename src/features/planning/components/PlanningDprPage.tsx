@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PageShell } from "@/components/shared/PageShell";
+import { resolveFileUrl } from "@/lib/upload";
 import { DprGeneratedPreview } from "./DprGeneratedPreview";
 import { useDprRecordsQuery } from "../hooks/usePlanning";
 import { PageLoading } from "@/components/shared/PageLoading";
@@ -69,28 +70,30 @@ export function PlanningDprPage() {
       }
     >
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-lg border border-border/70 bg-card px-3 py-2">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Supervisor</p>
-            <p className="text-sm font-semibold text-foreground">{supervisorName}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Customer</p>
-            <p className="text-sm font-semibold text-foreground">{customerName}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">DPR Date</p>
-            <p className="text-sm font-semibold text-foreground">{date}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">{siteLabel}</p>
-            <p className="text-sm font-semibold text-primary">{totalCompleted} completed</p>
-          </div>
-        </div>
-
         {isLoading ? (
           <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-card" />
-        ) : !record ? (
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-lg border border-border/70 bg-card px-3 py-2">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Supervisor</p>
+              <p className="text-sm font-semibold text-foreground">{supervisorName}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Customer</p>
+              <p className="text-sm font-semibold text-foreground">{customerName}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">DPR Date</p>
+              <p className="text-sm font-semibold text-foreground">{date}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">{siteLabel}</p>
+              <p className="text-sm font-semibold text-primary">{totalCompleted} completed</p>
+            </div>
+          </div>
+        )}
+
+        {isLoading ? null : !record ? (
           <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
             No DPR filed for this site and date yet.
           </p>
@@ -151,13 +154,13 @@ export function PlanningDprPage() {
                   {record.evidence.map((file) => (
                     <a
                       key={file.id}
-                      href={file.fileUrl}
+                      href={resolveFileUrl(file.fileUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="block h-20 w-20 overflow-hidden rounded-md border border-border"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={file.fileUrl} alt={file.fileName} className="h-full w-full object-cover" />
+                      <img src={resolveFileUrl(file.fileUrl)} alt={file.fileName} className="h-full w-full object-cover" />
                     </a>
                   ))}
                 </div>

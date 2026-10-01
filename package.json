@@ -14,7 +14,8 @@
     "build:standalone": "next build && node scripts/copy-standalone-assets.js",
     "electron": "electron .",
     "electron:start": "npm run build:standalone && npm run electron",
-    "dist": "npm run build:standalone && electron-builder --win"
+    "dist": "npm run build:standalone && electron-builder --win",
+    "build:win:store": "npm run build:standalone && electron-builder --win msix"
   },
   "build": {
     "appId": "org.hnenterprises.desktop",
@@ -43,6 +44,14 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true
+    },
+    "msix": {
+      "displayName": "HN Enterprises",
+      "identityName": "PlaceholderPartnerCenterIdentityName",
+      "publisher": "CN=PlaceholderPartnerCenterPublisherId",
+      "publisherDisplayName": "Placeholder Partner Center Publisher Display Name",
+      "capabilities": [],
+      "createMsixupload": true
     }
   },
   "dependencies": {
@@ -85,7 +94,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "electron": "^43.3.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "27.0.0-alpha.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",

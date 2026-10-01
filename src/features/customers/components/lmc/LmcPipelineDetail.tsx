@@ -5,6 +5,7 @@ import { ImageSquareIcon } from "@phosphor-icons/react";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
+import { resolveFileUrl } from "@/lib/upload";
 import { lmcPipelineFields } from "../../config/lmc-fields";
 import { deriveLmcOverallStatus, pickCivilFields } from "../../model/lmc-pipeline.rules";
 import { evidenceFilesToPersistedImages, persistedImagesToEvidenceFiles } from "../../mappers/evidence.mapper";
@@ -97,7 +98,7 @@ function EvidencePreview({ files }: { files: LmcEvidenceFile[] }) {
         >
           {file.fileUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={file.fileUrl} alt={file.fileName} className="h-4 w-4 rounded-xs object-cover" />
+            <img src={resolveFileUrl(file.fileUrl)} alt={file.fileName} className="h-4 w-4 rounded-xs object-cover" />
           ) : (
             <ImageSquareIcon size={14} className="text-primary" />
           )}

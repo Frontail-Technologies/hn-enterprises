@@ -76,7 +76,22 @@ export function CustomerEvidencePanel({
   const [uploadOpen, setUploadOpen] = useState(false);
   const deleteDocumentMutation = useDeleteCustomerDocument(customerId ?? "");
   const handleDeleteDocument = customerId
-    ? (documentId: string) => deleteDocumentMutation.mutate(documentId)
+    ? (documentId: string) => {
+        // Evidence staged via "Save Evidence" but not yet persisted (see CustomerForm.tsx's
+        // onSubmit, which checks this same prefix) has no backend row to delete - calling the
+        // real DELETE endpoint for it 404s. Just drop it from local form state instead.
+        if (documentId.startsWith("cust-evidence-")) {
+          onDocumentsChange?.(documents.filter((doc) => doc.id !== documentId));
+          return;
+        }
+
+        deleteDocumentMutation.mutate(documentId, {
+          // `documents` here is React Hook Form field state (see CustomerForm.tsx), not
+          // the live query cache - invalidating the query alone doesn't remove the item
+          // from this already-rendered form state, so it stays visible until a reload.
+          onSuccess: () => onDocumentsChange?.(documents.filter((doc) => doc.id !== documentId)),
+        });
+      }
     : undefined;
 
   const surveyPhotos = (survey?.evidence ?? []).map((photo) => ({
@@ -85,6 +100,7 @@ export function CustomerEvidencePanel({
     caption: photo.caption,
     fileName: photo.fileName,
     fileUrl: photo.fileUrl,
+    previewUrl: photo.previewUrl,
     status: survey?.approvalStatus ?? "Submitted",
     uploadedOn: survey?.surveyDate ?? "",
   }));
@@ -97,6 +113,7 @@ export function CustomerEvidencePanel({
         caption: pipe.remarks || pipe.jointFittingDetails || "Pipe evidence",
         fileName: file.fileName,
         fileUrl: file.fileUrl,
+        previewUrl: file.previewUrl,
         status: pipe.purgingStatus,
         uploadedOn: pipe.purgingDate || pipe.testingDate || pipe.layingDate,
       })),
@@ -244,6 +261,7 @@ function CustomerEvidenceUpload({
         fileName: image.fileName,
         fileUrl: image.fileUrl,
         file: image.file,
+        previewUrl: image.previewUrl,
         remarks,
         uploadedOn: evidenceDate || today,
         uploadedBy: "Demo Admin",
@@ -490,6 +508,7 @@ type EvidenceItem = {
   caption: string;
   fileName: string;
   fileUrl?: string;
+  previewUrl?: string;
   documentId?: string;
   status: string;
   uploadedOn: string;
@@ -516,7 +535,11 @@ function MediaSection({
           <div className="flex flex-wrap gap-2">
             {items.map((item) => {
               const href = resolveFileUrl(item.fileUrl);
-              const isImage = href && isImageFile(item.fileName);
+              // Fall back to the local blob preview when the real upload hasn't happened yet
+              // (e.g. evidence staged in the form but not persisted until "Save Changes") -
+              // mirrors the same fallback ImageUploadPreview uses for its own thumbnails.
+              const thumbSrc = href || item.previewUrl;
+              const isImage = thumbSrc && isImageFile(item.fileName);
               return (
                 <div key={item.id} className="relative">
                   <button
@@ -532,7 +555,7 @@ function MediaSection({
                     {isImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={href}
+                        src={thumbSrc}
                         alt={item.fileName}
                         className="h-full w-full object-cover"
                       />
@@ -581,7 +604,7 @@ function MediaSection({
           {previewItem ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={resolveFileUrl(previewItem.fileUrl)}
+              src={resolveFileUrl(previewItem.fileUrl) || previewItem.previewUrl}
               alt={previewItem.fileName}
               className="max-h-[70vh] w-full rounded-md object-contain"
             />
@@ -685,6 +708,7 @@ function documentToEvidence(document: CustomerDocument): EvidenceItem {
     caption: document.remarks || `Uploaded on ${document.uploadedOn || "-"}`,
     fileName: document.fileName,
     fileUrl: document.fileUrl,
+    previewUrl: document.previewUrl,
     documentId: document.id,
     status: document.status,
     uploadedOn: document.uploadedOn || document.issueDate,

@@ -171,7 +171,6 @@ export function ExcelDataGrid<T extends { id: string }>({
         className={cn(
           "flex flex-col bg-card",
           isFullViewActive ? "rounded-none" : "rounded-card border border-border",
-          effectiveFillHeight && "h-full min-h-0 flex-1",
         )}
       >
         <EmptyState title={emptyTitle} />

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
 import type { DeleteImpactAction, DeleteImpactDependency, DeleteImpactResult } from "./delete-impact.types";
 
@@ -87,6 +88,10 @@ export function DeleteImpactDialog({
   const [confirmText, setConfirmText] = useState("");
 
   function handleOpenChange(nextOpen: boolean) {
+    // Ignore any close attempt (Escape, outside click, Cancel) while the delete/archive
+    // request is in flight - otherwise the dialog can vanish well before the request
+    // actually finishes, with the row only updating/disappearing a moment later once it does.
+    if (!nextOpen && (isConfirming || isArchiving)) return;
     if (nextOpen) setConfirmText("");
     onOpenChange(nextOpen);
   }
@@ -197,14 +202,28 @@ export function DeleteImpactDialog({
 
         <DialogFooter className="mx-0 mb-0 shrink-0 flex-row justify-end rounded-b-xl border-t bg-muted/50 p-4">
           {impact && impact.blockers.length > 0 && onArchive ? (
-            <Button type="button" variant="outline" onClick={handleArchive} disabled={isArchiving}>
-              {isArchiving ? "Archiving..." : (archiveLabel ?? `Archive ${entityTypeLabel}`)}
+            <Button type="button" variant="outline" onClick={handleArchive} disabled={isArchiving || isConfirming}>
+              {isArchiving ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-1.5 inline-flex" />
+                  Archiving...
+                </>
+              ) : (
+                archiveLabel ?? `Archive ${entityTypeLabel}`
+              )}
             </Button>
           ) : null}
-          <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
+          <DialogClose render={<Button type="button" variant="outline" disabled={isConfirming || isArchiving} />}>Cancel</DialogClose>
           {impact?.canDelete ? (
             <Button type="button" variant="destructive" onClick={handleConfirm} disabled={!canConfirm}>
-              {isConfirming ? `${action.ing}...` : deleteCtaLabel}
+              {isConfirming ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-1.5 inline-flex" />
+                  {action.ing}...
+                </>
+              ) : (
+                deleteCtaLabel
+              )}
             </Button>
           ) : null}
         </DialogFooter>

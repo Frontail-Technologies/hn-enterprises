@@ -7,9 +7,9 @@ export type UploadedFile = {
   url: string;
 };
 
-export async function uploadFile(file: File, module: string, recordId?: string): Promise<UploadedFile> {
+export async function uploadFile(file: File, module: string, recordId?: string, fileName?: string): Promise<UploadedFile> {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file, fileName ?? file.name);
   formData.append("module", module);
   if (recordId) formData.append("recordId", recordId);
 

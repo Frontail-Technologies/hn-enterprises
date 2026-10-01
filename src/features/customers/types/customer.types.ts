@@ -345,6 +345,10 @@ export type CustomerDocument = {
   fileName: string;
   fileUrl?: string;
   file?: File;
+  // Local blob preview for a staged-but-not-yet-uploaded file (see ImagePreviewItem.previewUrl) -
+  // this document isn't persisted/uploaded until the customer form's "Save Changes" submits it,
+  // so fileUrl is empty until then; previewUrl is the only thing available to display meanwhile.
+  previewUrl?: string;
   remarks: string;
   uploadedOn: string;
   uploadedBy: string;

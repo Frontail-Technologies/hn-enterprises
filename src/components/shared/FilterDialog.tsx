@@ -101,16 +101,20 @@ export function FilterDialog({
               <Label className="text-xs font-medium text-muted-foreground">{filter.placeholder}</Label>
               {filter.type === "dateRange" ? (
                 <div className="flex items-center gap-2">
-                  <DatePicker
-                    value={draftValues[filter.key] || undefined}
-                    onChange={(value) => updateDraft(filter.key, value)}
-                    placeholder="From"
-                  />
-                  <DatePicker
-                    value={filter.toKey ? draftValues[filter.toKey] || undefined : undefined}
-                    onChange={(value) => filter.toKey && updateDraft(filter.toKey, value)}
-                    placeholder="To"
-                  />
+                  <div className="min-w-0 flex-1">
+                    <DatePicker
+                      value={draftValues[filter.key] || undefined}
+                      onChange={(value) => updateDraft(filter.key, value)}
+                      placeholder="From"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DatePicker
+                      value={filter.toKey ? draftValues[filter.toKey] || undefined : undefined}
+                      onChange={(value) => filter.toKey && updateDraft(filter.toKey, value)}
+                      placeholder="To"
+                    />
+                  </div>
                 </div>
               ) : (
                 <FilterSelectField

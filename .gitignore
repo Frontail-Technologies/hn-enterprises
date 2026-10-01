@@ -18,7 +18,9 @@
 /out/
 
 # production
-/build
+/build/*
+# MSIX/AppX Store assets (StoreLogo, Square44x44Logo, etc.) - committed brand assets, not build output
+!/build/appx
 /dist-electron
 
 # misc
