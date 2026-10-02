@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeftIcon, CaretRightIcon, CheckCircleIcon, DownloadSimpleIcon, FileCsvIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, CaretRightIcon, CheckCircleIcon, DownloadSimpleIcon, FileCsvIcon, XIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
@@ -15,6 +15,12 @@ import { useImportWorkspace } from "./useImportWorkspace";
 import type { ImportWorkspaceConfig } from "./types";
 
 const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".csv"];
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const VIEWPORT_HEIGHT_CLASS = "md:flex md:h-[calc(100dvh-4.5rem)] md:min-h-0 md:flex-col";
 
@@ -117,7 +123,11 @@ export function ImportWorkspace<TData>({
           <section className="rounded-lg border border-border/70 bg-card p-4">
             <div
               className={`flex min-h-[50vh] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 text-center transition-colors ${
-                isDragging ? "border-primary bg-primary/10" : "border-border/80 bg-muted/10 hover:bg-muted/30"
+                isDragging
+                  ? "border-primary bg-primary/10"
+                  : selectedFile
+                    ? "border-success/50 bg-success/5"
+                    : "border-border/80 bg-muted/10 hover:bg-muted/30"
               }`}
               onClick={() => inputRef.current?.click()}
               onDragOver={(event) => {
@@ -134,17 +144,40 @@ export function ImportWorkspace<TData>({
                 pickFile(event.dataTransfer.files[0]);
               }}
             >
-              <FileCsvIcon size={48} className="text-muted-foreground/40" />
-              <p className="text-base font-semibold text-foreground">
-                Drag &amp; drop your file or <span className="cursor-pointer underline">choose a file</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {selectedFile ? (
-                  <span className="font-medium text-foreground">{selectedFile.name}</span>
-                ) : (
-                  "Supported formats: .xlsx, .xls, .csv"
-                )}
-              </p>
+              {selectedFile ? (
+                <>
+                  <CheckCircleIcon size={48} weight="fill" className="text-success" />
+                  <p className="text-base font-semibold text-foreground">File selected</p>
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm">
+                    <FileCsvIcon size={16} className="shrink-0 text-success" />
+                    <span className="max-w-72 truncate font-medium text-foreground">{selectedFile.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</span>
+                    <button
+                      type="button"
+                      aria-label="Remove selected file"
+                      className="ml-1 shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedFile(null);
+                        if (inputRef.current) inputRef.current.value = "";
+                      }}
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Drag &amp; drop a different file or <span className="cursor-pointer underline">choose another</span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <FileCsvIcon size={48} className="text-muted-foreground/40" />
+                  <p className="text-base font-semibold text-foreground">
+                    Drag &amp; drop your file or <span className="cursor-pointer underline">choose a file</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">Supported formats: .xlsx, .xls, .csv</p>
+                </>
+              )}
               <input
                 ref={inputRef}
                 type="file"
