@@ -179,9 +179,6 @@ function ProjectFormFields({
               <FormField label="Contract Value">
                 <Input {...register("contractValue")} placeholder="Rs 12.50 Cr" />
               </FormField>
-              <FormField label="Assigned Supervisor / Project Manager">
-                <Input {...register("assignedManager")} placeholder="Manager name" />
-              </FormField>
               <FormField label="Description" className="md:col-span-2 xl:col-span-3">
                 <Textarea {...register("description")} placeholder="Brief project scope and notes" className="min-h-28" />
               </FormField>

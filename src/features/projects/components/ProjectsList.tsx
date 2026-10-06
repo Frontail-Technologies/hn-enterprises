@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BuildingsIcon, CaretDownIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -118,13 +117,15 @@ export function ProjectsList() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link
+            {/* Use a full page load so creation does not depend on client navigation. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
               href="/projects/new"
               className={buttonVariants({ variant: "default", size: "compact" })}
             >
               <PlusIcon size={13} />
               New Project
-            </Link>
+            </a>
           </div>
         </>
       }
