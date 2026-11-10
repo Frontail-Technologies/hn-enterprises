@@ -13,7 +13,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
+import { CaretLeftIcon, CaretRightIcon, ClockIcon, DownloadSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -150,14 +150,11 @@ export function AttendancePage() {
   );
 
   return (
-    <div className="space-y-3">
-      <PageHeader title="Attendance" icon={CalendarBlankIcon} actions={attendanceControls} />
+    <div className="space-y-5">
+      <PageHeader title="Attendance" description="Daily attendance for supervisors. Click any day to mark or change it." actions={attendanceControls} />
 
       <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
         <div className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
-      </div>
 
       {loadError ? (
         <p className="text-sm text-destructive">
@@ -173,11 +170,12 @@ export function AttendancePage() {
           selectedSupervisor={selectedSupervisor}
           onRecordSaved={refetchRecords}
           isLoading={isLoading || rosterLoading}
+          toolbarEnd={<FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />}
         />
       ) : null}
 
       {viewMode === "calendar" ? (
-        <section className="space-y-3 rounded-lg border border-border/70 bg-card p-3">
+        <section className="space-y-3 rounded-card border border-border bg-card shadow-card p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <AttendanceLegend />
             <div className="text-xs font-medium text-muted-foreground">
@@ -201,7 +199,7 @@ export function AttendancePage() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-border/70 bg-card">
+          <div className="grid grid-cols-7 overflow-hidden rounded-card border border-border bg-card shadow-card">
             {monthDays.map((day, index) => {
               if (!day) {
                 return (
@@ -233,7 +231,7 @@ export function AttendancePage() {
                     <span className="text-sm font-semibold text-foreground">
                       {format(day, "d")}
                     </span>
-                    <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                    <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[11px] font-semibold text-foreground">
                       {status}
                     </span>
                   </div>

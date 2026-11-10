@@ -85,7 +85,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
         <PlusIcon size={13} />
         Add Supervisor
       </SheetTrigger>
-      <SheetContent className="w-full border-border bg-card sm:max-w-lg">
+      <SheetContent className="w-full border-border bg-card sm:max-w-xl">
         <SheetHeader className="border-b border-border/70">
           <SheetTitle>Add Supervisor</SheetTitle>
           <SheetDescription>
@@ -94,7 +94,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto px-4">
+          <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-1 sm:grid-cols-2">
             <FormField label="Account">
               <Controller
                 control={control}
@@ -140,7 +140,6 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                     <p className="text-xs text-destructive">{formState.errors.newUser.name.message}</p>
                   ) : null}
                 </FormField>
-                <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Username">
                     <Input {...register("newUser.username")} />
                     {formState.errors.newUser?.username ? (
@@ -153,16 +152,13 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                       <p className="text-xs text-destructive">{formState.errors.newUser.email.message}</p>
                     ) : null}
                   </FormField>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Mobile">
                     <Input {...register("newUser.mobile")} />
                   </FormField>
                   <FormField label="Role">
                     <p className="flex h-9 items-center text-sm text-muted-foreground">Supervisor</p>
                   </FormField>
-                </div>
-                <FormField label="Initial Password">
+                <FormField label="Initial Password" className="sm:col-span-2">
                   <Input type="password" {...register("newUser.password")} />
                   {formState.errors.newUser?.password ? (
                     <p className="text-xs text-destructive">{formState.errors.newUser.password.message}</p>
@@ -171,7 +167,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
               </>
             )}
 
-            <FormField label="Salary Type">
+            <FormField label="Salary Type" className="sm:col-span-2">
               <Controller
                 control={control}
                 name="salaryType"
@@ -192,16 +188,14 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
               />
             </FormField>
 
-            <div className="grid gap-3 sm:grid-cols-2">
               <FormField label="Monthly Salary">
                 <Input type="number" {...register("monthlySalary")} />
               </FormField>
               <FormField label="Allowance">
                 <Input type="number" {...register("allowance")} />
               </FormField>
-            </div>
 
-            <FormField label="Payment Type">
+            <FormField label="Payment Type" className="sm:col-span-2">
               <Controller
                 control={control}
                 name="paymentAccountType"
@@ -224,22 +218,20 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
             {paymentAccountType === "Bank Account" ? (
               <>
-                <FormField label="Bank Name">
+                <FormField label="Bank Name" className="sm:col-span-2">
                   <Input {...register("bankName")} />
                 </FormField>
-                <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Account Number">
                     <Input {...register("accountNumber")} />
                   </FormField>
                   <FormField label="IFSC Code">
                     <Input {...register("ifscCode")} />
                   </FormField>
-                </div>
               </>
             ) : null}
 
             {paymentAccountType === "UPI" ? (
-              <FormField label="UPI ID">
+              <FormField label="UPI ID" className="sm:col-span-2">
                 <Input {...register("upiId")} />
               </FormField>
             ) : null}

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDownIcon, DatabaseIcon, DownloadSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, DownloadSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { ListTable, useClientRows, type ListColumn } from "@/components/shared/list";
+import { PageShell } from "@/components/shared/PageShell";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,21 +15,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HolidayDrawer } from "./HolidayDrawer";
 import { useHolidaysTab } from "./useHolidaysTab";
 import { useDeleteHoliday } from "../../hooks/useMasters";
 import { masterTabs, type Holiday, type MasterTabId } from "../../types/masters.types";
+
+const holidayColumns: ListColumn<Holiday>[] = [
+  { id: "name", header: "Holiday name", value: (row) => row.name, isTitle: true, hideable: false, sortable: true, width: 260, grow: true },
+  { id: "date", header: "Date", value: (row) => row.date, sortable: true, width: 140 },
+  { id: "type", header: "Type", value: (row) => row.type, sortable: true, width: 160 },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
+];
+
+// Same fields the tab searched before the migration.
+const holidaySearchText = (row: Holiday) => `${row.name} ${row.type}`;
 
 export function HolidaysTab({
   activeTab,
@@ -36,90 +39,68 @@ export function HolidaysTab({
   onTabChange: (tab: MasterTabId) => void;
 }) {
   const tab = useHolidaysTab();
-
-  const holidayColumns: ColumnDef<Holiday>[] = [
-    { key: "name", header: "Holiday Name", render: (row) => <span className="font-semibold text-foreground">{row.name}</span> },
-    { key: "date", header: "Date", render: (row) => row.date },
-    { key: "type", header: "Type" },
-    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-28",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <HolidayDrawer holiday={row} iconOnly />
-          <DeleteHolidayButton id={row.id} label={row.name} />
-        </div>
-      ),
-    },
-  ];
+  const { pageRows, total } = useClientRows(tab.holidays, tab.list, { columns: holidayColumns, searchText: holidaySearchText });
 
   return (
     <PageShell
       title="Masters"
-      icon={DatabaseIcon}
       tabs={
         <div className="border-b border-border">
           <UnderlineTabs items={masterTabs} active={activeTab} onChange={(nextTab) => onTabChange(nextTab as MasterTabId)} />
         </div>
       }
-      actions={
-        <>
-          <div className="w-full max-w-full sm:w-64">
-            <Input
-              value={tab.search.value}
-              onChange={(event) => tab.search.onChange(event.target.value)}
-              placeholder="Search holidays..."
-              className="h-8"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button type="button" variant="outline" size="compact">
-                    More
-                    <CaretDownIcon size={12} />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={tab.exportAction.onExport} disabled={tab.exportAction.isPending}>
-                  <DownloadSimpleIcon size={14} />
-                  {tab.exportAction.isPending ? "Exporting..." : "Export Excel"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <HolidayDrawer />
-          </div>
-        </>
-      }
-      contentClassName="space-y-3"
+      actions={<HolidayDrawer />}
     >
-      <BulkDeleteBar
-        selectedCount={tab.selection.selectedIds.size}
-        onClear={tab.selection.clear}
-        onDelete={() => tab.bulkDelete.onOpenChange(true)}
-      />
-      <PaginatedDataTable
-        data={tab.data}
+      <ListTable
+        itemLabel="holiday"
+        rows={pageRows}
+        total={total}
         columns={holidayColumns}
+        state={tab.list}
+        searchPlaceholder="Search holidays..."
         isLoading={tab.isLoading}
-        selection={{
-          selectedIds: tab.selection.selectedIds,
-          onToggleRow: tab.selection.toggleRow,
-          onTogglePage: tab.selection.toggleAllOnPage,
-          getRowLabel: (row) => row.name,
-        }}
+        isError={tab.isError}
+        onRetry={() => void tab.refetch()}
+        selectable
+        getRowLabel={(row) => row.name}
+        bulkActions={() => (
+          <Button type="button" variant="ghost" size="compact" onClick={() => tab.bulkDelete.onOpenChange(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        rowActionsWidth={88}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <HolidayDrawer holiday={row} iconOnly />
+            <DeleteHolidayButton id={row.id} label={row.name} />
+          </div>
+        )}
+        empty={{ illustration: "calendar", title: "No holidays added", description: "Company holidays you add will appear here." }}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline" size="compact">
+                  More
+                  <CaretDownIcon size={12} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={tab.exportAction.onExport} disabled={tab.exportAction.isPending}>
+                <DownloadSimpleIcon size={14} />
+                {tab.exportAction.isPending ? "Exporting..." : "Export Excel"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
 
       <BulkDeleteDialog
         open={tab.bulkDelete.open}
         onOpenChange={tab.bulkDelete.onOpenChange}
-        selectedCount={tab.selection.selectedIds.size}
+        selectedCount={tab.list.selection.size}
         entityLabel="Holiday"
         isSubmitting={tab.bulkDelete.isPending}
         onConfirm={tab.bulkDelete.onConfirm}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FileArrowUpIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared/DataTable";
+import { ListTable, useClientRows, useListState } from "@/components/shared/list";
 import { SectionCard } from "@/components/shared/SectionCard";
 import {
   useCreateProjectDocument,
@@ -12,18 +12,18 @@ import {
 } from "@/features/projects/hooks/useProjects";
 import type { ProjectDocument } from "../../types/project.types";
 import { documentCategories, emptyDocument } from "./project-document.constants";
-import { buildProjectDocumentColumns } from "./ProjectDocumentsTab.columns";
+import { ProjectDocumentRowActions, projectDocumentColumns, projectDocumentSearchText } from "./ProjectDocumentsTab.columns";
 import { ProjectDocumentDialog } from "./ProjectDocumentDialog";
 import { ProjectTabHeader } from "./ProjectTabHeader";
 
 export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
-  const { data: documents = [], isLoading } = useProjectDocumentsQuery(projectId);
+  const { data: documents = [], isLoading, isError, refetch } = useProjectDocumentsQuery(projectId);
   const createDocumentMutation = useCreateProjectDocument(projectId);
   const deleteDocumentMutation = useDeleteProjectDocument(projectId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectDocument>(emptyDocument);
-
-  const columns = buildProjectDocumentColumns((id) => deleteDocumentMutation.mutate(id));
+  const list = useListState({ pageSize: 25, storageKey: "project-documents" });
+  const { pageRows, total } = useClientRows(documents, list, { columns: projectDocumentColumns, searchText: projectDocumentSearchText });
 
   const saveDocument = async () => {
     if (!draft.type || !draft.number) return;
@@ -76,15 +76,23 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Uploaded Documents">
-        <DataTable
-          columns={columns}
-          data={documents}
-          variant="striped"
+      <section className="space-y-3">
+        <h3 className="text-section-title">Uploaded Documents</h3>
+        <ListTable
+          itemLabel="document"
+          rows={pageRows}
+          total={total}
+          columns={projectDocumentColumns}
+          state={list}
+          searchPlaceholder="Search name, number, type or file..."
           isLoading={isLoading}
-          emptyTitle="No documents uploaded yet."
+          isError={isError}
+          onRetry={() => void refetch()}
+          empty={{ illustration: "documents", title: "No documents uploaded yet." }}
+          rowActionsWidth={108}
+          renderRowActions={(doc) => <ProjectDocumentRowActions doc={doc} onDelete={(id) => deleteDocumentMutation.mutate(id)} />}
         />
-      </SectionCard>
+      </section>
 
       <ProjectDocumentDialog
         open={dialogOpen}

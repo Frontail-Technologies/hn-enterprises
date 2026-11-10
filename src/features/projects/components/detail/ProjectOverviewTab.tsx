@@ -1,12 +1,13 @@
 "use client";
 
-import { ChartBarIcon, ClipboardTextIcon, MapPinIcon, PackageIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import type { ColumnDef } from "@/components/shared/DataTable";
-import { DataTable } from "@/components/shared/DataTable";
-import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
-import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
-import { MetricCard } from "@/components/shared/MetricCard";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { CaretRightIcon, ClipboardTextIcon, CurrencyInrIcon, MapPinIcon, PackageIcon, ReceiptIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
+import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
+import { DetailRows, ProgressList, RecordLayout } from "@/components/shared/record";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
 import { money } from "@/features/commercial/utils/format";
 import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
@@ -14,136 +15,152 @@ import { formatCompactCount, formatFractionStat } from "@/lib/format";
 import type { Project } from "../../types/project.types";
 import { formatDate, toTitleCase } from "./project-detail.utils";
 
-export function ProjectOverviewTab({ project }: { project: Project }) {
-  const { data: summary, isLoading } = useProjectSummaryQuery(project.id);
+type ProjectSite = NonNullable<ReturnType<typeof useProjectSummaryQuery>["data"]>["sites"]["list"][number];
 
-  const info = [
-    ["Client", project.client],
-    ["Consultant", project.consultant],
-    ["Contractor", project.contractor],
-    ["Project Type", project.projectType],
-    ["City", project.city],
-    ["Start Date", formatDate(project.startDate)],
-    ["Planned End Date", formatDate(project.plannedEndDate)],
-    ["Project Manager", project.assignedManager],
-  ];
+const siteColumns: ListColumn<ProjectSite>[] = [
+  { id: "name", header: "Site / area", value: (site) => site.name, isTitle: true, hideable: false, sortable: true, width: 220, grow: true },
+  {
+    id: "status",
+    header: "Status",
+    value: (site) => toTitleCase(site.status),
+    sortable: true,
+    width: 140,
+    cell: (site) => <StatusBadge status={toTitleCase(site.status) as StatusValue} />,
+  },
+  { id: "supervisorName", header: "Supervisor", value: (site) => site.supervisorName || "-", sortable: true, width: 170 },
+  { id: "plannedConnections", header: "Planned connections", value: (site) => site.plannedConnections ?? "-", align: "end", sortable: true, width: 170 },
+  { id: "customerCount", header: "Customers", value: (site) => site.customerCount, align: "end", sortable: true, width: 120 },
+];
 
-  if (isLoading || !summary) {
-    return (
-      <div className="space-y-5">
-        <SectionCard title="Project Information">
-          <InfoGrid items={info} />
-        </SectionCard>
-        <p className="px-1 text-sm text-muted-foreground">Loading project summary...</p>
-      </div>
-    );
-  }
-
-  const siteColumns: ColumnDef<(typeof summary.sites.list)[number]>[] = [
-    { key: "name", header: "Site / Area", render: (site) => <span className="font-medium text-foreground">{site.name}</span> },
-    { key: "status", header: "Status", render: (site) => <StatusBadge status={toTitleCase(site.status) as StatusValue} /> },
-    { key: "supervisorName", header: "Supervisor", render: (site) => site.supervisorName || "-" },
-    { key: "plannedConnections", header: "Planned Connections", render: (site) => site.plannedConnections ?? "-" },
-    { key: "customerCount", header: "Customers", render: (site) => site.customerCount },
-  ];
-
+/** A stat tile that opens the full, project-filtered page for that record type. */
+function RecordTile({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <div className="space-y-5">
-      <SectionCard title="Project Information">
-        <InfoGrid items={info} />
-      </SectionCard>
-
-      <SectionCard title="Project Health">
-        <CompactStatGrid>
-          <MetricCard label="Total Customers" value={formatCompactCount(summary.customers.total)} icon={UsersThreeIcon} />
-          <MetricCard label="Active Sites" value={formatFractionStat(summary.sites.active, summary.sites.total)} icon={MapPinIcon} />
-          <MetricCard label="DPR Pending" value={formatCompactCount(summary.dpr.pending)} icon={ClipboardTextIcon} />
-          <MetricCard label="Stock Alerts" value={formatCompactCount(summary.materials.lowStockAlerts)} icon={PackageIcon} />
-        </CompactStatGrid>
-      </SectionCard>
-
-      <SectionCard title="Execution Progress">
-        <CompactStatGrid columns={5}>
-          <MetricCard
-            label="Survey Done"
-            value={formatFractionStat(summary.customers.surveyDone, summary.customers.total)}
-            icon={ChartBarIcon}
-          />
-          <MetricCard
-            label="GI Done"
-            value={formatFractionStat(summary.customers.giDone, summary.customers.total)}
-            icon={ChartBarIcon}
-          />
-          <MetricCard
-            label="GC Done"
-            value={formatFractionStat(summary.customers.gcDone, summary.customers.total)}
-            icon={ChartBarIcon}
-          />
-          <MetricCard
-            label="Conversion Done"
-            value={formatFractionStat(summary.customers.conversionDone, summary.customers.total)}
-            icon={ChartBarIcon}
-          />
-          <MetricCard
-            label="JMR Done"
-            value={formatFractionStat(summary.customers.jmrDone, summary.customers.total)}
-            icon={ChartBarIcon}
-          />
-        </CompactStatGrid>
-      </SectionCard>
-
-      <SectionCard title="Financial Summary">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contract</p>
-            <KeyValueGrid
-              columns={1}
-              compact
-              items={[
-                { label: "Contract Value", value: project.contractValue || "-" },
-                { label: "Approved Expenses", value: money(summary.expenses.total) },
-              ]}
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Work Billing Status</p>
-            <KeyValueGrid
-              columns={1}
-              compact
-              items={[
-                { label: "JMR Done", value: `${summary.customers.jmrDone} / ${summary.customers.total}` },
-                { label: "GI Billed", value: `${summary.customers.giBillDone} / ${summary.customers.total}` },
-                { label: "GC Billed", value: `${summary.customers.gcBillDone} / ${summary.customers.total}` },
-                {
-                  label: "Conversion Billed",
-                  value: `${summary.customers.conversionBillDone} / ${summary.customers.total}`,
-                },
-              ]}
-            />
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Sites">
-        {summary.sites.list.length === 0 ? (
-          <EmptyRow>No sites added to this project yet.</EmptyRow>
-        ) : (
-          <DataTable
-            columns={siteColumns}
-            data={summary.sites.list}
-            variant="striped"
-            emptyTitle="No sites added to this project yet."
-          />
-        )}
-      </SectionCard>
-    </div>
+    <Link
+      href={href}
+      className="group relative block rounded-card outline-none transition-transform focus-visible:ring-3 focus-visible:ring-ring/50 [&>article]:transition-colors hover:[&>article]:border-primary/40"
+    >
+      {children}
+      <CaretRightIcon
+        size={14}
+        aria-hidden="true"
+        className="absolute top-3 right-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+      />
+    </Link>
   );
 }
 
-function InfoGrid({ items }: { items: (string | undefined)[][] }) {
-  return <KeyValueGrid items={items.map(([label, value]) => ({ label: label ?? "", value }))} columns={2} />;
-}
+/**
+ * Project overview: key numbers (each opens the full page filtered to this
+ * project), execution and billing progress, sites, and a facts rail. Lists
+ * that have their own screens (customers, bills, expenses, materials, DPRs)
+ * are linked, not embedded.
+ */
+export function ProjectOverviewTab({ project, rail, children }: { project: Project; rail?: ReactNode; children?: ReactNode }) {
+  const { data: summary, isLoading } = useProjectSummaryQuery(project.id);
+  const siteList = useListState({ pageSize: 25, storageKey: "project-sites" });
+  const sites = useClientRows(summary?.sites.list ?? [], siteList, { columns: siteColumns });
+  const scoped = (path: string) => `${path}?projectId=${encodeURIComponent(project.id)}`;
+  // Customers of this project that have completed a stage (same keys as the dashboard stat drill-downs).
+  const stage = (statKey: string) => `${scoped("/customers")}&statKey=${statKey}`;
 
-function EmptyRow({ children }: { children: React.ReactNode }) {
-  return <p className="px-1 py-6 text-center text-sm text-muted-foreground">{children}</p>;
+  const facts = (
+    <>
+      <SectionCard title="Project facts">
+        <DetailRows
+          rows={[
+            { label: "Client", value: project.client },
+            { label: "Consultant", value: project.consultant },
+            { label: "Contractor", value: project.contractor },
+            { label: "Project type", value: project.projectType },
+            { label: "City", value: project.city },
+            { label: "Start date", value: formatDate(project.startDate) },
+            { label: "Planned end", value: formatDate(project.plannedEndDate) },
+            { label: "Project manager", value: project.assignedManager },
+            { label: "Contract value", value: project.contractValue },
+          ]}
+        />
+      </SectionCard>
+      {rail}
+    </>
+  );
+
+  if (isLoading || !summary) {
+    return (
+      <RecordLayout rail={facts}>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} className="h-[74px] rounded-card" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-card" />
+        {children}
+      </RecordLayout>
+    );
+  }
+
+  const total = summary.customers.total;
+
+  return (
+    <RecordLayout rail={facts}>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+        <RecordTile href={scoped("/customers")}>
+          <DashboardStatCard dense tone="primary" label="Customers" value={formatCompactCount(total)} helperText="Open customer list" icon={UsersThreeIcon} />
+        </RecordTile>
+        <RecordTile href="#sites">
+          <DashboardStatCard dense tone="info" label="Active sites" value={formatFractionStat(summary.sites.active, summary.sites.total)} helperText="See sites below" icon={MapPinIcon} />
+        </RecordTile>
+        <RecordTile href="/planning">
+          <DashboardStatCard dense tone="warning" label="DPR pending" value={formatCompactCount(summary.dpr.pending)} helperText="Open DPR / planning" icon={ClipboardTextIcon} />
+        </RecordTile>
+        <RecordTile href={scoped("/inventory")}>
+          <DashboardStatCard dense tone="danger" label="Stock alerts" value={formatCompactCount(summary.materials.lowStockAlerts)} helperText="Open materials" icon={PackageIcon} />
+        </RecordTile>
+        <RecordTile href={scoped("/payments")}>
+          <DashboardStatCard dense tone="success" label="Approved expenses" value={money(summary.expenses.total)} helperText="Open expenses" icon={CurrencyInrIcon} />
+        </RecordTile>
+        <RecordTile href={scoped("/billing")}>
+          <DashboardStatCard dense tone="info" label="JMR billed" value={formatFractionStat(summary.customers.jmrDone, total)} helperText="Open bills" icon={ReceiptIcon} />
+        </RecordTile>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SectionCard title="Execution progress" description="Customers through each field stage · click a stage to see them">
+          <ProgressList
+            items={[
+              { label: "Survey", value: summary.customers.surveyDone, total, href: stage("survey-done") },
+              { label: "GI", value: summary.customers.giDone, total, href: stage("gi-done") },
+              { label: "GC", value: summary.customers.gcDone, total, href: stage("gc-done") },
+              { label: "Conversion", value: summary.customers.conversionDone, total, href: stage("conversion-done") },
+              { label: "JMR", value: summary.customers.jmrDone, total, href: stage("jmr-done") },
+            ]}
+          />
+        </SectionCard>
+        <SectionCard title="Billing status" description="Work billed so far · click a row to see the customers">
+          <ProgressList
+            items={[
+              { label: "JMR done", value: summary.customers.jmrDone, total, href: stage("jmr-done") },
+              { label: "GI billed", value: summary.customers.giBillDone, total, href: stage("gi-bill-done") },
+              { label: "GC billed", value: summary.customers.gcBillDone, total, href: stage("gc-bill-done") },
+              { label: "Conversion billed", value: summary.customers.conversionBillDone, total, href: stage("conversion-bill-done") },
+            ]}
+          />
+        </SectionCard>
+      </div>
+
+      <section id="sites" className="flex scroll-mt-24 flex-col gap-3">
+        <h2 className="text-section-title">Sites</h2>
+        <ListTable
+          itemLabel="site"
+          rows={sites.pageRows}
+          total={sites.total}
+          columns={siteColumns}
+          state={siteList}
+          searchPlaceholder="Search sites or supervisors..."
+          empty={{ illustration: "projects", title: "No sites added to this project yet." }}
+        />
+      </section>
+
+      {children}
+    </RecordLayout>
+  );
 }

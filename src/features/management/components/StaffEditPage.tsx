@@ -1,6 +1,5 @@
 "use client";
 
-import { type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +21,10 @@ import { buildStaffEditFormSchema, type StaffEditFormValues } from "../schemas/s
 import type { Staff, StaffPaymentAccountType, StaffSalaryType } from "../types/staff.types";
 import type { UserStatus } from "../services/users.service";
 import { PageShell } from "@/components/shared/PageShell";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { AvatarUploadField } from "@/components/shared/AvatarUploadField";
 
 const statuses: UserStatus[] = ["Active", "Inactive", "Suspended"];
 const salaryTypes: StaffSalaryType[] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
@@ -33,24 +35,20 @@ export function StaffEditPage({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <PageShell
-        title="Edit Supervisor"
-        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
-      >
-        <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-muted/20" />
+      <PageShell title="Edit Supervisor">
+        <PageLoading />
       </PageShell>
     );
   }
 
   if (isError || !staffMember) {
     return (
-      <PageShell
-        title="Edit Supervisor"
-        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
-      >
-        <div className="rounded-lg border border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-          Supervisor record not found.
-        </div>
+      <PageShell title="Edit Supervisor">
+        <EmptyState
+          illustration="error"
+          title="Supervisor not found"
+          description="This record may have been removed, or the connection failed."
+        />
       </PageShell>
     );
   }
@@ -80,6 +78,7 @@ function defaultValuesFromStaff(staffMember: Staff): StaffEditFormValues {
     lastSalaryRevisionDate: staffMember.lastSalaryRevisionDate,
     nextSalaryReviewDate: staffMember.nextSalaryReviewDate,
     remarks: staffMember.remarks,
+    avatarUrl: staffMember.avatarUrl,
   };
 }
 
@@ -115,6 +114,7 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
       },
       userPatch: {
         name: values.name,
+        avatarUrl: values.avatarUrl,
         mobile: values.mobile,
         role: values.role,
         status: values.status,
@@ -124,80 +124,86 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 pb-20">
-      <PageHeader title="Edit Supervisor" />
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      <PageHeader title="Edit Supervisor" description={`${staffMember.name} · ${staffMember.role}`} />
 
-      <section className="rounded-lg border border-border/70 bg-card">
-        <div className="border-b border-border/70 px-4 py-3">
-          <p className="text-base font-semibold text-foreground">{staffMember.name}</p>
-          <p className="text-sm text-muted-foreground">{staffMember.role}</p>
-        </div>
+      <div className="divide-y divide-border rounded-card border border-border bg-card shadow-card">
+        <FormSection title="Basic details" description="Photo, name and contact shown across the app and in the mobile app.">
+          <AvatarField control={control} name={staffMember.name} userId={staffMember.userId} />
+          <EditField label="Name" registration={register("name")} />
+          <EditField label="Mobile" registration={register("mobile")} />
+          <SelectField label="Status" control={control} name="status" options={statuses} />
+        </FormSection>
 
-        <div className="grid gap-6 p-4 lg:grid-cols-2">
-          <FormSection title="Basic Details">
-            <EditField label="Name" registration={register("name")} />
-            <EditField label="Mobile" registration={register("mobile")} />
-            <SelectField label="Status" control={control} name="status" options={statuses} />
-          </FormSection>
+        <FormSection title="Salary" description="Pay structure used for wages and payable days.">
+          <SelectField label="Salary type" control={control} name="salaryType" options={salaryTypes} />
+          <EditField label="Monthly salary" registration={register("monthlySalary")} type="number" />
+          <EditField label="Allowance" registration={register("allowance")} type="number" />
+        </FormSection>
 
-          <FormSection title="Salary Details">
-            <SelectField label="Salary Type" control={control} name="salaryType" options={salaryTypes} />
-            <EditField label="Monthly Salary" registration={register("monthlySalary")} type="number" />
-            <EditField label="Allowance" registration={register("allowance")} type="number" />
-          </FormSection>
+        <FormSection title="Bank / UPI" description="Where salary and reimbursements are paid.">
+          <SelectField label="Payment type" control={control} name="paymentAccountType" options={paymentAccountTypes} />
+          {paymentAccountType === "Bank Account" ? (
+            <>
+              <EditField label="Bank name" registration={register("bankName")} />
+              <EditField label="Account number" registration={register("accountNumber")} />
+              <EditField label="IFSC code" registration={register("ifscCode")} />
+            </>
+          ) : null}
+          {paymentAccountType === "UPI" ? <EditField label="UPI ID" registration={register("upiId")} /> : null}
+          {paymentAccountType === "Cash" ? (
+            <p className="self-end rounded-lg bg-muted/50 px-3 py-2 text-[13px] text-muted-foreground">
+              Paid in cash — no bank or UPI details needed.
+            </p>
+          ) : null}
+        </FormSection>
 
-          <FormSection title="Bank / UPI Details">
-            <SelectField label="Payment Type" control={control} name="paymentAccountType" options={paymentAccountTypes} />
-            {paymentAccountType === "Bank Account" ? (
-              <>
-                <EditField label="Bank Name" registration={register("bankName")} />
-                <EditField label="Account Number" registration={register("accountNumber")} />
-                <EditField label="IFSC Code" registration={register("ifscCode")} />
-              </>
-            ) : null}
-            {paymentAccountType === "UPI" ? <EditField label="UPI ID" registration={register("upiId")} /> : null}
-            {paymentAccountType === "Cash" ? (
-              <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                Cash payment selected. No bank or UPI details required.
-              </p>
-            ) : null}
-          </FormSection>
+        <FormSection title="Review dates & notes" description="Salary revision history and anything worth remembering.">
+          <DateField label="Salary effective from" control={control} name="salaryEffectiveFrom" />
+          <DateField label="Last revision" control={control} name="lastSalaryRevisionDate" />
+          <DateField label="Next review" control={control} name="nextSalaryReviewDate" />
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-[13px] font-medium text-foreground">Remarks</span>
+            <Textarea {...register("remarks")} className="min-h-24" />
+          </label>
+        </FormSection>
+      </div>
 
-          <FormSection title="Review Dates">
-            <DateField label="Salary Effective From" control={control} name="salaryEffectiveFrom" />
-            <DateField label="Last Revision Date" control={control} name="lastSalaryRevisionDate" />
-            <DateField label="Next Review Date" control={control} name="nextSalaryReviewDate" />
-          </FormSection>
-
-          <FormSection title="Notes">
-            <label className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-start">
-              <span className="text-xs font-medium text-muted-foreground">Remarks</span>
-              <Textarea {...register("remarks")} className="min-h-24" />
-            </label>
-          </FormSection>
-        </div>
-      </section>
-
-      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 border-t border-border bg-card/95 px-6 py-3 shadow-sm backdrop-blur">
+      <StickyFormFooter>
         <Link href="/staff" className={buttonVariants({ variant: "outline" })}>
           Cancel
         </Link>
         <Button type="submit" disabled={updateStaff.isPending || formState.isSubmitting}>
           {updateStaff.isPending ? "Saving..." : "Save Changes"}
         </Button>
-      </div>
+      </StickyFormFooter>
     </form>
   );
 }
 
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
+/** One block of the single edit card: title + hint on the left, fields in two columns on the right. */
+function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3">
-      <div className="border-b border-border/70 pb-2">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
+    <section className="grid gap-4 p-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8 lg:p-6">
+      <div>
+        <h2 className="text-card-title">{title}</h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">{description}</p>
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </section>
+  );
+}
+
+/** Profile photo field bound to the form (shared picker). */
+function AvatarField({ control, name, userId }: { control: Control<StaffEditFormValues>; name: string; userId: string }) {
+  return (
+    <Controller
+      control={control}
+      name="avatarUrl"
+      render={({ field }) => (
+        <AvatarUploadField name={name} value={field.value} onChange={field.onChange} recordId={userId} className="sm:col-span-2" />
+      )}
+    />
   );
 }
 
@@ -211,8 +217,8 @@ function EditField({
   type?: string;
 }) {
   return (
-    <label className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-center">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[13px] font-medium text-foreground">{label}</span>
       <Input type={type} {...registration} />
     </label>
   );
@@ -230,8 +236,8 @@ function SelectField<Name extends keyof StaffEditFormValues & string>({
   options: readonly string[];
 }) {
   return (
-    <label className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-center">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[13px] font-medium text-foreground">{label}</span>
       <Controller
         control={control}
         name={name}
@@ -264,8 +270,8 @@ function DateField<Name extends keyof StaffEditFormValues & string>({
   name: Name;
 }) {
   return (
-    <label className="grid gap-1.5 sm:grid-cols-[160px_1fr] sm:items-center">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[13px] font-medium text-foreground">{label}</span>
       <Controller
         control={control}
         name={name}

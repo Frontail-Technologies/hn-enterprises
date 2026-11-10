@@ -117,6 +117,7 @@ export function SearchableSelect({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
+                  data-checked={value === option.value ? "true" : undefined}
                   value={option.label}
                   keywords={option.keywords ?? (option.secondary ? [option.secondary] : undefined)}
                   onSelect={() => {
@@ -124,11 +125,8 @@ export function SearchableSelect({
                     setOpen(false);
                   }}
                 >
-                  <Check
-                    className={cn("mr-2 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")}
-                  />
                   {option.secondary ? (
-                    <span className="flex min-w-0 flex-col">
+                    <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate" title={option.label}>
                         {option.label}
                       </span>
@@ -137,10 +135,11 @@ export function SearchableSelect({
                       </span>
                     </span>
                   ) : (
-                    <span className="truncate" title={option.label}>
+                    <span className="min-w-0 flex-1 truncate" title={option.label}>
                       {option.label}
                     </span>
                   )}
+                  {value === option.value ? <Check className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> : null}
                 </CommandItem>
               ))}
             </CommandGroup>

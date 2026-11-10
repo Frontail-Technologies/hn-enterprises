@@ -91,12 +91,17 @@ export function PdfPage({ children }: { children: ReactNode }) {
   );
 }
 
+/** The one company logo printed on each page (in the page header). */
+export function PdfLogo({ width = 42, height = 28 }: { width?: number; height?: number }) {
+  // eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image does not support alt.
+  return <Image src="/logo.png" style={{ width, height, objectFit: "contain" }} />;
+}
+
 export function PdfHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={[pdfStyles.row, { borderWidth: 1, borderColor: "#222222" }]}>
       <View style={[pdfStyles.cell, { width: "15%", borderWidth: 0, alignItems: "center" }]}>
-        {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image does not support alt. */}
-        <Image src="/logo.png" style={{ width: 42, height: 28, objectFit: "contain" }} />
+        <PdfLogo />
       </View>
       <View style={[pdfStyles.cell, { width: "85%", borderTopWidth: 0, borderBottomWidth: 0 }]}>
         <Text style={pdfStyles.title}>{title}</Text>

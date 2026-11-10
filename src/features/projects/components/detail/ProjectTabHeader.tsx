@@ -1,5 +1,6 @@
 "use client";
 
+/** Heading of one section of the scrolling Project detail page (matches RecordSection). */
 export function ProjectTabHeader({
   title,
   subtitle,
@@ -10,10 +11,10 @@ export function ProjectTabHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        {subtitle ? <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p> : null}
+    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-2">
+      <div className="min-w-0">
+        <h2 className="text-section-title">{title}</h2>
+        {subtitle ? <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p> : null}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">

@@ -1,38 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useState } from "react";
+import { useListState } from "@/components/shared/list";
 import { useDownloadHolidays } from "@/features/exports/hooks/useExports";
 import { useBulkDeleteHolidays, useHolidaysQuery } from "../../hooks/useMasters";
 
 export function useHolidaysTab() {
-  const [search, setSearch] = useState("");
-  const { data: holidays = [], isLoading } = useHolidaysQuery();
-  const selection = useBulkSelection();
+  const list = useListState({ pageSize: 50, storageKey: "masters-holidays" });
+  const { data: holidays = [], isLoading, isError, refetch } = useHolidaysQuery();
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeleteHolidays();
   const download = useDownloadHolidays();
 
-  const data = useMemo(() => {
-    const query = search.toLowerCase();
-    return holidays.filter((row) => !query || row.name.toLowerCase().includes(query) || row.type.toLowerCase().includes(query));
-  }, [holidays, search]);
-
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selection.selectedIds));
+    await bulkDelete.mutateAsync(Array.from(list.selection));
     setBulkDeleteOpen(false);
-    selection.clear();
+    list.clearSelection();
   }
 
   function handleExport() {
-    download.mutate({ search: search.trim() || undefined });
+    download.mutate({ search: list.search.trim() || undefined });
   }
 
   return {
-    data,
+    list,
+    holidays,
     isLoading,
-    search: { value: search, onChange: setSearch },
-    selection,
+    isError,
+    refetch,
     bulkDelete: {
       open: bulkDeleteOpen,
       onOpenChange: setBulkDeleteOpen,

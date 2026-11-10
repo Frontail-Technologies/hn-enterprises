@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   ImageUploadPreview,
   type ImagePreviewItem,
@@ -10,6 +11,7 @@ export function ImageProofField({
   onChange,
   module,
   recordId,
+  className,
 }: {
   label: string;
   description: string;
@@ -17,11 +19,12 @@ export function ImageProofField({
   onChange?: (images: ImagePreviewItem[]) => void;
   module: string;
   recordId?: string;
+  className?: string;
 }) {
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-1.5", className)}>
       <div>
-        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <ImageUploadPreview images={images} onChange={onChange} module={module} recordId={recordId} />

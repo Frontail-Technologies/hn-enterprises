@@ -39,7 +39,6 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { authService } from "@/features/auth/services/auth.service";
 import { NavItem, NavGroup } from "@/types/navigation";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Collapsible,
   CollapsibleContent,
@@ -58,7 +57,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -80,6 +78,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   SquaresFour,
@@ -126,18 +125,18 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         isActive={active}
         tooltip={collapsed ? item.label : undefined}
         className={cn(
-          "h-9 gap-2.5 rounded-sm px-2.5 text-sm font-medium text-sidebar-foreground/82 hover:bg-white/10 hover:text-sidebar-foreground",
+          "relative h-10 gap-3 rounded-lg px-3 text-[14px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-white/6 hover:text-sidebar-foreground",
           active &&
-            "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground",
+            "bg-white/12 font-semibold text-sidebar-foreground hover:bg-white/12 data-active:bg-white/12 data-active:font-semibold data-active:text-sidebar-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.75 before:rounded-full before:bg-primary group-data-[collapsible=icon]:before:hidden",
         )}
       >
         {IconComponent && (
           <IconComponent
-            size={18}
+            size={19}
             weight={active ? "fill" : "regular"}
             className={cn(
               "shrink-0",
-              active ? "text-primary-foreground" : "text-sidebar-foreground/75",
+              active ? "text-primary" : "text-sidebar-foreground/70",
             )}
           />
         )}
@@ -146,8 +145,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       {item.badge != null && item.badge > 0 && (
         <SidebarMenuBadge
           className={cn(
-            "text-sidebar-foreground/75",
-            active && "text-primary-foreground",
+            "top-2.5 text-sidebar-foreground/75",
+            active && "text-sidebar-foreground",
           )}
         >
           {item.badge}
@@ -187,12 +186,12 @@ function NavGroupSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
-      <SidebarGroup className="py-1">
+      <SidebarGroup className="py-1.5">
         <SidebarGroupLabel
           render={
             <CollapsibleTrigger className="group/label flex w-full items-center justify-between" />
           }
-          className="h-7 rounded-sm px-2.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/62 hover:bg-white/10 hover:text-sidebar-foreground"
+          className="mb-0.5 h-8 rounded-lg px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/50 hover:bg-white/6 hover:text-sidebar-foreground/80"
         >
           <span>{group.label}</span>
           <CaretDown
@@ -253,13 +252,6 @@ export function Sidebar() {
     setOpenGroups((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
   };
 
-  const initials =
-    user?.fullName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) ?? "U";
   const collapsed = state === "collapsed";
 
   return (
@@ -269,36 +261,38 @@ export function Sidebar() {
     >
       <SidebarHeader
         className={cn(
-          "h-12 flex-row items-center justify-center border-b border-sidebar-border/50",
-          collapsed ? "px-2 justify-center" : "px-3 gap-2.5",
+          "app-titlebar h-16 flex-row items-center",
+          collapsed ? "justify-center px-2" : "gap-3 px-4",
         )}
       >
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white",
+            collapsed ? "size-8" : "size-9",
+          )}
+        >
+          <Image
+            src="/logo.png"
+            alt="HN Enterprises"
+            width={36}
+            height={36}
+            priority
+            className={collapsed ? "size-7 object-contain" : "size-8 object-contain"}
+          />
+        </div>
         {!collapsed && (
-          <>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
-              <Image
-                src="/logo.png"
-                alt="HN Enterprises"
-                width={36}
-                height={36}
-                priority
-                className="h-8 w-8 object-contain"
-              />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col leading-tight">
-              <span className="truncate text-sm font-semibold text-current tracking-tight">
-                HN Enterprises
-              </span>
-              <span className="truncate text-[10px] text-current opacity-60 font-medium">
-                CGD Management
-              </span>
-            </div>
-          </>
+          <div className="flex min-w-0 flex-1 flex-col leading-tight">
+            <span className="truncate text-[15px] font-semibold tracking-tight text-current">
+              HN Enterprises
+            </span>
+            <span className="truncate text-xs font-medium text-current opacity-60">
+              CGD Management
+            </span>
+          </div>
         )}
-        <SidebarTrigger className="h-8 w-8 shrink-0 text-sidebar-foreground/75 hover:bg-white/10 hover:text-sidebar-foreground" />
       </SidebarHeader>
 
-      <SidebarContent className="px-0 py-1.5">
+      <SidebarContent className="px-1.5 py-2">
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -324,27 +318,24 @@ export function Sidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarSeparator className="bg-sidebar-border/50" />
-      <SidebarFooter className="p-2">
+      <SidebarSeparator className="mx-3 bg-sidebar-border/50" />
+      <SidebarFooter className={cn("p-3", collapsed && "items-center px-1.5")}>
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(
-              "w-full flex items-center gap-2.5 px-2 py-2 rounded-sm hover:bg-white/10 transition-colors text-left outline-none text-sidebar-foreground",
-              collapsed && "justify-center",
+              "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sidebar-foreground outline-none transition-colors hover:bg-white/8",
+              // Collapsed rail is 3rem wide: an 8×8 avatar with no side padding fits without clipping.
+              collapsed && "size-9 justify-center p-0",
             )}
           >
-            <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback className="bg-white/10 text-sidebar-foreground text-xs font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar name={user?.fullName} src={user?.avatar} tone="inverse" size="sm" className={collapsed ? undefined : "size-9 text-[13px]"} />
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-current truncate">
+                  <p className="truncate text-[13px] font-semibold text-current">
                     {user?.fullName}
                   </p>
-                  <p className="text-[10px] text-current opacity-60 truncate capitalize">
+                  <p className="truncate text-xs capitalize text-current opacity-60">
                     {user?.role.replace(/_/g, " ")}
                   </p>
                 </div>

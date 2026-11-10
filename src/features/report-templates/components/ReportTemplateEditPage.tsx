@@ -1,231 +1,256 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeftIcon, EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { ArrowCounterClockwiseIcon, ArrowLeftIcon, EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionCard } from "@/components/shared/SectionCard";
+import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import { useReportTemplateData } from "../hooks/useReportTemplateData";
+import {
+  useEffectiveReportTemplate,
+  useResetReportTemplate,
+  useSaveReportTemplate,
+  type EffectiveReportTemplate,
+} from "../hooks/useReportTemplateOverrides";
 import { getReportTemplateById } from "../services/report-templates.service";
-import type { ReportTemplateData, ReportTemplateId } from "../types/report-template.types";
-
-type MappingRow = {
-  id: string;
-  section: string;
-  label: string;
-  source: string;
-  sample: string;
-};
+import { FIELD_INFO, TEMPLATE_FIELDS } from "../template-fields";
+import type { ReportTemplateId } from "../types/report-template.types";
 
 export function ReportTemplateEditPage({ templateId }: { templateId: ReportTemplateId }) {
-  const template = getReportTemplateById(templateId);
-  const searchParams = useSearchParams();
-  const customerId = searchParams.get("customerId") ?? undefined;
-  const { data } = useReportTemplateData(templateId, customerId);
-
-  const initialRows = useMemo(() => (data ? buildMappingRows(data) : []), [data]);
-  const [title, setTitle] = useState(template?.title ?? "");
-  const [category, setCategory] = useState(template?.category ?? "");
-  const [description, setDescription] = useState(template?.description ?? "");
-  const [rows, setRows] = useState<MappingRow[]>(initialRows);
-  const [savedAt, setSavedAt] = useState("");
+  const router = useRouter();
+  const { template, isLoading, isError } = useEffectiveReportTemplate(templateId);
 
   if (!template) {
     return (
-      <div className="rounded-sm border border-border bg-card p-6">
-        <p className="text-sm font-semibold text-foreground">Template not found</p>
-        <Link href="/reports/templates" className={buttonVariants({ variant: "outline", className: "mt-4" })}>
-          Back to templates
-        </Link>
+      <div className="rounded-card border border-border bg-card shadow-card">
+        <EmptyState
+          illustration="documents"
+          title="Template not found"
+          description="It may have been renamed or removed."
+          action={{ label: "Back to templates", onClick: () => router.push("/reports/templates") }}
+        />
       </div>
     );
   }
 
-  function updateRow(id: string, key: "label" | "source", value: string) {
-    setRows((currentRows) =>
-      currentRows.map((row) => (row.id === id ? { ...row, [key]: value } : row)),
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center">
+        <LoadingSpinner />
+      </div>
     );
   }
 
-  function handleSave() {
-    setSavedAt(new Date().toLocaleTimeString());
-  }
-
-  const displayRows = rows.length ? rows : initialRows;
-
+  // The form seeds its state from the saved edits, so remount it whenever they change
+  // (after a save or reset) instead of trying to sync state by hand.
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/reports/templates"
-            className={buttonVariants({ variant: "ghost", size: "sm", className: "-ml-2 mb-1" })}
-          >
-            <ArrowLeftIcon size={15} />
-            Templates
-          </Link>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Edit Template</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure template labels and data mappings before final PDF generation.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={customerId ? `/reports/templates/${template.id}?customerId=${customerId}` : `/reports/templates/${template.id}`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            <EyeIcon size={15} />
-            Preview
-          </Link>
-          <Button onClick={handleSave}>
-            <FloppyDiskIcon size={15} />
-            Save Template
-          </Button>
-        </div>
-      </div>
-
-      {savedAt ? (
-        <div className="rounded-sm border border-primary/25 bg-primary/10 px-3 py-2 text-sm text-primary">
-          Template changes saved locally at {savedAt}.
-        </div>
-      ) : null}
-
-      <div className="grid gap-3 border-y border-border bg-muted/20 px-3 py-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Template", title],
-          ["Category", category],
-          ["Customer", customerId ?? "Not selected"],
-          ["Mapped Fields", `${displayRows.length}`],
-        ].map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-            <p className="mt-1 truncate text-sm font-semibold text-foreground">{value || "-"}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
-        <section className="space-y-4 rounded-sm border border-border bg-card p-4">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Template Settings</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              These settings are frontend-only until backend template storage is added.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="template-title">Template Title</Label>
-            <Input id="template-title" value={title} onChange={(event) => setTitle(event.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="template-category">Category</Label>
-            <Input
-              id="template-category"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="template-description">Description</Label>
-            <Textarea
-              id="template-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={4}
-            />
-          </div>
-
-          {!customerId ? (
-            <div className="rounded-sm border border-border bg-muted/40 p-3">
-              <p className="text-xs font-semibold text-foreground">No customer selected</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Pick a customer from the templates list to see real sample values below.
-              </p>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="overflow-hidden rounded-sm border border-border bg-card">
-          <div className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">Field Mapping</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Edit paper labels or mapping notes. Sample values show what the template currently resolves.
-            </p>
-          </div>
-
-          <Table className="min-w-[880px]">
-            <TableHeader className="bg-muted/60 text-xs font-semibold text-muted-foreground">
-              <TableRow>
-                <TableHead>Section</TableHead>
-                <TableHead>Paper Label</TableHead>
-                <TableHead>Data Mapping</TableHead>
-                <TableHead>Sample Value</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayRows.map((row) => (
-                <TableRow key={row.id} className="align-top">
-                  <TableCell className="w-[160px] whitespace-normal text-xs font-medium text-muted-foreground">
-                    {row.section}
-                  </TableCell>
-                  <TableCell className="w-[240px]">
-                    <Input
-                      value={row.label}
-                      onChange={(event) => updateRow(row.id, "label", event.target.value)}
-                      className="h-8"
-                    />
-                  </TableCell>
-                  <TableCell className="w-[280px]">
-                    <Input
-                      value={row.source}
-                      onChange={(event) => updateRow(row.id, "source", event.target.value)}
-                      className="h-8"
-                    />
-                  </TableCell>
-                  <TableCell className="whitespace-normal text-sm text-foreground">
-                    {row.sample || "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      </div>
-    </div>
+    <TemplateEditForm
+      key={template.override?.updatedAt ?? "default"}
+      template={template}
+      loadFailed={isError}
+    />
   );
 }
 
-function buildMappingRows(data: ReportTemplateData): MappingRow[] {
-  const rows: Array<Omit<MappingRow, "id">> = [
-    { section: "Header", label: "Client", source: "client", sample: data.client },
-    { section: "Header", label: "Consultant", source: "consultant", sample: data.consultant },
-    { section: "Header", label: "Contractor", source: "contractor", sample: data.contractor },
-    { section: "Customer", label: "Customer Name", source: "customer.customerConnection.customerName", sample: data.customerName },
-    { section: "Customer", label: "BP/TR Number", source: "customer.customerConnection.trBpNo", sample: data.bpNo },
-    { section: "Customer", label: "Phone No", source: "customer.customerConnection.mobileNo", sample: data.phoneNo },
-    { section: "Customer", label: "Customer Address", source: "customer.customerConnection.fullAddress", sample: data.customerAddress },
-    { section: "Meter", label: "Meter No", source: "customer.commissioningConversion.meterNo", sample: data.meterNo },
-    { section: "Meter", label: "Meter Type", source: "customer.commissioningConversion.meterType", sample: data.meterType },
-    { section: "Regulator", label: "Regulator No", source: "customer.commissioningConversion.regulatorNo", sample: data.regulatorNo },
-    { section: "Regulator", label: "Regulator Pressure", source: "customer.commissioningConversion.regulatorPressure", sample: data.regulatorPressure },
-    { section: "Testing", label: "Riser Testing Pressure", source: "(no real source - blank)", sample: data.riserTestingPressure },
-    { section: "Testing", label: "Testing Time", source: "(no real source - blank)", sample: data.riserTestingTime },
-    { section: "JMR", label: "Meter Reading", source: "customer.commissioningConversion.meterReading", sample: data.meterReading },
-    { section: "Common", label: "Remarks", source: "customer.billingCompletion.remark", sample: data.remarks },
-  ];
+function TemplateEditForm({ template, loadFailed }: { template: EffectiveReportTemplate; loadFailed: boolean }) {
+  const defaults = getReportTemplateById(template.id)!;
+  const fields = TEMPLATE_FIELDS[template.id];
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customerId") ?? undefined;
+  const { data } = useReportTemplateData(template.id, customerId);
+  const save = useSaveReportTemplate(template.id);
+  const reset = useResetReportTemplate(template.id);
 
-  return rows.map((row, index) => ({ id: `mapping-${index + 1}`, ...row }));
+  const [title, setTitle] = useState(template.override?.title ?? "");
+  const [category, setCategory] = useState(template.override?.category ?? "");
+  const [description, setDescription] = useState(template.override?.description ?? "");
+  const [labels, setLabels] = useState<Record<string, string>>(template.fieldLabels);
+
+  const isBusy = save.isPending || reset.isPending;
+  const previewHref = `/reports/templates/${template.id}${customerId ? `?customerId=${customerId}` : ""}`;
+  const savedAt = template.override ? new Date(template.override.updatedAt) : null;
+
+  async function handleSave() {
+    try {
+      await save.mutateAsync({ title, category, description, fieldLabels: labels });
+      toast.success("Template saved", { description: "Every preview and PDF now uses these labels." });
+    } catch (error) {
+      toast.error("Couldn't save template", { description: error instanceof Error ? error.message : undefined });
+    }
+  }
+
+  async function handleReset() {
+    try {
+      await reset.mutateAsync();
+      toast.success("Template reset to default wording");
+    } catch (error) {
+      toast.error("Couldn't reset template", { description: error instanceof Error ? error.message : undefined });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-5 pb-20">
+      <PageHeader
+        title="Edit template"
+        description="Rename the template and change the labels printed on the form. Saved for every admin."
+        actions={
+          <>
+            <Link href="/reports/templates" className={buttonVariants({ variant: "ghost" })}>
+              <ArrowLeftIcon size={15} />
+              Templates
+            </Link>
+            <Link href={previewHref} className={buttonVariants({ variant: "outline" })}>
+              <EyeIcon size={15} />
+              Preview
+            </Link>
+          </>
+        }
+      />
+
+      {loadFailed ? (
+        <p className="rounded-lg border border-status-warning/30 bg-status-warning-bg px-3 py-2 text-[13px] text-status-warning-fg">
+          Saved edits couldn&apos;t be loaded, so the default wording is shown. Saving now will replace any saved edits.
+        </p>
+      ) : null}
+
+      <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <SectionCard title="Template details" description="Leave a field empty to keep the default.">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="template-title" className="text-xs">Title</Label>
+              <Input id="template-title" value={title} placeholder={defaults.title} maxLength={200} onChange={(event) => setTitle(event.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="template-category" className="text-xs">Category</Label>
+              <Input id="template-category" value={category} placeholder={defaults.category} maxLength={80} onChange={(event) => setCategory(event.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="template-description" className="text-xs">Description</Label>
+              <Textarea
+                id="template-description"
+                value={description}
+                placeholder={defaults.description}
+                maxLength={1000}
+                rows={4}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
+            {!customerId ? (
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                Pick a customer on the templates page to see real sample values next to each label.
+              </p>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Printed labels"
+          description="Change the wording printed beside each value. Where the value comes from is fixed."
+          className="min-w-0 overflow-hidden"
+        >
+          {fields.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground">This template has no customer fields to relabel.</p>
+          ) : (
+            <div className="-mx-5 -mb-5 overflow-x-auto border-t border-border">
+              <Table className="min-w-[760px]">
+                <TableHeader className="bg-surface-muted text-xs font-semibold text-muted-foreground">
+                  <TableRow>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Printed label</TableHead>
+                    <TableHead>Data source</TableHead>
+                    <TableHead>Sample value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fields.map((field) => {
+                    const info = FIELD_INFO[field.key];
+                    const sample = data?.[field.key];
+                    return (
+                      <TableRow key={field.key} className="align-top">
+                        <TableCell className="w-[120px] text-xs font-medium text-muted-foreground">{info.section}</TableCell>
+                        <TableCell className="w-[240px]">
+                          <Input
+                            aria-label={`Label for ${field.defaultLabel}`}
+                            value={labels[field.key] ?? ""}
+                            placeholder={field.defaultLabel}
+                            maxLength={120}
+                            className="h-8"
+                            onChange={(event) => setLabels((current) => ({ ...current, [field.key]: event.target.value }))}
+                          />
+                        </TableCell>
+                        <TableCell className="w-[260px] whitespace-normal break-all font-mono text-[11px] text-muted-foreground">
+                          {info.source}
+                        </TableCell>
+                        <TableCell className="whitespace-normal text-sm text-foreground">
+                          {sample ? String(sample) : <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <StickyFormFooter
+        start={
+          savedAt
+            ? `Last saved ${savedAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`
+            : "Using default wording"
+        }
+      >
+        {template.override ? (
+          <AlertDialog>
+            <AlertDialogTrigger render={<Button variant="ghost" disabled={isBusy} />}>
+              <ArrowCounterClockwiseIcon size={15} />
+              Reset to default
+            </AlertDialogTrigger>
+            <AlertDialogContent className="sm:max-w-sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset this template?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The saved title, description and labels are removed for every admin, and the form prints its original
+                  wording again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
+        <Link href="/reports/templates" className={buttonVariants({ variant: "outline" })}>
+          Cancel
+        </Link>
+        <Button onClick={handleSave} disabled={isBusy}>
+          <FloppyDiskIcon size={15} />
+          {save.isPending ? "Saving..." : "Save template"}
+        </Button>
+      </StickyFormFooter>
+    </div>
+  );
 }

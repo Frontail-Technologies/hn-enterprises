@@ -19,6 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionCard } from "@/components/shared/SectionCard";
+import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import {
   projectStatusOptions,
 } from "@/features/projects/services/projects.service";
@@ -106,17 +108,20 @@ function ProjectFormFields({
   });
 
   return (
-    <div>
-      <PageHeader title={isEdit ? "Edit Project" : "Create Project"} />
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title={isEdit ? "Edit Project" : "Create Project"}
+        description={isEdit ? "Update the project's details, schedule and contract value." : "Set up a new project with its client, schedule and contract value."}
+      />
 
       <form
-        className="pb-24"
+        className="flex flex-col gap-5"
         onSubmit={(event) => {
           event.preventDefault();
           void onSubmit();
         }}
       >
-          <div className="rounded-sm border border-border bg-card p-4">
+          <SectionCard title="Project details">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <FormField label="Project Name">
                 <Input {...register("name")} placeholder="Project name" />
@@ -162,6 +167,11 @@ function ProjectFormFields({
                   )}
                 />
               </FormField>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Schedule & value">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <FormField label="Start Date">
                 <Controller
                   control={control}
@@ -183,16 +193,17 @@ function ProjectFormFields({
                 <Textarea {...register("description")} placeholder="Brief project scope and notes" className="min-h-28" />
               </FormField>
             </div>
-          </div>
+          </SectionCard>
 
         {mutation.isError ? (
-          <p className="mt-3 text-sm text-destructive">
+          <p className="text-sm text-destructive">
             {mutation.error instanceof Error ? mutation.error.message : "Unable to save project"}
           </p>
         ) : null}
 
-        <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-sm border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
-          {isEdit && projectId && (
+        <StickyFormFooter
+          start={
+            isEdit && projectId ? (
             <DeleteImpactDialog
               open={deleteDialogOpen}
               onOpenChange={setDeleteDialogOpen}
@@ -224,7 +235,9 @@ function ProjectFormFields({
                 router.push(`/projects/${projectId}`);
               }}
             />
-          )}
+            ) : undefined
+          }
+        >
           <Link
             href={isEdit && projectId ? `/projects/${projectId}` : "/projects"}
             className={buttonVariants({ variant: "outline", size: "default" })}
@@ -234,7 +247,7 @@ function ProjectFormFields({
           <Button type="submit" disabled={mutation.isPending || formState.isSubmitting}>
             {mutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Project"}
           </Button>
-        </div>
+        </StickyFormFooter>
       </form>
     </div>
   );

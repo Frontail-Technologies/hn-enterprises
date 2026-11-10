@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   useAnnouncementsQuery,
   useCreateAnnouncement,
@@ -23,7 +22,7 @@ const emptyDraft: Announcement = {
 };
 
 export function useAnnouncementsPage() {
-  const { data: announcements = [], isLoading } = useAnnouncementsQuery();
+  const { data: announcements = [], isLoading, isError, refetch } = useAnnouncementsQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Announcement>(emptyDraft);
@@ -34,14 +33,14 @@ export function useAnnouncementsPage() {
   const publishMutation = usePublishAnnouncement();
   const republishMutation = useRepublishAnnouncement();
   const deleteMutation = useDeleteAnnouncement();
-  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const bulkDeleteMutation = useBulkDeleteAnnouncements();
 
-  async function handleBulkDelete() {
-    await bulkDeleteMutation.mutateAsync(Array.from(selectedIds));
+  // Selection lives in the page's ListTable state; it hands over the ids.
+  async function handleBulkDelete(ids: string[], clearSelection: () => void) {
+    await bulkDeleteMutation.mutateAsync(ids);
     setBulkDeleteOpen(false);
-    clear();
+    clearSelection();
   }
 
   const openCreate = () => {
@@ -100,6 +99,8 @@ export function useAnnouncementsPage() {
   return {
     announcements,
     isLoading,
+    isError,
+    refetch,
     dialog: {
       open: dialogOpen,
       editingId,
@@ -111,12 +112,6 @@ export function useAnnouncementsPage() {
       openEdit,
       close: closeDialog,
       save: saveDraft,
-    },
-    selection: {
-      selectedIds,
-      toggleRow,
-      toggleAllOnPage,
-      clear,
     },
     bulkDelete: {
       open: bulkDeleteOpen,

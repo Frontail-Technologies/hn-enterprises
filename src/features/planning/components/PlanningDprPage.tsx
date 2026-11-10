@@ -71,9 +71,9 @@ export function PlanningDprPage() {
     >
       <div className="space-y-3">
         {isLoading ? (
-          <PageLoading className="min-h-24 rounded-lg border border-border/70 bg-card" />
+          <PageLoading className="min-h-24 rounded-card border border-border bg-card shadow-card" />
         ) : (
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-lg border border-border/70 bg-card px-3 py-2">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-card border border-border bg-card shadow-card px-3 py-2">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Supervisor</p>
               <p className="text-sm font-semibold text-foreground">{supervisorName}</p>
@@ -94,12 +94,12 @@ export function PlanningDprPage() {
         )}
 
         {isLoading ? null : !record ? (
-          <p className="rounded-lg border border-border/70 bg-card px-3 py-4 text-sm text-muted-foreground">
+          <p className="rounded-card border border-border bg-card shadow-card px-3 py-4 text-sm text-muted-foreground">
             No DPR filed for this site and date yet.
           </p>
         ) : (
           <>
-            <section className="rounded-lg border border-border/70 bg-card">
+            <section className="rounded-card border border-border bg-card shadow-card">
               <div className="border-b border-border/70 px-3 py-2">
                 <h2 className="text-sm font-semibold text-foreground">DPR Work Items</h2>
                 <p className="text-xs text-muted-foreground">
@@ -140,13 +140,13 @@ export function PlanningDprPage() {
               </Table>
             </section>
 
-            <div className="rounded-lg border border-border/70 bg-card px-3 py-2">
+            <div className="rounded-card border border-border bg-card shadow-card px-3 py-2">
               <p className="text-xs font-medium text-muted-foreground">Supervisor Remarks</p>
               <p className="mt-1 text-sm text-foreground">{remarks || "-"}</p>
             </div>
 
             {record.evidence.length ? (
-              <div className="rounded-lg border border-border/70 bg-card px-3 py-2">
+              <div className="rounded-card border border-border bg-card shadow-card px-3 py-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Photos ({record.evidence.length})
                 </p>

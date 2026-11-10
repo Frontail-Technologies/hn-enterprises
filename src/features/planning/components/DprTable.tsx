@@ -58,7 +58,7 @@ export function DprTable({
               <TableCell>
                 <div className="flex flex-col gap-1">
                   <StatusBadge status={row.status} />
-                  {!hasMatchingPlan ? <span className="text-[11px] text-muted-foreground">No matching plan</span> : null}
+                  {!hasMatchingPlan ? <span className="text-xs text-muted-foreground">No matching plan</span> : null}
                 </div>
               </TableCell>
               <TableCell className="max-w-[220px] truncate text-muted-foreground" title={row.remarks}>

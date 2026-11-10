@@ -128,13 +128,13 @@ export function WageDialog({
           {label}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{wage ? "Edit Wage Entry" : "Add Wage Entry"}</DialogTitle>
           <DialogDescription>Payroll entry for {month}.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           <FormField label="Plumber / Worker">
             <Controller
               control={control}
@@ -173,25 +173,21 @@ export function WageDialog({
             />
           </FormField>
 
-          <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Rate of Wage">
               <Input type="number" {...register("wageRate")} />
             </FormField>
             <FormField label="Days Worked">
               <Input type="number" {...register("daysWorked")} />
             </FormField>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="PF">
               <Input type="number" {...register("pf")} />
             </FormField>
             <FormField label="ESIC">
               <Input type="number" {...register("esic")} />
             </FormField>
-          </div>
 
-          <FormField label="Status">
+          <FormField label="Status" className="sm:col-span-2">
             <Controller
               control={control}
               name="status"
@@ -212,16 +208,16 @@ export function WageDialog({
             />
           </FormField>
 
-          <FormField label="Remarks">
+          <FormField label="Remarks" className="sm:col-span-2">
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
 
           {validationMessage || submitError ? (
-            <p className="text-xs text-destructive">{validationMessage || submitError}</p>
+            <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
           ) : null}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
           <Button type="button" onClick={() => void onSubmit()} disabled={upsertWage.isPending}>
             {upsertWage.isPending ? "Saving..." : "Save"}

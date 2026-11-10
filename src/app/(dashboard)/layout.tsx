@@ -1,38 +1,12 @@
-'use client'
+import { cookies } from 'next/headers'
+import { DashboardGate } from '@/components/layout/DashboardGate'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
+// The sidebar remembers open/collapsed in this cookie (components/ui/sidebar.tsx).
+const SIDEBAR_COOKIE = 'sidebar_state'
 
-export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (isLoading) return
-
-    if (!isAuthenticated) {
-      router.replace('/login')
-      return
-    }
-
-    if (user && user.role !== 'super_admin' && user.role !== 'admin') {
-      router.replace('/login')
-    }
-  }, [isAuthenticated, isLoading, router, user])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) return null
-  if (user && user.role !== 'super_admin' && user.role !== 'admin') return null
-
-  return <DashboardLayout>{children}</DashboardLayout>
+export default async function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
+  // Read on the server so the loading skeleton and the real sidebar start at
+  // the saved width on the very first paint.
+  const sidebarOpen = (await cookies()).get(SIDEBAR_COOKIE)?.value !== 'false'
+  return <DashboardGate sidebarOpen={sidebarOpen}>{children}</DashboardGate>
 }

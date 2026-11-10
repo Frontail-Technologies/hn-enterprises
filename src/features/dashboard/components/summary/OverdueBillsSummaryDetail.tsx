@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { differenceInCalendarDays } from "date-fns";
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useBillsQuery } from "@/features/commercial/hooks/useBills";
 import type { Bill } from "@/features/commercial/types/bill.types";
@@ -12,22 +12,16 @@ import { SummaryStatShell } from "../SummaryStatShell";
 
 type OverdueBillRow = Bill & { daysOverdue: number };
 
-const columns: ExcelColumn<OverdueBillRow>[] = [
-  { key: "billNumber", label: "Bill Number", width: 160, sticky: true, getValue: (row) => row.billNumber },
-  { key: "dueDate", label: "Due Date", width: 130, getValue: (row) => formatDate(row.dueDate) },
-  { key: "daysOverdue", label: "Days Overdue", width: 120, getValue: (row) => row.daysOverdue },
-  { key: "pendingAmount", label: "Pending Amount", width: 150, getValue: (row) => money(row.pendingAmount) },
-  {
-    key: "status",
-    label: "Status",
-    width: 130,
-    getValue: (row) => row.status,
-    render: (row) => <StatusBadge status={row.status} />,
-  },
+const columns: ListColumn<OverdueBillRow>[] = [
+  { id: "billNumber", header: "Bill Number", width: 160, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.billNumber },
+  { id: "dueDate", header: "Due Date", width: 130, sortable: true, columnFilter: true, value: (row) => row.dueDate, cell: (row) => formatDate(row.dueDate) },
+  { id: "daysOverdue", header: "Days Overdue", width: 120, align: "end", sortable: true, columnFilter: true, value: (row) => row.daysOverdue },
+  { id: "pendingAmount", header: "Pending Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.pendingAmount, cell: (row) => money(row.pendingAmount) },
+  { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status, cell: (row) => <StatusBadge status={row.status} /> },
 ];
 
 export function OverdueBillsSummaryDetail({ projectId }: { projectId: string }) {
-  const { data: bills = [], isLoading: billsLoading } = useBillsQuery({
+  const { data: bills = [], isLoading: billsLoading, isError, refetch } = useBillsQuery({
     projectId: projectId === "all" ? undefined : projectId,
   });
 
@@ -48,6 +42,9 @@ export function OverdueBillsSummaryDetail({ projectId }: { projectId: string }) 
       columns={columns}
       rows={rows}
       isLoading={billsLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      emptyIllustration="allClear"
       emptyTitle="No overdue bills found"
     />
   );

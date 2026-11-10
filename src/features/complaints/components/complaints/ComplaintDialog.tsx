@@ -115,14 +115,14 @@ export function ComplaintDialog({
           {triggerLabel}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{complaint ? "Edit Complaint" : "Raise Complaint"}</DialogTitle>
           <DialogDescription>Raise and track complaints against a customer.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {!preselectedCustomerId && (
               <FormField label="Customer">
                 <Controller
@@ -181,7 +181,7 @@ export function ComplaintDialog({
             </FormField>
           </div>
 
-          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+          <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
             <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
             <Button type="submit" disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Complaint"}

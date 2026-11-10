@@ -55,6 +55,8 @@ export type ReportTemplateData = {
   gcChecklistRows: PdfTableRow[];
   gcEvidenceRows: PdfTableRow[];
   gcEvidenceImages?: string[];
+  /** Admin-saved paper labels by field key (see template-fields.ts). */
+  fieldLabels?: Record<string, string>;
 };
 
 export type PdfTableRow = Array<string | number | boolean | null | undefined>;

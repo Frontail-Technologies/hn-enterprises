@@ -19,10 +19,16 @@ interface DashboardStatCardProps {
   tone?: StatCardTone;
   dense?: boolean;
   className?: string;
+  /** Custom colours for the icon tile; overrides `tone`. */
+  iconClassName?: string;
   /** Exact value for the hover tooltip when `value` has been compacted for display (e.g. "₹1.48Cr" vs "₹1,47,52,130"). Defaults to `value`. */
   fullValue?: string | number;
 }
 
+/**
+ * The one stat-card look for the admin panel: icon tile, muted label, large
+ * tabular value, optional helper line. MetricCard renders through this too.
+ */
 export function DashboardStatCard({
   label,
   value,
@@ -31,42 +37,39 @@ export function DashboardStatCard({
   tone = "info",
   dense = false,
   className,
+  iconClassName,
   fullValue,
 }: DashboardStatCardProps) {
   return (
     <article
       className={cn(
-        "flex w-full min-w-0 flex-col justify-between gap-2 rounded-card border border-border bg-card transition-colors sm:gap-2.5",
-        dense ? "min-h-16 p-2.5 sm:min-h-20 sm:p-3" : "min-h-20 p-3 sm:min-h-24 sm:p-4",
+        "flex w-full min-w-0 items-start gap-3.5 rounded-card border border-border bg-card shadow-card transition-colors",
+        dense ? "p-3.5" : "p-4 sm:p-5",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 text-[11px] font-semibold text-muted-foreground sm:text-meta">{label}</p>
-        <span
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-md",
-            dense ? "size-5 sm:size-6" : "size-6 sm:size-7",
-            TONE_CHIP_CLASSES[tone],
-          )}
-        >
-          <Icon weight="bold" className={dense ? "size-2.5 sm:size-3" : "size-3 sm:size-3.5"} />
-        </span>
-      </div>
-      <div className="min-w-0">
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-lg",
+          dense ? "size-9" : "size-10 sm:size-11",
+          iconClassName ?? TONE_CHIP_CLASSES[tone],
+        )}
+      >
+        <Icon weight="duotone" className={dense ? "size-[18px]" : "size-5 sm:size-[22px]"} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="truncate text-[13px] text-muted-foreground">{label}</p>
         <p
           title={String(fullValue ?? value)}
           className={cn(
-            "truncate leading-none font-bold text-foreground tabular-nums",
-            dense
-              ? "text-sm sm:text-[clamp(1rem,1.6vw,1.125rem)]"
-              : "text-base sm:text-[clamp(1.25rem,2.2vw,1.5rem)]",
+            "truncate leading-none font-bold tracking-tight text-foreground tabular-nums",
+            dense ? "text-lg" : "text-xl sm:text-[1.625rem]",
           )}
         >
           {value}
         </p>
         {helperText ? (
-          <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground/70 sm:text-meta">{helperText}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{helperText}</p>
         ) : null}
       </div>
     </article>

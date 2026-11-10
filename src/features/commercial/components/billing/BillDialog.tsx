@@ -137,13 +137,13 @@ export function BillDialog({
           {triggerLabel}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{bill ? "Edit Bill" : "Create Bill"}</DialogTitle>
           <DialogDescription>Create bill records and payment entries.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           <FormField label="Project">
             {projectLocked ? (
               <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
@@ -170,8 +170,7 @@ export function BillDialog({
             <Input {...register("billNumber")} />
           </FormField>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Bill Date">
+          <FormField label="Bill Date">
               <Controller
                 control={control}
                 name="billDate"
@@ -181,10 +180,8 @@ export function BillDialog({
             <FormField label="Total Amount">
               <Input type="number" {...register("totalAmount")} />
             </FormField>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Tax">
+          <FormField label="Tax">
               <Input type="number" {...register("tax")} />
             </FormField>
             <FormField label="Due Date">
@@ -194,9 +191,8 @@ export function BillDialog({
                 render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} />}
               />
             </FormField>
-          </div>
 
-          <FormField label="Status">
+          <FormField label="Status" className="sm:col-span-2">
             <Controller
               control={control}
               name="status"
@@ -222,16 +218,16 @@ export function BillDialog({
             />
           </FormField>
 
-          <FormField label="Remarks">
+          <FormField label="Remarks" className="sm:col-span-2">
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
 
           {validationMessage || submitError ? (
-            <p className="text-xs text-destructive">{validationMessage || submitError}</p>
+            <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
           ) : null}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 flex w-full flex-row items-center justify-between sm:justify-between">
+        <DialogFooter className="flex w-full shrink-0 flex-row items-center justify-between border-t border-border px-6 py-4 sm:justify-between">
           {bill?.id ? (
             <DeleteConfirmDialog
               itemName="this bill"

@@ -1,39 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { NotePencilIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
+import { useRouter } from "next/navigation";
+import { ArrowLeftIcon, AtIcon, EnvelopeSimpleIcon, IdentificationBadgeIcon, NotePencilIcon, PhoneIcon } from "@phosphor-icons/react";
+import { buttonVariants } from "@/components/ui/button";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageLoading } from "@/components/shared/PageLoading";
+import { DetailRows, RecordHeader, RecordLayout } from "@/components/shared/record";
+import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate, formatDateTime } from "../utils/format";
 import { useStaffMemberQuery } from "../hooks/useStaff";
-import { PageShell } from "@/components/shared/PageShell";
-import { PageLoading } from "@/components/shared/PageLoading";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 
 export function StaffDetailPage({ id }: { id: string }) {
   const { data: staffMember, isLoading, isError } = useStaffMemberQuery(id);
+  useBreadcrumbLabel(id, staffMember?.name);
+  const router = useRouter();
 
   if (isLoading) {
-    return (
-      <PageShell
-        title="Supervisor Details"
-        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
-      >
-        <PageLoading className="min-h-24 rounded-md bg-muted/30" />
-      </PageShell>
-    );
+    return <PageLoading />;
   }
 
   if (isError || !staffMember) {
     return (
-      <PageShell
-        title="Supervisor Details"
-        contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
-      >
-        <div className="rounded-md bg-muted/30 p-6 text-sm text-muted-foreground">
-          Supervisor record not found.
-        </div>
-      </PageShell>
+      <EmptyState
+        illustration="error"
+        title="Supervisor not found"
+        description="This record may have been removed, or the connection failed."
+        action={{ label: "Back to supervisors", onClick: () => router.push("/staff") }}
+      />
     );
   }
 
@@ -41,91 +38,77 @@ export function StaffDetailPage({ id }: { id: string }) {
   const isUpi = staffMember.paymentAccountType === "UPI";
 
   return (
-    <PageShell
-      title={staffMember.name}
-      actions={
-        <Link
-          href={`/staff/${staffMember.id}/edit`}
-          className={buttonVariants({ variant: "default" })}
-        >
-          <NotePencilIcon size={15} />
-          Edit Supervisor
-        </Link>
-      }
-      contentClassName="space-y-3 rounded-card border border-border bg-card p-4"
-    >
-      <div className="space-y-4">
-        <section className="rounded-md border border-border/70 bg-background p-4">
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/70 pb-3">
-            <div>
-              <h2 className="text-base font-semibold text-foreground">Supervisor Information</h2>
-              <p className="text-xs text-muted-foreground">Core profile and assignment details.</p>
-            </div>
-            <StatusBadge status={staffMember.status} />
-          </div>
-          <KeyValueGrid
-            columns={2}
-            items={[
-              { label: "Name", value: staffMember.name },
-              { label: "Role", value: staffMember.role },
-              { label: "Username", value: staffMember.username },
-              { label: "Mobile", value: staffMember.contact || "-" },
-              { label: "Email", value: staffMember.email },
-              { label: "Last Login", value: staffMember.lastLogin ? formatDateTime(staffMember.lastLogin) : "Never" },
-            ]}
-          />
-        </section>
+    <div className="flex flex-col gap-5">
+      <RecordHeader
+        leading={<UserAvatar name={staffMember.name} src={staffMember.avatarUrl} size="lg" />}
+        title={staffMember.name}
+        badges={<StatusBadge status={staffMember.status} />}
+        meta={[
+          { icon: IdentificationBadgeIcon, label: staffMember.role },
+          { icon: AtIcon, label: staffMember.username },
+          { icon: PhoneIcon, label: staffMember.contact },
+          { icon: EnvelopeSimpleIcon, label: staffMember.email },
+        ]}
+        actions={
+          <>
+            <Link href="/staff" className={buttonVariants({ variant: "outline" })}>
+              <ArrowLeftIcon size={15} />
+              Back to Supervisors
+            </Link>
+            <Link href={`/staff/${staffMember.id}/edit`} className={buttonVariants({ variant: "default" })}>
+              <NotePencilIcon size={15} />
+              Edit Supervisor
+            </Link>
+          </>
+        }
+      />
 
-        <section className="rounded-md border border-border/70 bg-background p-4">
-          <div className="mb-3 border-b border-border/70 pb-3">
-            <h2 className="text-base font-semibold text-foreground">Salary Details</h2>
-            <p className="text-xs text-muted-foreground">Important pay structure fields.</p>
-          </div>
-          <KeyValueGrid
-            columns={2}
-            items={[
-              { label: "Salary Type", value: staffMember.salaryType },
-              { label: "Monthly Salary", value: formatAmount(staffMember.monthlySalary) },
+      <RecordLayout
+        rail={
+          <SectionCard title="Account">
+            <DetailRows
+              rows={[
+                { label: "Role", value: staffMember.role },
+                { label: "Username", value: staffMember.username },
+                { label: "Mobile", value: staffMember.contact },
+                { label: "Email", value: staffMember.email },
+                { label: "Last login", value: staffMember.lastLogin ? formatDateTime(staffMember.lastLogin) : "Never" },
+                { label: "Status", value: <StatusBadge status={staffMember.status} /> },
+              ]}
+            />
+          </SectionCard>
+        }
+      >
+        <SectionCard title="Salary details" description="Pay structure and review dates.">
+          <DetailRows
+            rows={[
+              { label: "Salary type", value: staffMember.salaryType },
+              { label: "Monthly salary", value: formatAmount(staffMember.monthlySalary) },
               { label: "Allowance", value: formatAmount(staffMember.allowance) },
-              { label: "Payment Type", value: staffMember.paymentAccountType },
-              { label: "Last Revision", value: staffMember.lastSalaryRevisionDate ? formatDate(staffMember.lastSalaryRevisionDate) : "-" },
-              { label: "Next Review", value: staffMember.nextSalaryReviewDate ? formatDate(staffMember.nextSalaryReviewDate) : "-" },
+              { label: "Payment type", value: staffMember.paymentAccountType },
+              { label: "Last revision", value: staffMember.lastSalaryRevisionDate ? formatDate(staffMember.lastSalaryRevisionDate) : "-" },
+              { label: "Next review", value: staffMember.nextSalaryReviewDate ? formatDate(staffMember.nextSalaryReviewDate) : "-" },
             ]}
           />
-        </section>
+        </SectionCard>
 
-        <section className="rounded-md border border-border/70 bg-background p-4">
-          <div className="mb-3 border-b border-border/70 pb-3">
-            <h2 className="text-base font-semibold text-foreground">Bank / UPI Details</h2>
-            <p className="text-xs text-muted-foreground">Payment destination for salary and reimbursements.</p>
-          </div>
-          <KeyValueGrid
-            columns={2}
-            items={[
-              { label: "Account Holder", value: staffMember.accountHolderName || "-" },
+        <SectionCard title="Bank / UPI details" description="Payment destination for salary and reimbursements.">
+          <DetailRows
+            rows={[
+              { label: "Account holder", value: staffMember.accountHolderName || "-" },
               isBankAccount
-                ? { label: "Bank Type", value: staffMember.bankType || "-" }
-                : { label: "UPI Type", value: isUpi ? staffMember.upiType || "-" : "-" },
+                ? { label: "Bank type", value: staffMember.bankType || "-" }
+                : { label: "UPI type", value: isUpi ? staffMember.upiType || "-" : "-" },
               isBankAccount
-                ? { label: "Bank Name", value: staffMember.bankName || "-" }
+                ? { label: "Bank name", value: staffMember.bankName || "-" }
                 : { label: "UPI ID", value: isUpi ? staffMember.upiId || "-" : "-" },
-              isBankAccount
-                ? { label: "Account Number", value: staffMember.accountNumber || "-" }
-                : { label: "Account Number", value: "-" },
-              isBankAccount
-                ? { label: "IFSC Code", value: staffMember.ifscCode || "-" }
-                : { label: "IFSC Code", value: "-" },
+              { label: "Account number", value: isBankAccount ? staffMember.accountNumber || "-" : "-" },
+              { label: "IFSC code", value: isBankAccount ? staffMember.ifscCode || "-" : "-" },
             ]}
           />
-        </section>
-
-        <div className="flex justify-end">
-          <Link href="/staff">
-            <Button variant="outline">Back to Supervisors</Button>
-          </Link>
-        </div>
-      </div>
-    </PageShell>
+        </SectionCard>
+      </RecordLayout>
+    </div>
   );
 }
 

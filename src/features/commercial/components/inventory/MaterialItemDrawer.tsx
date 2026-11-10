@@ -76,15 +76,15 @@ export function MaterialItemDrawer() {
         <PlusIcon size={13} />
         Add Material
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>Add Material</DialogTitle>
           <DialogDescription>
             Create an actual stock item. Categories only group materials; they are not selectable stock items.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <FormField label="Material Name" helper={'Example: GI Pipe 20MM, 1/2" GI Tee, 90MM Coupler.'}>
             <Input {...register("name")} placeholder="Enter material name" />
           </FormField>
@@ -137,7 +137,7 @@ export function MaterialItemDrawer() {
           ) : null}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
           <Button type="button" onClick={() => void onSubmit()} disabled={createMaterial.isPending}>
             {createMaterial.isPending ? "Saving..." : "Save Material"}

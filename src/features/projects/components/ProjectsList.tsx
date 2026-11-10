@@ -2,22 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BuildingsIcon, CaretDownIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useBulkDeleteProjects, useProjectsQuery } from "@/features/projects/hooks/useProjects";
-import { exportRowsToExcel } from "@/lib/export-excel";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import type { Project } from "../types/project.types";
 
 type ProjectMasterSheetRow = {
@@ -25,133 +16,118 @@ type ProjectMasterSheetRow = {
   values: Record<string, string>;
 };
 
-const projectMasterSheetColumns: ExcelColumn<ProjectMasterSheetRow>[] = [
-  {
-    key: "name",
-    label: "Project Name",
-    width: 350,
-    sticky: true,
-    getValue: (row) => row.values.name,
-  },
-  {
-    key: "code",
-    label: "Project Code",
-    width: 260,
-    sticky: true,
-    getValue: (row) => row.values.code,
-  },
-  { key: "city", label: "City", width: 130, getValue: (row) => row.values.city },
-  { key: "client", label: "Client", width: 260, getValue: (row) => row.values.client },
-  { key: "consultant", label: "Consultant", width: 220, getValue: (row) => row.values.consultant },
-  { key: "contractor", label: "Contractor", width: 180, getValue: (row) => row.values.contractor },
-  { key: "projectType", label: "Project Type", width: 160, getValue: (row) => row.values.projectType },
-  { key: "startDate", label: "Start Date", width: 130, getValue: (row) => row.values.startDate },
-  { key: "plannedEndDate", label: "End Date", width: 130, getValue: (row) => row.values.plannedEndDate },
-  { key: "status", label: "Status", width: 140, getValue: (row) => row.values.status },
-  { key: "contractValue", label: "Contract Value", width: 150, getValue: (row) => row.values.contractValue },
-  { key: "assignedManager", label: "Project Manager", width: 180, getValue: (row) => row.values.assignedManager },
-  { key: "description", label: "Description", width: 360, getValue: (row) => row.values.description },
+const FIELDS: { key: string; label: string; width: number }[] = [
+  { key: "name", label: "Project Name", width: 320 },
+  { key: "code", label: "Project Code", width: 220 },
+  { key: "city", label: "City", width: 130 },
+  { key: "client", label: "Client", width: 240 },
+  { key: "consultant", label: "Consultant", width: 200 },
+  { key: "contractor", label: "Contractor", width: 180 },
+  { key: "projectType", label: "Project Type", width: 160 },
+  { key: "startDate", label: "Start Date", width: 130 },
+  { key: "plannedEndDate", label: "End Date", width: 130 },
+  { key: "status", label: "Status", width: 140 },
+  { key: "contractValue", label: "Contract Value", width: 150 },
+  { key: "assignedManager", label: "Project Manager", width: 180 },
+  { key: "description", label: "Description", width: 360 },
 ];
+
+// Every column keeps the Excel-style value filter it had on ExcelDataGrid (all
+// projects are loaded client-side). Name and code stay pinned.
+const columns: ListColumn<ProjectMasterSheetRow>[] = FIELDS.map((field) => ({
+  id: field.key,
+  header: field.label,
+  width: field.width,
+  // Contract value is a formatted currency string ("₹1,50,000"); sort/filter on the number, display the text.
+  value: field.key === "contractValue" ? (row) => parseAmount(row.values.contractValue) : (row) => row.values[field.key],
+  cell: field.key === "contractValue" ? (row) => row.values.contractValue || "—" : undefined,
+  columnFilter: true,
+  sortable: field.key !== "description",
+  isTitle: field.key === "name",
+  hideable: field.key !== "name",
+  pin: field.key === "name" || field.key === "code",
+  align: field.key === "contractValue" ? "end" : undefined,
+}));
+
+function parseAmount(value: string | null | undefined) {
+  const amount = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return value && Number.isFinite(amount) ? amount : null;
+}
+
+const exportColumns: ExportColumn<ProjectMasterSheetRow>[] = FIELDS.map((field) => ({
+  label: field.label,
+  getValue: (row) => row.values[field.key],
+}));
 
 export function ProjectsList() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const { data: projects = [], isLoading } = useProjectsQuery();
-  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const list = useListState({ pageSize: 50, storageKey: "projects" });
+  const { data: projects = [], isLoading, isError, refetch } = useProjectsQuery();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeleteProjects();
 
   const rows = useMemo(() => projects.map(projectToMasterSheetRow), [projects]);
-
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return rows;
-
-    return rows.filter((row) =>
-      projectMasterSheetColumns.some((column) =>
-        String(column.getValue(row) ?? "").toLowerCase().includes(query),
-      ),
-    );
-  }, [rows, search]);
+  // Search matches every column value, as before.
+  const { rows: filteredRows, pageRows, total } = useClientRows(rows, list, { columns });
 
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selectedIds));
-    clear();
+    await bulkDelete.mutateAsync(Array.from(list.selection));
+    list.clearSelection();
     setDeleteOpen(false);
   }
 
   return (
     <PageShell
       title="Projects"
-      icon={BuildingsIcon}
+      description="All CGD projects with their client, contractor and schedule."
       actions={
-        <>
-          <div className="relative min-w-0 sm:w-80 sm:shrink-0">
-            <MagnifyingGlassIcon
-              size={15}
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search projects..."
-              className="h-8 w-full pl-9"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button type="button" variant="outline" size="compact">
-                    More
-                    <CaretDownIcon size={12} />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => void exportRowsToExcel("projects.xlsx", projectMasterSheetColumns, filteredRows)}
-                >
-                  <DownloadSimpleIcon size={14} />
-                  Export Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {/* Use a full page load so creation does not depend on client navigation. */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a
-              href="/projects/new"
-              className={buttonVariants({ variant: "default", size: "compact" })}
-            >
-              <PlusIcon size={13} />
-              New Project
-            </a>
-          </div>
-        </>
+        // Use a full page load so creation does not depend on client navigation.
+        // eslint-disable-next-line @next/next/no-html-link-for-pages
+        <a href="/projects/new" className={buttonVariants({ variant: "default", size: "compact" })}>
+          <PlusIcon size={13} />
+          New Project
+        </a>
       }
-      fillHeight
     >
-      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
-      <ExcelDataGrid
-        columns={projectMasterSheetColumns}
-        rows={filteredRows}
-        emptyTitle="No project master records found"
+      <ListTable
+        itemLabel="project"
+        rows={pageRows}
+        total={total}
+        columns={columns}
+        state={list}
+        searchPlaceholder="Search projects..."
         isLoading={isLoading}
-        fillHeight
+        isError={isError}
+        onRetry={() => void refetch()}
         enableFullView
+        maxHeightClassName="max-h-[calc(100vh-320px)]"
         onRowClick={(row) => router.push(`/projects/${row.id}`)}
-        selection={{
-          selectedIds,
-          onToggleRow: toggleRow,
-          onTogglePage: toggleAllOnPage,
-          getRowLabel: (row) => row.values.name,
+        selectable
+        getRowLabel={(row) => row.values.name}
+        bulkActions={() => (
+          <Button type="button" size="compact" variant="ghost" onClick={() => setDeleteOpen(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        empty={{
+          illustration: "projects",
+          title: "No projects yet",
+          description: "Create a project to start tracking sites, customers and billing.",
+          action: { label: "New project", onClick: () => window.location.assign("/projects/new") },
         }}
+        actions={
+          <Button variant="outline" size="compact" disabled={filteredRows.length === 0} onClick={() => void exportRowsToExcel("projects.xlsx", exportColumns, filteredRows)}>
+            <DownloadSimpleIcon size={14} />
+            Export
+          </Button>
+        }
       />
 
       <BulkDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        selectedCount={selectedIds.size}
+        selectedCount={list.selection.size}
         entityLabel="Project"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}

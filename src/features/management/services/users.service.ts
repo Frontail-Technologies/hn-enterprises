@@ -4,6 +4,7 @@ import type { DeleteImpactResult } from "@/components/shared/delete-impact.types
 export type RosterUser = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   role: string;
   status: string;
 };

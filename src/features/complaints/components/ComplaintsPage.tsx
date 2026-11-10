@@ -1,17 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { MagnifyingGlassIcon, NotePencilIcon, PaperPlaneTiltIcon, WarningIcon } from "@phosphor-icons/react";
+import { NotePencilIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { type ColumnDef } from "@/components/shared/DataTable";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { FilterDialog } from "@/components/shared/FilterDialog";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { useComplaintsQuery, useDeleteComplaint, usePushComplaintNotification } from "../hooks/useComplaints";
 import type { Complaint, ComplaintStatus } from "../types/complaint.types";
 import { formatDate, uniqOptions } from "../utils/format";
@@ -20,128 +17,85 @@ import { ComplaintPriorityBadge } from "./complaints/ComplaintPriorityBadge";
 
 const complaintStatuses: ComplaintStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
+const filters: ListFilter[] = [{ id: "status", label: "Status", quick: true, options: uniqOptions(complaintStatuses) }];
+
+const columns: ListColumn<Complaint>[] = [
+  { id: "title", header: "Title", value: (row) => row.title, isTitle: true, hideable: false, sortable: true, width: 300, grow: true },
+  {
+    id: "customer",
+    header: "Customer",
+    width: 240,
+    value: (row) => row.customer?.name || row.customer?.trBpNumber,
+    sortable: true,
+    cell: (row) => {
+      const name = row.customer?.name;
+      const trBpNumber = row.customer?.trBpNumber;
+      if (!name && !trBpNumber) return <span className="text-muted-foreground">—</span>;
+      return (
+        <Link href={`/customers/${row.customerId}`} className="hover:text-primary hover:underline">
+          <span className="font-medium text-foreground">{name || `BR/TR: ${trBpNumber}`}</span>
+          {name && trBpNumber ? <span className="text-muted-foreground"> · {trBpNumber}</span> : null}
+        </Link>
+      );
+    },
+  },
+  { id: "priority", header: "Priority", width: 120, value: (row) => row.priority, sortable: true, cell: (row) => <ComplaintPriorityBadge priority={row.priority} /> },
+  { id: "status", header: "Status", width: 130, value: (row) => row.status, sortable: true, cell: (row) => <StatusBadge status={row.status} /> },
+  { id: "createdAt", header: "Raised on", width: 130, value: (row) => row.createdAt, sortable: true, cell: (row) => formatDate(row.createdAt) },
+];
+
+const searchText = (row: Complaint) => [row.title, row.customer?.name, row.customer?.trBpNumber].filter(Boolean).join(" ");
+
 export function ComplaintsPage() {
-  const [filters, setFilters] = useState({ search: "", status: "all" });
-  const { data: complaints = [], isLoading } = useComplaintsQuery(
-    filters.status === "all" ? {} : { status: filters.status as ComplaintStatus },
-  );
+  const list = useListState({ pageSize: 50, storageKey: "complaints" });
+  const status = list.filters.status as ComplaintStatus | undefined;
+  // Status is filtered by the API (as before); search, sort and paging run on the loaded rows.
+  const { data: complaints = [], isLoading, isError, refetch } = useComplaintsQuery(status ? { status } : {});
+  const { pageRows, total } = useClientRows(complaints, list, { columns, searchText });
+
   const deleteComplaint = useDeleteComplaint();
   const pushComplaint = usePushComplaintNotification();
   const [pushingId, setPushingId] = useState<string | null>(null);
 
-  const data = useMemo(() => {
-    const search = filters.search.toLowerCase();
-    if (!search) return complaints;
-    return complaints.filter((row) => {
-      const haystack = [row.title, row.customer?.name, row.customer?.trBpNumber].filter(Boolean).join(" ");
-      return haystack.toLowerCase().includes(search);
-    });
-  }, [complaints, filters.search]);
-
-  const columns: ColumnDef<Complaint>[] = [
-    { key: "title", header: "Title", className: "w-[28%]" },
-    {
-      key: "customer",
-      header: "Customer",
-      render: (row) => {
-        const name = row.customer?.name;
-        const trBpNumber = row.customer?.trBpNumber;
-        if (!name && !trBpNumber) return <span className="text-muted-foreground">-</span>;
-        return (
-          <Link href={`/customers/${row.customerId}`} className="flex flex-col hover:text-primary">
-            <span className="font-medium text-foreground">{name || `BR/TR: ${trBpNumber}`}</span>
-            {name && trBpNumber ? <span className="text-xs text-muted-foreground">{trBpNumber}</span> : null}
-          </Link>
-        );
-      },
-    },
-    {
-      key: "priority",
-      header: "Priority",
-      render: (row) => <ComplaintPriorityBadge priority={row.priority} />,
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "createdAt",
-      header: "Raised On",
-      render: (row) => formatDate(row.createdAt),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-32",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <ActionTooltip label="Push notification">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Push notification"
-              disabled={pushingId === row.id}
-              onClick={() => {
-                setPushingId(row.id);
-                pushComplaint.mutate(row.id, { onSettled: () => setPushingId(null) });
-              }}
-            >
-              <PaperPlaneTiltIcon size={15} />
-            </Button>
-          </ActionTooltip>
-          <ComplaintDialog
-            complaint={row}
-            preselectedCustomerId={row.customerId}
-            triggerLabel="Edit Complaint"
-            icon={<NotePencilIcon size={15} />}
-            iconOnly
-          />
-          <DeleteConfirmDialog itemName={row.title} onConfirm={() => deleteComplaint.mutateAsync(row.id)} />
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <PageShell
-      title="Complaints"
-      icon={WarningIcon}
-      actions={
-        <>
-          <div className="relative min-w-0 sm:w-64">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-            <Input
-              placeholder="Search complaint or customer..."
-              value={filters.search}
-              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-              className="h-8 w-full max-w-full pl-8 sm:w-64"
-            />
+    <PageShell title="Complaints" description="Customer complaints and their resolution status." actions={<ComplaintDialog triggerLabel="New Complaint" />}>
+      <ListTable
+        itemLabel="complaint"
+        rows={pageRows}
+        total={total}
+        columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search complaint or customer..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        enableFullView
+        empty={{ illustration: "allClear", title: "No complaints", description: "Complaints raised for customers will appear here." }}
+        rowActionsWidth={112}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <ActionTooltip label="Push notification">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Push notification"
+                className="text-muted-foreground hover:text-foreground"
+                disabled={pushingId === row.id}
+                onClick={() => {
+                  setPushingId(row.id);
+                  pushComplaint.mutate(row.id, { onSettled: () => setPushingId(null) });
+                }}
+              >
+                <PaperPlaneTiltIcon size={15} />
+              </Button>
+            </ActionTooltip>
+            <ComplaintDialog complaint={row} preselectedCustomerId={row.customerId} triggerLabel="Edit Complaint" icon={<NotePencilIcon size={15} />} iconOnly />
+            <DeleteConfirmDialog itemName={row.title} onConfirm={() => deleteComplaint.mutateAsync(row.id)} />
           </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <FilterDialog
-              title="Complaint Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: uniqOptions(complaintStatuses),
-                },
-              ]}
-              onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-              onReset={() => setFilters((current) => ({ ...current, status: "all" }))}
-            />
-
-            <ComplaintDialog triggerLabel="New Complaint" />
-          </div>
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <PaginatedDataTable data={data} columns={columns} isLoading={isLoading} enableFullView />
+        )}
+      />
     </PageShell>
   );
 }

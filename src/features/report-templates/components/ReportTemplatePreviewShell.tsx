@@ -2,10 +2,13 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { getReportTemplateById } from "../services/report-templates.service";
+import { PageShell } from "@/components/shared/PageShell";
+import { useEffectiveReportTemplate } from "../hooks/useReportTemplateOverrides";
 import type { ReportTemplateId } from "../types/report-template.types";
 
 const ReportTemplatePdfViewer = dynamic(
@@ -13,7 +16,7 @@ const ReportTemplatePdfViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card">
+      <div className="flex min-h-[560px] items-center justify-center rounded-card border border-border bg-card shadow-card">
         <LoadingSpinner />
       </div>
     ),
@@ -21,43 +24,38 @@ const ReportTemplatePdfViewer = dynamic(
 );
 
 export function ReportTemplatePreviewShell({ templateId }: { templateId: ReportTemplateId }) {
-  const template = getReportTemplateById(templateId);
+  const router = useRouter();
+  const { template } = useEffectiveReportTemplate(templateId);
 
   if (!template) {
     return (
-      <div className="rounded-sm border border-border bg-card p-6">
-        <p className="text-sm font-semibold text-foreground">Template not found</p>
-        <Link href="/reports/templates" className={buttonVariants({ variant: "outline", className: "mt-4" })}>
-          Back to templates
-        </Link>
-      </div>
+      <EmptyState
+        illustration="error"
+        title="Template not found"
+        description="It may have been renamed or removed."
+        action={{ label: "Back to templates", onClick: () => router.push("/reports/templates") }}
+      />
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/reports/templates"
-            className={buttonVariants({ variant: "ghost", size: "sm", className: "-ml-2 mb-1" })}
-          >
+    <PageShell
+      title={template.title}
+      description={template.description}
+      actions={
+        <>
+          <Link href="/reports/templates" className={buttonVariants({ variant: "ghost" })}>
             <ArrowLeftIcon size={15} />
             Templates
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">{template.title}</h1>
-          <p className="text-sm text-muted-foreground">{template.description}</p>
-        </div>
-        <Link
-          href={`/reports/templates/${template.id}/edit`}
-          className={buttonVariants({ variant: "outline" })}
-        >
-          <PencilSimpleIcon size={15} />
-          Edit Template
-        </Link>
-      </div>
-
-      <ReportTemplatePdfViewer template={template} />
-    </div>
+          <Link href={`/reports/templates/${template.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+            <PencilSimpleIcon size={15} />
+            Edit template
+          </Link>
+        </>
+      }
+    >
+      <ReportTemplatePdfViewer template={template} fieldLabels={template.fieldLabels} />
+    </PageShell>
   );
 }

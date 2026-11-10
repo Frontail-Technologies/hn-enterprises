@@ -12,7 +12,7 @@ export function Breadcrumb() {
   const labelOverrides = useBreadcrumbLabels()
   const segments = pathname.split('/').filter(Boolean)
 
-  if (segments.length <= 1) return null
+  if (segments.length === 0) return null
 
   const crumbs = segments.map((seg, idx) => {
     const href = '/' + segments.slice(0, idx + 1).join('/')
@@ -23,25 +23,20 @@ export function Breadcrumb() {
   })
 
   return (
-    <nav aria-label="Breadcrumb" className="hidden items-center gap-1 text-xs md:flex">
+    <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-[13px] md:flex">
       {crumbs.map((crumb, idx) => (
-        <span key={crumb.href} className="flex items-center gap-1">
+        <span key={crumb.href} className="flex min-w-0 items-center gap-1.5">
           {idx > 0 && (
-            <CaretRight
-              aria-hidden="true"
-              size={13}
-              weight="bold"
-              className="shrink-0 text-muted-foreground/70"
-            />
+            <CaretRight aria-hidden="true" size={12} className="shrink-0 text-muted-foreground/60" />
           )}
           {crumb.isLast ? (
-            <span className="text-foreground font-semibold truncate max-w-[200px]">
+            <span aria-current="page" className="max-w-60 truncate font-semibold text-foreground">
               {crumb.label}
             </span>
           ) : (
             <Link
               href={crumb.href}
-              className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[160px]"
+              className="max-w-45 truncate text-muted-foreground transition-colors hover:text-foreground"
             >
               {crumb.label}
             </Link>

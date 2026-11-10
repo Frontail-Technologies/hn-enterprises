@@ -2,4 +2,5 @@ import type { DashboardOverviewParams } from "@/features/dashboard/model/dashboa
 
 export const dashboardQueryKeys = {
   overview: (params: DashboardOverviewParams) => ["dashboard", "overview", params] as const,
+  charts: (params: DashboardOverviewParams) => ["dashboard", "charts", params] as const,
 };

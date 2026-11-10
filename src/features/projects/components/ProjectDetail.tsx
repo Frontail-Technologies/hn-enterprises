@@ -1,136 +1,116 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { NotePencilIcon } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  BuildingsIcon,
+  CalendarBlankIcon,
+  HashIcon,
+  MapPinIcon,
+  NotePencilIcon,
+  TagIcon,
+  UserIcon,
+} from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
-import { DetailHeader } from "@/components/shared/DetailHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { PageLoading } from "@/components/shared/PageLoading";
-import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
+import { RecordHeader } from "@/components/shared/record";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectQuery } from "@/features/projects/hooks/useProjects";
-import { ProjectActivityTab } from "./detail/ProjectActivityTab";
-import { ProjectBillingTab } from "./detail/ProjectBillingTab";
-import { ProjectCustomersTab } from "./detail/ProjectCustomersTab";
 import { ProjectDocumentsTab } from "./detail/ProjectDocumentsTab";
-import { ProjectExecutionTab } from "./detail/ProjectExecutionTab";
-import { ProjectExpensesTab } from "./detail/ProjectExpensesTab";
-import { ProjectMaterialsTab } from "./detail/ProjectMaterialsTab";
 import { ProjectOverviewTab } from "./detail/ProjectOverviewTab";
-import { ProjectTeamTab } from "./detail/ProjectTeamTab";
+import { ProjectActivityCard, ProjectTeamCard } from "./detail/ProjectRailCards";
+import { formatDate } from "./detail/project-detail.utils";
 
-const SECTIONS = [
-  { value: "overview", label: "Overview" },
-  { value: "customers", label: "Customers" },
-  { value: "execution", label: "Execution" },
-  { value: "billing", label: "Billing" },
-  { value: "expenses", label: "Expenses" },
-  { value: "materials", label: "Materials" },
-  { value: "team", label: "Team" },
-  { value: "documents", label: "Documents" },
-  { value: "activity", label: "Activity" },
-] as const;
-
-type Section = (typeof SECTIONS)[number]["value"];
-const SECTION_VALUES = SECTIONS.map((item) => item.value) as string[];
+/**
+ * Old Project-detail links (`?section=…`, from when this page embedded every
+ * list) now open the dedicated page, filtered to this project.
+ */
+function legacySectionTarget(section: string | null, projectId: string, statKey: string | null) {
+  const scoped = (path: string) => `${path}?projectId=${encodeURIComponent(projectId)}`;
+  switch (section) {
+    case "customers":
+      return scoped("/customers") + (statKey ? `&statKey=${encodeURIComponent(statKey)}` : "");
+    case "billing":
+      return scoped("/billing");
+    case "expenses":
+      return scoped("/payments");
+    case "materials":
+      return scoped("/inventory");
+    case "execution":
+      return "/planning";
+    default:
+      return null;
+  }
+}
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
   const { data: project, isLoading, isError } = useProjectQuery(projectId);
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useBreadcrumbLabel(projectId, project?.name);
 
-  const rawSection = searchParams.get("section");
-  const section: Section = (SECTION_VALUES.includes(rawSection ?? "") ? rawSection : "overview") as Section;
+  const legacyTarget = legacySectionTarget(searchParams.get("section"), projectId, searchParams.get("statKey"));
+  useEffect(() => {
+    if (legacyTarget) router.replace(legacyTarget);
+  }, [legacyTarget, router]);
 
-  function setSection(next: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("section", next);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  }
-
-  if (isLoading) {
+  if (isLoading || legacyTarget) {
     return <PageLoading />;
   }
 
   if (isError || !project) {
-    return <p className="p-4 text-sm text-destructive">Unable to load this project.</p>;
+    return (
+      <EmptyState
+        illustration="error"
+        title="Couldn't load this project"
+        description="It may have been removed, or the connection failed."
+        action={{ label: "Back to projects", onClick: () => router.push("/projects") }}
+      />
+    );
   }
 
-  const metaItems = [project.code, project.city, project.client, project.projectType].filter(Boolean);
+  const dates = [project.startDate, project.plannedEndDate].filter(Boolean).map((date) => formatDate(date));
 
   return (
-    <div className="space-y-3">
-      <DetailHeader
+    <div className="flex flex-col gap-6">
+      <RecordHeader
         title={project.name}
         badges={<StatusBadge status={project.status} />}
-        meta={
-          metaItems.length > 0 ? (
-            <span>{metaItems.join(" · ")}</span>
-          ) : null
-        }
+        meta={[
+          { icon: HashIcon, label: project.code },
+          { icon: MapPinIcon, label: project.city },
+          { icon: BuildingsIcon, label: project.client },
+          { icon: TagIcon, label: project.projectType },
+          { icon: CalendarBlankIcon, label: dates.join(" – ") },
+          { icon: UserIcon, label: project.assignedManager },
+        ]}
+        figure={project.contractValue ? { label: "Contract value", value: project.contractValue } : undefined}
         actions={
-          <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "outline", size: "default" })}>
+          <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "outline" })}>
             <NotePencilIcon size={15} />
-            Edit Project
+            Edit project
           </Link>
         }
       />
 
-      <Tabs value={section} onValueChange={(value) => value && setSection(value)} className="gap-3">
-        <div className="sticky top-0 z-40 -mx-1 bg-background px-1 backdrop-blur">
-          <ScrollableTabsList>
-            {SECTIONS.map((item) => (
-              <TabsTrigger key={item.value} value={item.value}>
-                {item.label}
-              </TabsTrigger>
-            ))}
-          </ScrollableTabsList>
-        </div>
-
-        <TabsContent value="overview">
-          <ProjectOverviewTab project={project} />
-        </TabsContent>
-        <TabsContent value="customers">
-          <ProjectCustomersTab projectId={project.id} onClearStatKey={() => setSection("customers")} />
-        </TabsContent>
-        <TabsContent value="execution">
-          <ProjectExecutionTab projectId={project.id} />
-        </TabsContent>
-        <TabsContent value="billing">
-          <ProjectBillingTab
-            projectId={project.id}
-            projectName={project.name}
-            onDrillDown={(statKey) => navigateToCustomersStatKey(router, pathname, statKey)}
-          />
-        </TabsContent>
-        <TabsContent value="expenses">
-          <ProjectExpensesTab projectId={project.id} projectName={project.name} />
-        </TabsContent>
-        <TabsContent value="materials">
-          <ProjectMaterialsTab projectId={project.id} />
-        </TabsContent>
-        <TabsContent value="team">
-          <ProjectTeamTab projectId={project.id} active={section === "team"} />
-        </TabsContent>
-        <TabsContent value="documents">
+      <ProjectOverviewTab
+        project={project}
+        rail={
+          <>
+            <ProjectTeamCard projectId={project.id} />
+            <ProjectActivityCard projectId={project.id} />
+          </>
+        }
+      >
+        {/* Documents are uploaded and managed only here, so they stay on the page. */}
+        <section id="documents" className="flex scroll-mt-24 flex-col gap-4">
           <ProjectDocumentsTab projectId={project.id} />
-        </TabsContent>
-        <TabsContent value="activity">
-          <ProjectActivityTab projectId={project.id} />
-        </TabsContent>
-      </Tabs>
+        </section>
+      </ProjectOverviewTab>
     </div>
   );
-}
-
-function navigateToCustomersStatKey(router: ReturnType<typeof useRouter>, pathname: string, statKey: string) {
-  const params = new URLSearchParams();
-  params.set("section", "customers");
-  params.set("statKey", statKey);
-  router.push(`${pathname}?${params.toString()}`, { scroll: false });
 }

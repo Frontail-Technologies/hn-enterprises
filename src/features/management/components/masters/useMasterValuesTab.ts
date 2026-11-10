@@ -1,42 +1,43 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useState } from "react";
+import { useListState } from "@/components/shared/list";
 import { useDownloadMasterValues } from "@/features/exports/hooks/useExports";
 import { useBulkDeleteMasterValues, useMasterValuesQuery } from "../../hooks/useMasters";
 import { CATEGORY_TO_BACKEND } from "../../services/masters.service";
 import type { MasterValueCategory } from "../../types/masters.types";
 
 export function useMasterValuesTab(category: MasterValueCategory) {
-  const [search, setSearch] = useState("");
-  const { data: values = [], isLoading } = useMasterValuesQuery(category, undefined);
-  const selection = useBulkSelection();
+  const list = useListState({ pageSize: 50, storageKey: "masters-values" });
+  // Switching category must not carry a selection into another category's
+  // bulk delete, so selection and paging reset (state adjusted during render).
+  const [shownCategory, setShownCategory] = useState(category);
+  if (shownCategory !== category) {
+    setShownCategory(category);
+    list.clearSelection();
+    list.setPage(1);
+  }
+  const { data: values = [], isLoading, isError, refetch } = useMasterValuesQuery(category, undefined);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeleteMasterValues(category);
   const download = useDownloadMasterValues();
 
-  const data = useMemo(() => {
-    const query = search.toLowerCase();
-    return values.filter(
-      (row) => !query || row.value.toLowerCase().includes(query) || row.description.toLowerCase().includes(query),
-    );
-  }, [values, search]);
-
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selection.selectedIds));
+    await bulkDelete.mutateAsync(Array.from(list.selection));
     setBulkDeleteOpen(false);
-    selection.clear();
+    list.clearSelection();
   }
 
   function handleExport() {
-    download.mutate({ category: CATEGORY_TO_BACKEND[category], search: search.trim() || undefined });
+    download.mutate({ category: CATEGORY_TO_BACKEND[category], search: list.search.trim() || undefined });
   }
 
   return {
-    data,
+    list,
+    values,
     isLoading,
-    search: { value: search, onChange: setSearch },
-    selection,
+    isError,
+    refetch,
     bulkDelete: {
       open: bulkDeleteOpen,
       onOpenChange: setBulkDeleteOpen,

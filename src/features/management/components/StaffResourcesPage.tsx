@@ -2,25 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DownloadSimpleIcon, EyeIcon, MagnifyingGlassIcon, NotePencilIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, EyeIcon, NotePencilIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
-import { FilterDialog } from "@/components/shared/FilterDialog";
+import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
+import { PageShell } from "@/components/shared/PageShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { useStaffQuery } from "../hooks/useStaff";
 import { useBulkDeleteUsers, useDeleteUser, useUserDeleteImpactQuery, useUsersQuery } from "../hooks/useUsers";
 import type { Staff } from "../types/staff.types";
 import { formatDateTime, uniqOptions } from "../utils/format";
 import { StaffDrawer } from "./StaffDrawer";
-import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
-import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 
 const exportColumns: ExportColumn<Staff>[] = [
   { label: "Name", getValue: (row) => row.name },
@@ -30,147 +26,117 @@ const exportColumns: ExportColumn<Staff>[] = [
   { label: "Last Login", getValue: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never") },
 ];
 
+const columns: ListColumn<Staff>[] = [
+  {
+    id: "name",
+    header: "Name",
+    value: (row) => row.name,
+    isTitle: true,
+    hideable: false,
+    sortable: true,
+    width: 240,
+    grow: true,
+    cell: (row) => (
+      <span className="flex items-center gap-2.5">
+        <UserAvatar name={row.name} src={row.avatarUrl} size="xs" />
+        <span className="truncate">{row.name}</span>
+      </span>
+    ),
+  },
+  { id: "contact", header: "Contact", value: (row) => row.contact, sortable: true, width: 180 },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
+  {
+    id: "lastLogin",
+    header: "Last login",
+    value: (row) => row.lastLogin ?? "",
+    sortable: true,
+    width: 180,
+    cell: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : <span className="text-muted-foreground">Never</span>),
+  },
+];
+
+const searchText = (row: Staff) => `${row.name} ${row.contact}`;
+
 export function StaffResourcesPage() {
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "all",
-  });
-  const { data: staff = [], isLoading: staffLoading } = useStaffQuery();
+  const list = useListState({ pageSize: 50, storageKey: "supervisors" });
+  const { data: staff = [], isLoading: staffLoading, isError, refetch } = useStaffQuery();
   const { data: users = [] } = useUsersQuery();
-  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeleteUsers();
+
+  const supervisors = useMemo(() => staff.filter((row) => row.role === "Supervisor"), [staff]);
+  const filters: ListFilter[] = [{ id: "status", label: "Status", quick: true, options: uniqOptions(staff.map((row) => row.status)) }];
+  const { rows: filteredRows, pageRows, total } = useClientRows(supervisors, list, { columns, filters, searchText });
+
   // Selection is keyed by staff.id (the table's row identity); the canonical
   // delete workflow operates on the linked user id (remove-staff-block brief §8).
   const userIdByStaffId = useMemo(() => new Map(staff.map((row) => [row.id, row.userId])), [staff]);
+  const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
 
   async function handleBulkDelete() {
-    const userIds = Array.from(selectedIds)
+    const userIds = Array.from(list.selection)
       .map((staffId) => userIdByStaffId.get(staffId))
       .filter((id): id is string => Boolean(id));
     await bulkDelete.mutateAsync(userIds);
     setDeleteOpen(false);
-    clear();
+    list.clearSelection();
   }
-  const staffedUserIds = useMemo(() => new Set(staff.map((row) => row.userId)), [staff]);
-  const data = useMemo(() => {
-    const search = filters.search.toLowerCase();
-    return staff.filter(
-      (row) =>
-        row.role === "Supervisor" &&
-        (!search ||
-          row.name.toLowerCase().includes(search) ||
-          row.contact.toLowerCase().includes(search)) &&
-        (filters.status === "all" || row.status === filters.status),
-    );
-  }, [staff, filters]);
-  const columns: ColumnDef<Staff>[] = [
-    { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
-    { key: "contact", header: "Contact" },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "lastLogin",
-      header: "Last Login",
-      render: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never"),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-24",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <ActionTooltip label="View supervisor">
-            <Link
-              href={`/staff/${row.id}`}
-              aria-label={`View ${row.name}`}
-              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            >
-              <EyeIcon size={15} />
-            </Link>
-          </ActionTooltip>
-          <ActionTooltip label="Edit supervisor">
-            <Link
-              href={`/staff/${row.id}/edit`}
-              aria-label={`Edit ${row.name}`}
-              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            >
-              <NotePencilIcon size={15} />
-            </Link>
-          </ActionTooltip>
-          <StaffDeleteAction staff={row} />
-        </div>
-      ),
-    },
-  ];
+
   return (
     <PageShell
       title="Supervisors"
-      icon={UsersThreeIcon}
-      actions={
-        <>
-          <div className="relative min-w-0 sm:w-64">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-            <Input
-              placeholder="Search supervisors or mobile..."
-              value={filters.search}
-              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-              className="h-8 w-full max-w-full pl-8 sm:w-64"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <FilterDialog
-              title="Supervisor Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: uniqOptions(staff.map((row) => row.status)),
-                },
-              ]}
-              onChange={(key, value) =>
-                setFilters((current) => ({ ...current, [key]: value }))
-              }
-              onReset={() => setFilters((current) => ({ ...current, status: "all" }))}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="compact"
-              onClick={() => void exportRowsToExcel("supervisors.xlsx", exportColumns, data)}
-            >
-              <DownloadSimpleIcon size={12} />
-              Export
-            </Button>
-          </div>
-          <StaffDrawer users={users} staffedUserIds={staffedUserIds} />
-        </>
-      }
-      contentClassName="space-y-3"
+      description="Supervisor accounts, their contact details and last login."
+      actions={<StaffDrawer users={users} staffedUserIds={staffedUserIds} />}
     >
-      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
-      <PaginatedDataTable
-        data={data}
+      <ListTable
+        itemLabel="supervisor"
+        rows={pageRows}
+        total={total}
         columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search supervisors or mobile..."
         isLoading={staffLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
         enableFullView
-        selection={{
-          selectedIds,
-          onToggleRow: toggleRow,
-          onTogglePage: toggleAllOnPage,
-          getRowLabel: (row) => row.name,
-        }}
+        selectable
+        getRowLabel={(row) => row.name}
+        bulkActions={() => (
+          <Button type="button" variant="ghost" size="compact" onClick={() => setDeleteOpen(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        empty={{ illustration: "customers", title: "No supervisors yet", description: "Supervisors you add will appear here." }}
+        actions={
+          <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("supervisors.xlsx", exportColumns, filteredRows)}>
+            <DownloadSimpleIcon size={14} />
+            Export
+          </Button>
+        }
+        rowActionsWidth={112}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <ActionTooltip label="View supervisor">
+              <Link href={`/staff/${row.id}`} aria-label={`View ${row.name}`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+                <EyeIcon size={15} />
+              </Link>
+            </ActionTooltip>
+            <ActionTooltip label="Edit supervisor">
+              <Link href={`/staff/${row.id}/edit`} aria-label={`Edit ${row.name}`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+                <NotePencilIcon size={15} />
+              </Link>
+            </ActionTooltip>
+            <StaffDeleteAction staff={row} />
+          </div>
+        )}
       />
 
       <BulkDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        selectedCount={selectedIds.size}
+        selectedCount={list.selection.size}
         entityLabel="Supervisor"
         entityLabelPlural="Supervisors"
         isSubmitting={bulkDelete.isPending}

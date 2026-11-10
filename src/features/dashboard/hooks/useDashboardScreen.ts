@@ -1,4 +1,5 @@
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useDashboardChartsQuery } from "@/features/dashboard/queries/useDashboardChartsQuery";
 import { useDashboardOverviewQuery } from "@/features/dashboard/queries/useDashboardOverviewQuery";
 import { useDashboardPreferencesStore } from "@/features/dashboard/store/dashboard-preferences.store";
 import { METRIC_ICON_BY_ID, DEFAULT_METRIC_ICON } from "@/features/dashboard/data/dashboard-metric-icons";
@@ -15,12 +16,14 @@ export function useDashboardScreen() {
   const [month, setMonth] = useQueryState("month", parseAsString.withDefault(""));
   const [year, setYear] = useQueryState("year", parseAsString.withDefault(""));
 
-  const overviewQuery = useDashboardOverviewQuery({
+  const queryParams = {
     projectId,
     period,
     month: period === "custom-month" ? month || undefined : undefined,
     year: period === "custom-year" || period === "custom-month" ? year || undefined : undefined,
-  });
+  };
+  const overviewQuery = useDashboardOverviewQuery(queryParams);
+  const chartsQuery = useDashboardChartsQuery(queryParams);
   const overview = overviewQuery.data;
 
   const selectedMetricIds = useDashboardPreferencesStore((state) => state.selectedMetricIds);
@@ -52,6 +55,10 @@ export function useDashboardScreen() {
     setMonth,
     setYear,
     overview,
+    charts: chartsQuery.data,
+    chartsLoading: chartsQuery.isLoading,
+    chartsError: chartsQuery.isError,
+    refetchCharts: chartsQuery.refetch,
     isLoading: overviewQuery.isLoading,
     isFetching: overviewQuery.isFetching,
     isError: overviewQuery.isError,

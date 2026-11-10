@@ -1,8 +1,12 @@
 import { Button } from '@/components/ui/button'
-import { FolderOpenIcon as FolderOpen } from '@phosphor-icons/react/dist/ssr'
+import { EmptyIllustration, type EmptyIllustrationName } from './illustrations/EmptyIllustration'
+
+export type { EmptyIllustrationName }
 
 interface EmptyStateProps {
+  /** Custom icon; when set it replaces the illustration. */
   icon?: React.ReactNode
+  illustration?: EmptyIllustrationName
   title: string
   description?: string
   action?: {
@@ -11,26 +15,21 @@ interface EmptyStateProps {
   }
 }
 
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon, illustration = 'records', title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-      <div className="w-11 h-11 bg-muted rounded-xl flex items-center justify-center mb-3">
-        {icon ?? <FolderOpen size={22} className="text-muted-foreground" />}
-      </div>
-      <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+    <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+      {icon ? (
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {icon}
+        </div>
+      ) : (
+        <EmptyIllustration name={illustration} className="mb-3" />
+      )}
+      <h3 className="mb-1 text-[15px] font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className="text-sm text-muted-foreground max-w-sm leading-relaxed mb-4">
-          {description}
-        </p>
+        <p className="mb-5 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
       )}
-      {action && (
-        <Button
-          onClick={action.onClick}
-          className="app-primary-action bg-primary hover:bg-primary/90 text-white text-sm h-9"
-        >
-          {action.label}
-        </Button>
-      )}
+      {action && <Button onClick={action.onClick}>{action.label}</Button>}
     </div>
   )
 }

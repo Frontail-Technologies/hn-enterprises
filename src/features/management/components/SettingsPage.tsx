@@ -41,7 +41,7 @@ export function SettingsPage() {
 
 function SettingsPanel({ title, items }: { title: string; items: string[] }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4">
+    <section className="rounded-card border border-border bg-card shadow-card p-4">
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <div className="mt-3 space-y-2">
         {items.map((item) => (

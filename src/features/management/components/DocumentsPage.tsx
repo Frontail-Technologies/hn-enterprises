@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { DownloadSimpleIcon, EyeIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { resolveFileUrl } from "@/lib/upload";
@@ -13,7 +11,6 @@ import { useDocumentsQuery } from "../hooks/useDocuments";
 import type { DocumentModule, DocumentRow } from "../services/documents.service";
 import { formatDate } from "../utils/format";
 import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 
 const exportColumns: ExportColumn<DocumentRow>[] = [
   { label: "Document Name", getValue: (row) => row.name },
@@ -24,71 +21,66 @@ const exportColumns: ExportColumn<DocumentRow>[] = [
   { label: "Status", getValue: (row) => row.status },
 ];
 
+const filters: ListFilter[] = [
+  {
+    id: "module",
+    label: "Module",
+    quick: true,
+    options: [
+      { value: "Projects", label: "Projects" },
+      { value: "Customers", label: "Customers" },
+    ],
+  },
+];
+
+const columns: ListColumn<DocumentRow>[] = [
+  { id: "name", header: "Document name", value: (row) => row.name, isTitle: true, hideable: false, sortable: true, width: 260, grow: true },
+  { id: "category", header: "Category", value: (row) => row.category, sortable: true, width: 160 },
+  { id: "module", header: "Related module", value: (row) => row.module, sortable: true, width: 150 },
+  { id: "relatedName", header: "Related record", value: (row) => row.relatedName, sortable: true, width: 220 },
+  { id: "uploadedAt", header: "Date", value: (row) => row.uploadedAt, sortable: true, width: 130, cell: (row) => formatDate(row.uploadedAt) },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
+];
+
 export function DocumentsPage() {
-  const [filters, setFilters] = useState<{ search: string; module: string }>({ search: "", module: "all" });
-  const { data: documents = [], isLoading } = useDocumentsQuery({
-    search: filters.search || undefined,
-    module: filters.module === "all" ? undefined : (filters.module as DocumentModule),
+  const list = useListState({ pageSize: 50, storageKey: "documents" });
+  // Search and module are filtered by the API (as before); sort and paging run on the loaded rows.
+  const { data: documents = [], isLoading, isError, refetch } = useDocumentsQuery({
+    search: list.debouncedSearch || undefined,
+    module: (list.filters.module as DocumentModule | undefined) || undefined,
   });
-  const columns: ColumnDef<DocumentRow>[] = [
-    {
-      key: "name",
-      header: "Document Name",
-      render: (row) => <b>{row.name}</b>,
-    },
-    { key: "category", header: "Category" },
-    { key: "module", header: "Related Module" },
-    { key: "relatedName", header: "Related Record" },
-    { key: "uploadedAt", header: "Date", render: (row) => formatDate(row.uploadedAt) },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-24",
-      render: (row) => <DocumentActions document={row} />,
-    },
-  ];
+  const { pageRows, total } = useClientRows(documents, list, { columns, clientSearch: false });
+
   return (
-    <PageShell
-      title="Documents"
-      actions={
-        <>
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search document, category or record..."
-            title="Document Filters"
-            values={filters}
-            filters={[
-              {
-                key: "module",
-                placeholder: "All Modules",
-                options: [
-                  { value: "Projects", label: "Projects" },
-                  { value: "Customers", label: "Customers" },
-                ],
-              },
-            ]}
-            onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-            onReset={() => setFilters({ search: "", module: "all" })}
-          />
+    <PageShell title="Documents" description="Files uploaded against projects and customers.">
+      <ListTable
+        itemLabel="document"
+        rows={pageRows}
+        total={total}
+        columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search document, category or record..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        enableFullView
+        empty={{ illustration: "documents", title: "No documents yet", description: "Files uploaded for projects and customers will appear here." }}
+        rowActionsWidth={80}
+        renderRowActions={(row) => <DocumentActions document={row} />}
+        actions={
           <Button
             type="button"
             variant="outline"
             size="compact"
+            disabled={documents.length === 0}
             onClick={() => void exportRowsToExcel("documents.xlsx", exportColumns, documents)}
           >
-            <DownloadSimpleIcon size={12} />
+            <DownloadSimpleIcon size={14} />
             Export Excel
           </Button>
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <PaginatedDataTable data={documents} columns={columns} isLoading={isLoading} enableFullView />
+        }
+      />
     </PageShell>
   );
 }
@@ -97,12 +89,13 @@ function DocumentActions({ document }: { document: DocumentRow }) {
   const href = resolveFileUrl(document.fileUrl);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       <ActionTooltip label="Preview">
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label={`Preview ${document.name}`}
+          className="text-muted-foreground hover:text-foreground"
           render={<a href={href} target="_blank" rel="noopener noreferrer" />}
         >
           <EyeIcon size={15} />
@@ -113,6 +106,7 @@ function DocumentActions({ document }: { document: DocumentRow }) {
           variant="ghost"
           size="icon-sm"
           aria-label={`Download ${document.name}`}
+          className="text-muted-foreground hover:text-foreground"
           render={<a href={href} download={document.name} />}
         >
           <DownloadSimpleIcon size={15} />

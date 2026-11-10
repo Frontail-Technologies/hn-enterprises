@@ -4,6 +4,7 @@ import { Document, Text, View, Image } from "@react-pdf/renderer";
 import type { ReportTemplateData, ReportTemplateId } from "../../types/report-template.types";
 import {
   PdfHeader,
+  PdfLogo,
   PdfKeyValueRow,
   PdfPage,
   PdfRemarks,
@@ -13,6 +14,7 @@ import {
   PdfTable,
   pdfStyles,
 } from "./PdfPrimitives";
+import { fieldLabel } from "../../template-fields";
 
 export function ReportPdfDocument({
   templateId,
@@ -56,7 +58,7 @@ function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
         <PdfSectionTitle>JMR Sheet / Customer Consent Form</PdfSectionTitle>
         <PdfKeyValueRow
           items={[
-            { label: "Contractor Name", value: data.contractor },
+            { label: fieldLabel(data, "contractor", "Contractor Name"), value: data.contractor },
             { label: "Report No", value: data.reportNo },
           ]}
         />
@@ -64,34 +66,34 @@ function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
           items={[
             { label: "Charge Area", value: data.chargeArea },
             { label: "Date of Visit RFC", value: data.date },
-            { label: "BP No", value: data.bpNo, handwriting: true },
+            { label: fieldLabel(data, "bpNo", "BP No"), value: data.bpNo, handwriting: true },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Customer Name", value: data.customerName, handwriting: true },
-            { label: "Phone No", value: data.phoneNo, handwriting: true },
+            { label: fieldLabel(data, "customerName", "Customer Name"), value: data.customerName, handwriting: true },
+            { label: fieldLabel(data, "phoneNo", "Phone No"), value: data.phoneNo, handwriting: true },
           ]}
         />
-        <PdfKeyValueRow items={[{ label: "Customer Address", value: data.customerAddress, wide: true, handwriting: true }]} />
+        <PdfKeyValueRow items={[{ label: fieldLabel(data, "customerAddress", "Customer Address"), value: data.customerAddress, wide: true, handwriting: true }]} />
         <PdfKeyValueRow
           items={[
-            { label: "Meter No", value: data.meterNo },
+            { label: fieldLabel(data, "meterNo", "Meter No"), value: data.meterNo },
             { label: "Meter Make", value: data.meterMake },
-            { label: "Meter Type", value: data.meterType },
+            { label: fieldLabel(data, "meterType", "Meter Type"), value: data.meterType },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Regulator No", value: data.regulatorNo },
+            { label: fieldLabel(data, "regulatorNo", "Regulator No"), value: data.regulatorNo },
             { label: "Regulator Make", value: data.regulatorMake },
-            { label: "Regulator Pressure", value: data.regulatorPressure },
+            { label: fieldLabel(data, "regulatorPressure", "Regulator Pressure"), value: data.regulatorPressure },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Riser Testing Pressure", value: data.riserTestingPressure },
-            { label: "Riser Testing Time", value: data.riserTestingTime },
+            { label: fieldLabel(data, "riserTestingPressure", "Riser Testing Pressure"), value: data.riserTestingPressure },
+            { label: fieldLabel(data, "riserTestingTime", "Riser Testing Time"), value: data.riserTestingTime },
           ]}
         />
         <PdfKeyValueRow
@@ -111,14 +113,14 @@ function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
         <PdfSectionTitle>Joint Meter Reading</PdfSectionTitle>
         <PdfKeyValueRow
           items={[
-            { label: "Customer Name", value: data.customerName, handwriting: true },
+            { label: fieldLabel(data, "customerName", "Customer Name"), value: data.customerName, handwriting: true },
             { label: "Conversion Date", value: data.conversionDate, handwriting: true },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Customer Address", value: data.customerAddress, handwriting: true },
-            { label: "Meter Reading", value: data.meterReading, handwriting: true },
+            { label: fieldLabel(data, "customerAddress", "Customer Address"), value: data.customerAddress, handwriting: true },
+            { label: fieldLabel(data, "meterReading", "Meter Reading"), value: data.meterReading, handwriting: true },
           ]}
         />
         <PdfRemarks value="If No. Reason For Non-Conversion" minHeight={52} />
@@ -135,28 +137,28 @@ function PngJobCard({ data }: { data: ReportTemplateData }) {
         <PdfHeader title="PNG Connection Job Card" />
         <PdfKeyValueRow
           items={[
-            { label: "Client", value: data.client },
+            { label: fieldLabel(data, "client", "Client"), value: data.client },
             { label: "Report No", value: data.reportNo },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Consultant", value: data.consultant },
-            { label: "Meter No", value: data.meterNo },
+            { label: fieldLabel(data, "consultant", "Consultant"), value: data.consultant },
+            { label: fieldLabel(data, "meterNo", "Meter No"), value: data.meterNo },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "BP No", value: data.bpNo, handwriting: true },
+            { label: fieldLabel(data, "bpNo", "BP No"), value: data.bpNo, handwriting: true },
             { label: "Connection Type", value: data.connectionType },
             { label: "Installation Date", value: data.date },
           ]}
         />
-        <PdfKeyValueRow items={[{ label: "Customer Name", value: data.customerName, handwriting: true }]} />
-        <PdfKeyValueRow items={[{ label: "Address", value: data.customerAddress, wide: true, handwriting: true }]} />
+        <PdfKeyValueRow items={[{ label: fieldLabel(data, "customerName", "Customer Name"), value: data.customerName, handwriting: true }]} />
+        <PdfKeyValueRow items={[{ label: fieldLabel(data, "customerAddress", "Address"), value: data.customerAddress, wide: true, handwriting: true }]} />
         <PdfKeyValueRow
           items={[
-            { label: "Contractor", value: data.contractor },
+            { label: fieldLabel(data, "contractor", "Contractor"), value: data.contractor },
             { label: "Testing Date", value: data.date },
             { label: "Commissioning Date", value: data.conversionDate },
           ]}
@@ -209,12 +211,12 @@ function ConversionReport({ data }: { data: ReportTemplateData }) {
         <PdfSectionTitle>Customer / Connection Details</PdfSectionTitle>
         <PdfKeyValueRow
           items={[
-            { label: "BP / TR No", value: data.bpNo, handwriting: true },
-            { label: "Customer Name", value: data.customerName, handwriting: true },
-            { label: "Mobile No", value: data.phoneNo },
+            { label: fieldLabel(data, "bpNo", "BP / TR No"), value: data.bpNo, handwriting: true },
+            { label: fieldLabel(data, "customerName", "Customer Name"), value: data.customerName, handwriting: true },
+            { label: fieldLabel(data, "phoneNo", "Mobile No"), value: data.phoneNo },
           ]}
         />
-        <PdfKeyValueRow items={[{ label: "Address", value: data.customerAddress, wide: true, handwriting: true }]} />
+        <PdfKeyValueRow items={[{ label: fieldLabel(data, "customerAddress", "Address"), value: data.customerAddress, wide: true, handwriting: true }]} />
         <PdfKeyValueRow
           items={[
             { label: "Connection Type", value: data.connectionType },
@@ -226,9 +228,9 @@ function ConversionReport({ data }: { data: ReportTemplateData }) {
         <PdfSectionTitle>Meter Details</PdfSectionTitle>
         <PdfKeyValueRow
           items={[
-            { label: "Meter Number", value: data.meterNo, handwriting: true },
-            { label: "Meter Type", value: data.meterType },
-            { label: "Meter Reading", value: data.meterReading, handwriting: true },
+            { label: fieldLabel(data, "meterNo", "Meter Number"), value: data.meterNo, handwriting: true },
+            { label: fieldLabel(data, "meterType", "Meter Type"), value: data.meterType },
+            { label: fieldLabel(data, "meterReading", "Meter Reading"), value: data.meterReading, handwriting: true },
           ]}
         />
         <PdfKeyValueRow
@@ -242,15 +244,15 @@ function ConversionReport({ data }: { data: ReportTemplateData }) {
         <PdfSectionTitle>Regulator Details</PdfSectionTitle>
         <PdfKeyValueRow
           items={[
-            { label: "Regulator Number", value: data.regulatorNo, handwriting: true },
+            { label: fieldLabel(data, "regulatorNo", "Regulator Number"), value: data.regulatorNo, handwriting: true },
             { label: "Regulator Make", value: data.regulatorMake },
-            { label: "Regulator Pressure", value: data.regulatorPressure },
+            { label: fieldLabel(data, "regulatorPressure", "Regulator Pressure"), value: data.regulatorPressure },
           ]}
         />
         <PdfKeyValueRow
           items={[
-            { label: "Riser Testing Pressure", value: data.riserTestingPressure },
-            { label: "Riser Testing Time", value: data.riserTestingTime },
+            { label: fieldLabel(data, "riserTestingPressure", "Riser Testing Pressure"), value: data.riserTestingPressure },
+            { label: fieldLabel(data, "riserTestingTime", "Riser Testing Time"), value: data.riserTestingTime },
           ]}
         />
 
@@ -292,7 +294,7 @@ function TestingReport({ data }: { data: ReportTemplateData }) {
       <PdfPage>
         <View style={[pdfStyles.row, { borderWidth: 1, borderColor: "#222222" }]}>
           <View style={[pdfStyles.cell, { width: "16%", minHeight: 42, alignItems: "center", justifyContent: "center" }]}>
-            <Text style={{ fontSize: 6, textAlign: "center" }}>HN Enterprises</Text>
+            <PdfLogo width={48} height={32} />
           </View>
           <View style={[pdfStyles.cell, { width: "68%", minHeight: 42, alignItems: "center", justifyContent: "center" }]}>
             <Text style={[pdfStyles.title, { fontSize: 11 }]}>Testing Report MDPE Line</Text>
@@ -303,9 +305,9 @@ function TestingReport({ data }: { data: ReportTemplateData }) {
         </View>
 
         <Text style={[pdfStyles.sectionTitle, { borderTopWidth: 0 }]}>Project :- City Gas Distribution Project</Text>
-        <PaperInfoRow label="Client" value={data.client} />
-        <PaperInfoRow label="Consultants" value={data.consultant} />
-        <PaperInfoRow label="Contractor" value={data.contractor} />
+        <PaperInfoRow label={fieldLabel(data, "client", "Client")} value={data.client} />
+        <PaperInfoRow label={fieldLabel(data, "consultant", "Consultants")} value={data.consultant} />
+        <PaperInfoRow label={fieldLabel(data, "contractor", "Contractor")} value={data.contractor} />
         <View style={pdfStyles.row}>
           <View style={[pdfStyles.cell, { width: "55%" }]}>
             <Text><Text style={pdfStyles.label}>Area : </Text>{data.chargeArea}</Text>
@@ -383,7 +385,7 @@ function PressureObservationChart({ data }: { data: ReportTemplateData }) {
   return (
     <Document title="Pressure Observation Chart">
       <PdfPage>
-        <PdfHeader title="Testing Report MDPE Line" />
+        <PdfHeader title="Pressure Observation Chart" />
         <PdfSectionTitle>Pressure Observation Chart</PdfSectionTitle>
         <PdfTable
           headers={["Sl. No.", "Date", "Time", "Reading (kg/cm2)"]}
@@ -419,7 +421,9 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
     <Document title="Pre-Commissioning Report">
       <PdfPage>
         <View style={[pdfStyles.row, { alignItems: "flex-start", marginBottom: 14 }]}>
-          <View style={{ width: "18%" }} />
+          <View style={{ width: "18%" }}>
+            <PdfLogo />
+          </View>
           <View style={{ width: "64%" }}>
             <Text style={[pdfStyles.title, { textDecoration: "underline", fontSize: 12 }]}>Pre-Commissioning Report</Text>
           </View>
@@ -430,9 +434,9 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
 
         <View style={{ marginBottom: 12 }}>
           <PlainInfoLine label="Project" value="City Gas Distribution Project at Kamrup & Kamrup Metropolitan GA" />
-          <PlainInfoLine label="Client" value={data.client} />
-          <PlainInfoLine label="Consultant" value={data.consultant} />
-          <PlainInfoLine label="Contractor" value={data.contractor} />
+          <PlainInfoLine label={fieldLabel(data, "client", "Client")} value={data.client} />
+          <PlainInfoLine label={fieldLabel(data, "consultant", "Consultant")} value={data.consultant} />
+          <PlainInfoLine label={fieldLabel(data, "contractor", "Contractor")} value={data.contractor} />
           <PlainInfoLine label="Location" value={data.location} underline />
         </View>
 
@@ -586,12 +590,12 @@ function GcReport({ data }: { data: ReportTemplateData }) {
         />
         <PdfKeyValueRow
           items={[
-            { label: "Customer", value: data.customerName },
-            { label: "BP/TR No", value: data.bpNo },
-            { label: "Phone", value: data.phoneNo },
+            { label: fieldLabel(data, "customerName", "Customer"), value: data.customerName },
+            { label: fieldLabel(data, "bpNo", "BP/TR No"), value: data.bpNo },
+            { label: fieldLabel(data, "phoneNo", "Phone"), value: data.phoneNo },
           ]}
         />
-        <PdfKeyValueRow items={[{ label: "Site / Address", value: data.customerAddress, wide: true }]} />
+        <PdfKeyValueRow items={[{ label: fieldLabel(data, "customerAddress", "Site / Address"), value: data.customerAddress, wide: true }]} />
         <PdfSectionTitle>GC Checklist</PdfSectionTitle>
         <PdfTable
           headers={["S.No.", "Checklist Item", "Type", "Status", "Remarks"]}

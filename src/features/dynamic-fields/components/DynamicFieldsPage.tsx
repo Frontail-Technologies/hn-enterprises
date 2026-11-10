@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, MagnifyingGlassIcon, SlidersHorizontalIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, MagnifyingGlassIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FilterDialog } from "@/components/shared/FilterDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { PageShell } from "@/components/shared/PageShell";
 import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
@@ -60,7 +61,7 @@ export function DynamicFieldsPage() {
   return (
     <PageShell
       title="Dynamic Fields"
-      icon={SlidersHorizontalIcon}
+      description="Custom customer fields, grouped and ordered as they appear on forms."
       actions={
         <>
           <div className="relative min-w-0 sm:w-52">
@@ -74,22 +75,16 @@ export function DynamicFieldsPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:contents">
-            <FilterDialog
-              title="Dynamic Field Filters"
-              values={{ status: statusFilter === "All" ? "all" : statusFilter }}
-              filters={[
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: [
-                    { value: "Active", label: "Active" },
-                    { value: "Inactive", label: "Inactive" },
-                  ],
-                },
-              ]}
-              onChange={(_key, value) => setStatusFilter(value === "all" ? "All" : (value as StatusFilter))}
-              onReset={() => setStatusFilter("Active")}
-            />
+            <Select value={statusFilter} onValueChange={(value) => value && setStatusFilter(value as StatusFilter)}>
+              <SelectTrigger size="sm" className="w-full text-[13px] sm:w-36" aria-label="Status filter">
+                <SelectValue>{statusFilter === "All" ? "All statuses" : statusFilter}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All statuses</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("dynamic-fields.xlsx", exportColumns, filteredFields)}>
               <DownloadSimpleIcon size={12} />
@@ -113,6 +108,30 @@ export function DynamicFieldsPage() {
         isLoading={isLoading}
         dragEnabled={!search.trim()}
         selection={{ selectedIds, onToggleRow: toggleRow }}
+        emptyState={
+          search.trim() ? (
+            <EmptyState
+              illustration="search"
+              title="No matching fields"
+              description="Try a different label, key or group."
+              action={{ label: "Clear search", onClick: () => setSearch("") }}
+            />
+          ) : statusFilter !== "All" ? (
+            <EmptyState
+              illustration="search"
+              title={`No ${statusFilter.toLowerCase()} fields`}
+              description="Fields with another status are hidden by the status filter."
+              action={{ label: "Show all statuses", onClick: () => setStatusFilter("All") }}
+            />
+          ) : (
+            <EmptyState
+              illustration="records"
+              title="No fields yet"
+              description="Add your first field with Add Field, or import a sheet."
+              action={{ label: "Import a sheet", onClick: () => router.push("/dynamic-fields/import") }}
+            />
+          )
+        }
       />
 
       <BulkDeleteDialog

@@ -64,6 +64,31 @@ export async function resolveReportTemplateData(
   return resolveReportTemplateDataFromCustomer(templateId, customer);
 }
 
+/**
+ * Blank paper form (no customer): same layout, headers and labels, with every
+ * customer value left empty, so the template can be previewed, checked after a
+ * label edit, or printed to fill in by hand.
+ */
+export function blankReportTemplateData(templateId: ReportTemplateId): ReportTemplateData {
+  // Every customer section reads as empty strings; lists are empty.
+  const emptySection = () => new Proxy({}, { get: (_target, key) => (typeof key === "string" ? "" : undefined) });
+  const blankCustomer = {
+    projectName: "",
+    city: "",
+    siteArea: "",
+    createdDate: "",
+    documents: [],
+    customerConnection: emptySection(),
+    commissioningConversion: emptySection(),
+    billingCompletion: emptySection(),
+    giMeasurements: emptySection(),
+    valvesRegulators: emptySection(),
+    fittingsAccessories: emptySection(),
+    lmcPipelineWork: { pipeRecords: [] },
+  } as unknown as Customer;
+  return { ...resolveReportTemplateDataFromCustomer(templateId, blankCustomer), date: "", conversionDate: "" };
+}
+
 export function resolveReportTemplateDataFromCustomer(
   templateId: ReportTemplateId,
   customer: Customer,

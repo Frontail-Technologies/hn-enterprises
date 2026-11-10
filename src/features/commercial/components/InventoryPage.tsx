@@ -1,17 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, PackageIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid } from "@/components/shared/ExcelDataGrid";
-import { Pagination } from "@/components/shared/Pagination";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { useRouter, useSearchParams } from "next/navigation";
+import { DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { ListTable, useClientRows, useListState } from "@/components/shared/list";
+import { PageShell } from "@/components/shared/PageShell";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { InventoryTab } from "../types/commercial.types";
-import type { MaterialTransactionType } from "../types/material.types";
+import type { MaterialSource, MaterialTransactionType } from "../types/material.types";
 import { useInventoryBaseData } from "../hooks/useInventoryBaseData";
-import { useInventoryColumns } from "../hooks/useInventoryColumns";
+import { renderTransactionActions, useInventoryColumns } from "../hooks/useInventoryColumns";
 import { useInventoryExports } from "../hooks/useInventoryExports";
 import {
   useInventoryOverviewQuery,
@@ -21,17 +19,10 @@ import {
 } from "../hooks/useMaterials";
 import { plumberBalanceRows } from "../mappers/inventory.mapper";
 import { InventoryTabNav } from "./inventory/InventoryTabNav";
-import {
-  EMPTY_INVENTORY_FILTERS,
-  InventoryFilterBar,
-  inventoryFiltersToDateRange,
-  type InventoryFilterState,
-} from "./inventory/InventoryFilterBar";
+import { InventoryMonthFilter, inventoryFiltersToDateRange, inventoryListFilters } from "./inventory/InventoryFilterBar";
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
 import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
 import { MaterialCategoryDrawer } from "./inventory/MaterialCategoryDrawer";
-
-const PAGE_SIZE = 50;
 
 const PLUMBER_FILTER_TABS = new Set<InventoryTab>(["storeIssue", "plumberBalance", "plumberConsumption"]);
 
@@ -69,24 +60,22 @@ const TAB_ACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = 
 export function InventoryPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
-  const [filters, setFilters] = useState<InventoryFilterState>(EMPTY_INVENTORY_FILTERS);
-  const [page, setPage] = useState(1);
+  // One list state for the page: filters carry across tabs (as before); paging resets per tab.
+  const urlProjectId = useSearchParams().get("projectId");
+  const list = useListState({ pageSize: 50, storageKey: "inventory", initialFilters: urlProjectId ? { projectId: urlProjectId } : {} });
 
   function handleTabChange(tab: InventoryTab) {
     setActiveTab(tab);
-    setPage(1);
-  }
-
-  function handleFiltersChange(next: InventoryFilterState) {
-    setFilters(next);
-    setPage(1);
+    list.setPage(1);
   }
 
   const showPlumberFilter = PLUMBER_FILTER_TABS.has(activeTab);
-  const effectivePlumberId = showPlumberFilter ? filters.plumberId || undefined : undefined;
-  const { from, to } = useMemo(() => inventoryFiltersToDateRange(filters.month), [filters.month]);
-  const sourceFilter = filters.source || undefined;
-  const projectFilter = filters.projectId || undefined;
+  const showMonthFilter = !MONTH_FILTER_EXCLUDED_TABS.has(activeTab);
+  const effectivePlumberId = showPlumberFilter ? list.filters.plumberId || undefined : undefined;
+  const month = list.filters.month ?? "";
+  const { from, to } = useMemo(() => inventoryFiltersToDateRange(month), [month]);
+  const sourceFilter = (list.filters.source || undefined) as MaterialSource | undefined;
+  const projectFilter = list.filters.projectId || undefined;
   const stockFiltered = Boolean(sourceFilter || projectFilter);
 
   const { materials, materialsLoading, plumbers, projects, stockBalanceByMaterialId } = useInventoryBaseData({
@@ -108,7 +97,7 @@ export function InventoryPage() {
 
   const transactionTypes = TRANSACTION_TAB_TYPES[activeTab];
   const isTransactionTab = Boolean(transactionTypes);
-  const { data: transactionsResult, isLoading: transactionsLoading } = useInventoryTransactionsPageQuery(
+  const transactionsQuery = useInventoryTransactionsPageQuery(
     {
       type: transactionTypes && transactionTypes.length === 1 ? transactionTypes[0] : undefined,
       types: transactionTypes && transactionTypes.length > 1 ? transactionTypes : undefined,
@@ -117,24 +106,20 @@ export function InventoryPage() {
       plumberId: effectivePlumberId,
       from,
       to,
-      page,
-      limit: PAGE_SIZE,
+      page: list.page,
+      limit: list.pageSize,
     },
     isTransactionTab,
   );
-  const activeTransactions = transactionsResult?.rows ?? [];
-  const transactionsPagination = transactionsResult?.pagination;
+  const activeTransactions = transactionsQuery.data?.rows ?? [];
 
-  const { data: totalIssueRowsData = [], isLoading: totalIssueLoading } = useTotalIssueSummaryQuery(
-    { source: sourceFilter, projectId: projectFilter, from, to },
-    activeTab === "totalIssue",
-  );
+  const totalIssueQuery = useTotalIssueSummaryQuery({ source: sourceFilter, projectId: projectFilter, from, to }, activeTab === "totalIssue");
 
-  const { data: plumberBalances = [], isLoading: plumberBalancesLoading } = usePlumberBalancesQuery(
+  const plumberBalancesQuery = usePlumberBalancesQuery(
     { source: sourceFilter, projectId: projectFilter, plumberId: effectivePlumberId },
     activeTab === "plumberBalance",
   );
-  const plumberBalanceRowsData = plumberBalanceRows(plumberBalances);
+  const plumberBalanceRowsData = useMemo(() => plumberBalanceRows(plumberBalancesQuery.data ?? []), [plumberBalancesQuery.data]);
 
   const { isExportPending, handleExport } = useInventoryExports({
     activeTab,
@@ -161,98 +146,112 @@ export function InventoryPage() {
     stockBalanceByMaterialId,
   });
 
-  return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Inventory & Material"
-        icon={PackageIcon}
-        actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <div className={cn("grid gap-2 sm:contents", activeTab === "stock" ? "grid-cols-3" : "grid-cols-2")}>
-              <InventoryFilterBar
-                filters={filters}
-                onChange={handleFiltersChange}
-                projects={projects}
-                plumbers={plumbers}
-                showPlumberFilter={showPlumberFilter}
-                showMonthFilter={!MONTH_FILTER_EXCLUDED_TABS.has(activeTab)}
-              />
+  // Client-side tabs: stock catalog and the two server aggregates are fully loaded.
+  const stockView = useClientRows(materials, list, { columns: stockColumns });
+  const totalIssueView = useClientRows(totalIssueQuery.data ?? [], list, { columns: totalIssueColumns });
+  const plumberBalanceView = useClientRows(plumberBalanceRowsData, list, { columns: plumberBalanceColumns });
 
-              <Button type="button" variant="outline" size="compact" onClick={handleExport} disabled={isExportPending}>
-                <DownloadSimpleIcon size={12} />
-                {isExportPending ? "Exporting..." : "Export"}
-              </Button>
+  const filters = inventoryListFilters({ projects, plumbers, showPlumberFilter });
 
-              {activeTab === "stock" ? (
-                <Button type="button" variant="outline" size="compact" onClick={() => router.push("/inventory/import")}>
-                  <UploadSimpleIcon size={12} />
-                  Import
-                </Button>
-              ) : null}
-            </div>
-
-            {activeTab === "stock" ? (
-              <div className="grid grid-cols-2 gap-2 sm:contents">
-                <MaterialCategoryDrawer />
-                <MaterialItemDrawer />
-              </div>
-            ) : TAB_ACTION_TYPE[activeTab] ? (
-              <div className="grid grid-cols-1 gap-2 sm:contents">
-                <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
-              </div>
-            ) : null}
-          </div>
-        }
-      />
-      <InventoryTabNav activeTab={activeTab} onChange={handleTabChange} counts={counts} />
-
+  const toolbarActions = (
+    <>
+      {showMonthFilter ? <InventoryMonthFilter value={month} onChange={(value) => list.setFilter("month", value)} /> : null}
+      <Button type="button" variant="outline" size="compact" onClick={handleExport} disabled={isExportPending}>
+        <DownloadSimpleIcon size={14} />
+        {isExportPending ? "Exporting..." : "Export"}
+      </Button>
       {activeTab === "stock" ? (
-        <ExcelDataGrid
+        <Button type="button" variant="outline" size="compact" onClick={() => router.push("/inventory/import")}>
+          <UploadSimpleIcon size={14} />
+          Import
+        </Button>
+      ) : null}
+    </>
+  );
+
+  const shared = {
+    state: list,
+    filters,
+    actions: toolbarActions,
+    enableFullView: true,
+  };
+
+  return (
+    <PageShell
+      title="Inventory & Material"
+      description="Stock, purchases, issues and plumber balances across purchase and PBG sources."
+      actions={
+        activeTab === "stock" ? (
+          <>
+            <MaterialCategoryDrawer />
+            <MaterialItemDrawer />
+          </>
+        ) : TAB_ACTION_TYPE[activeTab] ? (
+          <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
+        ) : null
+      }
+      tabs={<InventoryTabNav activeTab={activeTab} onChange={handleTabChange} counts={counts} />}
+    >
+      {activeTab === "stock" ? (
+        <ListTable
+          {...shared}
+          itemLabel="material"
+          rows={stockView.pageRows}
+          total={stockView.total}
           columns={stockColumns}
-          rows={materials}
-          emptyTitle="No materials in the catalog yet"
+          searchPlaceholder="Search materials..."
           isLoading={materialsLoading}
           onRowClick={(row) => router.push(`/inventory/${row.id}`)}
-          enableFullView
+          empty={{ illustration: "materials", title: "No materials in the catalog yet", description: "Add material items or import them from Excel." }}
         />
       ) : null}
 
       {isTransactionTab ? (
-        <>
-          <ExcelDataGrid
-            columns={transactionColumns(transactionTypes![0])}
-            rows={activeTransactions}
-            emptyTitle={TRANSACTION_TAB_EMPTY_TITLE[activeTab] ?? "No records found"}
-            isLoading={transactionsLoading}
-            enableFullView
-          />
-          {transactionsPagination && transactionsPagination.total > 0 ? (
-            <Pagination
-              compact
-              page={transactionsPagination.page}
-              pageCount={Math.max(1, transactionsPagination.totalPages)}
-              totalItems={transactionsPagination.total}
-              startItem={(transactionsPagination.page - 1) * transactionsPagination.limit + 1}
-              endItem={Math.min(transactionsPagination.page * transactionsPagination.limit, transactionsPagination.total)}
-              onPageChange={setPage}
-            />
-          ) : null}
-        </>
+        <ListTable
+          {...shared}
+          itemLabel="record"
+          rows={activeTransactions}
+          total={transactionsQuery.data?.pagination?.total ?? activeTransactions.length}
+          columns={transactionColumns(transactionTypes![0])}
+          searchable={false}
+          isLoading={transactionsQuery.isLoading}
+          isError={transactionsQuery.isError}
+          onRetry={() => void transactionsQuery.refetch()}
+          rowActionsWidth={140}
+          renderRowActions={(row) => renderTransactionActions(row)}
+          empty={{ illustration: "materials", title: TRANSACTION_TAB_EMPTY_TITLE[activeTab] ?? "No records found" }}
+        />
       ) : null}
 
       {activeTab === "totalIssue" ? (
-        <ExcelDataGrid columns={totalIssueColumns} rows={totalIssueRowsData} emptyTitle="No issued materials found" isLoading={totalIssueLoading} enableFullView />
+        <ListTable
+          {...shared}
+          itemLabel="material"
+          rows={totalIssueView.pageRows}
+          total={totalIssueView.total}
+          columns={totalIssueColumns}
+          searchPlaceholder="Search materials..."
+          isLoading={totalIssueQuery.isLoading}
+          isError={totalIssueQuery.isError}
+          onRetry={() => void totalIssueQuery.refetch()}
+          empty={{ illustration: "materials", title: "No issued materials found" }}
+        />
       ) : null}
 
       {activeTab === "plumberBalance" ? (
-        <ExcelDataGrid
+        <ListTable
+          {...shared}
+          itemLabel="balance"
+          rows={plumberBalanceView.pageRows}
+          total={plumberBalanceView.total}
           columns={plumberBalanceColumns}
-          rows={plumberBalanceRowsData}
-          emptyTitle="No plumber balance records found"
-          isLoading={plumberBalancesLoading}
-          enableFullView
+          searchPlaceholder="Search plumber or material..."
+          isLoading={plumberBalancesQuery.isLoading}
+          isError={plumberBalancesQuery.isError}
+          onRetry={() => void plumberBalancesQuery.refetch()}
+          empty={{ illustration: "materials", title: "No plumber balance records found" }}
         />
       ) : null}
-    </div>
+    </PageShell>
   );
 }

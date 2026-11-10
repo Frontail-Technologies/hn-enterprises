@@ -21,5 +21,5 @@ export function CompactStatGrid({ children, dashboard, columns, className }: Com
       ? "xl:grid-cols-4"
       : COLUMN_CLASSES[4];
 
-  return <section className={cn("grid grid-cols-2 gap-2.5 sm:gap-3", columnClasses, className)}>{children}</section>;
+  return <section className={cn("grid grid-cols-2 gap-3 lg:gap-4", columnClasses, className)}>{children}</section>;
 }

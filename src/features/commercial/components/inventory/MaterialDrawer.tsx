@@ -148,7 +148,7 @@ export function MaterialDrawer({
   });
 
   const materialField = (
-    <FormField label="Material">
+    <FormField label="Material" className="sm:col-span-2">
       <Controller
         control={control}
         name="materialId"
@@ -325,13 +325,13 @@ export function MaterialDrawer({
           {label}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{label}</DialogTitle>
           <DialogDescription>{TYPE_DESCRIPTIONS[type]}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           {materialField}
 
           {type === "purchase" ? (
@@ -345,14 +345,12 @@ export function MaterialDrawer({
               {projectField}
               {dateField("Purchase Date")}
               {quantityField("Quantity")}
-              <div className="grid gap-3 sm:grid-cols-2">
                 <FormField label="Rate">
                   <Input type="number" {...register("rate")} />
                 </FormField>
                 <FormField label="Bill Amount">
                   <Input type="number" {...register("billAmount")} />
                 </FormField>
-              </div>
             </>
           ) : null}
 
@@ -368,14 +366,12 @@ export function MaterialDrawer({
               <FormField label="Vendor Name">
                 <Input {...register("vendorName")} />
               </FormField>
-              <div className="grid gap-3 sm:grid-cols-2">
                 <FormField label="Vehicle No.">
                   <Input {...register("vehicleNo")} />
                 </FormField>
                 <FormField label="Vehicle Quantity">
                   <Input type="number" {...register("vehicleQty")} />
                 </FormField>
-              </div>
             </>
           ) : null}
 
@@ -495,20 +491,21 @@ export function MaterialDrawer({
                 images={field.value}
                 onChange={field.onChange}
                 module="inventory"
+                className="sm:col-span-2"
               />
             )}
           />
 
-          <FormField label="Remarks">
+          <FormField label="Remarks" className="sm:col-span-2">
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
 
           {validationMessage || submitError ? (
-            <p className="text-xs text-destructive">{validationMessage || submitError}</p>
+            <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
           ) : null}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
           <Button type="button" onClick={() => void onSubmit()} disabled={createTransaction.isPending}>
             {createTransaction.isPending ? "Saving..." : "Save"}

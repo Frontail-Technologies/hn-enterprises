@@ -76,6 +76,7 @@ type BackendStaff = {
     username: string;
     email: string;
     mobile: string | null;
+    avatarUrl?: string | null;
     role: BackendRole;
     status: BackendStatus;
     lastLoginAt: string | null;
@@ -93,6 +94,7 @@ function mapStaff(raw: BackendStaff): Staff {
     role: ROLE_TO_FRONTEND[raw.user.role] ?? "Viewer",
     status: STATUS_TO_FRONTEND[raw.user.status] ?? "Active",
     lastLogin: raw.user.lastLoginAt ?? "",
+    avatarUrl: raw.user.avatarUrl ?? "",
     assignedProjectId: raw.assignedProjectId ?? "",
     salaryType: SALARY_TYPE_TO_FRONTEND[raw.salaryType] ?? "Monthly",
     monthlySalary: raw.monthlySalary,
@@ -175,6 +177,8 @@ export const staffApi = {
       body.user = {
         name: userPatch.name,
         mobile: userPatch.mobile || undefined,
+        // Sent as-is so "" can remove the photo.
+        avatarUrl: userPatch.avatarUrl,
         role: userPatch.role ? ROLE_TO_BACKEND[userPatch.role] : undefined,
         status: userPatch.status ? STATUS_TO_BACKEND[userPatch.status] : undefined,
       };

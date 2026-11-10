@@ -6,6 +6,7 @@ export type TeamFilter = "all" | "supervisors" | "plumbers" | "staff";
 export type TeamRow = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   role: string;
   sites: string;
   workload: string;
@@ -21,6 +22,7 @@ export function buildTeamRows(
   const supervisorRows: TeamRow[] = supervisors.map((person) => ({
     id: `supervisor-${person.id}`,
     name: person.name,
+    avatarUrl: person.avatarUrl,
     role: "Supervisor",
     sites: person.sites.map((site) => site.name).join(", ") || "-",
     workload: `${person.customerCount} Customers`,
@@ -29,6 +31,7 @@ export function buildTeamRows(
   const plumberRows: TeamRow[] = plumbers.map((person) => ({
     id: `plumber-${person.id}`,
     name: person.name,
+    avatarUrl: person.avatarUrl,
     role: "Plumber",
     sites: person.sites.map((site) => site.name).join(", ") || "-",
     workload: `${person.customerCount} Customers`,

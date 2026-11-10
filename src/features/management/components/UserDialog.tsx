@@ -126,8 +126,8 @@ export function UserDialog({
           {label}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{label}</DialogTitle>
           <DialogDescription>
             {user ? "Update access, role or reset the password." : "Create a real login with an initial password."}
@@ -135,7 +135,7 @@ export function UserDialog({
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
             <FormField label="Name">
               <Input {...register("name")} />
               {formState.errors.name ? <p className="text-xs text-destructive">{formState.errors.name.message}</p> : null}
@@ -151,7 +151,6 @@ export function UserDialog({
               <Input type="email" {...register("email")} disabled={Boolean(user)} />
               {formState.errors.email ? <p className="text-xs text-destructive">{formState.errors.email.message}</p> : null}
             </FormField>
-            <div className="grid gap-3 sm:grid-cols-2">
               <FormField label="Role">
                 <Controller
                   control={control}
@@ -192,10 +191,9 @@ export function UserDialog({
                   )}
                 />
               </FormField>
-            </div>
 
             {user ? (
-              <div className="rounded-lg border border-border/70 bg-surface-muted/35 p-3">
+              <div className="rounded-lg border border-border/70 bg-surface-muted/35 p-3 sm:col-span-2">
                 <p className="text-sm font-semibold text-foreground">Reset Password</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Leave blank if you do not want to change it.
@@ -205,7 +203,7 @@ export function UserDialog({
                 </div>
               </div>
             ) : (
-              <FormField label="Password">
+              <FormField label="Password" className="sm:col-span-2">
                 <Input type="password" {...register("password")} />
                 {formState.errors.password ? (
                   <p className="text-xs text-destructive">{formState.errors.password.message}</p>
@@ -214,7 +212,7 @@ export function UserDialog({
             )}
           </div>
 
-          <DialogFooter className="mx-0 mb-0 flex w-full shrink-0 flex-row items-center justify-between rounded-b-xl border-t bg-muted/50 p-4 sm:justify-between">
+          <DialogFooter className="flex w-full shrink-0 flex-row items-center justify-between border-t border-border px-6 py-4 sm:justify-between">
             {user?.id ? (
               <DeleteConfirmDialog
                 itemName={user.name}

@@ -1,19 +1,19 @@
 "use client";
 
-import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
+import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useCustomerApprovalsHistory, type CustomerApprovalRow } from "../../hooks/useCustomerApprovalsHistory";
 import { formatDateTime } from "../../utils/format";
 import type { Customer } from "../../types/customer.types";
 
-const columns: ColumnDef<CustomerApprovalRow>[] = [
-  { key: "reference", header: "Reference", className: "font-medium" },
-  { key: "module", header: "Module" },
-  { key: "submittedBy", header: "Submitted By" },
-  { key: "date", header: "Date", render: (row) => formatDateTime(row.date) },
-  { key: "remarks", header: "Remarks", className: "min-w-64" },
-  { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
+const columns: ListColumn<CustomerApprovalRow>[] = [
+  { id: "reference", header: "Reference", value: (row) => row.reference, isTitle: true, hideable: false, sortable: true, width: 180 },
+  { id: "module", header: "Module", value: (row) => row.module, sortable: true, width: 150 },
+  { id: "submittedBy", header: "Submitted by", value: (row) => row.submittedBy, sortable: true, width: 160 },
+  { id: "date", header: "Date", value: (row) => row.date, sortable: true, width: 170, cell: (row) => formatDateTime(row.date) },
+  { id: "remarks", header: "Remarks", value: (row) => row.remarks, width: 260, grow: true },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
 ];
 
 /**
@@ -23,12 +23,23 @@ const columns: ColumnDef<CustomerApprovalRow>[] = [
  */
 export function CustomerApprovalsHistory({ customer }: { customer: Customer }) {
   const { approvalRows, workProgressUpdates } = useCustomerApprovalsHistory(customer);
+  const list = useListState({ pageSize: 25, storageKey: "customer-approvals" });
+  const { pageRows, total } = useClientRows(approvalRows, list, { columns });
 
   return (
     <div className="space-y-4">
-      <SectionCard title="Approvals">
-        <DataTable columns={columns} data={approvalRows} variant="striped" />
-      </SectionCard>
+      <section className="space-y-3">
+        <h2 className="text-section-title">Approvals</h2>
+        <ListTable
+          itemLabel="approval"
+          rows={pageRows}
+          total={total}
+          columns={columns}
+          state={list}
+          searchable={false}
+          empty={{ illustration: "checklist", title: "No approvals yet", description: "Survey, installation and other approvals for this customer will appear here." }}
+        />
+      </section>
 
       <SectionCard title="Activity History">
         {workProgressUpdates.length ? (

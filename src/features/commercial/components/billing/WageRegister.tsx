@@ -44,14 +44,14 @@ export function WageRegister({ month }: { month: string }) {
         <DashboardStatCard label="Net Payable" value={money(wageTotals.net)} icon={HandCoinsIcon} tone="success" dense />
         <DashboardStatCard label="Pending Payments" value={formatCompactCount(wageTotals.pending)} icon={HourglassIcon} tone="danger" dense />
       </CompactStatGrid>
-      <section className="rounded-lg border border-border/70 bg-card">
+      <section className="rounded-card border border-border bg-card shadow-card">
         <div className="border-b border-border/70 px-3 py-2">
           <p className="text-sm font-semibold text-foreground">
             Wage Register
           </p>
         </div>
         {!isLoading && wages.length === 0 ? (
-          <EmptyState title="No wage records for this month" />
+          <EmptyState illustration="calendar" title="No wage records for this month" />
         ) : (
         <div className="overflow-auto">
           <table className="min-w-max border-separate border-spacing-0 text-sm">

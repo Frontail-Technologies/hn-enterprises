@@ -81,7 +81,7 @@ export function MasterValueDrawer({
           <SheetTitle>{value ? `Edit ${category}` : `Add ${category}`}</SheetTitle>
           <SheetDescription>Create or update {category.toLowerCase()} options.</SheetDescription>
         </SheetHeader>
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6">
           <FormField label="Value">
             <Input value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} />
           </FormField>

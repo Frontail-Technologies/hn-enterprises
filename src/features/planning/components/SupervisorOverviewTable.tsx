@@ -65,7 +65,7 @@ export function SupervisorOverviewTable({
                   <TableCell colSpan={7} className="bg-muted/20 p-0">
                     <Table>
                       <TableHeader>
-                        <TableRow className="text-[11px] font-semibold text-muted-foreground">
+                        <TableRow className="text-xs font-semibold text-muted-foreground">
                           <TableHead className="py-1.5">Customer / BP</TableHead>
                           <TableHead className="py-1.5">Site</TableHead>
                           <TableHead className="py-1.5">Planned Work</TableHead>

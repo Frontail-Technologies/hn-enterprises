@@ -1,28 +1,15 @@
 "use client";
 
-import { FilterDialog } from "@/components/shared/FilterDialog";
+import type { ListFilter } from "@/components/shared/list";
 import { MonthPicker } from "@/components/shared/MonthPicker";
-import type { MaterialSource } from "../../types/material.types";
 
-export type InventoryFilterState = {
-  projectId: string;
-  source: MaterialSource | "";
-  month: string;
-  plumberId: string;
-};
-
-export const EMPTY_INVENTORY_FILTERS: InventoryFilterState = {
-  projectId: "",
-  source: "",
-  month: "",
-  plumberId: "",
-};
-
-export function hasActiveInventoryFilters(filters: InventoryFilterState) {
-  return Boolean(filters.projectId || filters.source || filters.month || filters.plumberId);
-}
-
-export function inventoryFiltersToDateRange(month: string) {
+/**
+ * Inventory page filters. Project, source and plumber are ListTable filters
+ * (keys `projectId`, `source`, `plumberId` in list state); month is a toolbar
+ * MonthPicker stored under `month` (yyyy-MM). The API params they produce are
+ * unchanged.
+ */
+export function inventoryFiltersToDateRange(month: string | undefined) {
   if (!month) return { from: undefined, to: undefined };
   const [year, monthNum] = month.split("-").map(Number);
   if (!year || !monthNum) return { from: undefined, to: undefined };
@@ -36,79 +23,32 @@ const SOURCE_OPTIONS = [
   { value: "pbg", label: "PBG" },
 ];
 
-export function InventoryFilterBar({
-  filters,
-  onChange,
+export function inventoryListFilters({
   projects,
   plumbers,
   showPlumberFilter,
-  showMonthFilter = true,
 }: {
-  filters: InventoryFilterState;
-  onChange: (filters: InventoryFilterState) => void;
   projects: { id: string; name: string }[];
   plumbers: { id: string; name: string }[];
   showPlumberFilter: boolean;
-  showMonthFilter?: boolean;
-}) {
-  const values: Record<string, string> = {
-    projectId: filters.projectId || "all",
-    source: filters.source || "all",
-    plumberId: filters.plumberId || "all",
-    month: filters.month,
-  };
+}): ListFilter[] {
+  return [
+    {
+      id: "projectId",
+      label: "Project",
+      quick: true,
+      options: [
+        { value: "unassigned", label: "Central / Unassigned" },
+        ...projects.map((project) => ({ value: project.id, label: project.name })),
+      ],
+    },
+    { id: "source", label: "Source", quick: true, options: SOURCE_OPTIONS },
+    ...(showPlumberFilter
+      ? [{ id: "plumberId", label: "Plumber", quick: true, options: plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name })) }]
+      : []),
+  ];
+}
 
-  function handleChange(key: string, value: string) {
-    const nextValue = value === "all" ? "" : value;
-    if (key === "projectId") onChange({ ...filters, projectId: nextValue });
-    if (key === "source") onChange({ ...filters, source: nextValue as MaterialSource | "" });
-    if (key === "plumberId") onChange({ ...filters, plumberId: nextValue });
-    if (key === "month") onChange({ ...filters, month: nextValue });
-  }
-
-  return (
-    <FilterDialog
-      title="Inventory Filters"
-      filters={[
-        {
-          key: "projectId",
-          placeholder: "All Projects",
-          searchable: true,
-          options: [
-            { value: "unassigned", label: "Central / Unassigned" },
-            ...projects.map((project) => ({ value: project.id, label: project.name })),
-          ],
-        },
-        { key: "source", placeholder: "All Sources", options: SOURCE_OPTIONS },
-        ...(showPlumberFilter
-          ? [
-              {
-                key: "plumberId",
-                placeholder: "All Plumbers",
-                searchable: true,
-                options: plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name })),
-              },
-            ]
-          : []),
-      ]}
-      values={values}
-      onChange={handleChange}
-      onReset={() => onChange(EMPTY_INVENTORY_FILTERS)}
-      renderExtra={
-        showMonthFilter
-          ? ({ values: draftValues, onChange: updateDraft }) => (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Month</p>
-                <MonthPicker
-                  value={draftValues.month ?? ""}
-                  onChange={(month) => updateDraft("month", month)}
-                  placeholder="All Time"
-                  className="h-8 w-full text-sm"
-                />
-              </div>
-            )
-          : undefined
-      }
-    />
-  );
+export function InventoryMonthFilter({ value, onChange }: { value: string; onChange: (month: string) => void }) {
+  return <MonthPicker value={value} onChange={onChange} placeholder="All time" className="h-8 w-36 text-[13px]" />;
 }

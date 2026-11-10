@@ -1,65 +1,57 @@
 "use client";
 
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DownloadSimpleIcon, PrinterIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useReportTemplateData } from "../hooks/useReportTemplateData";
+import { blankReportTemplateData } from "../services/report-templates.service";
 import type { ReportTemplateDefinition } from "../types/report-template.types";
 import { ReportPdfDocument } from "./pdf/ReportPdfDocument";
 
-export function ReportTemplatePdfViewer({ template }: { template: ReportTemplateDefinition }) {
+export function ReportTemplatePdfViewer({ template, fieldLabels }: { template: ReportTemplateDefinition; fieldLabels?: Record<string, string> }) {
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customerId") ?? undefined;
-  const { data, isLoading, isError } = useReportTemplateData(template.id, customerId);
+  const query = useReportTemplateData(template.id, customerId);
+  // No customer picked: show the blank paper form instead of nothing.
+  const data = customerId ? query.data : blankReportTemplateData(template.id);
+  const { isLoading, isError } = query;
 
-  if (!customerId) {
+  if (customerId && isError) {
     return (
-      <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-sm border border-border bg-card text-center">
-        <p className="text-sm font-semibold text-foreground">Pick a customer first</p>
-        <p className="max-w-sm text-xs text-muted-foreground">
-          This template needs a real customer to generate a report for. Select one from the templates list.
-        </p>
-        <Link href="/reports/templates" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          Back to templates
-        </Link>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card text-sm text-muted-foreground">
+      <div className="flex min-h-[560px] items-center justify-center rounded-card border border-border bg-card shadow-card text-sm text-muted-foreground">
         Unable to load this customer.
       </div>
     );
   }
 
-  if (isLoading || !data) {
+  if ((customerId && isLoading) || !data) {
     return (
-      <div className="flex min-h-[560px] items-center justify-center rounded-sm border border-border bg-card">
+      <div className="flex min-h-[560px] items-center justify-center rounded-card border border-border bg-card shadow-card">
         <LoadingSpinner />
       </div>
     );
   }
 
-  const document = <ReportPdfDocument templateId={template.id} data={data} />;
+  // Saved admin labels replace the default wording on the printed form.
+  const document = <ReportPdfDocument templateId={template.id} data={{ ...data, fieldLabels }} />;
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-card shadow-card p-3">
         <div>
           <p className="text-sm font-semibold text-foreground">A4 PDF Preview</p>
           <p className="text-xs text-muted-foreground">
-            Paper-style template generated from real customer data.
+            {customerId
+              ? "Paper-style template generated from real customer data."
+              : "Blank form - pick a customer on the templates page to fill it in."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <PDFDownloadLink
             document={document}
-            fileName={`${template.id}-${customerId}.pdf`}
+            fileName={`${template.id}-${customerId ?? "blank"}.pdf`}
             className="app-primary-action inline-flex h-9 items-center gap-2 rounded-sm bg-primary px-3 text-sm font-medium text-white"
           >
             {({ loading }) => (

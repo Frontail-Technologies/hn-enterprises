@@ -1,22 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { DragEvent } from "react";
-import { ArrowClockwiseIcon, ImageSquareIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, ImageSquareIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { FileDropzone } from "@/components/shared/FileDropzone";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Attachment,
-  AttachmentAction,
-  AttachmentActions,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentTitle,
-  AttachmentTrigger,
-} from "@/components/ui/attachment";
 import { resolveFileUrl, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +68,21 @@ export function appendSingleImage(formData: FormData, fieldKey: string, item: Im
   }
 }
 
+/**
+ * Camera, chat-app and download file names ("IMG_20241102_1234", "WhatsApp Image…",
+ * "795880ee23362c0d…") make poor captions; those get "Photo N" instead.
+ */
+function isMachineName(name: string) {
+  const plain = name.trim();
+  return (
+    !plain ||
+    /^[0-9a-f-]{12,}$/i.test(plain) ||
+    /^[\d\s_.-]{6,}$/.test(plain) ||
+    /^(img|image|photo|pxl|dsc|screenshot|scan|whatsapp image|signal|telegram)[\s_-]/i.test(plain) ||
+    /^(?=.*\d)[a-z0-9_-]{24,}$/i.test(plain)
+  );
+}
+
 interface ImageUploadPreviewProps {
   images: ImagePreviewItem[];
   onChange?: (images: ImagePreviewItem[]) => void;
@@ -95,9 +99,7 @@ export function ImageUploadPreview({
   recordId,
 }: ImageUploadPreviewProps) {
   const [localItems, setLocalItems] = useState<ImagePreviewItem[]>(images);
-  const [isDragging, setIsDragging] = useState(false);
   const [previewItem, setPreviewItem] = useState<ImagePreviewItem | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const isControlled = Boolean(onChange);
   const items = isControlled ? images : localItems;
   const itemsRef = useRef(items);
@@ -129,18 +131,18 @@ export function ImageUploadPreview({
     }
   }
 
-  function addFiles(files: FileList | null) {
-    const nextFiles = Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
-    if (inputRef.current) inputRef.current.value = "";
+  function addFiles(files: File[]) {
+    const nextFiles = files.filter((file) => file.type.startsWith("image/"));
     if (!nextFiles.length) return;
 
     const stamp = Date.now();
+    const existing = itemsRef.current.length;
     const staged = nextFiles.map((file, index) => {
       const extMatch = /\.[^.]+$/.exec(file.name);
       const ext = extMatch ? extMatch[0] : "";
       const preview: ImagePreviewItem = {
         id: `img-${stamp}-${index}`,
-        label: file.name.replace(/\.[^.]+$/, ""),
+        label: isMachineName(file.name.replace(/\.[^.]+$/, "")) ? `Photo ${existing + index + 1}` : file.name.replace(/\.[^.]+$/, ""),
         // Semantic, non-identifying name sent to the server - mirrors the mobile
         // app's upload naming (evidence-<timestamp>-<index>.ext) instead of the
         // raw OS filename. The user-facing `label` keeps the friendly default.
@@ -156,130 +158,110 @@ export function ImageUploadPreview({
     update([...itemsRef.current, ...staged]);
   }
 
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setIsDragging(false);
-    addFiles(event.dataTransfer.files);
-  }
 
   return (
     <div className={cn("space-y-3", className)}>
-      <Attachment
-        state="idle"
-        orientation="horizontal"
-        className={cn(
-          "w-full cursor-pointer items-center gap-3 rounded-sm border-dashed bg-muted/20 p-4",
-          isDragging && "border-primary bg-primary/5",
-        )}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(event) => addFiles(event.target.files)}
-        />
-        <AttachmentTrigger onClick={() => inputRef.current?.click()} />
-        <AttachmentMedia className="bg-primary/10 text-primary">
-          <UploadSimpleIcon size={22} />
-        </AttachmentMedia>
-        <AttachmentContent>
-          <AttachmentTitle>Upload images</AttachmentTitle>
-          <AttachmentDescription>
-            Drag and drop images here, or choose files.
-          </AttachmentDescription>
-        </AttachmentContent>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="relative z-20 shrink-0"
-          onClick={(event) => {
-            event.stopPropagation();
-            inputRef.current?.click();
-          }}
-        >
-          Choose Images
-        </Button>
-      </Attachment>
+      <FileDropzone
+        accept="image/*"
+        multiple
+        label="Choose images"
+        hint="PNG, JPG or WEBP · you can add several at once"
+        onFiles={addFiles}
+      />
 
-      <AttachmentGroup className="flex flex-col gap-2 overflow-visible py-0">
-        {items.map((item) => {
-          const thumbSrc = item.previewUrl || resolveFileUrl(item.fileUrl);
-          return (
-            <Attachment
-              key={item.id}
-              orientation="horizontal"
-              state={item.status === "uploading" ? "uploading" : item.status === "error" ? "error" : "done"}
-              className="w-full rounded-sm border-border/70"
-            >
-              <AttachmentMedia
-                variant={thumbSrc ? "image" : "icon"}
-                className={cn("h-14 w-14 rounded-sm", thumbSrc && "cursor-pointer")}
-                onClick={thumbSrc ? () => setPreviewItem(item) : undefined}
-              >
-                {thumbSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumbSrc} alt={item.label} className="h-full w-full object-cover" />
-                ) : (
-                  <ImageSquareIcon size={30} className="text-primary" />
+      {items.length ? (
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-2">
+          {items.map((item) => {
+            const thumbSrc = item.previewUrl || resolveFileUrl(item.fileUrl);
+            return (
+              <li
+                key={item.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border bg-card p-2",
+                  item.status === "error" ? "border-destructive/40 bg-danger-soft/40" : "border-border",
                 )}
-              </AttachmentMedia>
-              <AttachmentContent className="min-w-0 space-y-1">
-                <Input
-                  value={item.label}
-                  onChange={(event) =>
-                    update(items.map((image) => image.id === item.id ? { ...image, label: event.target.value } : image))
-                  }
-                  className="h-8 max-w-sm"
-                  aria-label="Image label"
-                />
-                <AttachmentDescription className="mt-0">
-                  {item.status === "staged" ? (
-                    <span className="ml-1.5 text-primary">Ready to save</span>
-                  ) : null}
-                  {item.status === "uploading" ? (
-                    <span className="ml-1.5 text-primary">Uploading...</span>
-                  ) : null}
-                  {item.status === "error" ? (
-                    <span className="ml-1.5 text-destructive">Upload failed</span>
-                  ) : null}
-                </AttachmentDescription>
-              </AttachmentContent>
-              <AttachmentActions className="ml-auto">
-                {item.status === "error" ? (
-                  <AttachmentAction
-                    type="button"
-                    aria-label="Retry upload"
-                    className="text-primary hover:text-primary"
-                    onClick={() => {
-                      update(items.map((image) => (image.id === item.id ? { ...image, status: "uploading" } : image)));
-                      void runUpload(item);
-                    }}
-                  >
-                    <ArrowClockwiseIcon size={15} />
-                  </AttachmentAction>
-                ) : null}
-                <AttachmentAction
+              >
+                <button
                   type="button"
-                  aria-label="Remove image"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => update(items.filter((image) => image.id !== item.id))}
+                  disabled={!thumbSrc}
+                  onClick={() => setPreviewItem(item)}
+                  aria-label={`Preview ${item.label || item.fileName}`}
+                  className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 enabled:cursor-zoom-in"
                 >
-                  <TrashIcon size={15} />
-                </AttachmentAction>
-              </AttachmentActions>
-            </Attachment>
-          );
-        })}
-      </AttachmentGroup>
+                  {thumbSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumbSrc} alt="" className="size-full object-cover" />
+                  ) : (
+                    <ImageSquareIcon size={22} className="text-muted-foreground" />
+                  )}
+                </button>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="group/caption relative">
+                  <Input
+                    value={item.label}
+                    onChange={(event) =>
+                      update(items.map((image) => (image.id === item.id ? { ...image, label: event.target.value } : image)))
+                    }
+                    placeholder="Add a caption"
+                    title="Caption saved with this image — click to edit"
+                    className="h-7 border-transparent pr-6 pl-1.5 text-[13px] font-medium shadow-none hover:border-border focus-visible:border-ring md:text-[13px]"
+                    aria-label="Image caption"
+                  />
+                  <PencilSimpleIcon
+                    size={12}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground opacity-60 group-focus-within/caption:opacity-0 group-hover/caption:opacity-100"
+                  />
+                  </div>
+                  <span
+                    className={cn(
+                      "px-1.5 text-xs",
+                      item.status === "error" ? "text-destructive" : item.status === "uploaded" || !item.status ? "text-muted-foreground" : "text-primary",
+                    )}
+                  >
+                    {item.status === "staged"
+                      ? "Ready to save"
+                      : item.status === "uploading"
+                        ? "Uploading..."
+                        : item.status === "error"
+                          ? "Upload failed"
+                          : "Uploaded"}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center">
+                  {item.status === "error" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Retry upload"
+                      title="Retry upload"
+                      className="text-primary"
+                      onClick={() => {
+                        update(items.map((image) => (image.id === item.id ? { ...image, status: "uploading" } : image)));
+                        void runUpload(item);
+                      }}
+                    >
+                      <ArrowClockwiseIcon size={15} />
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Remove image"
+                    title="Remove image"
+                    className="text-muted-foreground hover:bg-danger-soft hover:text-destructive"
+                    onClick={() => update(items.filter((image) => image.id !== item.id))}
+                  >
+                    <TrashIcon size={15} />
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
 
       <Dialog open={Boolean(previewItem)} onOpenChange={(open) => !open && setPreviewItem(null)}>
         <DialogContent className="sm:max-w-2xl">

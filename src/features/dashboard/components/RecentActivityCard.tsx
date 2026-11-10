@@ -20,7 +20,7 @@ const TYPE_ICON_CLASSES: Record<ActivityType, string> = {
 export function RecentActivityCard({ items }: RecentActivityCardProps) {
   return (
     <Card>
-      <CardHeader className="border-b border-border pb-3">
+      <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
         <CardAction>
           <Link href="/activity" className={buttonVariants({ variant: "link", size: "sm" })}>

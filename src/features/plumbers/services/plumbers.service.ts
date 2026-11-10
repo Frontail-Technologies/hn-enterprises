@@ -7,6 +7,7 @@ type BackendPlumber = {
   name: string;
   type: string;
   contactNumber: string | null;
+  avatarUrl?: string | null;
   status: string;
   remarks: string | null;
   createdAt: string;
@@ -18,6 +19,7 @@ function mapPlumber(raw: BackendPlumber): Plumber {
     name: raw.name,
     type: raw.type === "team" ? "team" : "individual",
     contactNumber: raw.contactNumber ?? "",
+    avatarUrl: raw.avatarUrl ?? "",
     status: raw.status === "inactive" ? "inactive" : "active",
     remarks: raw.remarks ?? "",
     createdAt: raw.createdAt,
@@ -29,6 +31,8 @@ function mapPlumberFormToBody(values: PlumberFormValues) {
     name: values.name,
     type: values.type,
     contactNumber: values.contactNumber || undefined,
+    // Sent as-is so "" can remove the photo.
+    avatarUrl: values.avatarUrl,
     status: values.status,
     remarks: values.remarks || undefined,
   };

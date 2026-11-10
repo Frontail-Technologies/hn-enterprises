@@ -6,6 +6,7 @@ export function buildPlumberFormSchema() {
     name: z.string().min(1, "Name is required"),
     type: z.custom<PlumberType>(),
     contactNumber: z.string(),
+    avatarUrl: z.string(),
     status: z.custom<PlumberStatus>(),
     remarks: z.string(),
   });

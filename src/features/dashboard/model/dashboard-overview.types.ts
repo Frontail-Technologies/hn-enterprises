@@ -52,3 +52,20 @@ export type DashboardOverviewParams = {
   month?: string;
   year?: string;
 };
+
+/** GET /dashboard/charts — same filters as the overview. */
+export type DashboardChartsResponse = {
+  period: { from: string; to: string };
+  /** All-time customers through each field stage. */
+  pipeline: { total: number; stages: { key: string; label: string; done: number }[] };
+  /** Field updates per bucket ("YYYY-MM-DD"; month buckets use the 1st) split by work stage. */
+  fieldTrend: {
+    unit: "day" | "month";
+    stages: string[];
+    points: { bucket: string; total: number; byStage: Record<string, number> }[];
+  };
+  /** Approved expenses in the period, largest first. */
+  expensesByCategory: { category: string; amount: number }[];
+  /** Billed (bill date) vs collected (payment date) per month of `year`. */
+  billing: { year: number; months: { month: number; billed: number; collected: number }[] };
+};

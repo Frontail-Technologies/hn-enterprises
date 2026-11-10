@@ -28,7 +28,7 @@ export function MobileNavbar() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-secondary-action-foreground">HN Enterprises</p>
-          <p className="truncate text-[10px] font-medium text-secondary-action-foreground/70">CGD Management</p>
+          <p className="truncate text-xs font-medium text-secondary-action-foreground/70">CGD Management</p>
         </div>
         <Button
           type="button"

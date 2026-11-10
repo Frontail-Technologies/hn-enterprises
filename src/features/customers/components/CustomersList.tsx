@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
   CaretDownIcon,
   DownloadSimpleIcon,
-  MagnifyingGlassIcon,
   PlusIcon,
   UploadSimpleIcon,
-  UsersIcon,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -20,14 +18,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { EnterpriseDataGrid } from "@/components/shared/enterprise-grid/EnterpriseDataGrid";
-import type { EnterpriseColumn } from "@/components/shared/enterprise-grid/types";
+import { ListTable, useListState, type ListColumn } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
-import { Pagination } from "@/components/shared/Pagination";
-import { exportRowsToExcel } from "@/lib/export-excel";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import { cn } from "@/lib/utils";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { CUSTOM_FILTER_GROUPS, type CustomerMasterSheetRow } from "../config/customer-columns";
 import { isServerFilterableMasterKey } from "../config/customer-filter-columns";
@@ -45,6 +39,7 @@ import { BulkEditDialog } from "./bulk/BulkEditDialog";
 import { BulkQuickFieldDialog } from "./bulk/BulkQuickFieldDialog";
 import { BulkRemarkDialog } from "./bulk/BulkRemarkDialog";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
 
@@ -64,17 +59,29 @@ const SORTABLE_MASTER_KEY_TO_BACKEND_FIELD: Record<string, CustomersListParams["
   trBpNo: "trBpNumber",
   mobileNo: "mobileNumber",
 };
-const BACKEND_FIELD_TO_MASTER_KEY = Object.fromEntries(
-  Object.entries(SORTABLE_MASTER_KEY_TO_BACKEND_FIELD).map(([key, field]) => [field, key]),
-);
-const SORTABLE_MASTER_KEYS = Object.keys(SORTABLE_MASTER_KEY_TO_BACKEND_FIELD);
+
+/** Readable names for the stage filters linked from Project detail (`?statKey=`). */
+const STAGE_FILTER_LABELS: Record<string, string> = {
+  "survey-done": "survey done",
+  "gi-done": "GI done",
+  "gc-done": "GC done",
+  "conversion-done": "conversion done",
+  "jmr-done": "JMR done",
+  "gi-bill-done": "GI billed",
+  "gc-bill-done": "GC billed",
+  "conversion-bill-done": "conversion billed",
+};
 
 export function CustomersList({ projectId, embedded = false, statKey }: CustomersListProps = {}) {
   const router = useRouter();
-  const [masterSheetSearch, setMasterSheetSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(masterSheetSearch, 300);
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<{ sortBy?: CustomersListParams["sortBy"]; sortOrder?: "asc" | "desc" }>({});
+  // Search, page, page size and sort live in the shared list state; column
+  // filters stay controlled here because they are sent to the server.
+  const list = useListState({ pageSize: PAGE_SIZE });
+  const masterSheetSearch = list.search;
+  const debouncedSearch = list.debouncedSearch;
+  const page = list.page;
+  const sortBy: CustomersListParams["sortBy"] = list.sort ? SORTABLE_MASTER_KEY_TO_BACKEND_FIELD[list.sort.id] : undefined;
+  const sortOrder: "asc" | "desc" | undefined = sortBy ? (list.sort?.desc ? "desc" : "asc") : undefined;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const columnFiltersRecord = useMemo(() => {
@@ -86,14 +93,14 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     return record;
   }, [columnFilters]);
 
-  const { data: customersResult, isLoading } = useCustomersListQuery({
+  const { data: customersResult, isLoading, isError, refetch } = useCustomersListQuery({
     projectId,
     statKey,
     search: debouncedSearch || undefined,
     page,
-    limit: PAGE_SIZE,
-    sortBy: sort.sortBy,
-    sortOrder: sort.sortOrder,
+    limit: list.pageSize,
+    sortBy,
+    sortOrder,
     columnFilters: columnFiltersRecord,
   });
   const customers = useMemo(() => customersResult?.data ?? [], [customersResult]);
@@ -106,31 +113,10 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   const canBulkRemark = canBulkEdit || user?.role === "supervisor";
   const canBulkDelete = canBulkEdit;
 
-  function handleSearchChange(value: string) {
-    setMasterSheetSearch(value);
-    setPage(1);
-  }
-
   function handleGridColumnFiltersChange(next: ColumnFiltersState) {
     setColumnFilters(next);
-    setPage(1);
+    list.setPage(1);
   }
-
-  function handleGridSortingChange(next: SortingState) {
-    setPage(1);
-    if (!next.length) {
-      setSort({});
-      return;
-    }
-    const [{ id, desc }] = next;
-    const sortBy = SORTABLE_MASTER_KEY_TO_BACKEND_FIELD[id];
-    if (!sortBy) return;
-    setSort({ sortBy, sortOrder: desc ? "desc" : "asc" });
-  }
-
-  const gridSorting: SortingState = sort.sortBy
-    ? [{ id: BACKEND_FIELD_TO_MASTER_KEY[sort.sortBy] ?? sort.sortBy, desc: sort.sortOrder === "desc" }]
-    : [];
 
   const [gridContext, setGridContext] = useState<{
     filteredIds: string[];
@@ -197,14 +183,19 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     warnIfMasterSheetProjectionIncomplete(resolvedColumns, masterSheetRows);
   }, [resolvedColumns, masterSheetRows]);
 
-  const masterSheetColumns: EnterpriseColumn<CustomerMasterSheetRow>[] = useMemo(() => {
-    const columns: EnterpriseColumn<CustomerMasterSheetRow>[] = resolvedColumns
+  const masterSheetColumns: ListColumn<CustomerMasterSheetRow>[] = useMemo(() => {
+    const columns: ListColumn<CustomerMasterSheetRow>[] = resolvedColumns
       .filter((column) => column.visible)
       .map((column) => ({
-        key: column.key,
-        label: column.label,
+        id: column.key,
+        header: column.label,
         width: column.width,
-        getValue: (row) => row.values[column.key],
+        // Column choice is managed by Customize Columns (saved server-side),
+        // so the list's own column picker is off for this screen.
+        hideable: false,
+        // Server sort only on the 3 backend-sortable fields.
+        sortable: column.key in SORTABLE_MASTER_KEY_TO_BACKEND_FIELD,
+        value: (row) => row.values[column.key],
         getFilterGroups: CUSTOM_FILTER_GROUPS[column.key],
         // Only the 14 columns in the server whitelist show a filter
         // affordance at all - every other column (derived/JSONB-nested,
@@ -213,7 +204,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         // ever be page-local under real pagination, which is misleading
         // presented as a filter, so it's hidden rather than left visible
         // and wrong.
-        filterable: isServerFilterableMasterKey(column.key),
+        columnFilter: isServerFilterableMasterKey(column.key),
         // Fetches distinct values scoped to the whole filtered dataset
         // instead of just this page (see customer-filter-columns.ts).
         getRemoteFilterOptions: isServerFilterableMasterKey(column.key)
@@ -229,8 +220,13 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
               })
           : undefined,
       }));
-    return projectId ? columns.filter((column) => column.key !== "projectName") : columns;
+    return projectId ? columns.filter((column) => column.id !== "projectName") : columns;
   }, [resolvedColumns, projectId, statKey, debouncedSearch, columnFiltersRecord]);
+
+  const exportColumns: ExportColumn<CustomerMasterSheetRow>[] = useMemo(
+    () => masterSheetColumns.map((column) => ({ label: column.header, getValue: (row) => column.value?.(row) ?? "" })),
+    [masterSheetColumns],
+  );
 
   // The search box is now the server `search` param (name/BR-TR/mobile,
   // across the whole filtered dataset, not just this page) - matching
@@ -292,7 +288,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
       // selection spanning multiple pages exports completely.
       const selectedCustomers = await customersApi.getByIds(Array.from(selection.selectedIds));
       const selectedRows = getCustomerMasterSheetRows(selectedCustomers);
-      await exportRowsToExcel("customers-selected.xlsx", masterSheetColumns, selectedRows);
+      await exportRowsToExcel("customers-selected.xlsx", exportColumns, selectedRows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to export selected customers");
     } finally {
@@ -314,76 +310,49 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const newCustomerHref = projectId ? `/customers/new?projectId=${projectId}` : "/customers/new";
 
-  const compactFieldClassName = "h-7 rounded-md text-xs";
-  const compactIcon = "size-3";
+  const addCustomer = (
+    <Link href={newCustomerHref} className={buttonVariants({ variant: "default", size: "compact" })}>
+      <PlusIcon size={14} />
+      Add Customer
+    </Link>
+  );
 
-  const actions = (
+  const toolbarActions = (
     <>
-      <div className="relative min-w-0 sm:w-55 sm:shrink-0">
-        <MagnifyingGlassIcon
-          size={12}
-          className="pointer-events-none absolute top-1/2 left-1.5 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
-          value={masterSheetSearch}
-          onChange={(event) => handleSearchChange(event.target.value)}
-          placeholder="Search by name, BR/TR or mobile..."
-          className={cn(compactFieldClassName, "w-full pl-6")}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:contents">
-        <CustomizeColumnsDialog triggerClassName={buttonVariants({ variant: "outline", size: "compact" })} iconClassName={compactIcon} />
-
-        <Link
-          href="/customers/import"
-          className={cn(buttonVariants({ variant: "outline", size: "compact" }), "hidden xl:inline-flex")}
-        >
-          <UploadSimpleIcon size={12} className={compactIcon} />
-          Import Excel
-        </Link>
-        <Button
-          type="button"
-          variant="outline"
-          size="compact"
-          className="hidden xl:inline-flex"
-          onClick={handleExportRegister}
-          disabled={downloadRegister.isPending}
-        >
-          <DownloadSimpleIcon size={12} className={compactIcon} />
-          {downloadRegister.isPending ? "Exporting..." : "Export Register"}
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button type="button" variant="outline" size="compact" className="xl:hidden" />}
-          >
-            More
-            <CaretDownIcon size={12} className={compactIcon} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem render={<Link href="/customers/import" />}>
-              <UploadSimpleIcon size={14} />
-              Import Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleExportRegister}
-              disabled={downloadRegister.isPending}
-            >
-              <DownloadSimpleIcon size={14} />
-              {downloadRegister.isPending ? "Exporting..." : "Export Register"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <Link
-        href={newCustomerHref}
-        className={buttonVariants({ variant: "default", size: "compact" })}
-      >
-        <PlusIcon size={12} className={compactIcon} />
-        Add Customer
+      <CustomizeColumnsDialog triggerClassName={buttonVariants({ variant: "outline", size: "compact" })} iconClassName="size-3.5" />
+      <Link href="/customers/import" className={cn(buttonVariants({ variant: "outline", size: "compact" }), "hidden xl:inline-flex")}>
+        <UploadSimpleIcon size={14} />
+        Import Excel
       </Link>
+      <Button
+        type="button"
+        variant="outline"
+        size="compact"
+        className="hidden xl:inline-flex"
+        onClick={handleExportRegister}
+        disabled={downloadRegister.isPending}
+      >
+        <DownloadSimpleIcon size={14} />
+        {downloadRegister.isPending ? "Exporting..." : "Export Register"}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button type="button" variant="outline" size="compact" className="xl:hidden" />}>
+          More
+          <CaretDownIcon size={12} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem render={<Link href="/customers/import" />}>
+            <UploadSimpleIcon size={14} />
+            Import Excel
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportRegister} disabled={downloadRegister.isPending}>
+            <DownloadSimpleIcon size={14} />
+            {downloadRegister.isPending ? "Exporting..." : "Export Register"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {/* Embedded in Project detail there is no page header, so Add Customer sits in the toolbar. */}
+      {embedded ? addCustomer : null}
     </>
   );
 
@@ -404,26 +373,37 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         canRemark={canBulkRemark}
         canDelete={canBulkDelete}
       />
-      {pagination && pagination.total > 0 ? (
-        <Pagination
-          compact
-          className="mb-3"
-          page={pagination.page}
-          pageCount={Math.max(1, pagination.totalPages)}
-          totalItems={pagination.total}
-          startItem={(pagination.page - 1) * pagination.limit + 1}
-          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
-          onPageChange={setPage}
-        />
-      ) : null}
-      <EnterpriseDataGrid
+      <ListTable
+        itemLabel="customer"
+        rows={filteredMasterSheetRows}
+        total={matchingTotal}
         columns={masterSheetColumns}
-        data={filteredMasterSheetRows}
-        {...(embedded
-          ? { maxHeightClassName: "h-[calc(100vh-420px)]" }
-          : { fillHeight: true, enableFullView: true, itemLabel: "customer" })}
-        emptyTitle="No customer master records found"
+        state={list}
+        searchPlaceholder="Search by name, BR/TR or mobile..."
+        actions={toolbarActions}
         isLoading={isLoading || columnsLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        empty={{ illustration: "customers", title: "No customers yet" }}
+        emptyState={
+          masterSheetSearch.trim() || columnFilters.length > 0 ? (
+            <EmptyState
+              illustration="search"
+              title="No customers match your search or filters"
+              description="Try a different search or clear the column filters."
+            />
+          ) : (
+            <EmptyState
+              illustration="customers"
+              title="No customers yet"
+              description="Add customers one by one or import them from Excel."
+              action={{ label: "Add customer", onClick: () => router.push(newCustomerHref) }}
+            />
+          )
+        }
+        {...(embedded
+          ? { maxHeightClassName: "max-h-[calc(100vh-420px)]" }
+          : { fillHeight: true, enableFullView: true })}
         onRowClick={handleRowClick}
         getRowClassName={(row) =>
           cn(
@@ -435,9 +415,6 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         onRowSelectionChange={selection.setRowSelection}
         getRowLabel={(row) => `Select ${row.values.customerName || "customer"}`}
         onVisibleRowsChange={setGridContext}
-        sorting={gridSorting}
-        onSortingChange={handleGridSortingChange}
-        sortableColumnKeys={SORTABLE_MASTER_KEYS}
         columnFilters={columnFilters}
         onColumnFiltersChange={handleGridColumnFiltersChange}
       />
@@ -478,23 +455,36 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   );
 
   if (embedded) {
-    return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-foreground">Customers</h2>
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        </div>
-        {table}
-      </div>
-    );
+    // Project detail already titles this section "Customers".
+    return <div className="space-y-3">{table}</div>;
   }
 
   return (
     <PageShell
       title="Customers"
-      icon={UsersIcon}
-      actions={actions}
+      description={
+        projectId ? (
+          <>
+            {statKey && STAGE_FILTER_LABELS[statKey] ? `Customers of one project with ${STAGE_FILTER_LABELS[statKey]}.` : "Customers of one project."}{" "}
+            {statKey ? (
+              <>
+                <Link href={`/customers?projectId=${encodeURIComponent(projectId)}`} className="font-medium text-primary hover:underline">
+                  Clear stage
+                </Link>
+                {" · "}
+              </>
+            ) : null}
+            <Link href="/customers" className="font-medium text-primary hover:underline">
+              Show all customers
+            </Link>
+          </>
+        ) : (
+          "Every customer connection, with its field and billing progress."
+        )
+      }
+      actions={addCustomer}
       fillHeight
+      contentClassName="space-y-3"
     >
       {table}
     </PageShell>

@@ -2,15 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, MagnifyingGlassIcon, UploadSimpleIcon, UserGearIcon } from "@phosphor-icons/react";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
-import { FilterDialog } from "@/components/shared/FilterDialog";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useDownloadUserRegister } from "@/features/exports/hooks/useExports";
 import { useUsersQuery } from "../hooks/useUsers";
 import { formatDateTime, uniqOptions } from "../utils/format";
@@ -19,153 +15,118 @@ import { UserDialog } from "./UserDialog";
 import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
 import { useBulkDeleteUsers, useDeleteUser, useUserDeleteImpactQuery } from "../hooks/useUsers";
 import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
+
+const columns: ListColumn<User>[] = [
+  {
+    id: "name",
+    header: "Name",
+    value: (row) => row.name,
+    hideable: false,
+    pin: true,
+    sortable: true,
+    width: 260,
+    cell: (row) => (
+      <>
+        <span className="font-semibold text-foreground">{row.name}</span>
+        <span className="text-muted-foreground"> · {row.username}</span>
+      </>
+    ),
+  },
+  { id: "role", header: "Role", value: (row) => row.role, sortable: true, width: 150 },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
+  {
+    id: "lastLogin",
+    header: "Last login",
+    value: (row) => row.lastLogin,
+    sortable: true,
+    width: 190,
+    grow: true,
+    cell: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : <span className="text-muted-foreground">Never</span>),
+  },
+];
+
+const searchText = (row: User) => `${row.name} ${row.username} ${row.mobile}`;
 
 export function UsersRolesPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState({
-    search: "",
-    role: "all",
-    status: "all",
-  });
-  const { data: users = [], isLoading } = useUsersQuery();
-  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
+  const list = useListState({ pageSize: 50, storageKey: "users" });
+  const { data: users = [], isLoading, isError, refetch } = useUsersQuery();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeleteUsers();
   const downloadRegister = useDownloadUserRegister();
 
+  // Only admin-panel and supervisor accounts are listed here (unchanged).
+  const panelUsers = useMemo(() => users.filter((row) => row.role === "Super Admin" || row.role === "Supervisor"), [users]);
+  const filters: ListFilter[] = [
+    { id: "role", label: "Role", quick: true, options: uniqOptions(users.map((row) => row.role)) },
+    { id: "status", label: "Status", quick: true, options: uniqOptions(users.map((row) => row.status)) },
+  ];
+  const { pageRows, total } = useClientRows(panelUsers, list, { columns, filters, searchText });
+
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    await bulkDelete.mutateAsync(Array.from(list.selection));
     setDeleteOpen(false);
-    clear();
+    list.clearSelection();
   }
 
   function handleExportRegister() {
+    const role = list.filters.role as UserRole | undefined;
+    const status = list.filters.status as UserStatus | undefined;
     downloadRegister.mutate({
-      role: filters.role === "all" ? undefined : ROLE_TO_BACKEND[filters.role as UserRole],
-      status: filters.status === "all" ? undefined : STATUS_TO_BACKEND[filters.status as UserStatus],
-      search: filters.search || undefined,
+      role: role ? ROLE_TO_BACKEND[role] : undefined,
+      status: status ? STATUS_TO_BACKEND[status] : undefined,
+      search: list.search || undefined,
     });
   }
-  const data = useMemo(() => {
-    const search = filters.search.toLowerCase();
-    return users.filter(
-      (row) =>
-        (row.role === "Super Admin" || row.role === "Supervisor") &&
-        (!search ||
-          row.name.toLowerCase().includes(search) ||
-          row.username.toLowerCase().includes(search) ||
-          row.mobile.toLowerCase().includes(search)) &&
-        (filters.role === "all" || row.role === filters.role) &&
-        (filters.status === "all" || row.status === filters.status),
-    );
-  }, [users, filters]);
-  const columns: ColumnDef<User>[] = [
-    {
-      key: "name",
-      header: "Name",
-      render: (row) => (
-        <div className="flex flex-col">
-          <b>{row.name}</b>
-          <span className="text-xs text-muted-foreground">{row.username}</span>
-        </div>
-      ),
-    },
-    { key: "role", header: "Role" },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: "lastLogin",
-      header: "Last Login",
-      render: (row) => (row.lastLogin ? formatDateTime(row.lastLogin) : "Never"),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-24",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <UserDialog user={row} iconOnly />
-          <UserDeleteAction user={row} />
-        </div>
-      ),
-    },
-  ];
+
   return (
-    <PageShell
-      title="Users & Roles"
-      icon={UserGearIcon}
-      actions={
-        <>
-          <div className="relative min-w-0 sm:w-60">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-            <Input
-              placeholder="Search user or username..."
-              value={filters.search}
-              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-              className="h-8 w-full max-w-full pl-8 sm:w-60"
-            />
+    <PageShell title="Users & Roles" description="Admin and supervisor accounts that can sign in." actions={<UserDialog />}>
+      <ListTable
+        itemLabel="user"
+        rows={pageRows}
+        total={total}
+        columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search user or username..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        enableFullView
+        selectable
+        getRowLabel={(row) => row.name}
+        bulkActions={() => (
+          <Button type="button" variant="ghost" size="compact" onClick={() => setDeleteOpen(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        empty={{ illustration: "customers", title: "No users yet", description: "Add an admin or supervisor account to get started." }}
+        rowActionsWidth={80}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <UserDialog user={row} iconOnly />
+            <UserDeleteAction user={row} />
           </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:contents">
-            <FilterDialog
-              title="User Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "role",
-                  placeholder: "All Roles",
-                  options: uniqOptions(users.map((row) => row.role)),
-                },
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: uniqOptions(users.map((row) => row.status)),
-                },
-              ]}
-              onChange={(key, value) =>
-                setFilters((current) => ({ ...current, [key]: value }))
-              }
-              onReset={() => setFilters((current) => ({ ...current, role: "all", status: "all" }))}
-            />
-
+        )}
+        actions={
+          <>
             <Button type="button" variant="outline" size="compact" onClick={handleExportRegister} disabled={downloadRegister.isPending}>
-              <DownloadSimpleIcon size={12} />
+              <DownloadSimpleIcon size={14} />
               {downloadRegister.isPending ? "Exporting..." : "Export"}
             </Button>
-
             <Button type="button" variant="outline" size="compact" onClick={() => router.push("/users/import")}>
-              <UploadSimpleIcon size={12} />
+              <UploadSimpleIcon size={14} />
               Import
             </Button>
-          </div>
-
-          <UserDialog />
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
-      <PaginatedDataTable
-        data={data}
-        columns={columns}
-        isLoading={isLoading}
-        enableFullView
-        selection={{
-          selectedIds,
-          onToggleRow: toggleRow,
-          onTogglePage: toggleAllOnPage,
-          getRowLabel: (row) => row.name,
-        }}
+          </>
+        }
       />
 
       <BulkDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        selectedCount={selectedIds.size}
+        selectedCount={list.selection.size}
         entityLabel="User"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}

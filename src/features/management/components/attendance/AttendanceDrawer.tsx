@@ -119,9 +119,9 @@ export function AttendanceDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6">
           {!targetStaffId ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-700">
+            <p className="rounded-md border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs font-medium text-warning-foreground">
               Select a specific supervisor filter to mark or edit attendance for this day.
             </p>
           ) : null}

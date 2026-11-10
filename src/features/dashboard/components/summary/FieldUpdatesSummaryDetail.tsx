@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate } from "@/features/commercial/utils/format";
 import type { DashboardMetricPeriod } from "@/features/dashboard/data/dashboard.data";
@@ -18,25 +18,19 @@ type FieldUpdateRow = WorkProgressUpdate & {
   supervisorName: string;
 };
 
-const columns: ExcelColumn<FieldUpdateRow>[] = [
-  { key: "customerName", label: "Customer", width: 190, sticky: true, getValue: (row) => row.customerName },
-  { key: "projectName", label: "Project", width: 190, getValue: (row) => row.projectName },
-  { key: "siteName", label: "Site", width: 170, getValue: (row) => row.siteName },
-  { key: "stage", label: "Stage", width: 140, getValue: (row) => row.stage },
-  {
-    key: "status",
-    label: "Status",
-    width: 130,
-    getValue: (row) => row.status,
-    render: (row) => <StatusBadge status={row.status} />,
-  },
-  { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
-  { key: "createdAt", label: "Date", width: 130, getValue: (row) => formatDate(row.createdAt) },
-  { key: "remarks", label: "Remarks", width: 240, getValue: (row) => row.remarks },
+const columns: ListColumn<FieldUpdateRow>[] = [
+  { id: "customerName", header: "Customer", width: 190, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.customerName },
+  { id: "projectName", header: "Project", width: 190, sortable: true, columnFilter: true, value: (row) => row.projectName },
+  { id: "siteName", header: "Site", width: 170, sortable: true, columnFilter: true, value: (row) => row.siteName },
+  { id: "stage", header: "Stage", width: 140, sortable: true, columnFilter: true, value: (row) => row.stage },
+  { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status, cell: (row) => <StatusBadge status={row.status} /> },
+  { id: "supervisorName", header: "Supervisor", width: 160, sortable: true, columnFilter: true, value: (row) => row.supervisorName },
+  { id: "createdAt", header: "Date", width: 130, sortable: true, columnFilter: true, value: (row) => row.createdAt, cell: (row) => formatDate(row.createdAt) },
+  { id: "remarks", header: "Remarks", width: 240, grow: true, columnFilter: true, value: (row) => row.remarks },
 ];
 
 export function FieldUpdatesSummaryDetail({ period }: { period: DashboardMetricPeriod }) {
-  const { data: workProgress = [], isLoading } = useWorkProgressListQuery({ limit: 200 });
+  const { data: workProgress = [], isLoading, isError, refetch } = useWorkProgressListQuery({ limit: 200 });
 
   const rows = useMemo(() => {
     const range = getPeriodRange(period);
@@ -59,6 +53,9 @@ export function FieldUpdatesSummaryDetail({ period }: { period: DashboardMetricP
       columns={columns}
       rows={rows}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      emptyIllustration="calendar"
       emptyTitle="No field updates found for the selected period"
     />
   );

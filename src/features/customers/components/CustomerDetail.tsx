@@ -29,6 +29,7 @@ import { LmcPipelineDetail } from "./lmc/LmcPipelineDetail";
 import { CustomerEvidencePanel, CustomerReportsPanel } from "./CustomerEvidenceReports";
 import { CustomerComplaintsPanel } from "./CustomerComplaintsPanel";
 import { CustomerNotesPanel } from "./CustomerNotesPanel";
+import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 
 /**
  * CustomerDetail orchestrator (§8 of the Checkpoint B brief): customer query
@@ -40,6 +41,7 @@ import { CustomerNotesPanel } from "./CustomerNotesPanel";
  */
 export function CustomerDetail({ customerId }: { customerId: string }) {
   const { data: customer, isLoading, isError } = useCustomerQuery(customerId);
+  useBreadcrumbLabel(customerId, customer?.customerConnection.customerName);
   const searchParams = useSearchParams();
   const initialPipeId = searchParams.get("pipe");
   const { user } = useAuth();
@@ -69,15 +71,15 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       <CustomerSectionNav items={sectionLinks} />
 
       <div className="space-y-4">
-        <section id="customer-details" className="scroll-mt-16">
+        <section id="customer-details" className="scroll-mt-32">
           <CustomerConnectionDetails customer={customer} customerConnectionFields={customerConnectionFields} />
         </section>
 
-        <section id="survey" className="scroll-mt-16">
+        <section id="survey" className="scroll-mt-32">
           <CustomerSurveyDetail survey={customer.survey} completion={completion?.survey} />
         </section>
 
-        <section id="gi" className="scroll-mt-16">
+        <section id="gi" className="scroll-mt-32">
           <SectionCard
             title="GI Installation Measurements"
             action={<SectionCompletionActions customerId={customer.id} sectionKey="giMeasurements" sectionLabel="GI Measurements" result={completion?.giMeasurements} />}
@@ -86,7 +88,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </SectionCard>
         </section>
 
-        <section id="isolation" className="scroll-mt-16">
+        <section id="isolation" className="scroll-mt-32">
           <div className="space-y-4">
             <SectionCard
               title="Isolation Valves & Regulators"
@@ -103,7 +105,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </div>
         </section>
 
-        <section id="lmc" className="scroll-mt-16">
+        <section id="lmc" className="scroll-mt-32">
           <LmcPipelineDetail
             key={customer.id}
             customerId={customer.id}
@@ -112,7 +114,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           />
         </section>
 
-        <section id="mdpe" className="scroll-mt-16">
+        <section id="mdpe" className="scroll-mt-32">
           <SectionCard
             title="MDPE Fittings"
             action={<SectionCompletionActions customerId={customer.id} sectionKey="mdpeFittings" sectionLabel="MDPE Fittings" result={completion?.mdpeFittings} />}
@@ -121,7 +123,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </SectionCard>
         </section>
 
-        <section id="commissioning" className="scroll-mt-16">
+        <section id="commissioning" className="scroll-mt-32">
           <CustomerCommissioningDetail
             commissioningConversion={customer.commissioningConversion}
             commissioningConversionFields={commissioningConversionFields}
@@ -129,23 +131,23 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           />
         </section>
 
-        <section id="progress-milestones" className="scroll-mt-16">
+        <section id="progress-milestones" className="scroll-mt-32">
           <SectionCard title="Progress Milestones">
             <CustomerProgressMilestones customerId={customer.id} completion={completion} audit={audit} />
           </SectionCard>
         </section>
 
-        <section id="billing" className="scroll-mt-16">
+        <section id="billing" className="scroll-mt-32">
           <SectionCard title="Billing & Completion Status">
             <KeyValueGridFor fields={billingCompletionFields} values={customer.billingCompletion} columns={2} />
           </SectionCard>
         </section>
 
-        <section id="notes" className="scroll-mt-16">
+        <section id="notes" className="scroll-mt-32">
           <CustomerNotesPanel customerId={customer.id} />
         </section>
 
-        <section id="documents" className="scroll-mt-16">
+        <section id="documents" className="scroll-mt-32">
           <CustomerEvidencePanel
             survey={customer.survey}
             lmcPipelineWork={customer.lmcPipelineWork}
@@ -154,21 +156,21 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           />
         </section>
 
-        <section id="reports" className="scroll-mt-16">
+        <section id="reports" className="scroll-mt-32">
           <CustomerReportsPanel customerId={customer.id} customer={customer} />
         </section>
 
-        <section id="complaints" className="scroll-mt-16">
+        <section id="complaints" className="scroll-mt-32">
           <CustomerComplaintsPanel customerId={customer.id} />
         </section>
 
         {Object.entries(visibleFieldGroups).map(([group, fields]) => (
-          <section key={group} id={groupAnchorId(group)} className="scroll-mt-16">
+          <section key={group} id={groupAnchorId(group)} className="scroll-mt-32">
             <CustomerCustomFieldsDetail group={group} fields={fields} values={customer.customFields} />
           </section>
         ))}
 
-        <section id="approvals" className="scroll-mt-16">
+        <section id="approvals" className="scroll-mt-32">
           <CustomerApprovalsHistory customer={customer} />
         </section>
       </div>

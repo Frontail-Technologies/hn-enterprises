@@ -40,6 +40,8 @@ import { CustomerNotesPanel } from "./CustomerNotesPanel";
 import { CustomerProgressMilestones } from "./detail/CustomerProgressMilestones";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import type { CustomerCompletionAudit, CustomerFormValues, CustomerSectionCompletion } from "../types/customer.types";
 
@@ -194,10 +196,18 @@ function CustomerFormFields({
   useBreadcrumbLabel(customerId, values.customerConnection?.customerName);
 
   return (
-    <div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title={isEdit ? values.customerConnection?.customerName || "Edit Customer" : "Add Customer"}
+        description={
+          isEdit
+            ? "Update connection, field work, commissioning and billing details."
+            : "Enter the customer's connection details; field sections can be filled in later."
+        }
+      />
       <FormProvider {...form}>
         <form
-          className="pb-28"
+          className="flex flex-col"
           onSubmit={(event) => {
             event.preventDefault();
             void onSubmit();
@@ -342,15 +352,16 @@ function CustomerFormFields({
             )}
           </Tabs>
 
-          {uploadError ? <p className="mt-3 text-sm text-destructive">{uploadError}</p> : null}
+          {uploadError ? <p className="mt-4 text-sm text-destructive">{uploadError}</p> : null}
           {saveCustomer.isError ? (
-            <p className="mt-3 text-sm text-destructive">
+            <p className="mt-4 text-sm text-destructive">
               {saveCustomer.error instanceof Error ? saveCustomer.error.message : "Unable to save customer"}
             </p>
           ) : null}
 
-          <div className="fixed inset-x-3 bottom-3 z-50 flex justify-end gap-2 rounded-lg border border-border bg-card/95 p-2 backdrop-blur sm:inset-x-auto sm:right-5">
-            {isEdit && customerId && (
+          <StickyFormFooter
+            start={
+              isEdit && customerId ? (
               <DeleteImpactDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
@@ -382,7 +393,9 @@ function CustomerFormFields({
                   router.push(`/customers/${customerId}`);
                 }}
               />
-            )}
+              ) : undefined
+            }
+          >
             <Link
               href={isEdit && customerId ? `/customers/${customerId}` : "/customers"}
               className={buttonVariants({ variant: "outline", size: "default" })}
@@ -392,7 +405,7 @@ function CustomerFormFields({
             <Button type="submit" disabled={saveCustomer.isPending}>
               {saveCustomer.isPending ? "Saving..." : isEdit ? "Save Changes" : "Save Customer"}
             </Button>
-          </div>
+          </StickyFormFooter>
         </form>
       </FormProvider>
     </div>

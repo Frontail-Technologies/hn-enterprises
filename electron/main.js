@@ -1,11 +1,15 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, clipboard, Menu, screen, shell } = require("electron");
 const { spawn } = require("child_process");
+const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
 app.setName("HN Enterprises");
+// Taskbar grouping/pinning identity (matches build.appId).
+if (process.platform === "win32") app.setAppUserModelId("org.hnenterprises.desktop");
 
 const PORT = process.env.ELECTRON_NEXT_PORT || 4488;
+const APP_URL = `http://localhost:${PORT}`;
 const STANDALONE_DIR = app.isPackaged
   ? path.join(process.resourcesPath, "standalone")
   : path.join(__dirname, "..", ".next", "standalone");
@@ -14,10 +18,128 @@ const ICON_PATH = app.isPackaged
   ? path.join(process.resourcesPath, "icon.png")
   : path.join(__dirname, "..", "public", "logo.png");
 
+// App canvas / top-bar colours (globals.css --background / --card / --foreground).
+const BACKGROUND = "#f7f6f4";
+const TITLE_BAR = { color: "#ffffff", symbolColor: "#1c2a3a", height: 56 };
+
 let serverProcess = null;
 let mainWindow = null;
+let splashWindow = null;
 
-function waitForServer(url, timeoutMs = 20000) {
+// ---------------------------------------------------------------------------
+// Single instance: a second launch focuses the running window.
+// ---------------------------------------------------------------------------
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const win = mainWindow ?? splashWindow;
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Window size/position memory.
+// ---------------------------------------------------------------------------
+const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+
+function readWindowState() {
+  try {
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    // Ignore saved bounds that are no longer on any connected display.
+    const visible = screen.getAllDisplays().some(({ workArea: area }) =>
+      state.x >= area.x - 50 && state.y >= area.y - 50 && state.x < area.x + area.width && state.y < area.y + area.height,
+    );
+    return visible ? state : { width: state.width, height: state.height, maximized: state.maximized };
+  } catch {
+    return { width: 1440, height: 900, maximized: false };
+  }
+}
+
+function trackWindowState(win) {
+  let timer = null;
+  const save = () => {
+    if (win.isDestroyed() || win.isMinimized()) return;
+    const bounds = win.isMaximized() ? win.getNormalBounds() : win.getBounds();
+    try {
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ ...bounds, maximized: win.isMaximized() }));
+    } catch {
+      // Not critical — the window just opens at the default size next time.
+    }
+  };
+  const debounced = () => {
+    clearTimeout(timer);
+    timer = setTimeout(save, 400);
+  };
+  win.on("resize", debounced);
+  win.on("move", debounced);
+  win.on("close", save);
+}
+
+// ---------------------------------------------------------------------------
+// Splash: shown instantly while the local Next.js server starts.
+// ---------------------------------------------------------------------------
+function iconDataUrl() {
+  try {
+    return `data:image/png;base64,${fs.readFileSync(ICON_PATH).toString("base64")}`;
+  } catch {
+    return "";
+  }
+}
+
+function splashHtml(message, isError = false) {
+  const icon = iconDataUrl();
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:#fff;color:#1c2a3a;-webkit-app-region:drag;user-select:none}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:1px solid #e7e3dd;box-sizing:border-box}
+    img{width:72px;height:72px;object-fit:contain;animation:in .5s ease-out both}
+    h1{margin:0;font-size:17px;font-weight:600}
+    p{margin:0;font-size:13px;color:${isError ? "#c0392b" : "#5f6b7a"};max-width:300px;text-align:center}
+    .bar{width:140px;height:3px;border-radius:3px;background:#f1efeb;overflow:hidden}
+    .bar i{display:block;width:40%;height:100%;border-radius:3px;background:#ef7b1f;animation:sweep 1.1s ease-in-out infinite}
+    @keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+    @keyframes in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion: reduce){*{animation:none!important}}
+  </style></head><body>
+    ${icon ? `<img src="${icon}" alt="">` : ""}
+    <h1>HN Enterprises</h1>
+    <p>${message}</p>
+    ${isError ? "" : '<div class="bar"><i></i></div>'}
+  </body></html>`;
+}
+
+function createSplash() {
+  splashWindow = new BrowserWindow({
+    width: 380,
+    height: 280,
+    frame: false,
+    resizable: false,
+    movable: true,
+    center: true,
+    show: true,
+    skipTaskbar: false,
+    backgroundColor: "#ffffff",
+    icon: ICON_PATH,
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml("Starting…"))}`);
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
+
+function showSplashError(message) {
+  if (!splashWindow) return;
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml(message, true))}`);
+}
+
+// ---------------------------------------------------------------------------
+// Local Next.js server.
+// ---------------------------------------------------------------------------
+function waitForServer(url, timeoutMs = 30000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
     const attempt = () => {
@@ -53,18 +175,131 @@ function startServer() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Main window behaviour.
+// ---------------------------------------------------------------------------
+const isAppUrl = (url) => url.startsWith(APP_URL);
+
+function attachContextMenu(win) {
+  win.webContents.on("context-menu", (_event, params) => {
+    const template = [];
+    if (params.misspelledWord) {
+      for (const suggestion of params.dictionarySuggestions.slice(0, 5)) {
+        template.push({ label: suggestion, click: () => win.webContents.replaceMisspelling(suggestion) });
+      }
+      if (template.length) template.push({ type: "separator" });
+    }
+    if (params.linkURL && !params.linkURL.startsWith("javascript:")) {
+      template.push({ label: "Copy link", click: () => clipboard.writeText(params.linkURL) });
+      if (!isAppUrl(params.linkURL)) template.push({ label: "Open in browser", click: () => shell.openExternal(params.linkURL) });
+      template.push({ type: "separator" });
+    }
+    if (params.isEditable) {
+      template.push(
+        { role: "undo", enabled: params.editFlags.canUndo },
+        { role: "redo", enabled: params.editFlags.canRedo },
+        { type: "separator" },
+        { role: "cut", enabled: params.editFlags.canCut },
+        { role: "copy", enabled: params.editFlags.canCopy },
+        { role: "paste", enabled: params.editFlags.canPaste },
+        { type: "separator" },
+        { role: "selectAll" },
+      );
+    } else if (params.selectionText.trim()) {
+      template.push({ role: "copy" });
+    }
+    if (template.length && template[template.length - 1].type === "separator") template.pop();
+    if (template.length) Menu.buildFromTemplate(template).popup({ window: win });
+  });
+}
+
+function attachShortcuts(win) {
+  const contents = win.webContents;
+  contents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    const ctrl = input.control || input.meta;
+    const key = input.key.toLowerCase();
+    const handled = (() => {
+      if ((ctrl && key === "r") || key === "f5") return contents.reload(), true;
+      if (key === "f11") return win.setFullScreen(!win.isFullScreen()), true;
+      if (ctrl && (key === "=" || key === "+")) return contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 3)), true;
+      if (ctrl && key === "-") return contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -2)), true;
+      if (ctrl && key === "0") return contents.setZoomLevel(0), true;
+      if (input.alt && key === "arrowleft" && contents.navigationHistory.canGoBack()) return contents.navigationHistory.goBack(), true;
+      if (input.alt && key === "arrowright" && contents.navigationHistory.canGoForward()) return contents.navigationHistory.goForward(), true;
+      if (!app.isPackaged && ctrl && input.shift && key === "i") return contents.toggleDevTools(), true;
+      return false;
+    })();
+    if (handled) event.preventDefault();
+  });
+}
+
+function attachExternalLinks(win) {
+  // Links to other sites open in the user's browser, never inside the app.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAppUrl(url)) return { action: "allow" };
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isAppUrl(url)) return;
+    event.preventDefault();
+    shell.openExternal(url);
+  });
+}
+
+function attachDownloadProgress(win) {
+  // Excel exports etc.: taskbar progress while saving, flash when done.
+  win.webContents.session.on("will-download", (_event, item) => {
+    item.on("updated", () => {
+      const total = item.getTotalBytes();
+      win.setProgressBar(total > 0 ? item.getReceivedBytes() / total : 2);
+    });
+    item.once("done", (_doneEvent, state) => {
+      win.setProgressBar(-1);
+      if (state === "completed" && !win.isFocused()) win.flashFrame(true);
+    });
+  });
+}
+
 function createWindow() {
+  const state = readWindowState();
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    x: state.x,
+    y: state.y,
+    width: state.width ?? 1440,
+    height: state.height ?? 900,
+    minWidth: 1024,
+    minHeight: 640,
+    show: false,
     icon: ICON_PATH,
+    backgroundColor: BACKGROUND,
+    // Native min/max/close drawn inside the app's own top bar (Windows/Linux);
+    // the page marks its draggable areas via the `app-titlebar` class.
+    titleBarStyle: "hidden",
+    titleBarOverlay: process.platform === "darwin" ? undefined : TITLE_BAR,
+    trafficLightPosition: { x: 16, y: 20 },
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      spellcheck: true,
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
-  mainWindow.loadURL(`http://localhost:${PORT}`);
+  trackWindowState(mainWindow);
+  attachContextMenu(mainWindow);
+  attachShortcuts(mainWindow);
+  attachExternalLinks(mainWindow);
+  attachDownloadProgress(mainWindow);
+
+  mainWindow.once("ready-to-show", () => {
+    if (state.maximized) mainWindow.maximize();
+    mainWindow.show();
+    splashWindow?.close();
+  });
+
+  mainWindow.loadURL(APP_URL);
 
   mainWindow.webContents.on("console-message", (_event, _level, message, line, sourceId) => {
     console.log(`[renderer] ${message} (${sourceId}:${line})`);
@@ -85,11 +320,17 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  if (!hasInstanceLock) return;
+  // No File/Edit/View menu bar; the shortcuts above cover what users need.
+  Menu.setApplicationMenu(null);
+  createSplash();
   startServer();
   try {
-    await waitForServer(`http://localhost:${PORT}`);
+    await waitForServer(APP_URL);
   } catch (error) {
     console.error(error);
+    showSplashError("HN Enterprises couldn't start. Close this window and open the app again. If it keeps happening, contact your administrator.");
+    return;
   }
   createWindow();
 

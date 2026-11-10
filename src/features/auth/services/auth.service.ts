@@ -7,6 +7,7 @@ type BackendUser = {
   username: string;
   email?: string;
   mobile?: string | null;
+  avatarUrl?: string | null;
   role: AuthUser["role"];
   status?: string;
   lastLoginAt?: string | null;
@@ -20,6 +21,7 @@ function mapUser(user: BackendUser): AuthUser {
     name: user.name,
     email: user.email,
     mobile: user.mobile,
+    avatar: user.avatarUrl ?? undefined,
     role: user.role,
     status: user.status,
     lastLogin: user.lastLoginAt,

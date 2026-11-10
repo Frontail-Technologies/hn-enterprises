@@ -24,6 +24,8 @@ export function buildStaffEditFormSchema() {
     lastSalaryRevisionDate: z.string(),
     nextSalaryReviewDate: z.string(),
     remarks: z.string(),
+    /** Profile photo URL ("" = none). */
+    avatarUrl: z.string(),
   });
 }
 

@@ -1,20 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
-import { ClockCounterClockwiseIcon, DownloadSimpleIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
-import { Pagination } from "@/components/shared/Pagination";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { ListTable, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useRecentActivityQuery } from "@/features/dashboard/queries/useRecentActivityQuery";
 import type { RecentActivityRow } from "@/features/dashboard/services/recent-activity.api";
 import {
@@ -23,148 +14,88 @@ import {
   activityRowClass,
   activityTypeLabel,
 } from "@/features/dashboard/services/recent-activity.presentation";
-import { exportRowsToExcel } from "@/lib/export-excel";
+import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 
-const PAGE_SIZE = 50;
+// The server sorts; "Order" replaces the old Newest/Oldest select (no value = newest).
+const filters: ListFilter[] = [
+  {
+    id: "order",
+    label: "Order",
+    quick: true,
+    options: [
+      { value: "newest", label: "Newest first" },
+      { value: "oldest", label: "Oldest first" },
+    ],
+  },
+];
 
 export function RecentActivityPage() {
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [page, setPage] = useState(1);
-  const debouncedSearch = useDebouncedValue(search, 300);
+  const list = useListState({ pageSize: 50, storageKey: "recent-activity" });
+  const sort = list.filters.order === "oldest" ? "oldest" : "newest";
 
-  const { data: result, isLoading } = useRecentActivityQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: debouncedSearch || undefined,
+  const { data: result, isLoading, isError, refetch } = useRecentActivityQuery({
+    page: list.page,
+    limit: list.pageSize,
+    search: list.debouncedSearch || undefined,
     sort,
   });
   const rows = useMemo(() => result?.data ?? [], [result]);
-  const pagination = result?.pagination;
-
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    setPage(1);
-  }
-
-  function handleSortChange(value: "newest" | "oldest") {
-    setSort(value);
-    setPage(1);
-  }
+  const total = result?.pagination?.total ?? rows.length;
 
   return (
-    <PageShell
-      title="Recent Activity"
-      icon={ClockCounterClockwiseIcon}
-      actions={
-        <>
-          <div className="relative min-w-0 sm:w-80">
-            <MagnifyingGlassIcon
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              size={15}
-            />
-            <Input
-              value={search}
-              onChange={(event) => handleSearchChange(event.target.value)}
-              placeholder="Search activity, actor, customer..."
-              className="h-8 w-full max-w-full pl-9 sm:w-80"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <Select value={sort} onValueChange={(value) => handleSortChange((value as "newest" | "oldest") ?? "newest")}>
-              <SelectTrigger className="w-full sm:w-40" size="sm">
-                <span className="truncate text-left">{sort === "oldest" ? "Oldest First" : "Newest First"}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="compact"
-              onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityColumns, rows)}
-            >
-              <DownloadSimpleIcon size={12} />
-              Export Excel
-            </Button>
-          </div>
-        </>
-      }
-      fillHeight
-    >
-      <ExcelDataGrid
-        columns={activityColumns}
-        rows={rows}
-        emptyTitle="No activity found"
-        isLoading={isLoading}
-        getRowClassName={activityRowClass}
+    <PageShell title="Recent Activity" description="Field updates, DPRs, payments and admin changes across all projects." fillHeight>
+      <ListTable
         fillHeight
+        itemLabel="activity"
+        rows={rows}
+        total={total}
+        columns={activityColumns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search activity, actor, customer..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        getRowClassName={activityRowClass}
         enableFullView
+        empty={{ illustration: "checklist", title: "No activity found" }}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="compact"
+            disabled={rows.length === 0}
+            onClick={() => void exportRowsToExcel("recent-activity.xlsx", activityExportColumns, rows)}
+          >
+            <DownloadSimpleIcon size={14} />
+            Export Excel
+          </Button>
+        }
       />
-      {pagination && pagination.total > 0 ? (
-        <Pagination
-          compact
-          page={pagination.page}
-          pageCount={Math.max(1, pagination.totalPages)}
-          totalItems={pagination.total}
-          startItem={(pagination.page - 1) * pagination.limit + 1}
-          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
-          onPageChange={setPage}
-        />
-      ) : null}
     </PageShell>
   );
 }
 
-const activityColumns: ExcelColumn<RecentActivityRow>[] = [
-  {
-    key: "occurredAt",
-    label: "Date / Time",
-    width: 160,
-    sticky: true,
-    getValue: (row) => formatActivityDate(row.occurredAt),
-  },
-  {
-    key: "title",
-    label: "Activity",
-    width: 240,
-    sticky: true,
-    getValue: (row) => row.title,
-  },
-  {
-    key: "type",
-    label: "Type",
-    width: 110,
-    getValue: (row) => activityTypeLabel(row.type),
-  },
-  {
-    key: "actor",
-    label: "Actor",
-    width: 200,
-    getValue: (row) => activityActorLabel(row),
-  },
-  {
-    key: "customer",
-    label: "Customer",
-    width: 220,
-    getValue: (row) => activityCustomerLabel(row),
-  },
-  {
-    key: "project",
-    label: "Project",
-    width: 180,
-    getValue: (row) => row.project?.name || "—",
-  },
-  {
-    key: "description",
-    label: "Description",
-    width: 380,
-    getValue: (row) => row.description,
-  },
+// Every column keeps its Excel-style filter (page-local, as before).
+const activityColumns: ListColumn<RecentActivityRow>[] = [
+  { id: "occurredAt", header: "Date / time", width: 170, pin: true, hideable: false, columnFilter: true, value: (row) => formatActivityDate(row.occurredAt) },
+  { id: "title", header: "Activity", width: 240, isTitle: true, hideable: false, columnFilter: true, value: (row) => row.title },
+  { id: "type", header: "Type", width: 110, columnFilter: true, value: (row) => activityTypeLabel(row.type) },
+  { id: "actor", header: "Actor", width: 200, columnFilter: true, value: (row) => activityActorLabel(row) },
+  { id: "customer", header: "Customer", width: 220, columnFilter: true, value: (row) => activityCustomerLabel(row) },
+  { id: "project", header: "Project", width: 180, columnFilter: true, value: (row) => row.project?.name || "—" },
+  { id: "description", header: "Description", width: 380, grow: true, columnFilter: true, value: (row) => row.description },
+];
+
+// Export keeps the previous columns/labels (current page, as before).
+const activityExportColumns: ExportColumn<RecentActivityRow>[] = [
+  { label: "Date / Time", getValue: (row) => formatActivityDate(row.occurredAt) },
+  { label: "Activity", getValue: (row) => row.title },
+  { label: "Type", getValue: (row) => activityTypeLabel(row.type) },
+  { label: "Actor", getValue: (row) => activityActorLabel(row) },
+  { label: "Customer", getValue: (row) => activityCustomerLabel(row) },
+  { label: "Project", getValue: (row) => row.project?.name || "—" },
+  { label: "Description", getValue: (row) => row.description },
 ];
 
 function formatActivityDate(occurredAt: string) {

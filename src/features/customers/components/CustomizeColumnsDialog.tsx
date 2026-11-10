@@ -101,8 +101,8 @@ export function CustomizeColumnsDialog({
         <GearSixIcon size={12} className={iconClassName} />
         Columns
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>Customize Columns</DialogTitle>
           <DialogDescription>
             Drag to reorder, check to show or hide. {visibleCount} of {draft.length} columns visible - the same order is
@@ -120,7 +120,7 @@ export function CustomizeColumnsDialog({
               className="h-8 pl-8"
             />
           </div>
-          {!dragEnabled ? <p className="mt-1.5 text-[11px] text-muted-foreground">Clear search to reorder columns.</p> : null}
+          {!dragEnabled ? <p className="mt-1.5 text-xs text-muted-foreground">Clear search to reorder columns.</p> : null}
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
@@ -154,7 +154,7 @@ export function CustomizeColumnsDialog({
           )}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 shrink-0 flex-row items-center justify-between rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 flex-row items-center justify-between border-t border-border px-6 py-4">
           <Button type="button" variant="ghost" size="sm" onClick={handleReset} disabled={resetColumns.isPending}>
             <ArrowCounterClockwiseIcon size={14} />
             {resetColumns.isPending ? "Resetting..." : "Reset to Default"}
@@ -211,7 +211,7 @@ function ColumnRow({
       <span className="min-w-0 flex-1 truncate text-foreground" title={column.label}>
         {column.label}
       </span>
-      <span className="shrink-0 text-[11px] text-muted-foreground">{column.group}</span>
+      <span className="shrink-0 text-xs text-muted-foreground">{column.group}</span>
       <Checkbox
         checked={column.visible}
         onCheckedChange={onToggle}

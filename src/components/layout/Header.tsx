@@ -1,61 +1,65 @@
 'use client'
 
-import { BellIcon as Bell, ListIcon as List } from '@phosphor-icons/react'
+import Link from 'next/link'
+import {
+  BuildingsIcon as Buildings,
+  CaretDownIcon as CaretDown,
+  PlusIcon as Plus,
+  SidebarSimpleIcon as SidebarSimple,
+  UsersIcon as Users,
+} from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useSidebar } from '@/components/ui/sidebar'
-import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Breadcrumb } from './Breadcrumb'
 
+const QUICK_ADD = [
+  { href: '/customers/new', label: 'New customer', icon: Users },
+  { href: '/projects/new', label: 'New project', icon: Buildings },
+] as const
+
+/** Desktop top bar. Mobile uses MobileNavbar / MobileNestedHeader instead. */
 export function Header() {
-  const { user } = useAuth()
   const { toggleSidebar } = useSidebar()
 
-  const initials = user?.fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) ?? 'U'
-
   return (
-    <header className="h-12 bg-card border-b border-border/70 flex items-center px-3 gap-3 sticky top-0 z-30">
+    <header className="app-titlebar app-titlebar-pad sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card/90 px-4 backdrop-blur md:flex lg:px-6">
       <Button
         variant="ghost"
         size="icon"
         onClick={toggleSidebar}
-          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+        className="text-muted-foreground hover:text-foreground"
         aria-label="Toggle sidebar"
+        title="Toggle sidebar (Ctrl+B)"
       >
-        <List size={18} weight="bold" />
+        <SidebarSimple size={19} />
       </Button>
+      <span className="h-5 w-px bg-border" aria-hidden="true" />
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <Breadcrumb />
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted relative"
-          aria-label="Notifications"
-        >
-          <Bell size={18} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full border-2 border-card" />
-        </Button>
-
-        <div className="hidden sm:flex items-center gap-1.5 pl-2 ml-1 border-l border-border/70">
-          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-xs font-semibold text-primary">{initials}</span>
-          </div>
-          <div className="hidden md:flex flex-col leading-none">
-            <span className="text-xs font-semibold text-foreground">{user?.fullName}</span>
-            <span className="text-[10px] text-muted-foreground capitalize">
-              {user?.role.replace(/_/g, ' ')}
-            </span>
-          </div>
-        </div>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button size="compact" />}>
+          <Plus size={14} weight="bold" />
+          Quick add
+          <CaretDown size={12} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {QUICK_ADD.map(({ href, label, icon: Icon }) => (
+            <DropdownMenuItem key={href} render={<Link href={href} />}>
+              <Icon size={15} />
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   )
 }

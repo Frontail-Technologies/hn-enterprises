@@ -1,88 +1,82 @@
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
+import type { ExportColumn } from "@/lib/export-excel";
 import type { PlumberLedgerRow } from "../mappers/inventory-detail.mapper";
-import type { Material, MaterialTransaction } from "../types/material.types";
+import type { MaterialTransaction } from "../types/material.types";
 import { formatDate, projectLabelFromName, sourceLabel } from "../utils/format";
-import { TransactionRowActions } from "../components/inventory/TransactionRowActions";
 
-export function useInventoryDetailColumns(params: { material: Material | undefined }) {
-  const { material } = params;
+// Every column keeps the Excel-style value filter it had on ExcelDataGrid.
+// `value` returns the same raw value as before (also used for Excel export).
+const filterable = { columnFilter: true } as const;
 
-  const actionsColumn: ExcelColumn<MaterialTransaction> = {
-    key: "actions",
-    label: "Actions",
-    width: 140,
-    getValue: () => "",
-    render: (row) => (
-      <TransactionRowActions
-        transaction={row}
-        lookups={{
-          materialName: material?.name ?? "",
-          plumberName: row.plumberName,
-          supervisorName: row.supervisorName,
-          customerName: row.customerName,
-          projectName: row.projectName,
-        }}
-      />
-    ),
-  };
+/** Excel export columns from list columns (same labels and raw values). */
+export function toExportColumns<T>(columns: ListColumn<T>[]): ExportColumn<T>[] {
+  return columns.map((column) => ({ label: column.header, getValue: (row: T) => column.value?.(row) }));
+}
 
-  const purchaseColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "type", label: "Type", width: 130, sticky: true, getValue: (row) => (row.type === "pbg_issue" ? "PBG Issue" : "Purchase") },
-    { key: "vendor", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "rate", label: "Rate", width: 110, getValue: (row) => row.rate ?? "-" },
-    { key: "billAmount", label: "Bill Amount", width: 140, getValue: (row) => row.billAmount ?? "-" },
-    { key: "referenceNo", label: "Reference No.", width: 150, getValue: (row) => row.referenceNo },
-    actionsColumn,
+const dateColumn: ListColumn<MaterialTransaction> = {
+  id: "transactionDate",
+  header: "Date",
+  width: 130,
+  ...filterable,
+  value: (row) => row.transactionDate,
+  cell: (row) => formatDate(row.transactionDate),
+};
+
+export function useInventoryDetailColumns() {
+  const purchaseColumns: ListColumn<MaterialTransaction>[] = [
+    { id: "type", header: "Type", width: 130, pin: true, hideable: false, ...filterable, value: (row) => (row.type === "pbg_issue" ? "PBG Issue" : "Purchase") },
+    { id: "vendor", header: "Vendor", width: 170, ...filterable, value: (row) => row.vendorName },
+    dateColumn,
+    { id: "quantity", header: "Quantity", width: 120, align: "end", ...filterable, value: (row) => row.quantity },
+    { id: "rate", header: "Rate", width: 110, align: "end", ...filterable, value: (row) => row.rate ?? "-" },
+    { id: "billAmount", header: "Bill Amount", width: 140, align: "end", ...filterable, value: (row) => row.billAmount ?? "-" },
+    { id: "referenceNo", header: "Reference No.", width: 150, ...filterable, value: (row) => row.referenceNo },
   ];
 
-  const storeIssueColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "slipNo", label: "Slip No.", width: 130, sticky: true, getValue: (row) => row.referenceNo },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => row.plumberName || "-" },
-    { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
-    actionsColumn,
+  const storeIssueColumns: ListColumn<MaterialTransaction>[] = [
+    { id: "slipNo", header: "Slip No.", width: 130, pin: true, hideable: false, ...filterable, value: (row) => row.referenceNo },
+    dateColumn,
+    { id: "quantity", header: "Quantity", width: 120, align: "end", ...filterable, value: (row) => row.quantity },
+    { id: "source", header: "Source", width: 110, ...filterable, value: (row) => sourceLabel(row.source) },
+    { id: "plumber", header: "Plumber / Team", width: 170, ...filterable, value: (row) => row.plumberName || "-" },
+    { id: "supervisorName", header: "Supervisor", width: 150, ...filterable, value: (row) => row.supervisorName },
+    { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+    { id: "address", header: "Address", width: 190, ...filterable, value: (row) => row.address ?? "-" },
   ];
 
-  const transactionColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "type", label: "Type", width: 150, sticky: true, getValue: (row) => row.type },
-    { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "plumber", label: "Plumber", width: 160, getValue: (row) => row.plumberName || "-" },
-    { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
-    { key: "customer", label: "Customer", width: 190, getValue: (row) => row.customerName || "-" },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
-    actionsColumn,
+  const transactionColumns: ListColumn<MaterialTransaction>[] = [
+    { id: "type", header: "Type", width: 150, pin: true, hideable: false, ...filterable, value: (row) => row.type },
+    { id: "quantity", header: "Quantity", width: 120, align: "end", ...filterable, value: (row) => row.quantity },
+    { id: "source", header: "Source", width: 110, ...filterable, value: (row) => sourceLabel(row.source) },
+    { id: "plumber", header: "Plumber", width: 160, ...filterable, value: (row) => row.plumberName || "-" },
+    { id: "address", header: "Address", width: 190, ...filterable, value: (row) => row.address ?? "-" },
+    { id: "customer", header: "Customer", width: 190, ...filterable, value: (row) => row.customerName || "-" },
+    { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+    dateColumn,
+    { id: "remarks", header: "Remarks", width: 260, ...filterable, value: (row) => row.remarks },
   ];
 
-  const consumptionColumns: ExcelColumn<MaterialTransaction>[] = [
-    { key: "customer", label: "Customer", width: 190, sticky: true, getValue: (row) => row.customerName || "-" },
-    { key: "usedQty", label: "Used Qty", width: 120, getValue: (row) => row.quantity },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-    { key: "plumber", label: "Plumber", width: 150, getValue: (row) => row.plumberName || "-" },
-    { key: "supervisorName", label: "Supervisor", width: 160, getValue: (row) => row.supervisorName },
-    { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
-    { key: "transactionDate", label: "Date", width: 130, getValue: (row) => row.transactionDate, render: (row) => formatDate(row.transactionDate) },
-    actionsColumn,
+  const consumptionColumns: ListColumn<MaterialTransaction>[] = [
+    { id: "customer", header: "Customer", width: 190, pin: true, hideable: false, ...filterable, value: (row) => row.customerName || "-" },
+    { id: "usedQty", header: "Used Qty", width: 120, align: "end", ...filterable, value: (row) => row.quantity },
+    { id: "source", header: "Source", width: 110, ...filterable, value: (row) => sourceLabel(row.source) },
+    { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+    { id: "plumber", header: "Plumber", width: 150, ...filterable, value: (row) => row.plumberName || "-" },
+    { id: "supervisorName", header: "Supervisor", width: 160, ...filterable, value: (row) => row.supervisorName },
+    { id: "reportNo", header: "Report No.", width: 140, ...filterable, value: (row) => row.reportNo },
+    dateColumn,
   ];
 
-  const plumberBalanceColumns: ExcelColumn<PlumberLedgerRow>[] = [
-    { key: "plumberName", label: "Plumber / Team", width: 170, sticky: true, getValue: (row) => row.plumberName },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-    { key: "issued", label: "Total Issued", width: 130, getValue: (row) => row.issued },
-    { key: "consumed", label: "Consumed", width: 120, getValue: (row) => row.consumed },
-    { key: "returned", label: "Returned", width: 120, getValue: (row) => row.returned },
-    { key: "adjusted", label: "Adjusted", width: 120, getValue: (row) => row.adjusted },
-    { key: "balance", label: "Balance", width: 120, getValue: (row) => row.balance },
+  // Fully loaded: sortable.
+  const plumberBalanceColumns: ListColumn<PlumberLedgerRow>[] = [
+    { id: "plumberName", header: "Plumber / Team", width: 170, pin: true, hideable: false, sortable: true, ...filterable, value: (row) => row.plumberName },
+    { id: "source", header: "Source", width: 110, sortable: true, ...filterable, value: (row) => sourceLabel(row.source) },
+    { id: "project", header: "Project", width: 180, sortable: true, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+    { id: "issued", header: "Total Issued", width: 130, align: "end", sortable: true, ...filterable, value: (row) => row.issued },
+    { id: "consumed", header: "Consumed", width: 120, align: "end", sortable: true, ...filterable, value: (row) => row.consumed },
+    { id: "returned", header: "Returned", width: 120, align: "end", sortable: true, ...filterable, value: (row) => row.returned },
+    { id: "adjusted", header: "Adjusted", width: 120, align: "end", sortable: true, ...filterable, value: (row) => row.adjusted },
+    { id: "balance", header: "Balance", width: 120, align: "end", sortable: true, ...filterable, value: (row) => row.balance },
   ];
 
   return { purchaseColumns, storeIssueColumns, transactionColumns, consumptionColumns, plumberBalanceColumns };

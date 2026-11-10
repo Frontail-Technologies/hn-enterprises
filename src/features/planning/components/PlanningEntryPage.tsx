@@ -14,9 +14,9 @@ import { CompactStatGrid } from "@/components/shared/CompactStatGrid";
 import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { FilterDialog } from "@/components/shared/FilterDialog";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { PageShell } from "@/components/shared/PageShell";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { formatCompactCount } from "@/lib/format";
 import { useDownloadDprPlanningSummary } from "@/features/exports/hooks/useExports";
@@ -91,38 +91,27 @@ export function PlanningEntryPage() {
   return (
     <PageShell
       title="DPR / Planning"
-      icon={ClipboardTextIcon}
+      description="Planned work and daily progress reports by supervisor for one day."
       actions={
         <>
           <DatePicker value={date} onChange={goToDate} className="h-8 w-full sm:w-44" />
 
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <FilterDialog
-              title="DPR / Planning Filters"
-              values={{ projectId: projectId || "all", supervisorId: supervisorId || "all" }}
-              filters={[
-                {
-                  key: "projectId",
-                  placeholder: "All Projects",
-                  searchable: true,
-                  options: projects.map((project) => ({ value: project.id, label: project.name })),
-                },
-                {
-                  key: "supervisorId",
-                  placeholder: "All Supervisors",
-                  searchable: true,
-                  options: supervisors.map((sup) => ({ value: sup.id, label: sup.name })),
-                },
-              ]}
-              onChange={(key, value) => {
-                const nextValue = value === "all" ? "" : value;
-                if (key === "projectId") setProjectId(nextValue);
-                if (key === "supervisorId") setSupervisorId(nextValue);
-              }}
-              onReset={() => {
-                setProjectId("");
-                setSupervisorId("");
-              }}
+          <div className="grid grid-cols-2 gap-2 sm:contents [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+            <SearchableSelect
+              value={projectId || "all"}
+              onValueChange={(value) => setProjectId(value === "all" ? "" : value)}
+              options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: project.name }))]}
+              placeholder="All projects"
+              searchPlaceholder="Search projects..."
+              className="h-8 w-full text-[13px] sm:w-48"
+            />
+            <SearchableSelect
+              value={supervisorId || "all"}
+              onValueChange={(value) => setSupervisorId(value === "all" ? "" : value)}
+              options={[{ value: "all", label: "All supervisors" }, ...supervisors.map((sup) => ({ value: sup.id, label: sup.name }))]}
+              placeholder="All supervisors"
+              searchPlaceholder="Search supervisors..."
+              className="h-8 w-full text-[13px] sm:w-44"
             />
 
             <Button
@@ -141,7 +130,7 @@ export function PlanningEntryPage() {
         </>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <CompactStatGrid columns={4}>
           <DashboardStatCard label="Planned Work" value={formatCompactCount(summary.plannedWork)} icon={ClipboardTextIcon} tone="info" dense />
           <DashboardStatCard label="DPR Submitted" value={formatCompactCount(summary.dprSubmitted)} icon={CalendarCheckIcon} tone="success" dense />
@@ -151,26 +140,28 @@ export function PlanningEntryPage() {
 
         <UnderlineTabs items={TABS} active={activeTab} onChange={(id) => setActiveTab(id as ViewTab)} />
 
-        <section className="overflow-hidden rounded-lg border border-border/70 bg-card">
+        <section className="overflow-hidden rounded-card border border-border bg-card shadow-card">
           {isLoading ? (
             <PageLoading className="min-h-24" />
           ) : isError ? (
-            <div className="flex items-center justify-between gap-2 px-3 py-6">
-              <p className="text-sm text-destructive">Unable to load planning data for this date.</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
+            <EmptyState
+              illustration="error"
+              title="Couldn't load planning data for this date"
+              description="Check your connection and try again."
+              action={{
+                label: "Retry",
+                onClick: () => {
                   void sitePlansQuery.refetch();
                   void dprRecordsQuery.refetch();
-                }}
-              >
-                Retry
-              </Button>
-            </div>
+                },
+              }}
+            />
           ) : isEmpty ? (
-            <EmptyState title={`No planning or DPR records for ${format(parseISO(date), "dd MMM yyyy")}`} />
+            <EmptyState
+              illustration="calendar"
+              title={`No planning or DPR records for ${format(parseISO(date), "dd MMM yyyy")}`}
+              description={projectId || supervisorId ? "Try another day or clear the project / supervisor filter." : "Pick another day to see its plans and reports."}
+            />
           ) : activeTab === "overview" ? (
             <SupervisorOverviewTable
               groups={supervisorGroups}

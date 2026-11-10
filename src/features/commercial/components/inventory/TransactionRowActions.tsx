@@ -35,11 +35,11 @@ export function TransactionRowActions({ transaction, lookups }: { transaction: M
   return (
     <div className="flex items-center justify-end gap-1">
       {isSuperseded ? (
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {transaction.isCorrected ? "Corrected" : "Reversed"}
         </span>
       ) : isLinkRow ? (
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {transaction.linkType === "correction" ? "Correction" : "Reversal"}
         </span>
       ) : null}
@@ -89,15 +89,15 @@ function ViewTransactionDialog({ transaction, lookups }: { transaction: Material
       <DialogTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label="View transaction" />}>
         <EyeIcon size={14} />
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-xl">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>Transaction Details</DialogTitle>
           <DialogDescription>Read-only record - use Correct or Reverse to change its effect.</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           <KeyValueGrid columns={2} items={items} />
         </div>
-        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Close</DialogClose>
         </DialogFooter>
       </DialogContent>

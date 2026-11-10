@@ -1,30 +1,25 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { useAllProjectSitesFullQuery } from "@/features/commercial/hooks/useAllProjectSites";
 import type { ProjectSite } from "@/features/projects/types/project.types";
 import { getActiveSites } from "@/features/dashboard/services/dashboard.selectors";
 import { getAdminSummaryStatDefinition } from "@/features/dashboard/services/dashboard-summary-stats.service";
 import { SummaryStatShell } from "../SummaryStatShell";
 
-const columns: ExcelColumn<ProjectSite>[] = [
-  { key: "name", label: "Site Name", width: 220, sticky: true, getValue: (row) => row.name },
-  { key: "code", label: "Site Code", width: 130, sticky: true, getValue: (row) => row.code },
-  { key: "city", label: "City", width: 120, getValue: (row) => row.city },
-  { key: "supervisor", label: "Supervisor", width: 170, getValue: (row) => row.supervisor },
-  {
-    key: "plannedConnections",
-    label: "Planned Connections",
-    width: 170,
-    getValue: (row) => row.plannedConnections,
-  },
-  { key: "status", label: "Status", width: 130, getValue: (row) => row.status },
-  { key: "remarks", label: "Remarks", width: 260, getValue: (row) => row.remarks },
+const columns: ListColumn<ProjectSite>[] = [
+  { id: "name", header: "Site Name", width: 220, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.name },
+  { id: "code", header: "Site Code", width: 130, pin: true, sortable: true, columnFilter: true, value: (row) => row.code },
+  { id: "city", header: "City", width: 120, sortable: true, columnFilter: true, value: (row) => row.city },
+  { id: "supervisor", header: "Supervisor", width: 170, sortable: true, columnFilter: true, value: (row) => row.supervisor },
+  { id: "plannedConnections", header: "Planned Connections", width: 170, align: "end", sortable: true, columnFilter: true, value: (row) => row.plannedConnections },
+  { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status },
+  { id: "remarks", header: "Remarks", width: 260, grow: true, columnFilter: true, value: (row) => row.remarks },
 ];
 
 export function ActiveSitesSummaryDetail({ city }: { city: string }) {
-  const { data: projectSites = [], isLoading } = useAllProjectSitesFullQuery();
+  const { data: projectSites = [], isLoading, isError, refetch } = useAllProjectSitesFullQuery();
   const rows = useMemo(() => getActiveSites(projectSites, { city }), [projectSites, city]);
 
   return (
@@ -34,6 +29,9 @@ export function ActiveSitesSummaryDetail({ city }: { city: string }) {
       columns={columns}
       rows={rows}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      emptyIllustration="projects"
       emptyTitle="No matching active sites found"
     />
   );

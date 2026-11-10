@@ -13,6 +13,8 @@ export type Staff = {
   role: UserRole;
   status: UserStatus;
   lastLogin: string;
+  /** Profile photo URL ("" = none). */
+  avatarUrl: string;
   assignedProjectId: string;
   salaryType: StaffSalaryType;
   monthlySalary: string;
@@ -68,6 +70,8 @@ export type CreateStaffFormValues = StaffPayrollFormValues & {
 export type StaffUserPatchValues = {
   name: string;
   mobile: string;
+  /** "" removes the photo. */
+  avatarUrl: string;
   role: UserRole;
   status: UserStatus;
 };

@@ -130,15 +130,15 @@ export function DynamicFieldDialog({
           {triggerLabel}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{field ? "Edit Field" : "Add Field"}</DialogTitle>
           <DialogDescription>
             Configure a dynamic field shown on the Customer form and master-sheet import template.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
             <FormField label="Field Label">
               <Input {...register("label")} />
               {formState.errors.label ? <p className="text-xs text-destructive">{formState.errors.label.message}</p> : null}
@@ -152,12 +152,12 @@ export function DynamicFieldDialog({
               </datalist>
               {formState.errors.group ? <p className="text-xs text-destructive">{formState.errors.group.message}</p> : null}
               {!field ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   New fields are added to the end of their group - drag to reposition afterward.
                 </p>
               ) : null}
             </FormField>
-            <FormField label="Value Type">
+            <FormField label="Value Type" className="sm:col-span-2">
               <Controller
                 control={control}
                 name="valueType"
@@ -179,7 +179,7 @@ export function DynamicFieldDialog({
               />
             </FormField>
             {valueType === "Dropdown" ? (
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <span className="text-xs font-medium text-muted-foreground">Dropdown Options</span>
                 <div className="flex gap-2">
                   <Input
@@ -261,7 +261,7 @@ export function DynamicFieldDialog({
               />
             </FormField>
             {field ? (
-              <FormField label="Status">
+              <FormField label="Status" className="sm:col-span-2">
                 <Controller
                   control={control}
                   name="status"
@@ -284,7 +284,7 @@ export function DynamicFieldDialog({
               </FormField>
             ) : null}
           </div>
-          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+          <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
             <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
             <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</Button>
           </DialogFooter>

@@ -1,30 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageShell } from "@/components/shared/PageShell";
 
 export function ReportsPage() {
+  const router = useRouter();
   return (
-    <div className="space-y-5">
-      <PageHeader title="Reports" />
-      <div className="rounded-xl border border-border/70 bg-card p-8">
-        <div className="mx-auto max-w-md text-center">
-          <p className="text-base font-semibold text-foreground">
-            Reports module coming soon
-          </p>
-          <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
-            Generated reports, saved exports and scheduled operational summaries
-            will be configured here.
-          </p>
-          <Link
-            href="/reports/templates"
-            className={buttonVariants({ className: "mt-5" })}
-          >
-            Open Templates
-          </Link>
-        </div>
+    <PageShell title="Reports" description="Generated reports, saved exports and scheduled summaries.">
+      <div className="rounded-card border border-border bg-card shadow-card">
+        <EmptyState
+          illustration="documents"
+          title="Reports module coming soon"
+          description="Generated reports, saved exports and scheduled operational summaries will be configured here. Field report templates are ready to use now."
+          action={{ label: "Open templates", onClick: () => router.push("/reports/templates") }}
+        />
       </div>
-    </div>
+    </PageShell>
   );
 }

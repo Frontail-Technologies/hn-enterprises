@@ -75,7 +75,7 @@ export function HolidayDrawer({ holiday, iconOnly = false }: { holiday?: Holiday
           <SheetTitle>{holiday ? "Edit Holiday" : "Add Holiday"}</SheetTitle>
           <SheetDescription>Manage national, restricted and company holidays.</SheetDescription>
         </SheetHeader>
-        <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6">
           <FormField label="Holiday Name">
             <Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
           </FormField>

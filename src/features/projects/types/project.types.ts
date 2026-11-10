@@ -119,6 +119,7 @@ export type ProjectTeamSiteRef = { id: string; name: string };
 export type ProjectTeamSupervisor = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   role: "Supervisor";
   sites: ProjectTeamSiteRef[];
   customerCount: number;
@@ -128,6 +129,7 @@ export type ProjectTeamSupervisor = {
 export type ProjectTeamPlumber = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   role: "Plumber";
   sites: ProjectTeamSiteRef[];
   customerCount: number;

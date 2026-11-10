@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { FileTextIcon } from "@phosphor-icons/react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/shared/DatePicker";
+import { FileDropzone } from "@/components/shared/FileDropzone";
 import { FormField } from "@/components/shared/FormField";
 import { uploadFile } from "@/lib/upload";
 import type { ProjectDocument } from "../../types/project.types";
@@ -119,12 +121,26 @@ export function ProjectDocumentDialog({
             onChange={(value) => setDraft((current) => ({ ...current, expiryDate: value }))}
           />
           <FormField label="File">
-            <Input type="file" onChange={(event) => void handleFileSelect(event.target.files?.[0])} />
-            {isUploading ? (
-              <p className="mt-1 text-xs text-primary">Uploading {draft.fileName}...</p>
-            ) : draft.fileUrl ? (
-              <p className="mt-1 text-xs text-muted-foreground">Ready to save: {draft.fileName}</p>
-            ) : null}
+            {draft.fileUrl && !isUploading ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+                  <FileTextIcon size={18} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[13px] font-medium text-foreground">{draft.fileName}</span>
+                  <span className="text-xs text-muted-foreground">Ready to save</span>
+                </div>
+                <FileDropzoneReplace onFile={(file) => void handleFileSelect(file)} />
+              </div>
+            ) : (
+              <FileDropzone
+                busy={isUploading}
+                invalid={Boolean(uploadError)}
+                label="Choose document"
+                hint="PDF, image or office document"
+                onFiles={(files) => void handleFileSelect(files[0])}
+              />
+            )}
             {uploadError ? <p className="mt-1 text-xs text-destructive">{uploadError}</p> : null}
           </FormField>
           <FormField label="Remarks">
@@ -170,5 +186,23 @@ function CompactInput({
     <FormField label={label}>
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
     </FormField>
+  );
+}
+
+/** "Replace" button that re-opens the file picker for an already chosen document. */
+function FileDropzoneReplace({ onFile }: { onFile: (file: File) => void }) {
+  return (
+    <label className={buttonVariants({ variant: "ghost", size: "sm" })}>
+      Replace
+      <input
+        type="file"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onFile(file);
+          event.target.value = "";
+        }}
+      />
+    </label>
   );
 }

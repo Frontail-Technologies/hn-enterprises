@@ -46,8 +46,8 @@ export function InventoryTabNav({
               <span
                 title={count.toLocaleString("en-IN")}
                 className={cn(
-                  "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-                  tab === activeTab ? "bg-white/20 text-primary-foreground" : "bg-muted text-muted-foreground",
+                  "shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                  tab === activeTab ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
                 )}
               >
                 {formatCompactCount(count)}

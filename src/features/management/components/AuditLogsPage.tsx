@@ -2,18 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { DataTable, type ColumnDef } from "@/components/shared/DataTable";
-import { FilterSheetButton } from "@/components/shared/FilterSheetButton";
-import { Pagination } from "@/components/shared/Pagination";
+import { ListTable, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
+import { PageShell } from "@/components/shared/PageShell";
 import { Button } from "@/components/ui/button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuditLogModulesQuery, useAuditLogsPageQuery } from "../hooks/useAuditLogs";
 import { auditLogsApi, type AuditLog } from "../services/audit-logs.service";
 import { formatDateTime } from "../utils/format";
-import { PageShell } from "@/components/shared/PageShell";
-
-const PAGE_SIZE = 50;
 
 const exportColumns: ExportColumn<AuditLog>[] = [
   { label: "User", getValue: (row) => row.user },
@@ -24,33 +19,59 @@ const exportColumns: ExportColumn<AuditLog>[] = [
   { label: "IP/Device", getValue: (row) => row.device },
 ];
 
+const columns: ListColumn<AuditLog>[] = [
+  { id: "user", header: "User", value: (row) => row.user, isTitle: true, hideable: false, width: 180 },
+  {
+    id: "action",
+    header: "Action",
+    value: (row) => row.action,
+    cell: (row) => (
+      <span className="inline-flex h-6 items-center rounded-full bg-muted px-2.5 text-xs font-medium whitespace-nowrap text-foreground">
+        {row.action}
+      </span>
+    ),
+  },
+  { id: "module", header: "Module", value: (row) => row.module, width: 150 },
+  { id: "description", header: "Description", value: (row) => row.description, width: 360, grow: true },
+  {
+    id: "dateTime",
+    header: "Date & time",
+    width: 170,
+    value: (row) => row.dateTime,
+    cell: (row) => <span className="whitespace-nowrap text-muted-foreground">{formatDateTime(row.dateTime)}</span>,
+  },
+  {
+    id: "device",
+    header: "IP / device",
+    value: (row) => row.device,
+    defaultHidden: true,
+    width: 260,
+    cell: (row) => <span className="text-muted-foreground">{row.device}</span>,
+  },
+];
+
 export function AuditLogsPage() {
-  const [filters, setFilters] = useState({ search: "", module: "all" });
-  const [page, setPage] = useState(1);
+  const list = useListState({ pageSize: 50, storageKey: "audit-logs" });
   const [isExporting, setIsExporting] = useState(false);
-  const debouncedSearch = useDebouncedValue(filters.search, 300);
 
   const listParams = {
-    search: debouncedSearch || undefined,
-    module: filters.module !== "all" ? filters.module : undefined,
+    search: list.debouncedSearch || undefined,
+    module: list.filters.module || undefined,
   };
 
-  const { data: result, isLoading } = useAuditLogsPageQuery({ ...listParams, page, limit: PAGE_SIZE });
-  const data = useMemo(() => result?.data ?? [], [result]);
-  const pagination = result?.pagination;
+  const { data: result, isLoading, isError, refetch } = useAuditLogsPageQuery({ ...listParams, page: list.page, limit: list.pageSize });
+  const rows = useMemo(() => result?.data ?? [], [result]);
+  const total = result?.pagination?.total ?? rows.length;
 
   const { data: modules = [] } = useAuditLogModulesQuery();
-
-  function updateFilter(key: string, value: string) {
-    setFilters((current) => ({ ...current, [key]: value }));
-    setPage(1);
-  }
+  const filters: ListFilter[] = [
+    { id: "module", label: "Module", quick: true, options: modules.map((module) => ({ value: module, label: module })) },
+  ];
 
   async function handleExport() {
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const total = pagination?.total ?? data.length;
       const { data: allRows } = await auditLogsApi.listPage({ ...listParams, page: 1, limit: Math.max(total, 1) });
       await exportRowsToExcel("audit-logs.xlsx", exportColumns, allRows);
     } finally {
@@ -58,58 +79,27 @@ export function AuditLogsPage() {
     }
   }
 
-  const columns: ColumnDef<AuditLog>[] = [
-    { key: "user", header: "User", render: (row) => <b>{row.user}</b> },
-    { key: "action", header: "Action" },
-    { key: "module", header: "Module" },
-    { key: "description", header: "Description" },
-    { key: "dateTime", header: "Date & Time", render: (row) => formatDateTime(row.dateTime) },
-    { key: "device", header: "IP/Device" },
-  ];
-
   return (
-    <PageShell
-      title="Audit Logs"
-      actions={
-        <>
-          <FilterSheetButton
-            searchKey="search"
-            searchPlaceholder="Search user or description..."
-            title="Audit Filters"
-            values={filters}
-            filters={[
-              {
-                key: "module",
-                placeholder: "All Modules",
-                options: modules.map((module) => ({ value: module, label: module })),
-              },
-            ]}
-            onChange={updateFilter}
-            onReset={() => {
-              setFilters({ search: "", module: "all" });
-              setPage(1);
-            }}
-          />
-          <Button type="button" variant="outline" size="compact" disabled={isExporting} onClick={handleExport}>
-            <DownloadSimpleIcon size={12} />
-            {isExporting ? "Exporting..." : "Export Excel"}
+    <PageShell title="Audit Logs" description="Who changed what in the admin panel, and when.">
+      <ListTable
+        itemLabel="audit log"
+        rows={rows}
+        total={total}
+        columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search user or description..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        empty={{ illustration: "checklist", title: "No audit log entries yet", description: "Actions taken in the admin panel will appear here." }}
+        actions={
+          <Button variant="outline" size="compact" disabled={isExporting || total === 0} onClick={handleExport}>
+            <DownloadSimpleIcon size={14} />
+            {isExporting ? "Exporting..." : "Export"}
           </Button>
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <DataTable columns={columns} data={data} isLoading={isLoading} emptyTitle="No audit log entries found" />
-      {pagination && pagination.total > 0 ? (
-        <Pagination
-          compact
-          page={pagination.page}
-          pageCount={Math.max(1, pagination.totalPages)}
-          totalItems={pagination.total}
-          startItem={(pagination.page - 1) * pagination.limit + 1}
-          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
-          onPageChange={setPage}
-        />
-      ) : null}
+        }
+      />
     </PageShell>
   );
 }

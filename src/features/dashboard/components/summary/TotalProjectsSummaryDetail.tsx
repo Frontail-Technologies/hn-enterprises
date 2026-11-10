@@ -1,25 +1,25 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import type { Project } from "@/features/projects/types/project.types";
 import { getScopedProjects } from "@/features/dashboard/services/dashboard.selectors";
 import { getAdminSummaryStatDefinition } from "@/features/dashboard/services/dashboard-summary-stats.service";
 import { SummaryStatShell } from "../SummaryStatShell";
 
-const columns: ExcelColumn<Project>[] = [
-  { key: "name", label: "Project Name", width: 220, sticky: true, getValue: (row) => row.name },
-  { key: "code", label: "Project Code", width: 140, sticky: true, getValue: (row) => row.code },
-  { key: "city", label: "City", width: 120, getValue: (row) => row.city },
-  { key: "client", label: "Client", width: 220, getValue: (row) => row.client },
-  { key: "projectType", label: "Project Type", width: 150, getValue: (row) => row.projectType },
-  { key: "status", label: "Status", width: 130, getValue: (row) => row.status },
-  { key: "assignedManager", label: "Project Manager", width: 170, getValue: (row) => row.assignedManager },
+const columns: ListColumn<Project>[] = [
+  { id: "name", header: "Project Name", width: 220, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.name },
+  { id: "code", header: "Project Code", width: 140, pin: true, sortable: true, columnFilter: true, value: (row) => row.code },
+  { id: "city", header: "City", width: 120, sortable: true, columnFilter: true, value: (row) => row.city },
+  { id: "client", header: "Client", width: 220, sortable: true, columnFilter: true, value: (row) => row.client },
+  { id: "projectType", header: "Project Type", width: 150, sortable: true, columnFilter: true, value: (row) => row.projectType },
+  { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status },
+  { id: "assignedManager", header: "Project Manager", width: 170, sortable: true, columnFilter: true, value: (row) => row.assignedManager },
 ];
 
 export function TotalProjectsSummaryDetail({ projectId, city }: { projectId: string; city: string }) {
-  const { data: projects = [], isLoading } = useProjectsQuery();
+  const { data: projects = [], isLoading, isError, refetch } = useProjectsQuery();
   const rows = useMemo(
     () => getScopedProjects(projects, { projectId, city }),
     [projects, projectId, city],
@@ -32,6 +32,9 @@ export function TotalProjectsSummaryDetail({ projectId, city }: { projectId: str
       columns={columns}
       rows={rows}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
+      emptyIllustration="projects"
       emptyTitle="No matching projects found"
     />
   );

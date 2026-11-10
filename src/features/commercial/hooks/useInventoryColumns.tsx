@@ -1,176 +1,142 @@
-import type { ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { PlumberBalanceRow } from "../mappers/inventory.mapper";
 import type { Material, MaterialTransaction, MaterialTransactionType, TotalIssueSummaryRow } from "../types/material.types";
 import { computeStockStatus, formatDate, projectLabelFromName, sourceLabel } from "../utils/format";
 import { TransactionRowActions } from "../components/inventory/TransactionRowActions";
 
+// Every column keeps the Excel-style value filter it had on ExcelDataGrid
+// (`columnFilter: true`). `value` returns the same raw value as before.
+const filterable = { columnFilter: true } as const;
+
+export function renderTransactionActions(row: MaterialTransaction, materialName?: string) {
+  return (
+    <TransactionRowActions
+      transaction={row}
+      lookups={{
+        materialName: materialName ?? (row.materialName || "-"),
+        plumberName: row.plumberName,
+        supervisorName: row.supervisorName,
+        customerName: row.customerName,
+        projectName: row.projectName,
+      }}
+    />
+  );
+}
+
 export function useInventoryColumns(params: {
   stockFiltered: boolean;
   stockBalanceByMaterialId: Map<string, number>;
 }) {
   const { stockFiltered, stockBalanceByMaterialId } = params;
+  const stockBalance = (row: Material) => (stockFiltered ? stockBalanceByMaterialId.get(row.id) ?? 0 : row.currentBalance);
+  const stockStatus = (row: Material) =>
+    stockFiltered ? computeStockStatus(stockBalanceByMaterialId.get(row.id) ?? 0, row.reorderLevel) : row.status;
 
-  const stockColumns: ExcelColumn<Material>[] = [
+  const stockColumns: ListColumn<Material>[] = [
+    { id: "name", header: "Item Name", width: 230, isTitle: true, grow: true, hideable: false, sortable: true, ...filterable, value: (row) => row.name },
+    { id: "category", header: "Category", width: 150, grow: true, sortable: true, ...filterable, value: (row) => row.category },
+    { id: "unit", header: "Unit", width: 90, sortable: true, ...filterable, value: (row) => row.unit },
     {
-      key: "name",
-      label: "Item Name",
-      width: 230,
-      sticky: true,
-      grow: true,
-      getValue: (row) => row.name,
-      render: (row) => <span className="font-semibold text-foreground">{row.name}</span>,
-    },
-    { key: "category", label: "Category", width: 150, grow: true, getValue: (row) => row.category },
-    { key: "unit", label: "Unit", width: 90, getValue: (row) => row.unit },
-    {
-      key: "currentBalance",
-      label: stockFiltered ? "Balance (Filtered)" : "Current Balance",
+      id: "currentBalance",
+      header: stockFiltered ? "Balance (Filtered)" : "Current Balance",
       width: 160,
-      getValue: (row) => (stockFiltered ? stockBalanceByMaterialId.get(row.id) ?? 0 : row.currentBalance),
+      align: "end",
+      sortable: true,
+      ...filterable,
+      value: stockBalance,
     },
-    { key: "reorderLevel", label: "Reorder Level", width: 140, getValue: (row) => row.reorderLevel },
-    {
-      key: "status",
-      label: "Status",
-      width: 140,
-      getValue: (row) => (stockFiltered ? computeStockStatus(stockBalanceByMaterialId.get(row.id) ?? 0, row.reorderLevel) : row.status),
-      render: (row) => (
-        <StatusBadge status={stockFiltered ? computeStockStatus(stockBalanceByMaterialId.get(row.id) ?? 0, row.reorderLevel) : row.status} />
-      ),
-    },
+    { id: "reorderLevel", header: "Reorder Level", width: 140, align: "end", sortable: true, ...filterable, value: (row) => row.reorderLevel },
+    { id: "status", header: "Status", width: 140, sortable: true, ...filterable, value: stockStatus, cell: (row) => <StatusBadge status={stockStatus(row)} /> },
   ];
 
-  function transactionColumns(kind: MaterialTransactionType): ExcelColumn<MaterialTransaction>[] {
-    const base: ExcelColumn<MaterialTransaction>[] = [
-      {
-        key: "material",
-        label: "Item Name",
-        width: 220,
-        sticky: true,
-        grow: true,
-        getValue: (row) => row.materialName || "-",
-        render: (row) => <span className="font-semibold text-foreground">{row.materialName || "-"}</span>,
-      },
-      { key: "referenceNo", label: "Reference No.", width: 150, getValue: (row) => row.referenceNo },
-      { key: "quantity", label: "Quantity", width: 120, getValue: (row) => row.quantity },
-      {
-        key: "transactionDate",
-        label: "Date",
-        width: 130,
-        getValue: (row) => row.transactionDate,
-        render: (row) => formatDate(row.transactionDate),
-      },
+  // Server-paged: no sorting (the API has no sort params); column filters act on the loaded page, as before.
+  function transactionColumns(kind: MaterialTransactionType): ListColumn<MaterialTransaction>[] {
+    const base: ListColumn<MaterialTransaction>[] = [
+      { id: "material", header: "Item Name", width: 220, isTitle: true, grow: true, hideable: false, ...filterable, value: (row) => row.materialName || "-" },
+      { id: "referenceNo", header: "Reference No.", width: 150, ...filterable, value: (row) => row.referenceNo },
+      { id: "quantity", header: "Quantity", width: 120, align: "end", ...filterable, value: (row) => row.quantity },
+      { id: "transactionDate", header: "Date", width: 130, ...filterable, value: (row) => row.transactionDate, cell: (row) => formatDate(row.transactionDate) },
     ];
 
-    let specific: ExcelColumn<MaterialTransaction>[] = [];
+    let specific: ListColumn<MaterialTransaction>[] = [];
     if (kind === "purchase") {
       specific = [
-        { key: "rate", label: "Rate", width: 110, getValue: (row) => row.rate ?? "-" },
-        { key: "billAmount", label: "Bill Amount", width: 140, getValue: (row) => row.billAmount ?? "-" },
-        { key: "vendorName", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
+        { id: "rate", header: "Rate", width: 110, align: "end", ...filterable, value: (row) => row.rate ?? "-" },
+        { id: "billAmount", header: "Bill Amount", width: 140, align: "end", ...filterable, value: (row) => row.billAmount ?? "-" },
+        { id: "vendorName", header: "Vendor", width: 170, ...filterable, value: (row) => row.vendorName },
       ];
     } else if (kind === "pbg_issue") {
       specific = [
-        { key: "vendorName", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
-        { key: "vehicleNo", label: "Vehicle No.", width: 140, getValue: (row) => row.vehicleNo },
-        { key: "vehicleQty", label: "Vehicle Qty", width: 120, getValue: (row) => row.vehicleQty ?? "-" },
-        { key: "supervisorName", label: "Person", width: 150, getValue: (row) => row.supervisorName },
+        { id: "vendorName", header: "Vendor", width: 170, ...filterable, value: (row) => row.vendorName },
+        { id: "vehicleNo", header: "Vehicle No.", width: 140, ...filterable, value: (row) => row.vehicleNo },
+        { id: "vehicleQty", header: "Vehicle Qty", width: 120, align: "end", ...filterable, value: (row) => row.vehicleQty ?? "-" },
+        { id: "supervisorName", header: "Person", width: 150, ...filterable, value: (row) => row.supervisorName },
       ];
     } else if (kind === "pbg_consumption") {
       specific = [
-        { key: "customer", label: "Customer", width: 190, getValue: (row) => row.customerName || "-" },
-        { key: "plumber", label: "Plumber", width: 150, getValue: (row) => row.plumberName || "-" },
-        { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-        { key: "vendorName", label: "Vendor", width: 170, getValue: (row) => row.vendorName },
+        { id: "customer", header: "Customer", width: 190, ...filterable, value: (row) => row.customerName || "-" },
+        { id: "plumber", header: "Plumber", width: 150, ...filterable, value: (row) => row.plumberName || "-" },
+        { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+        { id: "vendorName", header: "Vendor", width: 170, ...filterable, value: (row) => row.vendorName },
       ];
     } else if (kind === "issue") {
       specific = [
-        { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-        { key: "plumber", label: "Plumber / Team", width: 170, getValue: (row) => row.plumberName || "-" },
-        { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-        { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-        { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
+        { id: "source", header: "Source", width: 110, ...filterable, value: (row) => sourceLabel(row.source) },
+        { id: "plumber", header: "Plumber / Team", width: 170, ...filterable, value: (row) => row.plumberName || "-" },
+        { id: "supervisorName", header: "Supervisor", width: 150, ...filterable, value: (row) => row.supervisorName },
+        { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+        { id: "address", header: "Address", width: 190, ...filterable, value: (row) => row.address ?? "-" },
       ];
     } else if (kind === "consumption") {
       specific = [
-        { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-        { key: "customer", label: "Customer", width: 190, getValue: (row) => row.customerName || "-" },
-        { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-        { key: "reportNo", label: "Report No.", width: 140, getValue: (row) => row.reportNo },
-        { key: "plumber", label: "Plumber", width: 150, getValue: (row) => row.plumberName || "-" },
-        { key: "supervisorName", label: "Supervisor", width: 150, getValue: (row) => row.supervisorName },
-        { key: "address", label: "Address", width: 190, getValue: (row) => row.address ?? "-" },
+        { id: "source", header: "Source", width: 110, ...filterable, value: (row) => sourceLabel(row.source) },
+        { id: "customer", header: "Customer", width: 190, ...filterable, value: (row) => row.customerName || "-" },
+        { id: "project", header: "Project", width: 180, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+        { id: "reportNo", header: "Report No.", width: 140, ...filterable, value: (row) => row.reportNo },
+        { id: "plumber", header: "Plumber", width: 150, ...filterable, value: (row) => row.plumberName || "-" },
+        { id: "supervisorName", header: "Supervisor", width: 150, ...filterable, value: (row) => row.supervisorName },
+        { id: "address", header: "Address", width: 190, ...filterable, value: (row) => row.address ?? "-" },
       ];
     }
 
-    const actionsColumn: ExcelColumn<MaterialTransaction> = {
-      key: "actions",
-      label: "Actions",
-      width: 140,
-      getValue: () => "",
-      render: (row) => (
-        <TransactionRowActions
-          transaction={row}
-          lookups={{
-            materialName: row.materialName || "-",
-            plumberName: row.plumberName,
-            supervisorName: row.supervisorName,
-            customerName: row.customerName,
-            projectName: row.projectName,
-          }}
-        />
-      ),
-    };
-
-    return [...base, ...specific, actionsColumn];
+    return [...base, ...specific];
   }
 
-  const totalIssueColumns: ExcelColumn<TotalIssueSummaryRow>[] = [
+  const totalIssueColumns: ListColumn<TotalIssueSummaryRow>[] = [
+    { id: "materialName", header: "Item Name", width: 240, isTitle: true, grow: true, hideable: false, sortable: true, ...filterable, value: (row) => row.materialName },
+    { id: "unit", header: "Unit", width: 90, sortable: true, ...filterable, value: (row) => row.unit },
+    { id: "totalIssued", header: "Total Issued", width: 150, align: "end", sortable: true, ...filterable, value: (row) => row.totalIssued },
+    { id: "transactionCount", header: "Issue Slips", width: 130, align: "end", sortable: true, ...filterable, value: (row) => row.transactionCount },
     {
-      key: "materialName",
-      label: "Item Name",
-      width: 240,
-      sticky: true,
-      grow: true,
-      getValue: (row) => row.materialName,
-      render: (row) => <span className="font-semibold text-foreground">{row.materialName}</span>,
-    },
-    { key: "unit", label: "Unit", width: 90, getValue: (row) => row.unit },
-    { key: "totalIssued", label: "Total Issued", width: 150, getValue: (row) => row.totalIssued },
-    { key: "transactionCount", label: "Issue Slips", width: 130, getValue: (row) => row.transactionCount },
-    {
-      key: "lastIssueDate",
-      label: "Last Issue Date",
+      id: "lastIssueDate",
+      header: "Last Issue Date",
       width: 160,
-      getValue: (row) => row.lastIssueDate,
-      render: (row) => formatDate(row.lastIssueDate),
+      sortable: true,
+      ...filterable,
+      value: (row) => row.lastIssueDate,
+      cell: (row) => formatDate(row.lastIssueDate),
     },
   ];
 
-  const plumberBalanceColumns: ExcelColumn<PlumberBalanceRow>[] = [
+  const plumberBalanceColumns: ListColumn<PlumberBalanceRow>[] = [
+    { id: "plumberName", header: "Plumber / Team", width: 180, isTitle: true, grow: true, hideable: false, sortable: true, ...filterable, value: (row) => row.plumberName },
+    { id: "materialName", header: "Material", width: 210, grow: true, sortable: true, ...filterable, value: (row) => row.materialName },
+    { id: "source", header: "Source", width: 110, sortable: true, ...filterable, value: (row) => sourceLabel(row.source) },
+    { id: "project", header: "Project", width: 180, sortable: true, ...filterable, value: (row) => projectLabelFromName(row.projectId, row.projectName) },
+    { id: "issued", header: "Total Issued", width: 140, align: "end", sortable: true, ...filterable, value: (row) => row.issued },
+    { id: "consumed", header: "Consumed", width: 130, align: "end", sortable: true, ...filterable, value: (row) => row.consumed },
+    { id: "returned", header: "Returned", width: 130, align: "end", sortable: true, ...filterable, value: (row) => row.returned },
+    { id: "adjusted", header: "Adjusted", width: 120, align: "end", sortable: true, ...filterable, value: (row) => row.adjusted },
     {
-      key: "plumberName",
-      label: "Plumber / Team",
-      width: 180,
-      sticky: true,
-      grow: true,
-      getValue: (row) => row.plumberName,
-      render: (row) => <span className="font-semibold text-foreground">{row.plumberName}</span>,
-    },
-    { key: "materialName", label: "Material", width: 210, grow: true, getValue: (row) => row.materialName },
-    { key: "source", label: "Source", width: 110, getValue: (row) => sourceLabel(row.source) },
-    { key: "project", label: "Project", width: 180, getValue: (row) => projectLabelFromName(row.projectId, row.projectName) },
-    { key: "issued", label: "Total Issued", width: 140, getValue: (row) => row.issued },
-    { key: "consumed", label: "Consumed", width: 130, getValue: (row) => row.consumed },
-    { key: "returned", label: "Returned", width: 130, getValue: (row) => row.returned },
-    { key: "adjusted", label: "Adjusted", width: 120, getValue: (row) => row.adjusted },
-    {
-      key: "balance",
-      label: "Balance With Plumber",
+      id: "balance",
+      header: "Balance With Plumber",
       width: 190,
-      getValue: (row) => row.balance,
-      render: (row) => <b>{row.balance}</b>,
+      align: "end",
+      sortable: true,
+      ...filterable,
+      value: (row) => row.balance,
+      cell: (row) => <b>{row.balance}</b>,
     },
   ];
 

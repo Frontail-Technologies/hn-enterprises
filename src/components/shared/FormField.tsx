@@ -22,7 +22,7 @@ export function FormField({
         {required ? <span className="ml-0.5 text-destructive">*</span> : null}
       </Label>
       {children}
-      {helper ? <span className="block text-[11px] text-muted-foreground">{helper}</span> : null}
+      {helper ? <span className="block text-xs text-muted-foreground">{helper}</span> : null}
     </div>
   );
 }

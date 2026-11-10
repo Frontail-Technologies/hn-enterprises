@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Sidebar } from "./Sidebar";
-import { Breadcrumb } from "./Breadcrumb";
+import { Header } from "./Header";
 import { BreadcrumbLabelProvider } from "./BreadcrumbLabelContext";
 import { MobileNestedHeader } from "./MobileNestedHeader";
 import { MobileNavbar } from "./MobileNavbar";
@@ -9,20 +10,30 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  /** Saved open/collapsed state read from the cookie on the server (falls back to document.cookie). */
+  sidebarDefaultOpen?: boolean;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+// The sidebar saves its open/collapsed state in this cookie (components/ui/sidebar.tsx).
+function readSidebarOpen() {
+  if (typeof document === "undefined") return true;
+  return !document.cookie.split("; ").includes("sidebar_state=false");
+}
+
+export function DashboardLayout({ children, sidebarDefaultOpen: savedOpen }: DashboardLayoutProps) {
+  // Restore the saved state before the first paint so the sidebar doesn't
+  // always open and then need collapsing again.
+  const [sidebarDefaultOpen] = useState(() => savedOpen ?? readSidebarOpen());
+
   return (
-    <SidebarProvider className="overflow-x-clip">
+    <SidebarProvider defaultOpen={sidebarDefaultOpen} className="overflow-x-clip">
       <BreadcrumbLabelProvider>
         <Sidebar />
-        <SidebarInset className="min-w-0 overflow-x-clip ">
+        <SidebarInset className="min-w-0 overflow-x-clip">
           <MobileNavbar />
           <MobileNestedHeader />
-          <main className="min-w-0 flex-1 overflow-x-clip px-3 py-3 sm:px-4 md:flex md:flex-col md:py-4 lg:px-5">
-            <div className="mb-3 hidden min-w-0 shrink-0 md:block">
-              <Breadcrumb />
-            </div>
+          <Header />
+          <main className="min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 md:flex md:flex-col md:py-5 lg:px-6 lg:py-6">
             {children}
           </main>
         </SidebarInset>

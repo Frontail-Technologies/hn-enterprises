@@ -1,5 +1,5 @@
-import { SquaresFourIcon } from "@phosphor-icons/react";
 import { DashboardMetricFilter } from "@/features/dashboard/components/DashboardMetricFilter";
+import { PageIcon } from "@/components/shared/PageIcon";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/DashboardPeriodFilter";
 import { DashboardProjectFilter } from "@/features/dashboard/components/DashboardProjectFilter";
 import type { DashboardMetric, DashboardPeriod } from "@/features/dashboard/data/dashboard.data";
@@ -33,11 +33,12 @@ export function DashboardHeader({
 }) {
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
-          <SquaresFourIcon size={17} weight="bold" />
-        </span>
-        <h1 className="truncate text-page-title">Dashboard</h1>
+      <div className="flex min-w-0 items-center gap-3.5">
+        <PageIcon name="dashboard" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="truncate text-page-title">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Projects, field work and money at a glance.</p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

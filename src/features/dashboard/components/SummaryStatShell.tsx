@@ -1,62 +1,61 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid, type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { EmptyIllustrationName } from "@/components/shared/EmptyState";
+import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export function SummaryStatShell<T extends { id: string }>({
   title,
+  description,
   searchPlaceholder,
   columns,
   rows,
   isLoading,
+  isError,
+  onRetry,
   emptyTitle,
+  emptyIllustration,
 }: {
   title: string;
+  description?: string;
   searchPlaceholder: string;
-  columns: ExcelColumn<T>[];
+  columns: ListColumn<T>[];
   rows: T[];
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   emptyTitle: string;
+  emptyIllustration?: EmptyIllustrationName;
 }) {
-  const [search, setSearch] = useState("");
-
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return rows;
-
-    return rows.filter((row) =>
-      columns.some((column) => String(column.getValue(row) ?? "").toLowerCase().includes(query)),
-    );
-  }, [columns, rows, search]);
+  const list = useListState({ pageSize: 50, storageKey: `dashboard-summary:${title}` });
+  // Search covers every column's value, as before; sort and paging run on the loaded rows.
+  const { pageRows, total } = useClientRows(rows, list, { columns });
 
   return (
     <PageShell
       title={title}
+      description={description}
       actions={
         <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
           <ArrowLeftIcon size={14} />
           Back
         </Link>
       }
-      contentClassName="space-y-3"
     >
-      <Input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder={searchPlaceholder}
-        className="h-8 w-96 max-w-full"
-      />
-      <ExcelDataGrid
+      <ListTable
+        rows={pageRows}
+        total={total}
         columns={columns}
-        rows={filteredRows}
-        emptyTitle={emptyTitle}
+        state={list}
+        searchPlaceholder={searchPlaceholder}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={onRetry}
         maxHeightClassName="max-h-[68vh]"
+        empty={{ title: emptyTitle, illustration: emptyIllustration }}
       />
     </PageShell>
   );

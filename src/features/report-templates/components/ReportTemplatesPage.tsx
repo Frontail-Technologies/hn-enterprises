@@ -4,33 +4,31 @@ import { useState } from "react";
 import Link from "next/link";
 import { EyeIcon, FileTextIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { PageShell } from "@/components/shared/PageShell";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
-import { reportTemplates } from "../services/report-templates.service";
+import { useEffectiveReportTemplates } from "../hooks/useReportTemplateOverrides";
 
 export function ReportTemplatesPage() {
   const [customerId, setCustomerId] = useState("");
   const { options, isLoading, onSearchChange } = useCustomerSelectorOptions(customerId);
+  const { templates } = useEffectiveReportTemplates();
 
   const query = customerId ? `?customerId=${customerId}` : "";
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Reports</h1>
-          <p className="text-sm text-muted-foreground">
-            Preview, print and download field report templates generated from real customer data.
+    <PageShell
+      title="Report templates"
+      description="Preview, print and download field report templates generated from real customer data."
+    >
+      <section className="flex flex-col gap-3 rounded-card border border-border bg-card p-5 shadow-card sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-card-title">Customer</h2>
+          <p className="mt-1 max-w-2xl text-[13px] text-muted-foreground">
+            Pick a customer to fill the templates with. Fields with no real data source (for example pressure-test
+            readings or JMR/GC remarks) print blank rather than invented.
           </p>
         </div>
-      </div>
-
-      <div className="rounded-sm border border-border bg-card p-4">
-        <p className="text-sm font-semibold text-foreground">Customer</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Pick a customer to generate reports for. Fields with no real data source (e.g. pressure
-          test readings, JMR/GC remarks) print blank rather than fabricated.
-        </p>
         <SearchableSelect
           value={customerId}
           onValueChange={setCustomerId}
@@ -39,49 +37,40 @@ export function ReportTemplatesPage() {
           options={options}
           isLoading={isLoading}
           onSearchChange={onSearchChange}
-          className="mt-3 h-9 w-full max-w-sm bg-card text-sm"
+          className="h-9 w-full shrink-0 sm:w-80"
         />
-      </div>
+      </section>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {reportTemplates.map((template) => (
-          <div
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {templates.map((template) => (
+          <article
             key={template.id}
-            className="rounded-sm border border-border bg-card p-4 transition hover:border-primary/45 hover:bg-primary/5"
+            className="group flex flex-col gap-4 rounded-card border border-border bg-card p-5 shadow-card transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-floating"
           >
-            <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-primary/20 bg-primary/10 text-primary">
-                <FileTextIcon size={18} />
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <FileTextIcon size={19} weight="duotone" />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="text-xs font-medium text-primary">{template.category}</span>
-                <span className="mt-1 block text-sm font-semibold text-foreground">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-card-title">
                   {template.title}
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                  {template.description}
-                </span>
-              </span>
+                  {template.override ? <span className="ms-1.5 text-xs font-normal text-muted-foreground">· Edited</span> : null}
+                </h3>
+              </div>
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <Link
-                href={`/reports/templates/${template.id}${query}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
+            <div className="mt-auto flex items-center gap-2">
+              <Link href={`/reports/templates/${template.id}${query}`} className={buttonVariants({ variant: "outline", size: "compact" })}>
                 <EyeIcon size={14} />
                 Preview
               </Link>
-              <Link
-                href={`/reports/templates/${template.id}/edit${query}`}
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-              >
+              <Link href={`/reports/templates/${template.id}/edit${query}`} className={buttonVariants({ variant: "ghost", size: "compact" })}>
                 <PencilSimpleIcon size={14} />
                 Edit
               </Link>
             </div>
-          </div>
+          </article>
         ))}
       </div>
-    </div>
+    </PageShell>
   );
 }

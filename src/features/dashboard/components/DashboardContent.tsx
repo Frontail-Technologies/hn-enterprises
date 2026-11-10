@@ -9,6 +9,7 @@ import { DashboardAlerts } from "@/features/dashboard/components/DashboardAlerts
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { DashboardStats } from "@/features/dashboard/components/DashboardStats";
 import { RecentActivityCard } from "@/features/dashboard/components/RecentActivityCard";
+import { DashboardCharts } from "@/features/dashboard/components/charts/DashboardCharts";
 import { ACTIVITY_ICON_BY_TYPE } from "@/features/dashboard/data/dashboard-metric-icons";
 import { humanizeActivityTitle } from "@/features/dashboard/data/activity-labels";
 import { useDashboardScreen } from "@/features/dashboard/hooks/useDashboardScreen";
@@ -23,6 +24,7 @@ export function DashboardContent() {
   if (screen.isError || !screen.overview) {
     return (
       <EmptyState
+        illustration="error"
         title="Couldn't load the dashboard"
         description="Something went wrong while fetching your overview."
         action={{ label: "Retry", onClick: () => screen.refetch() }}
@@ -30,7 +32,12 @@ export function DashboardContent() {
     );
   }
 
-  const activityItems = screen.overview.recentActivity.map((activity) => ({
+  // Only operational activity on the dashboard: sign-in/password events (audit
+  // module "auth") are noise here. The backend also excludes them; this keeps
+  // the card clean against an API that hasn't been updated yet.
+  const activityItems = screen.overview.recentActivity
+    .filter((activity) => !(activity.type === "System" && activity.title.startsWith("auth - ")))
+    .map((activity) => ({
     title: humanizeActivityTitle(activity.title, activity.type),
     time: formatRelativeTime(activity.dateTime),
     icon: ACTIVITY_ICON_BY_TYPE[activity.type],
@@ -56,6 +63,17 @@ export function DashboardContent() {
 
       <div className={cn("space-y-5 transition-opacity", screen.isFetching && "opacity-60")}>
         <DashboardStats metrics={screen.visibleMetrics} />
+
+        {screen.chartsError ? (
+          <p className="rounded-card border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            Charts couldn&apos;t load.{" "}
+            <button type="button" className="font-medium text-primary hover:underline" onClick={() => void screen.refetchCharts()}>
+              Retry
+            </button>
+          </p>
+        ) : (
+          <DashboardCharts charts={screen.charts} isLoading={screen.chartsLoading} />
+        )}
 
         <div className="grid items-start gap-5 xl:grid-cols-[0.75fr_1.25fr]">
           <AttendanceSummary rows={screen.overview.attendance} />

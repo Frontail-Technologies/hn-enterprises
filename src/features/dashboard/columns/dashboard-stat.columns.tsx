@@ -1,11 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { type ExcelColumn } from "@/components/shared/ExcelDataGrid";
+import type { ListColumn } from "@/components/shared/list";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import type { ExportColumn } from "@/lib/export-excel";
 import {
   type DashboardStatKey,
   type DashboardStatRow,
@@ -17,8 +16,36 @@ function formatMaybeDate(value: string) {
   return formatDate(value);
 }
 
-export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<DashboardStatRow>[] {
-  const identityColumns: ExcelColumn<DashboardStatRow>[] = [
+type StatColumn = {
+  key: string;
+  label: string;
+  width?: number;
+  sticky?: boolean;
+  getValue: (row: DashboardStatRow) => string | number | boolean | null | undefined;
+  render?: (row: DashboardStatRow) => ReactNode;
+};
+
+/** Table columns. Every column keeps its Excel-style filter (page-local, as before). */
+export function getDashboardStatColumns(statKey: DashboardStatKey): ListColumn<DashboardStatRow>[] {
+  return getStatColumns(statKey).map((column) => ({
+    id: column.key,
+    header: column.label,
+    width: column.width,
+    pin: column.sticky,
+    hideable: !column.sticky,
+    columnFilter: true,
+    value: column.getValue,
+    cell: column.render,
+  }));
+}
+
+/** Excel export columns (same columns as the table, without the Edit action). */
+export function getDashboardStatExportColumns(statKey: DashboardStatKey): ExportColumn<DashboardStatRow>[] {
+  return getStatColumns(statKey).map((column) => ({ label: column.label, getValue: column.getValue }));
+}
+
+function getStatColumns(statKey: DashboardStatKey): StatColumn[] {
+  const identityColumns: StatColumn[] = [
     {
       key: "bpTrNo",
       label: "BP / TR No.",
@@ -54,21 +81,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     { key: "mobileNo", label: "Phone", width: 130, getValue: (row) => row.mobileNo },
   ];
 
-  const actionColumn: ExcelColumn<DashboardStatRow> = {
-    key: "actions",
-    label: "Action",
-    width: 110,
-    getValue: () => "Edit",
-    render: (row) => (
-      <Link
-        href={`/customers/${row.customerId}/edit`}
-        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-primary")}
-      >
-        <PencilSimpleIcon size={14} />
-        Edit
-      </Link>
-    ),
-  };
 
   if (statKey === "survey-done") {
     return [
@@ -90,7 +102,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
         getValue: (row) => row.approvalStatus,
         render: (row) => <StatusBadge status={row.approvalStatus} />,
       },
-      actionColumn,
     ];
   }
 
@@ -101,7 +112,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       { key: "totalGi", label: "Total GI", width: 130, getValue: (row) => row.totalGi },
       { key: "giReportNo", label: "GI Report No.", width: 170, getValue: (row) => row.giReportNo },
       { key: "giBillDone", label: "GI Bill", width: 120, getValue: (row) => row.giBillDone },
-      actionColumn,
     ];
   }
 
@@ -117,7 +127,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
         render: (row) => <StatusBadge status={row.gcStatus} />,
       },
       { key: "gcBillDone", label: "GC Bill", width: 120, getValue: (row) => row.gcBillDone },
-      actionColumn,
     ];
   }
 
@@ -128,7 +137,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
       { key: "regulatorNo", label: "Regulator No.", width: 150, getValue: (row) => row.regulatorNo },
       { key: "meterReading", label: "Meter Reading", width: 140, getValue: (row) => row.meterReading },
-      actionColumn,
     ];
   }
 
@@ -138,7 +146,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       { key: "giReportNo", label: "JMR / GI Report No.", width: 180, getValue: (row) => row.giReportNo },
       { key: "jmrDone", label: "JMR Done", width: 130, getValue: (row) => row.jmrDone },
       { key: "jmrSubmittedInPbg", label: "Submitted in PBG", width: 160, getValue: (row) => row.jmrSubmittedInPbg },
-      actionColumn,
     ];
   }
 
@@ -155,7 +162,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
         getValue: (row) => row.billingStatus,
         render: (row) => <StatusBadge status={row.billingStatus} />,
       },
-      actionColumn,
     ];
   }
 
@@ -172,7 +178,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
         getValue: (row) => row.approvalStatus || row.status,
         render: (row) => <StatusBadge status={row.approvalStatus || row.status} />,
       },
-      actionColumn,
     ];
   }
 
@@ -181,7 +186,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       ...identityColumns,
       { key: "commissioningDate", label: "Commissioning Date", width: 170, getValue: (row) => formatMaybeDate(row.commissioningDate) },
       { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
-      actionColumn,
     ];
   }
 
@@ -189,7 +193,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "valveChamberCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.valveChamberCompletedOn) },
-      actionColumn,
     ];
   }
 
@@ -197,7 +200,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "preCommissioningCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.preCommissioningCompletedOn) },
-      actionColumn,
     ];
   }
 
@@ -205,7 +207,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "poleMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.poleMarkerCompletedOn) },
-      actionColumn,
     ];
   }
 
@@ -213,7 +214,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "routeMarkerCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.routeMarkerCompletedOn) },
-      actionColumn,
     ];
   }
 
@@ -222,7 +222,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       ...identityColumns,
       { key: "connectionCompletedOn", label: "Connection Completed On", width: 190, getValue: (row) => formatMaybeDate(row.connectionCompletedOn) },
       { key: "meterNo", label: "Meter No.", width: 140, getValue: (row) => row.meterNo },
-      actionColumn,
     ];
   }
 
@@ -230,7 +229,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "siteExpensesCompletedOn", label: "Completed On", width: 160, getValue: (row) => formatMaybeDate(row.siteExpensesCompletedOn) },
-      actionColumn,
     ];
   }
 
@@ -239,7 +237,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       ...identityColumns,
       { key: "layingDate", label: "Laying Date", width: 150, getValue: (row) => formatMaybeDate(row.layingDate) },
       { key: "pipeSummary", label: "Pipe Summary", width: 220, getValue: (row) => row.pipeSummary },
-      actionColumn,
     ];
   }
 
@@ -248,7 +245,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       ...identityColumns,
       { key: "testingDate", label: "Testing Date", width: 150, getValue: (row) => formatMaybeDate(row.testingDate) },
       { key: "purgingDate", label: "Purging Date", width: 150, getValue: (row) => formatMaybeDate(row.purgingDate) },
-      actionColumn,
     ];
   }
 
@@ -263,7 +259,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
         render: (row) => <StatusBadge status={row.complaintStatus} />,
       },
       { key: "complaintDate", label: "Complaint Date", width: 150, getValue: (row) => formatMaybeDate(row.complaintDate) },
-      actionColumn,
     ];
   }
 
@@ -272,7 +267,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       ...identityColumns,
       { key: "resolvedDate", label: "Resolved Date", width: 150, getValue: (row) => formatMaybeDate(row.resolvedDate) },
       { key: "resolutionRemark", label: "Resolution Remark", width: 260, getValue: (row) => row.resolutionRemark },
-      actionColumn,
     ];
   }
 
@@ -280,7 +274,6 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
     return [
       ...identityColumns,
       { key: "connectionRemark", label: "Connection Remark", width: 300, getValue: (row) => row.connectionRemark },
-      actionColumn,
     ];
   }
 
@@ -296,6 +289,5 @@ export function getDashboardStatColumns(statKey: DashboardStatKey): ExcelColumn<
       getValue: (row) => row.status,
       render: (row) => <StatusBadge status={row.status} />,
     },
-    actionColumn,
   ];
 }

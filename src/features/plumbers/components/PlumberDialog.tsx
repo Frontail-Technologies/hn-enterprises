@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/shared/FormField";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,13 @@ import { useCreatePlumber, useUpdatePlumber, useDeletePlumber } from "../hooks/u
 import { buildPlumberFormSchema } from "../schemas/plumber-form.schema";
 import type { Plumber, PlumberFormValues } from "../types/plumber.types";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { AvatarUploadField } from "@/components/shared/AvatarUploadField";
 
 const emptyValues: PlumberFormValues = {
   name: "",
   type: "individual",
   contactNumber: "",
+  avatarUrl: "",
   status: "active",
   remarks: "",
 };
@@ -38,6 +40,7 @@ function valuesFromPlumber(plumber: Plumber): PlumberFormValues {
     name: plumber.name,
     type: plumber.type,
     contactNumber: plumber.contactNumber,
+    avatarUrl: plumber.avatarUrl,
     status: plumber.status,
     remarks: plumber.remarks,
   };
@@ -57,6 +60,7 @@ export function PlumberDialog({
     resolver: zodResolver(schema),
     defaultValues: plumber ? valuesFromPlumber(plumber) : emptyValues,
   });
+  const watchedName = useWatch({ control, name: "name" });
   const createPlumber = useCreatePlumber();
   const updatePlumber = useUpdatePlumber(plumber?.id ?? "");
   const deletePlumber = useDeletePlumber();
@@ -80,8 +84,8 @@ export function PlumberDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{plumber ? "Edit Plumber" : "Add Plumber"}</DialogTitle>
           <DialogDescription>
             {plumber
@@ -91,7 +95,14 @@ export function PlumberDialog({
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+            <Controller
+              control={control}
+              name="avatarUrl"
+              render={({ field }) => (
+                <AvatarUploadField name={watchedName || "Plumber"} value={field.value} onChange={field.onChange} recordId={plumber?.id} />
+              )}
+            />
             <FormField label="Name">
               <Input {...register("name")} placeholder="e.g. Rahim Sheikh or Group A" />
               {formState.errors.name ? (
@@ -145,7 +156,7 @@ export function PlumberDialog({
             </FormField>
           </div>
 
-          <DialogFooter className="mx-0 mb-0 flex w-full shrink-0 flex-row items-center justify-between rounded-b-xl border-t bg-muted/50 p-4 sm:justify-between">
+          <DialogFooter className="flex w-full shrink-0 flex-row items-center justify-between border-t border-border px-6 py-4 sm:justify-between">
             {plumber?.id ? (
               <DeleteConfirmDialog
                 itemName={plumber.name}

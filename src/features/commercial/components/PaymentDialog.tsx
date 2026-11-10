@@ -160,15 +160,15 @@ export function PaymentDialog({
           {label}
         </DialogTrigger>
       )}
-      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
-        <DialogHeader className="shrink-0 border-b border-border/70 p-4">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle>{payment ? "Edit Payment / Expense" : "Add Payment / Expense"}</DialogTitle>
           <DialogDescription>Record payment, receipt and approval information.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           {defaultProjectId && defaultProjectName ? (
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs sm:col-span-2">
               <span className="text-muted-foreground">Project</span>
               <span className="font-semibold text-foreground">{defaultProjectName}</span>
             </div>
@@ -236,12 +236,8 @@ export function PaymentDialog({
             </FormField>
           ) : null}
 
-          <FormField label="Purpose / What Bought">
-            <Input {...register("purpose")} placeholder="E.g. Pipe clamp purchase" />
-          </FormField>
-
           {isPlumberCategory ? (
-            <FormField label="Plumber / Team">
+            <FormField label="Plumber / Team" className={isAdmin ? undefined : "sm:col-span-2"}>
               <Controller
                 control={control}
                 name="plumberId"
@@ -257,17 +253,20 @@ export function PaymentDialog({
               />
             </FormField>
           ) : (
-            <FormField label="Payee">
+            <FormField label="Payee" className={isAdmin ? undefined : "sm:col-span-2"}>
               <Input {...register("paidTo")} placeholder="Person or vendor name" />
             </FormField>
           )}
 
-          <FormField label="Address">
+          <FormField label="Purpose / What Bought" className="sm:col-span-2">
+            <Input {...register("purpose")} placeholder="E.g. Pipe clamp purchase" />
+          </FormField>
+
+          <FormField label="Address" className="sm:col-span-2">
             <Input {...register("address")} placeholder="Site / work address (optional)" />
           </FormField>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Amount">
+          <FormField label="Amount">
               <Input type="number" {...register("amount")} />
             </FormField>
             <FormField label="Date">
@@ -277,7 +276,6 @@ export function PaymentDialog({
                 render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} />}
               />
             </FormField>
-          </div>
 
           <FormField label="Payment Mode">
             <Controller
@@ -293,20 +291,6 @@ export function PaymentDialog({
               )}
             />
           </FormField>
-
-          <Controller
-            control={control}
-            name="evidence"
-            render={({ field }) => (
-              <ImageProofField
-                label="Receipt / Photo"
-                description="Upload payment proof, expense bill or receipt image."
-                images={field.value}
-                onChange={field.onChange}
-                module="expenses"
-              />
-            )}
-          />
 
           <FormField label="Status">
             <Controller
@@ -329,16 +313,31 @@ export function PaymentDialog({
             />
           </FormField>
 
-          <FormField label="Remarks">
+          <Controller
+            control={control}
+            name="evidence"
+            render={({ field }) => (
+              <ImageProofField
+                label="Receipt / Photo"
+                description="Upload payment proof, expense bill or receipt image."
+                images={field.value}
+                onChange={field.onChange}
+                module="expenses"
+                className="sm:col-span-2"
+              />
+            )}
+          />
+
+          <FormField label="Remarks" className="sm:col-span-2">
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
 
           {validationMessage || submitError ? (
-            <p className="text-xs text-destructive">{validationMessage || submitError}</p>
+            <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
           ) : null}
         </div>
 
-        <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+        <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
           <Button type="button" onClick={() => void onSubmit()} disabled={isSaving}>
             {isSaving ? "Saving..." : "Save"}

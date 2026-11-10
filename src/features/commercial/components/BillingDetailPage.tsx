@@ -1,29 +1,36 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, NotePencilIcon } from "@phosphor-icons/react";
+import { BuildingsIcon, CalendarBlankIcon, ClockIcon, DownloadSimpleIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared/DataTable";
+import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { DetailRows, ProgressList, RecordHeader, RecordLayout } from "@/components/shared/record";
+import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { exportGridToExcel } from "@/lib/export-excel";
 import { useProjectQuery } from "@/features/projects/hooks/useProjects";
 import { useBillPaymentsQuery, useBillQuery, useDeleteBill, useUpdateBillPaymentStatus } from "../hooks/useBills";
 import { getBillingPaymentColumns } from "../hooks/billing-payment.columns";
 import { buildInvoiceGrid } from "../mappers/billing-invoice.mapper";
-import type { BillPaymentStatus } from "../types/bill.types";
+import type { BillPayment, BillPaymentStatus } from "../types/bill.types";
 import { formatDate, money } from "../utils/format";
 import { BillDialog } from "./billing/BillDialog";
 import { PaymentDialog } from "./billing/PaymentDialog";
-import { Panel } from "./shared/Panel";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 
 export function BillingDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { data: bill, isLoading, isError } = useBillQuery(id);
-  const { data: payments = [] } = useBillPaymentsQuery(id);
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    isError: paymentsError,
+    refetch: refetchPayments,
+  } = useBillPaymentsQuery(id);
   const { data: project } = useProjectQuery(bill?.projectId ?? "");
   const deleteMutation = useDeleteBill();
   const updatePaymentStatus = useUpdateBillPaymentStatus(id);
@@ -34,7 +41,14 @@ export function BillingDetailPage({ id }: { id: string }) {
   }
 
   if (isError || !bill) {
-    return <p className="p-4 text-sm text-destructive">Unable to load this bill.</p>;
+    return (
+      <EmptyState
+        illustration="error"
+        title="Couldn't load this bill"
+        description="It may have been removed, or the connection failed."
+        action={{ label: "Back to billing", onClick: () => router.push("/billing") }}
+      />
+    );
   }
 
   function handleStatusChange(paymentId: string, status: BillPaymentStatus) {
@@ -49,12 +63,25 @@ export function BillingDetailPage({ id }: { id: string }) {
     void exportGridToExcel(`invoice-${bill.billNumber}.xlsx`, grid);
   }
 
+  // Paid + pending is the amount billed (as the API reports it), so the bar always reaches 100% when settled.
+  const billed = bill.paidAmount + bill.pendingAmount;
+
   return (
-    <div className="space-y-5">
-      <PageHeader
+    <div className="flex flex-col gap-5">
+      <RecordHeader
         title={bill.billNumber}
+        badges={<StatusBadge status={bill.status} />}
+        meta={[
+          { icon: BuildingsIcon, label: bill.projectName },
+          { icon: CalendarBlankIcon, label: `Billed ${formatDate(bill.billDate)}` },
+          { icon: ClockIcon, label: bill.dueDate ? `Due ${formatDate(bill.dueDate)}` : null },
+        ]}
+        figure={{
+          label: "Balance due",
+          value: <span className={bill.pendingAmount > 0 ? "text-destructive" : undefined}>{money(bill.pendingAmount)}</span>,
+        }}
         actions={
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <>
             <BillDialog bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />
             <DeleteConfirmDialog
               itemName={`Bill ${bill.billNumber}`}
@@ -65,38 +92,85 @@ export function BillingDetailPage({ id }: { id: string }) {
                 })
               }
             />
-          </div>
+          </>
         }
       />
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <StatusBadge status={bill.status} />
-        <span>
-          Bill date: <span className="font-semibold text-foreground">{formatDate(bill.billDate)}</span>
-        </span>
-        <span>
-          Total: <span className="font-semibold text-foreground">{money(bill.totalAmount)}</span>
-        </span>
-        <span>
-          Paid: <span className="font-semibold text-foreground">{money(bill.paidAmount)}</span>
-        </span>
-        <span>
-          Pending: <span className="font-semibold text-destructive">{money(bill.pendingAmount)}</span>
-        </span>
-      </div>
-      <Panel
-        title="Payment History"
-        actions={
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            <PaymentDialog billId={bill.id} />
-            <Button type="button" variant="outline" size="sm" onClick={handleDownloadInvoice}>
-              <DownloadSimpleIcon size={14} />
-              Download Invoice
-            </Button>
-          </div>
+
+      <RecordLayout
+        rail={
+          <SectionCard title="Bill summary">
+            <div className="flex flex-col gap-4">
+              <ProgressList items={[{ label: "Collected", value: bill.paidAmount, total: billed }]} />
+              <DetailRows
+                rows={[
+                  { label: "Total", value: money(bill.totalAmount) },
+                  { label: "Tax", value: money(bill.tax) },
+                  { label: "Paid", value: money(bill.paidAmount) },
+                  { label: "Pending", value: <span className="text-destructive">{money(bill.pendingAmount)}</span> },
+                  { label: "Bill date", value: formatDate(bill.billDate) },
+                  { label: "Due date", value: bill.dueDate ? formatDate(bill.dueDate) : null },
+                  { label: "Remarks", value: bill.remarks },
+                ]}
+              />
+            </div>
+          </SectionCard>
         }
       >
-        <DataTable data={payments} columns={columns} />
-      </Panel>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-section-title">Payment history</h2>
+          <PaymentHistory
+            payments={payments}
+            columns={columns}
+            isLoading={paymentsLoading}
+            isError={paymentsError}
+            onRetry={() => void refetchPayments()}
+            actions={
+              <>
+                <PaymentDialog billId={bill.id} />
+                <Button type="button" variant="outline" size="compact" onClick={handleDownloadInvoice}>
+                  <DownloadSimpleIcon size={14} />
+                  Download Invoice
+                </Button>
+              </>
+            }
+          />
+        </section>
+      </RecordLayout>
     </div>
+  );
+}
+
+function PaymentHistory({
+  payments,
+  columns,
+  isLoading,
+  isError,
+  onRetry,
+  actions,
+}: {
+  payments: BillPayment[];
+  columns: ListColumn<BillPayment>[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  actions: ReactNode;
+}) {
+  const list = useListState({ pageSize: 25, storageKey: "bill-payments" });
+  const { pageRows, total } = useClientRows(payments, list, { columns });
+
+  return (
+    <ListTable
+      itemLabel="payment"
+      rows={pageRows}
+      total={total}
+      columns={columns}
+      state={list}
+      searchPlaceholder="Search payments..."
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={onRetry}
+      actions={actions}
+      empty={{ illustration: "billing", title: "No payments recorded", description: "Payments added against this bill will appear here." }}
+    />
   );
 }

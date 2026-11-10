@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { CaretDownIcon, DatabaseIcon, DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { CaretDownIcon, DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
+import { ListTable, useClientRows, type ListColumn } from "@/components/shared/list";
+import { PageShell } from "@/components/shared/PageShell";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,16 +14,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import { UnderlineTabs } from "@/components/shared/UnderlineTabs";
-import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
 import { MasterValueDrawer } from "./MasterValueDrawer";
 import { MasterValueDeleteButton } from "./MasterValueDeleteButton";
 import { useMasterValuesTab } from "./useMasterValuesTab";
 import { masterTabs, type MasterTabId, type MasterValue, type MasterValueCategory } from "../../types/masters.types";
+
+const valueColumns: ListColumn<MasterValue>[] = [
+  { id: "value", header: "Value", value: (row) => row.value, isTitle: true, hideable: false, sortable: true, width: 240 },
+  { id: "description", header: "Description", value: (row) => row.description, sortable: true, width: 360, grow: true },
+  { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
+];
+
+// Same fields the tab searched before the migration.
+const valueSearchText = (row: MasterValue) => `${row.value} ${row.description}`;
 
 export function MasterValuesTab({
   activeTab,
@@ -31,98 +37,80 @@ export function MasterValuesTab({
 }) {
   const category = activeTab;
   const tab = useMasterValuesTab(category);
-
-  const valueColumns: ColumnDef<MasterValue>[] = [
-    { key: "value", header: "Value", render: (row) => <span className="font-semibold text-foreground">{row.value}</span> },
-    { key: "description", header: "Description" },
-    { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status} /> },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-28",
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <MasterValueDrawer category={category} value={row} iconOnly />
-          <MasterValueDeleteButton value={row} category={category} />
-        </div>
-      ),
-    },
-  ];
+  const { pageRows, total } = useClientRows(tab.values, tab.list, { columns: valueColumns, searchText: valueSearchText });
+  const noun = activeTab.toLowerCase();
 
   return (
     <PageShell
       title="Masters"
-      icon={DatabaseIcon}
       tabs={
         <div className="border-b border-border">
           <UnderlineTabs items={masterTabs} active={activeTab} onChange={(nextTab) => onTabChange(nextTab as MasterTabId)} />
         </div>
       }
-      actions={
-        <>
-          <div className="w-full max-w-full sm:w-64">
-            <Input
-              value={tab.search.value}
-              onChange={(event) => tab.search.onChange(event.target.value)}
-              placeholder={`Search ${activeTab.toLowerCase()}...`}
-              className="h-8"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button type="button" variant="outline" size="compact">
-                    More
-                    <CaretDownIcon size={12} />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={tab.exportAction.onExport} disabled={tab.exportAction.isPending}>
-                  <DownloadSimpleIcon size={14} />
-                  {tab.exportAction.isPending ? "Exporting..." : "Export Excel"}
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href={`/masters/values/import?category=${encodeURIComponent(category)}`} />}>
-                  <UploadSimpleIcon size={14} />
-                  Import Values
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <MasterValueDrawer category={category} />
-          </div>
-        </>
-      }
+      actions={<MasterValueDrawer category={category} />}
       contentClassName="space-y-3"
     >
       {category === "Material Categories" ? (
-        <div className="rounded-sm border border-border bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
+        <div className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
           Material categories are only groups like GI Pipe, MDPE Pipe, Valve, Tools. Actual stock items are added from Inventory & Material using Add Material.
         </div>
       ) : null}
-      <BulkDeleteBar
-        selectedCount={tab.selection.selectedIds.size}
-        onClear={tab.selection.clear}
-        onDelete={() => tab.bulkDelete.onOpenChange(true)}
-      />
-      <PaginatedDataTable
-        data={tab.data}
+
+      <ListTable
+        itemLabel="value"
+        rows={pageRows}
+        total={total}
         columns={valueColumns}
+        state={tab.list}
+        searchPlaceholder={`Search ${noun}...`}
         isLoading={tab.isLoading}
-        selection={{
-          selectedIds: tab.selection.selectedIds,
-          onToggleRow: tab.selection.toggleRow,
-          onTogglePage: tab.selection.toggleAllOnPage,
-          getRowLabel: (row) => row.value,
-        }}
+        isError={tab.isError}
+        onRetry={() => void tab.refetch()}
+        selectable
+        getRowLabel={(row) => row.value}
+        bulkActions={() => (
+          <Button type="button" variant="ghost" size="compact" onClick={() => tab.bulkDelete.onOpenChange(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        rowActionsWidth={88}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <MasterValueDrawer category={category} value={row} iconOnly />
+            <MasterValueDeleteButton value={row} category={category} />
+          </div>
+        )}
+        empty={{ illustration: "records", title: `No ${noun} yet`, description: "Add values here or import them from Excel." }}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline" size="compact">
+                  More
+                  <CaretDownIcon size={12} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={tab.exportAction.onExport} disabled={tab.exportAction.isPending}>
+                <DownloadSimpleIcon size={14} />
+                {tab.exportAction.isPending ? "Exporting..." : "Export Excel"}
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href={`/masters/values/import?category=${encodeURIComponent(category)}`} />}>
+                <UploadSimpleIcon size={14} />
+                Import Values
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
 
       <BulkDeleteDialog
         open={tab.bulkDelete.open}
         onOpenChange={tab.bulkDelete.onOpenChange}
-        selectedCount={tab.selection.selectedIds.size}
+        selectedCount={tab.list.selection.size}
         entityLabel="Value"
         isSubmitting={tab.bulkDelete.isPending}
         onConfirm={tab.bulkDelete.onConfirm}

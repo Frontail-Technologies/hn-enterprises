@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { cn } from "@/lib/utils";
@@ -63,11 +64,14 @@ export function DynamicFieldGrid({
   isLoading,
   dragEnabled,
   selection,
+  emptyState,
 }: {
   fields: CustomField[];
   isLoading?: boolean;
   dragEnabled: boolean;
   selection?: DynamicFieldGridSelection;
+  /** Shown when there are no fields to list; the page knows why (search, status filter, none at all). */
+  emptyState?: ReactNode;
 }) {
   const [groups, setGroups] = useState<GroupedFields>(() => groupFields(fields));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -143,7 +147,7 @@ export function DynamicFieldGrid({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center rounded-lg border border-border/70 bg-white py-16">
+      <div className="flex justify-center rounded-card border border-border bg-card py-16 shadow-card">
         <LoadingSpinner size="sm" />
       </div>
     );
@@ -151,8 +155,14 @@ export function DynamicFieldGrid({
 
   if (!groupNames.length) {
     return (
-      <div className="rounded-lg border border-dashed border-border/70 bg-white px-4 py-16 text-center text-sm text-muted-foreground">
-        No fields yet. Add your first field or import a sheet to get started.
+      <div className="rounded-card border border-border bg-card shadow-card">
+        {emptyState ?? (
+          <EmptyState
+            illustration="records"
+            title="No fields yet"
+            description="Add your first field or import a sheet to get started."
+          />
+        )}
       </div>
     );
   }
@@ -169,7 +179,7 @@ export function DynamicFieldGrid({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="overflow-hidden rounded-lg border border-border/70 bg-white">
+      <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
         <div className={cn("grid gap-2 border-b border-border/70 bg-table-header px-3 py-2 text-xs font-semibold text-muted-foreground", gridTemplate)}>
           <span />
           {selection && <span />}
@@ -206,7 +216,7 @@ export function DynamicFieldGrid({
       </div>
       <DragOverlay>
         {activeField ? (
-          <div className="rounded-md border border-primary/40 bg-white px-3 py-2 text-sm font-medium text-foreground shadow-lg">
+          <div className="rounded-md border border-primary/40 bg-card px-3 py-2 text-sm font-medium text-foreground shadow-lg">
             {activeField.label}
           </div>
         ) : null}
@@ -243,7 +253,7 @@ function FieldRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "grid items-center gap-2 bg-white px-3 py-2 text-sm",
+        "grid items-center gap-2 bg-card px-3 py-2 text-sm",
         gridTemplate,
         isDragging && "z-10 opacity-60",
       )}

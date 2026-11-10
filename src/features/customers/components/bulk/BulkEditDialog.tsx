@@ -295,7 +295,7 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
                 </li>
               ))}
             </ul>
-            <p className="pt-0.5 text-[11px] text-muted-foreground">
+            <p className="pt-0.5 text-xs text-muted-foreground">
               {selectedCount} customer{selectedCount === 1 ? "" : "s"} will be updated.
             </p>
           </div>
@@ -317,7 +317,7 @@ export function BulkEditDialog({ open, onOpenChange, selectedCount, isSubmitting
 function BulkEditSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-2.5">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
       <div className="space-y-3">{children}</div>
     </div>
   );

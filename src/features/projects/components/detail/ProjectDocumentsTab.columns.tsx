@@ -1,40 +1,39 @@
 "use client";
 
-import { DownloadSimpleIcon, EyeIcon, TrashIcon } from "@phosphor-icons/react";
-import type { ColumnDef } from "@/components/shared/DataTable";
+import { DownloadSimpleIcon, EyeIcon } from "@phosphor-icons/react";
 import { ActionButton } from "@/components/shared/ActionButton";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import type { ListColumn } from "@/components/shared/list";
 import { resolveFileUrl } from "@/lib/upload";
 import type { ProjectDocument } from "../../types/project.types";
 import { formatDate } from "./project-detail.utils";
 
-export function buildProjectDocumentColumns(onDelete: (id: string) => void): ColumnDef<ProjectDocument>[] {
-  return [
-    { key: "type", header: "Type" },
-    { key: "documentName", header: "Document Name", className: "min-w-48" },
-    { key: "number", header: "No. / Reference", className: "min-w-40" },
-    { key: "documentDate", header: "Document Date", render: (doc) => formatDate(doc.documentDate) },
-    { key: "amount", header: "Amount" },
-    { key: "fileName", header: "File", className: "min-w-52" },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-64",
-      render: (doc) => {
-        const href = resolveFileUrl(doc.fileUrl);
-        return (
-          <div className="flex flex-wrap items-center gap-1">
-            <ActionButton label="Preview" icon={<EyeIcon size={13} />} href={href} disabled={!href} />
-            <ActionButton
-              label="Download"
-              icon={<DownloadSimpleIcon size={13} />}
-              href={href}
-              download={doc.fileName || true}
-              disabled={!href}
-            />
-            <ActionButton label="Delete" icon={<TrashIcon size={13} />} onClick={() => onDelete(doc.id)} />
-          </div>
-        );
-      },
-    },
-  ];
+export const projectDocumentColumns: ListColumn<ProjectDocument>[] = [
+  { id: "type", header: "Type", value: (doc) => doc.type, sortable: true, width: 140 },
+  { id: "documentName", header: "Document name", value: (doc) => doc.documentName, isTitle: true, hideable: false, sortable: true, width: 220, grow: true },
+  { id: "number", header: "No. / Reference", value: (doc) => doc.number, sortable: true, width: 170 },
+  {
+    id: "documentDate",
+    header: "Document date",
+    value: (doc) => doc.documentDate,
+    sortable: true,
+    width: 140,
+    cell: (doc) => formatDate(doc.documentDate),
+  },
+  { id: "amount", header: "Amount", value: (doc) => doc.amount, width: 120 },
+  { id: "fileName", header: "File", value: (doc) => doc.fileName, width: 210 },
+];
+
+export const projectDocumentSearchText = (doc: ProjectDocument) =>
+  [doc.type, doc.documentName, doc.number, doc.fileName].filter(Boolean).join(" ");
+
+export function ProjectDocumentRowActions({ doc, onDelete }: { doc: ProjectDocument; onDelete: (id: string) => void }) {
+  const href = resolveFileUrl(doc.fileUrl);
+  return (
+    <div className="flex items-center gap-0.5">
+      <ActionButton label="Preview" icon={<EyeIcon size={15} />} href={href} disabled={!href} />
+      <ActionButton label="Download" icon={<DownloadSimpleIcon size={15} />} href={href} download={doc.fileName || true} disabled={!href} />
+      <DeleteConfirmDialog itemName={doc.documentName || doc.fileName || "this document"} onConfirm={() => onDelete(doc.id)} />
+    </div>
+  );
 }

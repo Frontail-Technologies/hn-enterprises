@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import {
   useTable,
@@ -30,23 +31,26 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, type EmptyIllustrationName } from "@/components/shared/EmptyState";
 import { tableDensity } from "@/components/shared/table/density";
 import { useFullViewActive } from "@/components/shared/table/FullViewContext";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
 import { TableScrollNav } from "@/components/shared/table/TableScrollNav";
-import { cn } from "@/lib/utils";
+import { cn, pluralize } from "@/lib/utils";
 import {
   enterpriseGridFeatures,
   type EnterpriseGridFeatures,
 } from "./features";
 import type { EnterpriseColumn } from "./types";
 
-const ROW_HEIGHT = 36;
+// Keep in sync with tableDensity.rowHeight (h-9.5 = 38px, DS-TABLE).
+const ROW_HEIGHT = 38;
 const SELECT_COLUMN_ID = "__select__";
 const SELECT_COLUMN_WIDTH = 44;
+const ACTIONS_COLUMN_ID = "__actions__";
+const LEGACY_PIN_COUNT = 4;
 const OVERSCAN = 10;
 const EMPTY_VALUE = "—";
 
@@ -70,6 +74,7 @@ interface EnterpriseDataGridProps<T extends { id: string }> {
   columns: EnterpriseColumn<T>[];
   data: T[];
   emptyTitle?: string;
+  emptyIllustration?: EmptyIllustrationName;
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
@@ -107,12 +112,25 @@ interface EnterpriseDataGridProps<T extends { id: string }> {
    */
   columnFilters?: ColumnFiltersState;
   onColumnFiltersChange?: (next: ColumnFiltersState) => void;
+  /** false = no own border/radius, for use inside a framed card (ListTable). */
+  framed?: boolean;
+  /** Replaces the default empty state when `data` is empty. */
+  emptyState?: ReactNode;
+  /** Renders a per-row actions cell, kept visible on the right edge. */
+  renderRowActions?: (row: T) => ReactNode;
+  rowActionsWidth?: number;
+  /** Controlled Full View (pass both to drive it from outside, e.g. a toolbar toggle). */
+  fullView?: boolean;
+  onFullViewChange?: (next: boolean) => void;
+  /** Show the count + Full View bar above the grid. Default true; it always shows inside Full View. */
+  showSummaryBar?: boolean;
 }
 
 export function EnterpriseDataGrid<T extends { id: string }>({
   columns,
   data,
   emptyTitle = "No records found",
+  emptyIllustration,
   isLoading,
   isError,
   onRetry,
@@ -131,8 +149,22 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   sortableColumnKeys,
   columnFilters: externalColumnFilters,
   onColumnFiltersChange: onExternalColumnFiltersChange,
+  framed = true,
+  emptyState,
+  renderRowActions,
+  rowActionsWidth = 96,
+  fullView: externalFullView,
+  onFullViewChange,
+  showSummaryBar = true,
 }: EnterpriseDataGridProps<T>) {
-  const [fullView, setFullView] = useState(false);
+  const [internalFullView, setInternalFullView] = useState(false);
+  const isExternalFullView = externalFullView !== undefined && onFullViewChange !== undefined;
+  const fullView = isExternalFullView ? externalFullView : internalFullView;
+  const setFullView = (next: boolean | ((current: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(fullView) : next;
+    if (isExternalFullView) onFullViewChange!(value);
+    else setInternalFullView(value);
+  };
   const inheritedFullView = useFullViewActive();
   const isFullViewActive = fullView || inheritedFullView;
   const effectiveFillHeight = fillHeight || isFullViewActive;
@@ -148,7 +180,10 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   const enableSelection = rowSelection !== undefined;
 
   const pinnedStart = useMemo(() => {
-    const businessPins = columns.slice(0, 4).map((column) => column.key);
+    // Columns marked `pin` are pinned; grids that mark none keep the original
+    // first-four pinning.
+    const explicit = columns.filter((column) => column.pin);
+    const businessPins = (explicit.length ? explicit : columns.slice(0, LEGACY_PIN_COUNT)).map((column) => column.key);
     return enableSelection ? [SELECT_COLUMN_ID, ...businessPins] : businessPins;
   }, [columns, enableSelection]);
 
@@ -206,8 +241,22 @@ export function EnterpriseDataGrid<T extends { id: string }>({
       });
     }
 
+    if (renderRowActions) {
+      defs.push({
+        id: ACTIONS_COLUMN_ID,
+        header: () => null,
+        cell: () => null,
+        size: rowActionsWidth,
+        minSize: rowActionsWidth,
+        maxSize: rowActionsWidth,
+        enableResizing: false,
+        enableSorting: false,
+        enableColumnFilter: false,
+      });
+    }
+
     return defs;
-  }, [columns, enableSelection, isExternalSort, sortableColumnKeys]);
+  }, [columns, enableSelection, isExternalSort, sortableColumnKeys, renderRowActions, rowActionsWidth]);
 
   const table = useTable({
     features: enterpriseGridFeatures,
@@ -248,8 +297,8 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   const visibleCount = rows.length;
   const resultSummaryText =
     visibleCount === totalCount
-      ? `${totalCount} ${totalCount === 1 ? itemLabel : `${itemLabel}s`}`
-      : `${visibleCount} of ${totalCount} ${itemLabel}s`;
+      ? `${totalCount} ${pluralize(itemLabel, totalCount)}`
+      : `${visibleCount} of ${totalCount} ${pluralize(itemLabel)}`;
 
   const filterSignature = useMemo(
     () => JSON.stringify(columnFilters),
@@ -302,20 +351,26 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   }
 
   const showLoading = Boolean(isLoading);
-  const showError = !showLoading && isError && rows.length === 0;
-  const showEmpty = !showLoading && !showError && rows.length === 0;
+  const showError = !showLoading && isError && data.length === 0;
+  // Only an empty dataset replaces the grid. When column filters hide every
+  // row the header stays (with a message below it) so filters can be cleared.
+  const showEmpty = !showLoading && !showError && data.length === 0;
+  const filteredToNothing = !showLoading && !showError && data.length > 0 && rows.length === 0;
+  // An empty/error grid shrinks to its message instead of stretching a blank
+  // card down the page (Full View still fills the screen).
+  const stretch = effectiveFillHeight && (isFullViewActive || !(showEmpty || showError));
 
   const gridBody = (
     <div
       className={cn(
         "flex flex-col bg-card",
-        isFullViewActive ? "rounded-none" : "rounded-card border border-border",
-        effectiveFillHeight && "h-full min-h-0 flex-1",
+        isFullViewActive || !framed ? "rounded-none" : "rounded-card border border-border",
+        stretch && "h-full min-h-0 flex-1",
       )}
     >
-      {enableFullView ? (
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-2 py-1.5">
-          <span className="text-xs text-muted-foreground">
+      {enableFullView && (showSummaryBar || isFullViewActive) ? (
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-1.5">
+          <span className="text-[13px] text-muted-foreground">
             {resultSummaryText}
           </span>
           <FullViewToggleButton
@@ -328,23 +383,32 @@ export function EnterpriseDataGrid<T extends { id: string }>({
       <div
         className={cn(
           "group/enterprise-grid relative flex min-h-0 flex-col",
-          effectiveFillHeight
+          stretch
             ? "flex-1"
             : (maxHeightClassName ?? "max-h-[68vh]"),
         )}
       >
         {showLoading ? (
-          <div className="flex items-center justify-center px-3 py-16">
-            <LoadingSpinner size="lg" />
+          <div aria-busy="true" aria-label="Loading records">
+            <div className={cn(tableDensity.headerBg, tableDensity.rowHeight, "border-b border-border")} />
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className={cn("flex items-center gap-6 border-b border-border px-3", tableDensity.rowHeight)}>
+                <Skeleton className="h-3 w-40 rounded-full" />
+                <Skeleton className="h-3 w-24 rounded-full" />
+                <Skeleton className="h-3 w-32 rounded-full" />
+                <Skeleton className="hidden h-3 w-20 rounded-full md:block" />
+              </div>
+            ))}
           </div>
         ) : showError ? (
           <EmptyState
+            illustration="error"
             title="Couldn't load records"
             description="Check your connection and try again."
             action={onRetry ? { label: "Retry", onClick: onRetry } : undefined}
           />
         ) : showEmpty ? (
-          <EmptyState title={emptyTitle} />
+          (emptyState ?? <EmptyState title={emptyTitle} illustration={emptyIllustration} />)
         ) : (
           <>
             <div
@@ -366,10 +430,22 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                           startPinnedCount,
                         );
 
+                        if (header.id === ACTIONS_COLUMN_ID) {
+                          return (
+                            <div
+                              key={header.id}
+                              style={actionsStyle(rowActionsWidth)}
+                              className={cn(tableDensity.rowHeight, tableDensity.headerBg, "z-30 border-b border-l border-border")}
+                            >
+                              <span className="sr-only">Actions</span>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={header.id}
-                            style={pinnedStyle(column, pinned)}
+                            style={{ ...pinnedStyle(column, pinned), flexGrow: growOf(column) }}
                             className={cn(
                               tableDensity.rowHeight,
                               tableDensity.headerText,
@@ -486,10 +562,28 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                             startPinnedCount,
                           );
 
+                          if (cell.column.id === ACTIONS_COLUMN_ID) {
+                            return (
+                              <div
+                                key={cell.id}
+                                data-row-ignore-click="true"
+                                style={actionsStyle(rowActionsWidth)}
+                                className={cn(
+                                  tableDensity.rowHeight,
+                                  tableDensity.pinnedBodyBg,
+                                  "z-10 flex items-center justify-end border-b border-l border-border px-1.5 group-hover:bg-surface-hover",
+                                  isSelected && "bg-primary-soft group-hover:bg-primary-soft",
+                                )}
+                              >
+                                {renderRowActions?.(row.original)}
+                              </div>
+                            );
+                          }
+
                           return (
                             <div
                               key={cell.id}
-                              style={pinnedStyle(cell.column, pinned)}
+                              style={{ ...pinnedStyle(cell.column, pinned), flexGrow: growOf(cell.column) }}
                               className={cn(
                                 tableDensity.rowHeight,
                                 tableDensity.bodyText,
@@ -529,6 +623,16 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                     );
                   })}
                 </div>
+                {filteredToNothing ? (
+                  <div className="sticky left-0 w-full max-w-3xl">
+                    <EmptyState
+                      illustration="search"
+                      title="No matching records"
+                      description="No rows match the column filters."
+                      action={{ label: "Clear column filters", onClick: () => table.setColumnFilters([]) }}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           </>
@@ -561,6 +665,16 @@ function pinnedStyle(
     position: pinned ? "sticky" : "relative",
     left: pinned === "start" ? column.getStart("start") : undefined,
   };
+}
+
+/** Columns marked `grow` absorb spare width so the grid fills its container. */
+function growOf(column: { columnDef: { meta?: unknown } }): number | undefined {
+  return (column.columnDef.meta as { grow?: boolean } | undefined)?.grow ? 1 : undefined;
+}
+
+/** The actions column is always last, so it sticks to the right edge. */
+function actionsStyle(width: number): CSSProperties {
+  return { width, position: "sticky", right: 0, marginLeft: "auto" };
 }
 
 type PinnableColumn = {
@@ -676,7 +790,7 @@ function EnterpriseColumnFilter<T extends { id: string }>({
             <p className="text-xs font-semibold text-foreground">
               {columnDef.label}
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Select values to show
             </p>
           </div>
@@ -688,7 +802,7 @@ function EnterpriseColumnFilter<T extends { id: string }>({
           />
           <div className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-border p-1">
             {isRemote && remoteLoading ? (
-              <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Loading values...</p>
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">Loading values...</p>
             ) : null}
             {values.map((value) => (
               <label

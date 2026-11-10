@@ -1,15 +1,38 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeftIcon, CaretRightIcon, CheckCircleIcon, DownloadSimpleIcon, FileCsvIcon, XIcon } from "@phosphor-icons/react";
+import { usePathname } from "next/navigation";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowsClockwiseIcon,
+  CheckCircleIcon,
+  DownloadSimpleIcon,
+  FileXlsIcon,
+  UploadSimpleIcon,
+  WarningCircleIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageIcon, pageIconForPath } from "@/components/shared/PageIcon";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
 import { cn } from "@/lib/utils";
 import { ImportFilterTabs } from "./ImportFilterTabs";
 import { ImportPreviewTable } from "./ImportPreviewTable";
 import { ImportRowEditorModal } from "./ImportRowEditorModal";
+import { ImportStepper } from "./ImportStepper";
 import { ImportSummary } from "./ImportSummary";
 import { useImportWorkspace } from "./useImportWorkspace";
 import type { ImportWorkspaceConfig } from "./types";
@@ -23,6 +46,7 @@ function formatFileSize(bytes: number) {
 }
 
 const VIEWPORT_HEIGHT_CLASS = "md:flex md:h-[calc(100dvh-4.5rem)] md:min-h-0 md:flex-col";
+const ENTER = "animate-in fade-in-0 slide-in-from-bottom-2 duration-300 fill-mode-both";
 
 export function ImportWorkspace<TData>({
   config,
@@ -37,10 +61,14 @@ export function ImportWorkspace<TData>({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [fileTypeError, setFileTypeError] = useState("");
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const workspace = useImportWorkspace(config);
+  const sectionIcon = pageIconForPath(usePathname());
   const isPreview = workspace.view === "preview";
   const [fullView, setFullView] = useState(false);
+  const step: 0 | 1 | 2 = !isPreview ? 0 : workspace.commitResult ? 2 : 1;
+  const readyShare = workspace.summary.total ? Math.round((workspace.summary.ready / workspace.summary.total) * 100) : 0;
 
   function pickFile(file: File | undefined) {
     if (!file) return;
@@ -53,83 +81,77 @@ export function ImportWorkspace<TData>({
     setSelectedFile(file);
   }
 
-  function handleBackToUpload() {
-    if (workspace.hasUnsavedWork && !window.confirm("You have unsaved changes in this import. Discard them and start over?")) {
-      return;
-    }
+  function clearFile() {
+    setSelectedFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function discardAndRestart() {
+    setConfirmDiscard(false);
     setSelectedFile(null);
     workspace.backToUpload();
+  }
+
+  function handleBackToUpload() {
+    // Unsaved edits are confirmed with the shared dialog (RG-031) instead of window.confirm.
+    if (workspace.hasUnsavedWork) setConfirmDiscard(true);
+    else discardAndRestart();
   }
 
   const activeRow = workspace.rows.find((row) => row.tempId === workspace.editingTempId) ?? null;
 
   return (
-    <div className={cn("flex flex-col gap-3", VIEWPORT_HEIGHT_CLASS)}>
-      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
+    <div className={cn("flex flex-col gap-4", VIEWPORT_HEIGHT_CLASS)}>
+      {/* Header */}
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
           {backHref ? (
             <a
               href={backHref}
               aria-label={backLabel}
               title={backLabel}
-              className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <ArrowLeftIcon size={17} />
+              <ArrowLeftIcon size={18} />
             </a>
           ) : null}
+          <PageIcon name={sectionIcon} />
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold leading-tight tracking-tight text-foreground">
-              {config.title}
-            </h1>
+            <h1 className="truncate text-page-title">{config.title}</h1>
             {isPreview && workspace.fileName ? (
-              <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                <FileCsvIcon size={12} className="shrink-0" />
+              <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+                <FileXlsIcon size={15} className="shrink-0 text-success" />
                 <span className="truncate">{workspace.fileName}</span>
               </p>
             ) : null}
           </div>
         </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {config.onDownloadTemplate ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={config.onDownloadTemplate}
-            >
-              <DownloadSimpleIcon size={14} />
-              Download Template
-            </Button>
-          ) : null}
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <ImportStepper current={step} />
           {isPreview ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={handleBackToUpload}
-              disabled={workspace.isCommitting}
-            >
-              Replace File
+            <Button type="button" variant="outline" size="compact" onClick={handleBackToUpload} disabled={workspace.isCommitting}>
+              <ArrowsClockwiseIcon size={14} />
+              Replace file
             </Button>
           ) : null}
         </div>
       </div>
 
       {!isPreview ? (
-        <div className="space-y-4">
-          {config.description ? <p className="text-sm text-muted-foreground">{config.description}</p> : null}
-          <section className="rounded-lg border border-border/70 bg-card p-4">
+        <div key="upload" className={cn("grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]", ENTER)}>
+          {/* Drop zone */}
+          <section className="flex flex-col gap-4 rounded-card border border-border bg-card p-5 shadow-card">
             <div
-              className={`flex min-h-[50vh] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 text-center transition-colors ${
-                isDragging
-                  ? "border-primary bg-primary/10"
-                  : selectedFile
-                    ? "border-success/50 bg-success/5"
-                    : "border-border/80 bg-muted/10 hover:bg-muted/30"
-              }`}
+              role="button"
+              tabIndex={0}
+              aria-label="Choose an import file"
               onClick={() => inputRef.current?.click()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  inputRef.current?.click();
+                }
+              }}
               onDragOver={(event) => {
                 event.preventDefault();
                 setIsDragging(true);
@@ -143,39 +165,62 @@ export function ImportWorkspace<TData>({
                 setIsDragging(false);
                 pickFile(event.dataTransfer.files[0]);
               }}
+              className={cn(
+                "group flex min-h-[44vh] cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed px-6 text-center outline-none transition-[border-color,background-color] duration-200 focus-visible:ring-3 focus-visible:ring-ring/50",
+                isDragging
+                  ? "border-primary bg-primary-soft"
+                  : selectedFile
+                    ? "border-success/50 bg-success-soft/50"
+                    : "border-border-strong hover:border-primary/50 hover:bg-muted/40",
+              )}
             >
               {selectedFile ? (
-                <>
-                  <CheckCircleIcon size={48} weight="fill" className="text-success" />
-                  <p className="text-base font-semibold text-foreground">File selected</p>
-                  <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm">
-                    <FileCsvIcon size={16} className="shrink-0 text-success" />
-                    <span className="max-w-72 truncate font-medium text-foreground">{selectedFile.name}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</span>
+                <div key={selectedFile.name} className="flex flex-col items-center gap-4 animate-in fade-in-0 zoom-in-95 duration-300">
+                  <span className="flex size-14 items-center justify-center rounded-full bg-success-soft text-success">
+                    <CheckCircleIcon size={30} weight="fill" />
+                  </span>
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 ps-3 pe-2 text-left shadow-card">
+                    <FileXlsIcon size={26} className="shrink-0 text-success" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="max-w-64 truncate text-sm font-semibold text-foreground">{selectedFile.name}</span>
+                      <span className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</span>
+                    </span>
                     <button
                       type="button"
                       aria-label="Remove selected file"
-                      className="ml-1 shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                      className="ms-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-danger-soft hover:text-destructive"
                       onClick={(event) => {
                         event.stopPropagation();
-                        setSelectedFile(null);
-                        if (inputRef.current) inputRef.current.value = "";
+                        clearFile();
                       }}
                     >
                       <XIcon size={14} />
                     </button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Drag &amp; drop a different file or <span className="cursor-pointer underline">choose another</span>
-                  </p>
-                </>
+                  <p className="text-[13px] text-muted-foreground">Drop a different file or click to choose another.</p>
+                </div>
               ) : (
                 <>
-                  <FileCsvIcon size={48} className="text-muted-foreground/40" />
-                  <p className="text-base font-semibold text-foreground">
-                    Drag &amp; drop your file or <span className="cursor-pointer underline">choose a file</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">Supported formats: .xlsx, .xls, .csv</p>
+                  <span
+                    className={cn(
+                      "flex size-16 items-center justify-center rounded-full transition-all duration-300",
+                      isDragging
+                        ? "-translate-y-1 scale-110 bg-primary text-primary-foreground shadow-floating"
+                        : "bg-primary-soft text-primary group-hover:-translate-y-0.5",
+                    )}
+                  >
+                    <UploadSimpleIcon size={28} weight="bold" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold text-foreground">
+                      {isDragging ? "Drop it here" : (
+                        <>
+                          <span className="text-primary">Click to choose a file</span> or drag and drop
+                        </>
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Excel (.xlsx, .xls) or CSV</p>
+                  </div>
                 </>
               )}
               <input
@@ -186,46 +231,93 @@ export function ImportWorkspace<TData>({
                 onChange={(event) => pickFile(event.target.files?.[0])}
               />
             </div>
-            {fileTypeError ? <p className="mt-2 text-sm text-destructive">{fileTypeError}</p> : null}
-            {workspace.previewError ? <p className="mt-2 text-sm text-destructive">{workspace.previewError}</p> : null}
-            <div className="mt-3 flex items-center justify-end">
-              <Button
-                type="button"
-                disabled={!selectedFile || workspace.isPreviewing}
-                onClick={() => selectedFile && void workspace.loadPreview(selectedFile)}
-              >
+
+            {fileTypeError || workspace.previewError ? (
+              <p role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/25 bg-danger-soft px-3 py-2 text-sm text-destructive animate-in fade-in-0 duration-200">
+                <WarningCircleIcon size={17} weight="fill" className="mt-px shrink-0" />
+                {fileTypeError || workspace.previewError}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {workspace.isPreviewing ? (
+                <div className="flex min-w-48 flex-1 flex-col gap-1.5" role="status">
+                  <span className="text-[13px] text-muted-foreground">Reading and checking rows…</span>
+                  <span className="relative h-1.5 overflow-hidden rounded-full bg-muted">
+                    <span className="absolute inset-y-0 w-1/3 rounded-full bg-primary animate-[import-progress_1.1s_ease-in-out_infinite]" />
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[13px] text-muted-foreground">
+                  {selectedFile ? "Next, review every row before anything is saved." : "Nothing is saved until you confirm the import."}
+                </span>
+              )}
+              <Button type="button" disabled={!selectedFile || workspace.isPreviewing} onClick={() => selectedFile && void workspace.loadPreview(selectedFile)}>
                 {workspace.isPreviewing ? <LoadingSpinner size="sm" /> : null}
-                Next
-                <CaretRightIcon size={15} />
+                Review rows
+                <ArrowRightIcon size={15} />
               </Button>
             </div>
           </section>
+
+          {/* Guidance */}
+          <aside className="flex flex-col gap-4 rounded-card border border-border bg-card p-5 shadow-card">
+            <h2 className="text-section-title">Before you start</h2>
+            {config.description ? <div className="text-sm text-muted-foreground">{config.description}</div> : null}
+            <ol className="flex flex-col gap-3 text-[13px]">
+              {[
+                config.onDownloadTemplate ? "Download the template and fill one row per record." : "Use one row per record, with column headers in the first row.",
+                "Upload the file — every row is checked before import.",
+                "Fix or remove rejected rows, then import the ready ones.",
+              ].map((tip, index) => (
+                <li key={tip} className="flex gap-2.5">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">{index + 1}</span>
+                  <span className="text-foreground/90">{tip}</span>
+                </li>
+              ))}
+            </ol>
+            {config.onDownloadTemplate ? (
+              <Button type="button" variant="outline" className="mt-auto" onClick={config.onDownloadTemplate}>
+                <DownloadSimpleIcon size={15} />
+                Download template
+              </Button>
+            ) : null}
+          </aside>
         </div>
       ) : (
         <FullViewPortal active={fullView} onExit={() => setFullView(false)}>
-          <div className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
+          <div key="preview" className={cn(fullView ? "flex min-h-0 flex-1 flex-col gap-3" : "contents")}>
             {workspace.commitResult ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-status-success/30 bg-status-success-bg px-3 py-2 text-sm">
-                <CheckCircleIcon size={17} className="text-status-success-fg" />
-                <span className="font-medium text-status-success-fg">
-                  {workspace.commitResult.imported} {config.entityLabelPlural.toLowerCase()} imported
-                  {workspace.commitResult.failed.length ? ` · ${workspace.commitResult.failed.length} rows failed - fix and retry below` : ""}
+              <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-card border border-success/30 bg-success-soft px-4 py-3 animate-in fade-in-0 zoom-in-95 duration-300">
+                <span className="flex size-9 items-center justify-center rounded-full bg-success text-white">
+                  <CheckCircleIcon size={20} weight="fill" className="animate-in zoom-in-50 duration-500" />
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-semibold text-success-foreground">
+                    {workspace.commitResult.imported.toLocaleString("en-IN")} {config.entityLabelPlural.toLowerCase()} imported
+                  </span>
+                  {workspace.commitResult.failed.length ? (
+                    <span className="text-[13px] text-success-foreground/80">
+                      {workspace.commitResult.failed.length} rows failed — fix them below and import again.
+                    </span>
+                  ) : null}
                 </span>
               </div>
             ) : null}
-            {workspace.commitError ? <p className="shrink-0 text-sm text-destructive">{workspace.commitError}</p> : null}
-            {workspace.rowActionError ? <p className="shrink-0 text-sm text-destructive">{workspace.rowActionError}</p> : null}
+            {workspace.commitError || workspace.rowActionError ? (
+              <p role="alert" className="flex shrink-0 items-start gap-2 rounded-lg border border-destructive/25 bg-danger-soft px-3 py-2 text-sm text-destructive animate-in fade-in-0 duration-200">
+                <WarningCircleIcon size={17} weight="fill" className="mt-px shrink-0" />
+                {workspace.commitError || workspace.rowActionError}
+              </p>
+            ) : null}
+
+            <div className={cn("shrink-0", ENTER)}>
+              <ImportFilterTabs active={workspace.filter} onChange={workspace.setFilter} summary={workspace.summary} />
+            </div>
 
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-              <ImportFilterTabs active={workspace.filter} onChange={workspace.setFilter} summary={workspace.summary} />
-              <div className="flex items-center gap-3">
-                <ImportSummary
-                  summary={workspace.summary}
-                  importedCount={workspace.importedCount}
-                  onUndoAllRemoved={() => void workspace.undoAllRemoved()}
-                />
-                <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
-              </div>
+              <ImportSummary summary={workspace.summary} importedCount={workspace.importedCount} onUndoAllRemoved={() => void workspace.undoAllRemoved()} />
+              <FullViewToggleButton active={fullView} onToggle={() => setFullView((current) => !current)} />
             </div>
 
             <ImportPreviewTable
@@ -237,17 +329,19 @@ export function ImportWorkspace<TData>({
               fillHeight
             />
 
-            <div className="sticky bottom-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
-              <span className="text-sm text-muted-foreground">
-                <b className="text-foreground">{workspace.summary.ready}</b> row{workspace.summary.ready === 1 ? "" : "s"} ready
-              </span>
-              <Button
-                type="button"
-                onClick={() => void workspace.commit()}
-                disabled={!workspace.summary.ready || workspace.isCommitting}
-              >
-                {workspace.isCommitting ? <LoadingSpinner size="sm" /> : null}
-                Import {workspace.summary.ready} {config.entityLabelPlural}
+            <div className="sticky bottom-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 rounded-card border border-border bg-card px-4 py-3 shadow-card">
+              <div className="flex min-w-48 flex-1 flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">
+                  <b className="font-semibold text-foreground tabular-nums">{workspace.summary.ready.toLocaleString("en-IN")}</b> of{" "}
+                  {workspace.summary.total.toLocaleString("en-IN")} rows ready to import
+                </span>
+                <span className="h-1.5 max-w-80 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                  <span className="block h-full rounded-full bg-success transition-[width] duration-500 ease-out" style={{ width: `${readyShare}%` }} />
+                </span>
+              </div>
+              <Button type="button" onClick={() => void workspace.commit()} disabled={!workspace.summary.ready || workspace.isCommitting}>
+                {workspace.isCommitting ? <LoadingSpinner size="sm" /> : <UploadSimpleIcon size={15} />}
+                {workspace.isCommitting ? "Importing…" : `Import ${workspace.summary.ready.toLocaleString("en-IN")} ${config.entityLabelPlural}`}
               </Button>
             </div>
           </div>
@@ -262,6 +356,21 @@ export function ImportWorkspace<TData>({
         onCancel={workspace.cancelEdit}
         onSave={(tempId, data) => void workspace.saveEdit(tempId, data)}
       />
+
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this import?</AlertDialogTitle>
+            <AlertDialogDescription>Your row edits and removals in this file will be lost.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={discardAndRestart}>
+              Discard and start over
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

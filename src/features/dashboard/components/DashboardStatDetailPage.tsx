@@ -3,25 +3,21 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
-import { ExcelDataGrid } from "@/components/shared/ExcelDataGrid";
-import { Pagination } from "@/components/shared/Pagination";
+import { ArrowLeftIcon, DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { ListTable, useListState } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   type DashboardStatKey,
   getDashboardStatDefinition,
   getDashboardStatRows,
 } from "@/features/dashboard/services/dashboard-stats.service";
-import { getDashboardStatColumns } from "@/features/dashboard/columns/dashboard-stat.columns";
+import { getDashboardStatColumns, getDashboardStatExportColumns } from "@/features/dashboard/columns/dashboard-stat.columns";
 import { findTrustedZeroCount } from "@/features/dashboard/model/dashboard-stat-cache.model";
 import { customersApi } from "@/features/customers/api/customers.api";
 import { useCustomersListQuery } from "@/features/customers/queries/useCustomersQuery";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { exportRowsToExcel } from "@/lib/export-excel";
-
-const PAGE_SIZE = 50;
 
 export function DashboardStatDetailPage({
   statKey,
@@ -32,10 +28,8 @@ export function DashboardStatDetailPage({
   projectId?: string;
   city?: string;
 }) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const list = useListState({ pageSize: 50, storageKey: `dashboard-stat-${statKey}` });
   const [isExporting, setIsExporting] = useState(false);
-  const debouncedSearch = useDebouncedValue(search, 300);
   const definition = getDashboardStatDefinition(statKey);
   const queryClient = useQueryClient();
   const knownZero = useMemo(
@@ -43,47 +37,29 @@ export function DashboardStatDetailPage({
     [queryClient, statKey, projectId, city],
   );
 
-  const scopedProjectId = projectId === "all" ? undefined : projectId;
-  const scopedCity = city === "all" ? undefined : city;
   const queryParams = {
-    projectId: scopedProjectId,
-    city: scopedCity,
+    projectId: projectId === "all" ? undefined : projectId,
+    city: city === "all" ? undefined : city,
     statKey,
-    search: debouncedSearch || undefined,
-    page,
-    limit: PAGE_SIZE,
+    search: list.debouncedSearch || undefined,
+    page: list.page,
+    limit: list.pageSize,
   };
 
-  const { data: result, isLoading } = useCustomersListQuery(queryParams, { enabled: !knownZero });
+  const { data: result, isLoading, isError, refetch } = useCustomersListQuery(queryParams, { enabled: !knownZero });
   const customers = useMemo(() => result?.data ?? [], [result]);
-  const pagination = result?.pagination;
+  // RG-013: a trusted zero resolves to 0 without fetching.
+  const total = knownZero ? 0 : (result?.pagination?.total ?? customers.length);
 
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    setPage(1);
-  }
-
-  const rows = useMemo(
-    () => (knownZero ? [] : getDashboardStatRows(statKey, customers)),
-    [knownZero, customers, statKey],
-  );
+  const rows = useMemo(() => (knownZero ? [] : getDashboardStatRows(statKey, customers)), [knownZero, customers, statKey]);
   const columns = useMemo(() => getDashboardStatColumns(statKey), [statKey]);
 
   async function handleExport() {
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const total = pagination?.total ?? rows.length;
-      const { data } = await customersApi.listPaginated({
-        ...queryParams,
-        page: 1,
-        limit: Math.max(total, 1),
-      });
-      await exportRowsToExcel(
-        `${statKey}.xlsx`,
-        columns.filter((column) => column.key !== "actions"),
-        getDashboardStatRows(statKey, data),
-      );
+      const { data } = await customersApi.listPaginated({ ...queryParams, page: 1, limit: Math.max(total, 1) });
+      await exportRowsToExcel(`${statKey}.xlsx`, getDashboardStatExportColumns(statKey), getDashboardStatRows(statKey, data));
     } finally {
       setIsExporting(false);
     }
@@ -92,45 +68,47 @@ export function DashboardStatDetailPage({
   return (
     <PageShell
       title={definition.title}
+      description="Customers counted in this dashboard figure."
       actions={
-        <>
-          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <ArrowLeftIcon size={14} />
-            Back
-          </Link>
-          <Button type="button" size="sm" disabled={isExporting || knownZero} onClick={handleExport}>
+        <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "compact" })}>
+          <ArrowLeftIcon size={14} />
+          Back
+        </Link>
+      }
+    >
+      <ListTable
+        itemLabel="customer"
+        rows={rows}
+        total={total}
+        columns={columns}
+        state={list}
+        searchPlaceholder="Search customer, BR/TR, mobile..."
+        isLoading={!knownZero && isLoading}
+        isError={!knownZero && isError}
+        onRetry={() => void refetch()}
+        maxHeightClassName="max-h-[68vh]"
+        empty={
+          knownZero
+            ? { illustration: "records", title: `No records for ${definition.title}` }
+            : { illustration: "search", title: "No matching records found" }
+        }
+        actions={
+          <Button type="button" size="compact" disabled={isExporting || knownZero} onClick={handleExport}>
             <DownloadSimpleIcon size={14} />
             {isExporting ? "Exporting..." : "Export Excel"}
           </Button>
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <Input
-        value={search}
-        onChange={(event) => handleSearchChange(event.target.value)}
-        placeholder="Search customer, BR/TR, mobile..."
-        className="h-8 w-96 max-w-full"
+        }
+        rowActionsWidth={84}
+        renderRowActions={(row) => (
+          <Link
+            href={`/customers/${row.customerId}/edit`}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-primary")}
+          >
+            <PencilSimpleIcon size={14} />
+            Edit
+          </Link>
+        )}
       />
-
-      <ExcelDataGrid
-        columns={columns}
-        rows={rows}
-        emptyTitle={knownZero ? `No records for ${definition.title}` : "No matching records found"}
-        isLoading={isLoading}
-        maxHeightClassName="max-h-[68vh]"
-      />
-      {pagination && pagination.total > 0 ? (
-        <Pagination
-          compact
-          page={pagination.page}
-          pageCount={Math.max(1, pagination.totalPages)}
-          totalItems={pagination.total}
-          startItem={(pagination.page - 1) * pagination.limit + 1}
-          endItem={Math.min(pagination.page * pagination.limit, pagination.total)}
-          onPageChange={setPage}
-        />
-      ) : null}
     </PageShell>
   );
 }

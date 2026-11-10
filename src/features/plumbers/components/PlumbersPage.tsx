@@ -1,19 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadSimpleIcon, MagnifyingGlassIcon, NotePencilIcon, PlusIcon, UploadSimpleIcon, WrenchIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { type ColumnDef } from "@/components/shared/DataTable";
-import { BulkDeleteBar } from "@/components/shared/bulk/BulkDeleteBar";
+import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { DeleteImpactAction } from "@/components/shared/DeleteImpactAction";
-import { FilterDialog } from "@/components/shared/FilterDialog";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
-import { PaginatedDataTable } from "@/components/shared/PaginatedDataTable";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/export-excel";
 import {
   useBulkDeletePlumbers,
@@ -24,6 +20,7 @@ import {
 } from "../hooks/usePlumbers";
 import { PlumberDialog } from "./PlumberDialog";
 import type { Plumber } from "../types/plumber.types";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 
 const exportColumns: ExportColumn<Plumber>[] = [
   { label: "Name", getValue: (row) => row.name },
@@ -33,143 +30,122 @@ const exportColumns: ExportColumn<Plumber>[] = [
   { label: "Remarks", getValue: (row) => row.remarks },
 ];
 
+const filters: ListFilter[] = [
+  { id: "type", label: "Type", quick: true, options: [{ value: "individual", label: "Individual" }, { value: "team", label: "Team" }] },
+  { id: "status", label: "Status", quick: true, options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] },
+];
+
+const columns: ListColumn<Plumber>[] = [
+  {
+    id: "name",
+    header: "Name",
+    value: (row) => row.name,
+    isTitle: true,
+    hideable: false,
+    sortable: true,
+    width: 220,
+    cell: (row) => (
+      <span className="flex items-center gap-2.5">
+        <UserAvatar name={row.name} src={row.avatarUrl} size="xs" />
+        <span className="truncate">{row.name}</span>
+      </span>
+    ),
+  },
+  { id: "type", header: "Type", value: (row) => row.type, sortable: true, width: 120, cell: (row) => (row.type === "team" ? "Team" : "Individual") },
+  { id: "contactNumber", header: "Contact number", value: (row) => row.contactNumber, width: 160 },
+  {
+    id: "status",
+    header: "Status",
+    value: (row) => row.status,
+    sortable: true,
+    width: 120,
+    cell: (row) => <StatusBadge status={row.status === "active" ? "Active" : "Inactive"} />,
+  },
+  { id: "remarks", header: "Remarks", value: (row) => row.remarks, width: 260, grow: true },
+];
+
 export function PlumbersPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState({ search: "", type: "all", status: "all" });
-  const { data: plumbers = [] } = usePlumbersQuery(filters.search || undefined);
+  const list = useListState({ pageSize: 50, storageKey: "plumbers" });
+  // Search is sent to the API (as before); type/status filters, sort and paging run on the loaded rows.
+  const { data: plumbers = [], isLoading, isError, refetch } = usePlumbersQuery(list.debouncedSearch || undefined);
+  const { rows: filteredPlumbers, pageRows, total } = useClientRows(plumbers, list, { columns, filters, clientSearch: false });
   const [drawerState, setDrawerState] = useState<{ open: boolean; plumber?: Plumber }>({ open: false });
-  const { selectedIds, toggleRow, toggleAllOnPage, clear } = useBulkSelection();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeletePlumbers();
 
   async function handleBulkDelete() {
-    await bulkDelete.mutateAsync(Array.from(selectedIds));
+    await bulkDelete.mutateAsync(Array.from(list.selection));
     setDeleteOpen(false);
-    clear();
+    list.clearSelection();
   }
-
-  const filteredPlumbers = useMemo(
-    () =>
-      plumbers.filter(
-        (plumber) =>
-          (filters.type === "all" || plumber.type === filters.type) &&
-          (filters.status === "all" || plumber.status === filters.status),
-      ),
-    [plumbers, filters.type, filters.status],
-  );
-
-  const columns: ColumnDef<Plumber>[] = [
-    { key: "name", header: "Name", render: (row) => <b>{row.name}</b> },
-    {
-      key: "type",
-      header: "Type",
-      render: (row) => (row.type === "team" ? "Team" : "Individual"),
-    },
-    { key: "contactNumber", header: "Contact Number" },
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge status={row.status === "active" ? "Active" : "Inactive"} />,
-    },
-    { key: "remarks", header: "Remarks" },
-    {
-      key: "actions",
-      header: "Actions",
-      className: "w-24",
-      render: (row) => (
-        <div className="flex items-center gap-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setDrawerState({ open: true, plumber: row })}
-          >
-            <NotePencilIcon size={15} />
-          </Button>
-          <PlumberDeleteAction plumber={row} />
-        </div>
-      ),
-    },
-  ];
 
   return (
     <PageShell
       title="Plumbers"
-      icon={WrenchIcon}
+      description="Individual plumbers and plumber teams working on sites."
       actions={
-        <>
-          <div className="relative min-w-0 sm:w-52">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-            <Input
-              placeholder="Search plumbers..."
-              value={filters.search}
-              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-              className="h-8 w-full max-w-full pl-8 sm:w-52"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:contents">
-            <FilterDialog
-              title="Plumber Filters"
-              values={filters}
-              filters={[
-                {
-                  key: "type",
-                  placeholder: "All Types",
-                  options: [
-                    { value: "individual", label: "Individual" },
-                    { value: "team", label: "Team" },
-                  ],
-                },
-                {
-                  key: "status",
-                  placeholder: "All Statuses",
-                  options: [
-                    { value: "active", label: "Active" },
-                    { value: "inactive", label: "Inactive" },
-                  ],
-                },
-              ]}
-              onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-              onReset={() => setFilters((current) => ({ ...current, type: "all", status: "all" }))}
-            />
-
+        <Button type="button" size="compact" onClick={() => setDrawerState({ open: true })}>
+          <PlusIcon size={13} />
+          Add Plumber
+        </Button>
+      }
+    >
+      <ListTable
+        itemLabel="plumber"
+        rows={pageRows}
+        total={total}
+        columns={columns}
+        state={list}
+        filters={filters}
+        searchPlaceholder="Search plumbers..."
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+        enableFullView
+        selectable
+        getRowLabel={(row) => row.name}
+        bulkActions={() => (
+          <Button type="button" variant="ghost" size="compact" onClick={() => setDeleteOpen(true)}>
+            <TrashIcon size={14} />
+            Delete
+          </Button>
+        )}
+        empty={{
+          illustration: "customers",
+          title: "No plumbers yet",
+          description: "Add plumbers one by one or import them from Excel.",
+          action: { label: "Add plumber", onClick: () => setDrawerState({ open: true }) },
+        }}
+        actions={
+          <>
             <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}>
-              <DownloadSimpleIcon size={12} />
+              <DownloadSimpleIcon size={14} />
               Export
             </Button>
-
             <Button type="button" variant="outline" size="compact" onClick={() => router.push("/plumbers/import")}>
-              <UploadSimpleIcon size={12} />
+              <UploadSimpleIcon size={14} />
               Import
             </Button>
+          </>
+        }
+        rowActionsWidth={84}
+        renderRowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            <ActionTooltip label="Edit plumber">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={`Edit ${row.name}`} onClick={() => setDrawerState({ open: true, plumber: row })}>
+                <NotePencilIcon size={15} />
+              </Button>
+            </ActionTooltip>
+            <PlumberDeleteAction plumber={row} />
           </div>
-
-          <Button type="button" size="compact" onClick={() => setDrawerState({ open: true })}>
-            <PlusIcon size={13} />
-            Add Plumber
-          </Button>
-        </>
-      }
-      contentClassName="space-y-3"
-    >
-      <BulkDeleteBar selectedCount={selectedIds.size} onClear={clear} onDelete={() => setDeleteOpen(true)} />
-      <PaginatedDataTable
-        data={filteredPlumbers}
-        columns={columns}
-        enableFullView
-        selection={{
-          selectedIds,
-          onToggleRow: toggleRow,
-          onTogglePage: toggleAllOnPage,
-          getRowLabel: (row) => row.name,
-        }}
+        )}
       />
 
       <BulkDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        selectedCount={selectedIds.size}
+        selectedCount={list.selection.size}
         entityLabel="Plumber"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
@@ -211,6 +187,8 @@ function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
           name: plumber.name,
           type: plumber.type,
           contactNumber: plumber.contactNumber,
+          // Keep the existing photo (an empty value would remove it).
+          avatarUrl: plumber.avatarUrl,
           status: "inactive",
           remarks: plumber.remarks,
         })
