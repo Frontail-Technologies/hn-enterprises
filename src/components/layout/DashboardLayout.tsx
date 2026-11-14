@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { BreadcrumbLabelProvider } from "./BreadcrumbLabelContext";
@@ -25,15 +26,28 @@ export function DashboardLayout({ children, sidebarDefaultOpen: savedOpen }: Das
   // always open and then need collapsing again.
   const [sidebarDefaultOpen] = useState(() => savedOpen ?? readSidebarOpen());
 
+  // On desktop widths the content area (not the window) is the scroller, so
+  // full-height pages like Customers get a real height and their tables only
+  // draw the rows on screen. Next.js only resets the window's scroll on
+  // navigation, so reset the content area's ourselves.
+  const pathname = usePathname();
+  const contentRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
   return (
     <SidebarProvider defaultOpen={sidebarDefaultOpen} className="overflow-x-clip">
       <BreadcrumbLabelProvider>
         <Sidebar />
-        <SidebarInset className="min-w-0 overflow-x-clip">
+        <SidebarInset className="min-w-0 overflow-x-clip md:h-svh md:overflow-hidden">
           <MobileNavbar />
           <MobileNestedHeader />
           <Header />
-          <main className="min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 md:flex md:flex-col md:py-5 lg:px-6 lg:py-6">
+          <main
+            ref={contentRef}
+            className="min-w-0 flex-1 overflow-x-clip px-3 py-4 sm:px-4 md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:py-5 lg:px-6 lg:py-6"
+          >
             {children}
           </main>
         </SidebarInset>
