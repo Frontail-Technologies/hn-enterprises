@@ -200,7 +200,15 @@ function waitForServer(url, timeoutMs = 30000) {
 function startServer() {
   serverProcess = spawn(process.execPath, [SERVER_ENTRY], {
     cwd: STANDALONE_DIR,
-    env: { ...process.env, PORT: String(PORT), HOSTNAME: "localhost", ELECTRON_RUN_AS_NODE: "1" },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      HOSTNAME: "localhost",
+      ELECTRON_RUN_AS_NODE: "1",
+      // Cache the server's compiled JavaScript on disk so later launches
+      // (especially cold ones after a restart) skip recompiling Next.js.
+      NODE_COMPILE_CACHE: path.join(app.getPath("userData"), "compile-cache"),
+    },
     stdio: "inherit",
   });
 
@@ -330,7 +338,13 @@ function createWindow() {
   attachExternalLinks(mainWindow);
   attachDownloadProgress(mainWindow);
 
-  mainWindow.once("ready-to-show", () => {
+  // The window is created before the server is up and only navigates to the
+  // app once it is, so show it on the app page's first paint - never on an
+  // empty window.
+  let shown = false;
+  mainWindow.on("ready-to-show", () => {
+    if (shown || !mainWindow || !isAppUrl(mainWindow.webContents.getURL())) return;
+    shown = true;
     if (state.maximized) mainWindow.maximize();
     mainWindow.show();
     splashWindow?.close();
@@ -341,7 +355,6 @@ function createWindow() {
   mainWindow.webContents.on("did-navigate", applySavedScale);
   mainWindow.webContents.on("dom-ready", applySavedScale);
 
-  mainWindow.loadURL(APP_URL);
 
   mainWindow.webContents.on("console-message", (_event, _level, message, line, sourceId) => {
     console.log(`[renderer] ${message} (${sourceId}:${line})`);
@@ -367,17 +380,25 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   createSplash();
   startServer();
+  // Build the (hidden) main window while the server boots, then load the page
+  // the moment the server answers. Readiness is probed with a static file so
+  // no page has to be rendered just to find out the server is up.
+  createWindow();
   try {
-    await waitForServer(APP_URL);
+    await waitForServer(`${APP_URL}/logo.png`);
   } catch (error) {
     console.error(error);
+    mainWindow?.destroy();
     showSplashError("HN Enterprises couldn't start. Close this window and open the app again. If it keeps happening, contact your administrator.");
     return;
   }
-  createWindow();
+  mainWindow?.loadURL(APP_URL);
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      mainWindow?.loadURL(APP_URL);
+    }
   });
 });
 
