@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -64,6 +65,25 @@ export function ImportWorkspace<TData>({
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const workspace = useImportWorkspace(config);
+  const router = useRouter();
+
+  /**
+   * All rows imported: confirm with a toast and go back to the list (when there
+   * is one). Some failed: stay here so they can be fixed and imported again.
+   */
+  async function handleCommit() {
+    const result = await workspace.commit();
+    if (!result) return;
+    const label = config.entityLabelPlural.toLowerCase();
+    if (!result.failed.length) {
+      toast.success(`${result.imported.toLocaleString("en-IN")} ${label} imported`);
+      if (backHref) router.push(backHref);
+      return;
+    }
+    toast.warning(`${result.imported.toLocaleString("en-IN")} ${label} imported, ${result.failed.length} failed`, {
+      description: "The failed rows are still listed here - fix them and import again.",
+    });
+  }
   const sectionIcon = pageIconForPath(usePathname());
   const isPreview = workspace.view === "preview";
   const [fullView, setFullView] = useState(false);
@@ -339,7 +359,7 @@ export function ImportWorkspace<TData>({
                   <span className="block h-full rounded-full bg-success transition-[width] duration-500 ease-out" style={{ width: `${readyShare}%` }} />
                 </span>
               </div>
-              <Button type="button" onClick={() => void workspace.commit()} disabled={!workspace.summary.ready || workspace.isCommitting}>
+              <Button type="button" onClick={() => void handleCommit()} disabled={!workspace.summary.ready || workspace.isCommitting}>
                 {workspace.isCommitting ? <LoadingSpinner size="sm" /> : <UploadSimpleIcon size={15} />}
                 {workspace.isCommitting ? "Importing…" : `Import ${workspace.summary.ready.toLocaleString("en-IN")} ${config.entityLabelPlural}`}
               </Button>

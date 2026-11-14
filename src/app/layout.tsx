@@ -36,8 +36,11 @@ export default function RootLayout({
             <AuthProvider>
               <TooltipProvider>
                 {children}
+                {/* Offset below the 56px top bar: in the desktop app the native
+                    window buttons are drawn over the top-right corner and hid toasts. */}
                 <Toaster
                   position="top-right"
+                  offset={{ top: 68, right: 16 }}
                   richColors
                   closeButton
                   duration={3500}

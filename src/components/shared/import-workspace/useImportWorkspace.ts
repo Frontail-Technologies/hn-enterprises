@@ -125,9 +125,10 @@ export function useImportWorkspace<TData>(config: ImportWorkspaceConfig<TData>) 
     }
   }
 
+  /** Imports the remaining rows; resolves to the result, or null if nothing ran / it failed. */
   async function commit() {
     const submittable = rows.filter((row) => !row.isRemoved && !row.isImported);
-    if (!submittable.length) return;
+    if (!submittable.length) return null;
 
     setCommitError("");
     setIsCommitting(true);
@@ -143,8 +144,10 @@ export function useImportWorkspace<TData>(config: ImportWorkspaceConfig<TData>) 
         }),
       );
       setCommitResult(result);
+      return result;
     } catch (error) {
       setCommitError(error instanceof Error ? error.message : "Unable to import these rows");
+      return null;
     } finally {
       setIsCommitting(false);
     }

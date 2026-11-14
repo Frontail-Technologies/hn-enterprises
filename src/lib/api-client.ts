@@ -84,6 +84,20 @@ function redirectToLogin() {
   window.location.href = "/login";
 }
 
+/**
+ * fetch() rejects with a bare "Failed to fetch" TypeError when the request never
+ * got a response (offline, server down/restarting, or the connection was cut).
+ * Replace that with a message an admin can act on.
+ */
+async function fetchOrExplain(input: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    throw new Error("Couldn't reach the server. Check your internet connection and try again.");
+  }
+}
+
 async function fetchWithAuth(path: string, options: RequestOptions): Promise<Response> {
   const { skipRefresh, headers, ...init } = options;
   const isFormData = init.body instanceof FormData;
@@ -92,7 +106,7 @@ async function fetchWithAuth(path: string, options: RequestOptions): Promise<Res
     ...headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchOrExplain(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
     headers: requestHeaders,
@@ -106,7 +120,7 @@ async function fetchWithAuth(path: string, options: RequestOptions): Promise<Res
       throw error;
     }
 
-    const retry = await fetch(`${API_BASE_URL}${path}`, {
+    const retry = await fetchOrExplain(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: "include",
       headers: requestHeaders,
