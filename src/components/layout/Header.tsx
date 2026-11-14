@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Breadcrumb } from './Breadcrumb'
+import { DisplayScaleMenu } from './DisplayScaleMenu'
+import { RefreshButton } from './RefreshButton'
 
 const QUICK_ADD = [
   { href: '/customers/new', label: 'New customer', icon: Users },
@@ -44,6 +46,9 @@ export function Header() {
       <div className="min-w-0 flex-1">
         <Breadcrumb />
       </div>
+
+      <RefreshButton />
+      <DisplayScaleMenu />
 
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button size="compact" />}>

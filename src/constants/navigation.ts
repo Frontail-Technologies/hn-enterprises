@@ -5,6 +5,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   projects: "Projects",
   customers: "Customers",
   reports: "Reports Center",
+  templates: "Templates",
   planning: "DPR / Planning",
   complaints: "Complaints",
   plan: "Planning",
@@ -45,6 +46,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "customers", label: "Customers", icon: "Users", href: "/customers" },
       { id: "complaints", label: "Complaints", icon: "Warning", href: "/complaints" },
       { id: "planning", label: "DPR / Planning", icon: "ClipboardText", href: "/planning" },
+      // /reports itself is only a placeholder for now, so link straight to the working templates.
+      { id: "reports", label: "Reports", icon: "FileText", href: "/reports/templates" },
     ],
   },
   {

@@ -310,6 +310,14 @@ html[data-desktop] .app-titlebar :is(button, a, input, select, textarea, [role="
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+.app-fullview-bar {
+  display: none;
+}
+html[data-desktop] .app-fullview-bar {
+  display: flex;
+  flex-shrink: 0;
+  height: calc(env(titlebar-area-height, 56px) - 0.5rem);
+}
 html[data-desktop] .app-titlebar-pad {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 0.75rem);
 }

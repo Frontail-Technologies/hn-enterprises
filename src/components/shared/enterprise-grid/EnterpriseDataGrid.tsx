@@ -52,6 +52,11 @@ const SELECT_COLUMN_WIDTH = 44;
 const ACTIONS_COLUMN_ID = "__actions__";
 const LEGACY_PIN_COUNT = 4;
 const OVERSCAN = 10;
+// Wide grids (e.g. the Customers master sheet, ~60 columns) only draw the
+// scrolling columns that are on screen, like rows. Narrow grids draw all of
+// them, so column `grow` (fill spare width) keeps working there.
+const COLUMN_VIRTUALIZE_MIN = 20;
+const COLUMN_OVERSCAN = 3;
 const EMPTY_VALUE = "—";
 
 const INTERACTIVE_TARGET_SELECTOR =
@@ -323,6 +328,67 @@ export function EnterpriseDataGrid<T extends { id: string }>({
     overscan: OVERSCAN,
   });
 
+  const startColumns = table.getStartVisibleLeafColumns();
+  const centerColumns = table
+    .getCenterVisibleLeafColumns()
+    .filter((column) => column.id !== ACTIONS_COLUMN_ID);
+  const virtualizeColumns = centerColumns.length > COLUMN_VIRTUALIZE_MIN;
+  const startWidth = startColumns.reduce((sum, column) => sum + column.getSize(), 0);
+
+  const columnVirtualizer = useVirtualizer({
+    horizontal: true,
+    count: virtualizeColumns ? centerColumns.length : 0,
+    getScrollElement: () => scrollAreaRef.current,
+    estimateSize: (index) => centerColumns[index]?.getSize() ?? 140,
+    getItemKey: (index) => centerColumns[index]?.id ?? index,
+    paddingStart: startWidth,
+    overscan: COLUMN_OVERSCAN,
+  });
+
+  // Re-measure when columns are resized, shown/hidden or (un)pinned.
+  const columnLayoutSignature = `${startWidth}|${centerColumns
+    .map((column) => `${column.id}:${column.getSize()}`)
+    .join(",")}`;
+  useEffect(() => {
+    columnVirtualizer.measure();
+  }, [columnLayoutSignature, columnVirtualizer]);
+
+  const virtualColumns = virtualizeColumns ? columnVirtualizer.getVirtualItems() : null;
+
+  /**
+   * Header cells / row cells in display order. For wide grids: pinned start
+   * columns, a spacer standing in for the off-screen columns on the left, the
+   * on-screen columns, a spacer for the rest, then the actions column - so the
+   * scroll width (and everything you can scroll to) is unchanged.
+   */
+  function arrangeSlots<X>(
+    items: X[],
+    getId: (item: X) => string,
+  ): Array<{ key: string; item?: X; spacerWidth?: number }> {
+    if (!virtualColumns) return items.map((item) => ({ key: getId(item), item }));
+    const byId = new Map(items.map((item) => [getId(item), item]));
+    const slots: Array<{ key: string; item?: X; spacerWidth?: number }> = [];
+    for (const column of startColumns) {
+      const item = byId.get(column.id);
+      if (item) slots.push({ key: column.id, item });
+    }
+    const first = virtualColumns[0];
+    const last = virtualColumns[virtualColumns.length - 1];
+    if (first && first.start > startWidth) {
+      slots.push({ key: "__spacer_start__", spacerWidth: first.start - startWidth });
+    }
+    for (const virtualColumn of virtualColumns) {
+      const id = centerColumns[virtualColumn.index]?.id;
+      const item = id ? byId.get(id) : undefined;
+      if (id && item) slots.push({ key: id, item });
+    }
+    const remaining = last ? columnVirtualizer.getTotalSize() - last.end : 0;
+    if (remaining > 0) slots.push({ key: "__spacer_end__", spacerWidth: remaining });
+    const actions = byId.get(ACTIONS_COLUMN_ID);
+    if (actions) slots.push({ key: ACTIONS_COLUMN_ID, item: actions });
+    return slots;
+  }
+
   const allOnPageSelected =
     enableSelection &&
     rows.length > 0 &&
@@ -419,7 +485,17 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                 <div className="sticky top-0 z-20">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <div key={headerGroup.id} className="flex">
-                      {headerGroup.headers.map((header) => {
+                      {arrangeSlots(headerGroup.headers, (entry) => entry.column.id).map(({ key, item: header, spacerWidth }) => {
+                        if (!header) {
+                          return (
+                            <div
+                              key={key}
+                              aria-hidden="true"
+                              style={{ width: spacerWidth, flexShrink: 0 }}
+                              className={cn(tableDensity.rowHeight, tableDensity.headerBg, "border-b border-border")}
+                            />
+                          );
+                        }
                         const column = header.column;
                         const pinned = column.getIsPinned();
                         const canSort = column.getCanSort();
@@ -553,7 +629,17 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                           getRowClassName?.(row.original),
                         )}
                       >
-                        {row.getAllCells().map((cell) => {
+                        {arrangeSlots(row.getAllCells(), (entry) => entry.column.id).map(({ key, item: cell, spacerWidth }) => {
+                          if (!cell) {
+                            return (
+                              <div
+                                key={key}
+                                aria-hidden="true"
+                                style={{ width: spacerWidth, flexShrink: 0 }}
+                                className={cn(tableDensity.rowHeight, "border-b", tableDensity.rowBottomBorder)}
+                              />
+                            );
+                          }
                           const pinned = cell.column.getIsPinned();
                           const isSelectColumn =
                             cell.column.id === SELECT_COLUMN_ID;
@@ -736,7 +822,9 @@ function EnterpriseColumnFilter<T extends { id: string }>({
   }
 
   const values = useMemo(() => {
-    if (!columnDef) return [];
+    // Closed dropdowns need no values; building them for every column on every
+    // grid render was a large share of the wide-grid render cost.
+    if (!columnDef || !open) return [];
     const unique = isRemote
       ? remoteValues
       : Array.from(
@@ -751,7 +839,7 @@ function EnterpriseColumnFilter<T extends { id: string }>({
     return unique
       .filter((value) => value.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => a.localeCompare(b));
-  }, [columnDef, data, search, isRemote, remoteValues]);
+  }, [columnDef, data, search, isRemote, remoteValues, open]);
 
   function toggleValue(value: string) {
     setDraft((current) =>

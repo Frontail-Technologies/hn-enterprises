@@ -1,4 +1,4 @@
-const { app, BrowserWindow, clipboard, Menu, screen, shell } = require("electron");
+const { app, BrowserWindow, clipboard, ipcMain, Menu, screen, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
@@ -45,6 +45,43 @@ if (!hasInstanceLock) {
 // Window size/position memory.
 // ---------------------------------------------------------------------------
 const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+
+// ---------------------------------------------------------------------------
+// Display size (page zoom), chosen in the app's top bar or with Ctrl +/-/0.
+// Kept in its own file and re-applied on every load so it survives restarts.
+// ---------------------------------------------------------------------------
+const SCALE_FILE = path.join(app.getPath("userData"), "display-scale.json");
+const SCALE_STEPS = [0.9, 1, 1.1, 1.25, 1.4];
+
+function readDisplayScale() {
+  try {
+    const { scale } = JSON.parse(fs.readFileSync(SCALE_FILE, "utf8"));
+    return SCALE_STEPS.includes(scale) ? scale : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function setDisplayScale(contents, scale) {
+  const next = SCALE_STEPS.includes(scale) ? scale : 1;
+  contents.setZoomFactor(next);
+  try {
+    fs.writeFileSync(SCALE_FILE, JSON.stringify({ scale: next }));
+  } catch {
+    // Not critical: the app just opens at 100% next time.
+  }
+  contents.send("display-scale:changed", next);
+  return next;
+}
+
+function stepDisplayScale(contents, direction) {
+  const current = SCALE_STEPS.indexOf(readDisplayScale());
+  const index = Math.min(Math.max(current + direction, 0), SCALE_STEPS.length - 1);
+  return setDisplayScale(contents, SCALE_STEPS[index]);
+}
+
+ipcMain.handle("display-scale:get", () => readDisplayScale());
+ipcMain.handle("display-scale:set", (event, scale) => setDisplayScale(event.sender, Number(scale)));
 
 function readWindowState() {
   try {
@@ -222,9 +259,9 @@ function attachShortcuts(win) {
     const handled = (() => {
       if ((ctrl && key === "r") || key === "f5") return contents.reload(), true;
       if (key === "f11") return win.setFullScreen(!win.isFullScreen()), true;
-      if (ctrl && (key === "=" || key === "+")) return contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 3)), true;
-      if (ctrl && key === "-") return contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -2)), true;
-      if (ctrl && key === "0") return contents.setZoomLevel(0), true;
+      if (ctrl && (key === "=" || key === "+")) return stepDisplayScale(contents, 1), true;
+      if (ctrl && key === "-") return stepDisplayScale(contents, -1), true;
+      if (ctrl && key === "0") return setDisplayScale(contents, 1), true;
       if (input.alt && key === "arrowleft" && contents.navigationHistory.canGoBack()) return contents.navigationHistory.goBack(), true;
       if (input.alt && key === "arrowright" && contents.navigationHistory.canGoForward()) return contents.navigationHistory.goForward(), true;
       if (!app.isPackaged && ctrl && input.shift && key === "i") return contents.toggleDevTools(), true;
@@ -298,6 +335,11 @@ function createWindow() {
     mainWindow.show();
     splashWindow?.close();
   });
+
+  // Re-apply the saved display size on every page load (before first paint where possible).
+  const applySavedScale = () => mainWindow?.webContents.setZoomFactor(readDisplayScale());
+  mainWindow.webContents.on("did-navigate", applySavedScale);
+  mainWindow.webContents.on("dom-ready", applySavedScale);
 
   mainWindow.loadURL(APP_URL);
 

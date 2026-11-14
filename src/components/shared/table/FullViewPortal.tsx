@@ -33,6 +33,12 @@ export function FullViewPortal({
               className,
             )}
           >
+            {/* Desktop app only (hidden in browsers via CSS): clears the native
+                min/max/close buttons drawn over the top-right corner, and is a
+                drag handle for the window like the normal top bar. */}
+            <div className="app-fullview-bar app-titlebar app-titlebar-pad items-center px-2 text-xs font-medium text-muted-foreground">
+              Full view · Esc to exit
+            </div>
             {children}
           </DialogContent>
         </Dialog>
