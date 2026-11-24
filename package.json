@@ -3,7 +3,7 @@
   "productName": "HN Enterprises",
   "description": "Desktop admin panel for HN Enterprises - manage customers, projects, field operations, inventory, and workforce.",
   "author": "Frontail Technologies",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -41,7 +41,14 @@
       ],
       "icon": "electron-assets/icon.png"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://api.hnenterprises.org/desktop-updates/"
+      }
+    ],
     "nsis": {
+      "artifactName": "HN-Enterprises-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true

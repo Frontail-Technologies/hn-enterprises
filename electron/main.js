@@ -3,6 +3,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const { startAutoUpdates } = require("./updater");
 
 app.setName("HN Enterprises");
 // Taskbar grouping/pinning identity (matches build.appId).
@@ -393,6 +394,7 @@ app.whenReady().then(async () => {
     return;
   }
   mainWindow?.loadURL(APP_URL);
+  startAutoUpdates(() => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
