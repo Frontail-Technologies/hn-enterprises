@@ -17,7 +17,7 @@ interface PageHeaderProps {
   className?: string
 }
 
-export function PageHeader({ title, description, iconName, eyebrow, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, iconName, eyebrow, actions, className }: PageHeaderProps) {
   const pathname = usePathname()
   const name = iconName === false ? null : (iconName ?? pageIconForPath(pathname))
 
@@ -35,7 +35,7 @@ export function PageHeader({ title, description, iconName, eyebrow, actions, cla
             <div className="text-xs font-semibold uppercase tracking-wider text-primary">{eyebrow}</div>
           ) : null}
           <h1 className="truncate text-page-title">{title}</h1>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          {/* Sub-labels are not shown anywhere (design decision): the prop stays so callers keep compiling. */}
         </div>
       </div>
       {actions ? (

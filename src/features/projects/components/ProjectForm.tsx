@@ -131,7 +131,6 @@ function ProjectFormFields({
               </FormField>
               <FormField label="Project Code">
                 <Input {...register("code")} placeholder="Leave empty for automatic (PRJ-0001…)" />
-                <p className="text-xs text-muted-foreground">Customer import sheets use this code to put customers in this project.</p>
               </FormField>
               <FormField label="Client">
                 <Input {...register("client")} placeholder="Client name" />

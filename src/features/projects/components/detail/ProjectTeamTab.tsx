@@ -58,7 +58,6 @@ export function ProjectTeamTab({ projectId }: { projectId: string }) {
     <section className="flex flex-col gap-2">
       <div>
         <h2 className="text-section-title">{title}</h2>
-        <p className="text-[13px] text-muted-foreground">{hint}</p>
       </div>
       {table}
     </section>

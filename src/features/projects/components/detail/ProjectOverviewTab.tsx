@@ -14,7 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
 import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
-import { DetailRows, ProgressList, RecordLayout } from "@/components/shared/record";
+import { DetailRows, ProgressList } from "@/components/shared/record";
 import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
@@ -27,7 +27,7 @@ import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
 import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
-import { ProjectActivityCard } from "./ProjectRailCards";
+import { ProjectActivityTab } from "./ProjectActivityTab";
 import { ProjectTeamTab } from "./ProjectTeamTab";
 import { toTitleCase } from "./project-detail.utils";
 
@@ -41,6 +41,7 @@ const TABS = [
   { value: "billing", label: "Billing" },
   { value: "expenses", label: "Expenses" },
   { value: "team", label: "Team" },
+  { value: "activity", label: "Activity" },
   { value: "sites", label: "Sites" },
   { value: "documents", label: "Documents" },
 ] as const;
@@ -147,9 +148,7 @@ export function ProjectTabs({ project }: { project: Project }) {
       </ScrollableTabsList>
 
       <TabsContent value="overview">
-        <RecordLayout
-          rail={<ProjectActivityCard projectId={project.id} />}
-        >
+        <div className="flex flex-col gap-5">
           {isLoading || !summary ? (
             <>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -207,7 +206,7 @@ export function ProjectTabs({ project }: { project: Project }) {
               </div>
             </>
           )}
-        </RecordLayout>
+        </div>
       </TabsContent>
 
       <TabsContent value="customers">
@@ -227,13 +226,10 @@ export function ProjectTabs({ project }: { project: Project }) {
         <div className="grid gap-5 lg:grid-cols-2">
           <SectionCard
             title="LMC laid"
-            description={
-              <>
-                Metres per pipe size ·{" "}
-                <Link href={stage("laying-done")} className="font-medium text-primary hover:underline">
-                  see laying status
-                </Link>
-              </>
+            action={
+              <Link href={stage("laying-done")} className="text-[13px] font-medium text-primary hover:underline">
+                Laying status
+              </Link>
             }
           >
             {work ? (
@@ -261,13 +257,10 @@ export function ProjectTabs({ project }: { project: Project }) {
       <TabsContent value="billing">
         <SectionCard
           title="Billing amounts"
-          description={
-            <>
-              Bills raised on this project (drafts excluded) ·{" "}
-              <Link href={scoped("/billing")} className="font-medium text-primary hover:underline">
-                open bills
-              </Link>
-            </>
+          action={
+            <Link href={scoped("/billing")} className="text-[13px] font-medium text-primary hover:underline">
+              Open bills
+            </Link>
           }
           className="max-w-2xl"
         >
@@ -294,6 +287,10 @@ export function ProjectTabs({ project }: { project: Project }) {
 
       <TabsContent value="team">
         {tab === "team" ? <ProjectTeamTab projectId={project.id} /> : null}
+      </TabsContent>
+
+      <TabsContent value="activity">
+        {tab === "activity" ? <ProjectActivityTab projectId={project.id} /> : null}
       </TabsContent>
 
       <TabsContent value="sites">

@@ -33,7 +33,6 @@ export function DashboardStatCard({
   label,
   value,
   icon: Icon,
-  helperText,
   tone = "info",
   dense = false,
   className,
@@ -68,9 +67,7 @@ export function DashboardStatCard({
         >
           {value}
         </p>
-        {helperText ? (
-          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{helperText}</p>
-        ) : null}
+        {/* Sub-labels are not shown anywhere (design decision): helperText stays in the props so callers keep compiling. */}
       </div>
     </article>
   );

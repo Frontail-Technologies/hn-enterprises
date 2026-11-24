@@ -15,13 +15,13 @@ interface RecordSectionProps {
  * One block of a scrolling detail page: heading + content. `scroll-mt` keeps
  * the heading clear of the sticky top bar and jump-nav when jumped to.
  */
-export function RecordSection({ id, title, description, actions, children, className }: RecordSectionProps) {
+export function RecordSection({ id, title, actions, children, className }: RecordSectionProps) {
   return (
     <section id={id} data-record-section className={cn("flex scroll-mt-32 flex-col gap-4", className)}>
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-2">
         <div className="min-w-0">
           <h2 className="text-section-title">{title}</h2>
-          {description ? <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p> : null}
+          {/* Sub-labels are not shown anywhere (design decision): the prop stays so callers keep compiling. */}
         </div>
         {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
