@@ -41,6 +41,7 @@ import { BulkRemarkDialog } from "./bulk/BulkRemarkDialog";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ReplaceTempIdsDialog } from "./ReplaceTempIdsDialog";
+import { BulkPdfDialog } from "./bulk/BulkPdfDialog";
 import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
 
@@ -86,6 +87,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   // Only customers still waiting for their real BR/TR number (TEMP-... IDs).
   const [tempOnly, setTempOnly] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
   const columnFiltersRecord = useMemo(() => {
     const record: Record<string, string[]> = {};
@@ -387,11 +389,13 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         onOpenBulkEdit={() => setEditDialogOpen(true)}
         onOpenRemark={() => setRemarkDialogOpen(true)}
         onExportSelected={handleExportSelected}
+        onOpenPdfs={() => setPdfDialogOpen(true)}
         onOpenDelete={() => setDeleteDialogOpen(true)}
         canEdit={canBulkEdit}
         canRemark={canBulkRemark}
         canDelete={canBulkDelete}
       />
+      <BulkPdfDialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen} customerIds={Array.from(selection.selectedIds)} />
       <ListTable
         itemLabel="customer"
         rows={filteredMasterSheetRows}

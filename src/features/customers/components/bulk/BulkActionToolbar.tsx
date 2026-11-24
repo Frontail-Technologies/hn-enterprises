@@ -4,6 +4,7 @@ import {
   CaretDownIcon,
   DotsThreeIcon,
   DownloadSimpleIcon,
+  FilePdfIcon,
   NotePencilIcon,
   TrashIcon,
   UserSwitchIcon,
@@ -32,6 +33,8 @@ interface BulkActionToolbarProps {
   onOpenBulkEdit: () => void;
   onOpenRemark: () => void;
   onExportSelected: () => void;
+  /** Opens the bulk PDF download (report templates as one ZIP). */
+  onOpenPdfs?: () => void;
   onOpenDelete: () => void;
   canEdit: boolean;
   canRemark: boolean;
@@ -48,6 +51,7 @@ export function BulkActionToolbar({
   onOpenBulkEdit,
   onOpenRemark,
   onExportSelected,
+  onOpenPdfs,
   onOpenDelete,
   canEdit,
   canRemark,
@@ -167,6 +171,13 @@ export function BulkActionToolbar({
             <DownloadSimpleIcon size={14} />
             Export Selected
           </Button>
+
+          {onOpenPdfs ? (
+            <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={onOpenPdfs}>
+              <FilePdfIcon size={14} />
+              Download PDFs
+            </Button>
+          ) : null}
 
           {canDelete && (
             <DropdownMenu>
