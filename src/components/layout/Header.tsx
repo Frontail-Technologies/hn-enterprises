@@ -18,6 +18,7 @@ import {
 import { useSidebar } from '@/components/ui/sidebar'
 import { Breadcrumb } from './Breadcrumb'
 import { DisplayScaleMenu } from './DisplayScaleMenu'
+import { GlobalSearch } from './GlobalSearch'
 import { RefreshButton } from './RefreshButton'
 
 const QUICK_ADD = [
@@ -47,6 +48,7 @@ export function Header() {
         <Breadcrumb />
       </div>
 
+      <GlobalSearch />
       <RefreshButton />
       <DisplayScaleMenu />
 
