@@ -40,6 +40,7 @@ import { BulkQuickFieldDialog } from "./bulk/BulkQuickFieldDialog";
 import { BulkRemarkDialog } from "./bulk/BulkRemarkDialog";
 import { BulkDeleteDialog } from "@/components/shared/bulk/BulkDeleteDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ReplaceTempIdsDialog } from "./ReplaceTempIdsDialog";
 import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
 
@@ -83,6 +84,8 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   const sortBy: CustomersListParams["sortBy"] = list.sort ? SORTABLE_MASTER_KEY_TO_BACKEND_FIELD[list.sort.id] : undefined;
   const sortOrder: "asc" | "desc" | undefined = sortBy ? (list.sort?.desc ? "desc" : "asc") : undefined;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  // Only customers still waiting for their real BR/TR number (TEMP-... IDs).
+  const [tempOnly, setTempOnly] = useState(false);
 
   const columnFiltersRecord = useMemo(() => {
     const record: Record<string, string[]> = {};
@@ -102,6 +105,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
     sortBy,
     sortOrder,
     columnFilters: columnFiltersRecord,
+    tempIds: tempOnly || undefined,
   });
   const customers = useMemo(() => customersResult?.data ?? [], [customersResult]);
   const pagination = customersResult?.pagination;
@@ -262,6 +266,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         statKey,
         search: debouncedSearch || undefined,
         columnFilters: columnFiltersRecord,
+        tempIds: tempOnly || undefined,
       });
       selection.selectAllMatching(result.ids);
       if (result.truncated) {
@@ -319,6 +324,20 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
 
   const toolbarActions = (
     <>
+      <Button
+        type="button"
+        variant={tempOnly ? "default" : "outline"}
+        size="compact"
+        aria-pressed={tempOnly}
+        title="Show only customers still on a temporary ID (no BR/TR number yet)"
+        onClick={() => {
+          setTempOnly((current) => !current);
+          list.setPage(1);
+        }}
+      >
+        TEMP IDs
+      </Button>
+      {canBulkEdit ? <ReplaceTempIdsDialog triggerClassName="hidden xl:inline-flex" /> : null}
       <CustomizeColumnsDialog triggerClassName={buttonVariants({ variant: "outline", size: "compact" })} iconClassName="size-3.5" />
       <Link href="/customers/import" className={cn(buttonVariants({ variant: "outline", size: "compact" }), "hidden xl:inline-flex")}>
         <UploadSimpleIcon size={14} />

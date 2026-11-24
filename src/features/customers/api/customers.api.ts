@@ -28,6 +28,15 @@ import type {
   LmcPipeSizeRecord,
 } from "../types/customer.types";
 
+export type TempIdReplacementResult = {
+  tempId: string;
+  trBpNumber: string;
+  customerId: string | null;
+  customerName: string | null;
+  status: "ready" | "updated" | "not_found" | "not_temp" | "missing" | "duplicate_in_file" | "number_in_use";
+  message: string;
+};
+
 export const customersApi = {
   async list(
     params: {
@@ -69,6 +78,8 @@ export const customersApi = {
       sortOrder?: "asc" | "desc";
       /** Whitelisted-column Excel filters, e.g. {city: ["Pune","Mumbai"]}. Unsupported keys are silently ignored server-side. */
       columnFilters?: Record<string, string[]>;
+      /** Only customers still on an import-assigned TEMP-... ID. */
+      tempIds?: boolean;
     } = {},
   ): Promise<{ data: Customer[]; pagination?: PaginationMeta }> {
     const query = new URLSearchParams();
@@ -85,6 +96,7 @@ export const customersApi = {
     if (params.columnFilters && Object.keys(params.columnFilters).length) {
       query.set("columnFilters", JSON.stringify(params.columnFilters));
     }
+    if (params.tempIds) query.set("tempIds", "true");
     const { data, pagination } = await apiRequestPaginated<BackendCustomer[]>(`/customers?${query.toString()}`);
     return { data: (data ?? []).map((row) => mapCustomer(row)), pagination };
   },
@@ -133,6 +145,7 @@ export const customersApi = {
     statKey?: string;
     city?: string;
     columnFilters?: Record<string, string[]>;
+    tempIds?: boolean;
   }): Promise<{ ids: string[]; total: number; truncated: boolean }> {
     const query = new URLSearchParams();
     if (params.search) query.set("search", params.search);
@@ -144,6 +157,7 @@ export const customersApi = {
     if (params.columnFilters && Object.keys(params.columnFilters).length) {
       query.set("columnFilters", JSON.stringify(params.columnFilters));
     }
+    if (params.tempIds) query.set("tempIds", "true");
     return apiRequest<{ ids: string[]; total: number; truncated: boolean }>(`/customers/ids?${query.toString()}`);
   },
 
@@ -152,6 +166,14 @@ export const customersApi = {
    * used by "Export Selected" so a cross-page selection exports every selected
    * customer, not just whichever ones happen to be on the currently loaded page.
    */
+  /** Check (apply=false) or save (apply=true) TEMP ID -> real BR/TR number pairs. */
+  async replaceTempIds(rows: { tempId: string; trBpNumber: string }[], apply: boolean) {
+    return apiRequest<{
+      results: TempIdReplacementResult[];
+      summary: { total: number; ready: number; updated: number; problems: number };
+    }>("/customers/temp-ids/replace", { method: "POST", body: JSON.stringify({ rows, apply }) });
+  },
+
   async getByIds(ids: string[]): Promise<Customer[]> {
     if (!ids.length) return [];
     const query = new URLSearchParams({ ids: ids.join(","), limit: String(ids.length) });

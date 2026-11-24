@@ -59,6 +59,29 @@ async function downloadWorkbook(filename: string, workbook: ExcelJS.Workbook) {
   URL.revokeObjectURL(url);
 }
 
+/** First sheet of an .xlsx as objects keyed by the header row (cell text, trimmed). */
+export async function readExcelRows(file: File): Promise<Record<string, string>[]> {
+  const ExcelJSMod = await loadExcelJS();
+  const workbook = new ExcelJSMod.Workbook();
+  await workbook.xlsx.load(await file.arrayBuffer());
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return [];
+  const headers: string[] = [];
+  sheet.getRow(1).eachCell((cell, column) => {
+    headers[column] = cell.text.trim();
+  });
+  const rows: Record<string, string>[] = [];
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const record: Record<string, string> = {};
+    headers.forEach((header, column) => {
+      if (header) record[header] = row.getCell(column).text.trim();
+    });
+    if (Object.values(record).some(Boolean)) rows.push(record);
+  });
+  return rows;
+}
+
 export async function exportRowsToExcel<T>(filename: string, columns: ExportColumn<T>[], rows: T[]) {
   const ExcelJSMod = await loadExcelJS();
   const workbook = new ExcelJSMod.Workbook();

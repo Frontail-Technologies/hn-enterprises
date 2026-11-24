@@ -26,6 +26,8 @@ export type CustomersListParams = {
   sortBy?: "customerName" | "trBpNumber" | "mobileNumber" | "createdAt";
   sortOrder?: "asc" | "desc";
   columnFilters?: Record<string, string[]>;
+  /** Only customers still on a TEMP-... ID. */
+  tempIds?: boolean;
 };
 
 /** Real server pagination for CustomersList - keeps previous page's data while the next page loads. */
