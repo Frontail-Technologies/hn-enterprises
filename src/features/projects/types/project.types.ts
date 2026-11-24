@@ -134,6 +134,8 @@ export type ProjectTeamSupervisor = {
   name: string;
   avatarUrl?: string | null;
   role: "Supervisor";
+  /** false: only a name typed in an imported sheet, not a saved user. */
+  linked?: boolean;
   sites: ProjectTeamSiteRef[];
   customerCount: number;
   lastActivityAt: string | null;
@@ -144,6 +146,8 @@ export type ProjectTeamPlumber = {
   name: string;
   avatarUrl?: string | null;
   role: "Plumber";
+  /** false: only a name typed in an imported sheet, not a saved plumber. */
+  linked?: boolean;
   sites: ProjectTeamSiteRef[];
   customerCount: number;
   lastActivityAt: string | null;

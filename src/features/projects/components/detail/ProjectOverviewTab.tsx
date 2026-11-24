@@ -26,7 +26,8 @@ import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
 import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
-import { ProjectActivityCard, ProjectTeamCard } from "./ProjectRailCards";
+import { ProjectActivityCard } from "./ProjectRailCards";
+import { ProjectTeamTab } from "./ProjectTeamTab";
 import { toTitleCase } from "./project-detail.utils";
 
 type ProjectSite = ProjectSummary["sites"]["list"][number];
@@ -37,6 +38,7 @@ const TABS = [
   { value: "customers", label: "Customers" },
   { value: "work", label: "Work" },
   { value: "billing", label: "Billing" },
+  { value: "team", label: "Team" },
   { value: "sites", label: "Sites" },
   { value: "documents", label: "Documents" },
 ] as const;
@@ -144,12 +146,7 @@ export function ProjectTabs({ project }: { project: Project }) {
 
       <TabsContent value="overview">
         <RecordLayout
-          rail={
-            <>
-              <ProjectTeamCard projectId={project.id} />
-              <ProjectActivityCard projectId={project.id} />
-            </>
-          }
+          rail={<ProjectActivityCard projectId={project.id} />}
         >
           {isLoading || !summary ? (
             <>
@@ -287,6 +284,10 @@ export function ProjectTabs({ project }: { project: Project }) {
             <NeedsBackendUpdate />
           )}
         </SectionCard>
+      </TabsContent>
+
+      <TabsContent value="team">
+        {tab === "team" ? <ProjectTeamTab projectId={project.id} /> : null}
       </TabsContent>
 
       <TabsContent value="sites">
