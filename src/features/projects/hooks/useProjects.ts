@@ -12,7 +12,9 @@ const teamKey = (projectId: string) => ["projects", projectId, "team"] as const;
 
 export function useProjectsQuery(search?: string) {
   return useQuery({
-    queryKey: [...projectsKey, search ?? ""],
+    // "list" keeps this apart from a single project's key (["projects", id]):
+    // with an empty search the two used to collide (["projects", ""]).
+    queryKey: [...projectsKey, "list", search ?? ""],
     queryFn: () => projectsApi.list(search),
   });
 }

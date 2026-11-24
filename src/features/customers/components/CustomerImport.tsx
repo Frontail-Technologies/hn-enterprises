@@ -11,7 +11,11 @@ export function CustomerImport() {
   // Opened from a project page (?projectId=...): import into that project.
   const projectId = useSearchParams().get("projectId") ?? "";
   const { data: project, isLoading } = useProjectQuery(projectId);
-  const target = useMemo(() => (project ? { id: project.id, name: project.name } : undefined), [project]);
+  // Only when the address names a project, and the loaded record is that project.
+  const target = useMemo(
+    () => (projectId && project?.id === projectId ? { id: project.id, name: project.name } : undefined),
+    [projectId, project],
+  );
   const config = useCustomerImportConfig(target);
 
   if (projectId && isLoading) return <PageLoading />;
