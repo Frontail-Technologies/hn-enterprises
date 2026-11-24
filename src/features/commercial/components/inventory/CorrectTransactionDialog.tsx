@@ -36,6 +36,7 @@ import type {
   MaterialSource,
   MaterialTransaction,
 } from "../../types/material.types";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 const SOURCE_REQUIRED_TYPES = ["issue", "return", "adjustment"];
 
@@ -152,7 +153,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
         value={values.projectId || undefined}
         onValueChange={(projectId) => set("projectId", projectId ?? "")}
         placeholder="Select project"
-        options={projects.map((project) => ({ value: project.id, label: project.name }))}
+        options={projects.map(projectOption)}
         className="w-full"
       />
     </FormField>

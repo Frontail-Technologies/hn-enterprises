@@ -2,6 +2,7 @@
 
 import type { ListFilter } from "@/components/shared/list";
 import { MonthPicker } from "@/components/shared/MonthPicker";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 /**
  * Inventory page filters. Project, source and plumber are ListTable filters
@@ -39,7 +40,7 @@ export function inventoryListFilters({
       quick: true,
       options: [
         { value: "unassigned", label: "Central / Unassigned" },
-        ...projects.map((project) => ({ value: project.id, label: project.name })),
+        ...projects.map(projectOption),
       ],
     },
     { id: "source", label: "Source", quick: true, options: SOURCE_OPTIONS },

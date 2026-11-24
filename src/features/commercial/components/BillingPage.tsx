@@ -33,6 +33,7 @@ import { BillDialog } from "./billing/BillDialog";
 import { BillingActions } from "./billing/BillingActions";
 import { WageDialog } from "./billing/WageDialog";
 import { WageRegister } from "./billing/WageRegister";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 const BILL_STATUSES: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
 
@@ -101,7 +102,7 @@ export function BillingPage() {
   const { data: projects = [] } = useProjectsQuery();
   const filters = useMemo<ListFilter[]>(
     () => [
-      { id: "project", label: "Project", quick: true, options: projects.map((project) => ({ value: project.id, label: project.name })) },
+      { id: "project", label: "Project", quick: true, options: projects.map(projectOption) },
       { id: "status", label: "Status", quick: true, options: BILL_STATUSES.map((s) => ({ value: s, label: s })) },
     ],
     [projects],

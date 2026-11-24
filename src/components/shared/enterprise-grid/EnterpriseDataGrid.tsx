@@ -365,7 +365,19 @@ export function EnterpriseDataGrid<T extends { id: string }>({
     items: X[],
     getId: (item: X) => string,
   ): Array<{ key: string; item?: X; spacerWidth?: number }> {
-    if (!virtualColumns) return items.map((item) => ({ key: getId(item), item }));
+    if (!virtualColumns) {
+      // Same order as the header (pinned columns first). Row cells come in
+      // definition order, so a pinned column defined later (e.g. the title
+      // column of the project Activity table) used to sit under another header.
+      const position = new Map<string, number>(
+        [...table.getStartVisibleLeafColumns(), ...table.getCenterVisibleLeafColumns(), ...table.getEndVisibleLeafColumns()].map(
+          (column, index): [string, number] => [column.id, index],
+        ),
+      );
+      return [...items]
+        .sort((a, b) => (position.get(getId(a)) ?? Number.MAX_SAFE_INTEGER) - (position.get(getId(b)) ?? Number.MAX_SAFE_INTEGER))
+        .map((item) => ({ key: getId(item), item }));
+    }
     const byId = new Map(items.map((item) => [getId(item), item]));
     const slots: Array<{ key: string; item?: X; spacerWidth?: number }> = [];
     for (const column of startColumns) {

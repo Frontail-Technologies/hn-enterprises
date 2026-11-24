@@ -44,6 +44,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import type { CustomerCompletionAudit, CustomerFormValues, CustomerSectionCompletion } from "../types/customer.types";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 interface CustomerFormProps {
   mode: "create" | "edit";
@@ -147,7 +148,7 @@ function CustomerFormFields({
     return groups;
   }, [customFields, isAdmin]);
 
-  const projectOptions = projects.map((project) => ({ value: project.id, label: project.name }));
+  const projectOptions = projects.map(projectOption);
 
   const onSubmit = handleSubmit(async (values) => {
     setUploadError("");

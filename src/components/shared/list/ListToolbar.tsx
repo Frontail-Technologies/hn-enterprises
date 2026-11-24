@@ -59,7 +59,7 @@ function QuickFilter({ filter, state }: { filter: SelectFilter; state: ListState
         <span className="truncate">{selected ? `${filter.label}: ${selected.label}` : filter.label}</span>
         <CaretDownIcon size={12} className="shrink-0 text-muted-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-60 p-0">
+      <PopoverContent align="start" className="w-80 max-w-[90vw] p-0">
         <Command>
           {filter.options.length > 7 ? <CommandInput placeholder={`Search ${filter.label.toLowerCase()}...`} /> : null}
           <CommandList>
@@ -72,8 +72,11 @@ function QuickFilter({ filter, state }: { filter: SelectFilter; state: ListState
               {filter.options.map((option) => (
                 <CommandItem key={option.value} value={`${option.label} ${option.value}`} onSelect={() => choose(option.value)}>
                   <CheckIcon size={14} className={cn(option.value === value ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{option.label}</span>
-                </CommandItem>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="break-words">{option.label}</span>
+                    {option.secondary ? <span className="break-words text-xs text-muted-foreground">{option.secondary}</span> : null}
+                  </span>
+</CommandItem>
               ))}
             </CommandGroup>
           </CommandList>

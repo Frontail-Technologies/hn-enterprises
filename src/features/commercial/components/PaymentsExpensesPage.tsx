@@ -24,6 +24,7 @@ import type { PaymentCategory, PaymentStatus } from "../types/payment.types";
 import { money } from "../utils/format";
 import { PaymentActions } from "./PaymentActions";
 import { PaymentDialog } from "./PaymentDialog";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 const categories = paymentTabs as PaymentCategory[];
 
@@ -46,7 +47,7 @@ export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?
   const filters: ListFilter[] = [
     ...(fixedProjectId
       ? []
-      : [{ id: "projectId", label: "Project", quick: true, options: projects.map((project) => ({ value: project.id, label: project.name })) } as ListFilter]),
+      : [{ id: "projectId", label: "Project", quick: true, options: projects.map(projectOption) } as ListFilter]),
     { type: "dateRange", id: "from", toId: "to", label: "Date" },
   ];
   const [isExporting, setIsExporting] = useState(false);

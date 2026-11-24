@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ export function SearchableSelect({
         </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-(--anchor-width) min-w-[200px] max-w-[400px] p-0" align="start">
+      <PopoverContent className="w-(--anchor-width) min-w-[280px] max-w-[min(560px,90vw)] p-0" align="start">
         <Command shouldFilter={!isAsync}>
           <div className="relative">
             <CommandInput
@@ -118,8 +118,9 @@ export function SearchableSelect({
                 <CommandItem
                   key={option.value}
                   data-checked={value === option.value ? "true" : undefined}
-                  value={option.label}
-                  keywords={option.keywords ?? (option.secondary ? [option.secondary] : undefined)}
+                  // Unique per option: two projects can share a name.
+                  value={`${option.label} ${option.value}`}
+                  keywords={option.keywords ?? (option.secondary ? [option.label, option.secondary] : [option.label])}
                   onSelect={() => {
                     onValueChange(option.value);
                     setOpen(false);
@@ -127,19 +128,13 @@ export function SearchableSelect({
                 >
                   {option.secondary ? (
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate" title={option.label}>
-                        {option.label}
-                      </span>
-                      <span className="truncate text-xs text-muted-foreground" title={option.secondary}>
-                        {option.secondary}
-                      </span>
+                      <span className="break-words">{option.label}</span>
+                      <span className="break-words text-xs text-muted-foreground">{option.secondary}</span>
                     </span>
                   ) : (
-                    <span className="min-w-0 flex-1 truncate" title={option.label}>
-                      {option.label}
-                    </span>
+                    <span className="min-w-0 flex-1 break-words">{option.label}</span>
                   )}
-                  {value === option.value ? <Check className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> : null}
+                  {/* The tick comes from CommandItem (data-checked); no second one here. */}
                 </CommandItem>
               ))}
             </CommandGroup>

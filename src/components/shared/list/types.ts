@@ -38,7 +38,7 @@ export type ListColumn<T> = {
   defaultHidden?: boolean;
 };
 
-export type FilterOption = { value: string; label: string };
+export type FilterOption = { value: string; label: string; /** e.g. a project's code · city · contractor */ secondary?: string };
 
 export type ListFilter =
   | {

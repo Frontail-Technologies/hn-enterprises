@@ -33,6 +33,7 @@ import {
 import { SupervisorOverviewTable } from "./SupervisorOverviewTable";
 import { PlanningTable } from "./PlanningTable";
 import { DprTable } from "./DprTable";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 type ViewTab = "overview" | "planning" | "dpr";
 
@@ -100,7 +101,7 @@ export function PlanningEntryPage() {
             <SearchableSelect
               value={projectId || "all"}
               onValueChange={(value) => setProjectId(value === "all" ? "" : value)}
-              options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: project.name }))]}
+              options={[{ value: "all", label: "All projects" }, ...projects.map(projectOption)]}
               placeholder="All projects"
               searchPlaceholder="Search projects..."
               className="h-8 w-full text-[13px] sm:w-48"

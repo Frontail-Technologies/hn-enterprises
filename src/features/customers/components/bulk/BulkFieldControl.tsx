@@ -11,6 +11,7 @@ import {
 } from "../../config/customer-options";
 import type { CustomerBulkFieldKey } from "../../types/customer-bulk.types";
 import type { useBulkFieldOptions } from "../../hooks/useBulkFieldOptions";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 export const BULK_CLEAR_VALUE = "__clear__";
 export const BULK_YES_VALUE = "yes";
@@ -62,7 +63,7 @@ export function BulkFieldControl({ field, value, onChange, fieldOptions, related
           value={value || undefined}
           onValueChange={onChange}
           placeholder="Select project"
-          options={projects.map((project) => ({ value: project.id, label: project.name }))}
+          options={projects.map(projectOption)}
         />
       );
 

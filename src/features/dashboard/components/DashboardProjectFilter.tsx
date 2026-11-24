@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 interface DashboardProjectFilterProps {
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; code?: string | null; city?: string | null; contractor?: string | null }[];
   value: string;
   onChange: (value: string) => void;
 }
@@ -47,7 +47,7 @@ export function DashboardProjectFilter({ projects, value, onChange }: DashboardP
         <span className="truncate">{selectedName ?? "All Projects"}</span>
         <CaretDownIcon size={12} className="size-3 shrink-0 opacity-60" />
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-96 max-w-[90vw] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search projects..." />
           <CommandList className="max-h-80">
@@ -59,12 +59,16 @@ export function DashboardProjectFilter({ projects, value, onChange }: DashboardP
               {projects.map((project) => (
                 <CommandItem
                   key={project.id}
-                  value={project.name}
+                  value={`${project.name} ${project.code ?? ""} ${project.id}`}
+                  keywords={[project.name, project.code, project.city, project.contractor].filter((part): part is string => Boolean(part))}
                   data-checked={value === project.id}
                   onSelect={() => select(project.id)}
                 >
-                  <span className="truncate" title={project.name}>
-                    {project.name}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="break-words">{project.name}</span>
+                    <span className="break-words text-xs text-muted-foreground">
+                      {[project.code, project.city, project.contractor].filter(Boolean).join(" · ")}
+                    </span>
                   </span>
                 </CommandItem>
               ))}

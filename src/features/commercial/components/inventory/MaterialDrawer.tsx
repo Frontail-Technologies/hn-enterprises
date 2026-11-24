@@ -40,6 +40,7 @@ import type {
   MaterialTransactionType,
 } from "../../types/material.types";
 import { ImageProofField } from "../shared/ImageProofField";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 const TYPE_LABELS: Record<MaterialTransactionType, string> = {
   purchase: "Add Purchase",
@@ -278,7 +279,7 @@ export function MaterialDrawer({
             value={field.value || undefined}
             onValueChange={(projectId) => field.onChange(projectId ?? "")}
             placeholder="Select project"
-            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+            options={projects.map(projectOption)}
             className="w-full"
           />
         )}
