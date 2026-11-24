@@ -31,7 +31,6 @@ import { ProjectWorkTab } from "./ProjectWorkTab";
 import { toTitleCase } from "./project-detail.utils";
 
 type ProjectSite = ProjectSummary["sites"]["list"][number];
-type WorkTotals = NonNullable<ProjectSummary["work"]>;
 
 const TABS = [
   { value: "overview", label: "Overview" },
