@@ -130,10 +130,11 @@ export function useCustomerImportConfig(
         : "Upload a customer master sheet. Customers go to the project in each row's Project Code (or Project Name) column. Rejected rows can be fixed and revalidated right here - no need to re-upload the file.",
       entityLabelPlural: "Customers",
       onDownloadTemplate: () => {
-        void exportColumnTemplate(
-          "customer-import-template.xlsx",
-          masterColumns.map((column) => column.label),
-        );
+        // "Project Code" first: it decides which project each row goes to.
+        void exportColumnTemplate("customer-import-template.xlsx", [
+          "Project Code",
+          ...masterColumns.map((column) => column.label),
+        ]);
       },
       columns: PREVIEW_COLUMNS,
       renderEditor: (props) => <CustomerImportRowEditor {...props} />,
