@@ -22,6 +22,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   "dynamic-fields": "Dynamic Fields",
   settings: "Settings",
   "audit-logs": "Audit Logs",
+  "recycle-bin": "Recycle Bin",
   announcements: "Announcements",
   new: "New",
   edit: "Edit",
@@ -70,6 +71,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "users", label: "Users & Roles", icon: "UserGear", href: "/users", allowedRoles: ["super_admin", "admin"] },
       { id: "announcements", label: "Announcements", icon: "Megaphone", href: "/announcements", allowedRoles: ["super_admin", "admin"] },
       { id: "masters", label: "Masters", icon: "Database", href: "/masters", allowedRoles: ["super_admin", "admin"] },
+      { id: "recycle-bin", label: "Recycle Bin", icon: "Trash", href: "/recycle-bin", allowedRoles: ["super_admin", "admin"] },
       {
         id: "dynamic-fields",
         label: "Dynamic Fields",

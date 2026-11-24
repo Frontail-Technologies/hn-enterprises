@@ -472,7 +472,8 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         entityLabelPlural="Customers"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDeleteConfirm}
-        note="Customers with associated records (e.g. bills or payments) will be skipped with an error instead of partially deleted."
+        recoverable
+        note="Customers with payments, DPR or site plans can't be deleted and stop the whole delete with an error."
       />
     </>
   );

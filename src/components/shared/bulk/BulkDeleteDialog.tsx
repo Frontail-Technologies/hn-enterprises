@@ -21,6 +21,8 @@ interface BulkDeleteDialogProps {
   isSubmitting: boolean;
   onConfirm: () => void;
   note?: string;
+  /** Deleted items go to the Recycle Bin (restorable) instead of being gone for good. */
+  recoverable?: boolean;
 }
 
 export function BulkDeleteDialog({
@@ -32,6 +34,7 @@ export function BulkDeleteDialog({
   isSubmitting,
   onConfirm,
   note,
+  recoverable = false,
 }: BulkDeleteDialogProps) {
   const plural = entityLabelPlural ?? `${entityLabel}s`;
   const noun = selectedCount === 1 ? entityLabel : plural;
@@ -52,7 +55,15 @@ export function BulkDeleteDialog({
             Delete {selectedCount} {noun}?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently deletes <strong>{selectedCount}</strong> {noun.toLowerCase()} and cannot be undone.
+            {recoverable ? (
+              <>
+                This moves <strong>{selectedCount}</strong> {noun.toLowerCase()} to the Recycle Bin. They can be restored from there for 30 days.
+              </>
+            ) : (
+              <>
+                This permanently deletes <strong>{selectedCount}</strong> {noun.toLowerCase()} and cannot be undone.
+              </>
+            )}
             {note ? ` ${note}` : ""}
             {isSubmitting ? (
               <span className="mt-2 block text-foreground">

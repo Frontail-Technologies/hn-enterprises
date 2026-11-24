@@ -26,6 +26,7 @@ import {
   MegaphoneIcon as Megaphone,
   WarningIcon as Warning,
   SlidersHorizontalIcon as SlidersHorizontal,
+  TrashIcon as Trash,
   SignOutIcon as SignOut,
   LockIcon as Lock,
   CaretUpDownIcon as CaretUpDown,
@@ -105,6 +106,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Megaphone,
   Warning,
   SlidersHorizontal,
+  Trash,
 };
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
