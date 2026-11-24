@@ -1,5 +1,7 @@
 import { customersApi } from "@/features/customers/api/customers.api";
 import type { Customer } from "@/features/customers/types/customer.types";
+import { projectsApi } from "@/features/projects/services/projects.service";
+import type { Project } from "@/features/projects/types/project.types";
 import type {
   PdfTableRow,
   ReportTemplateData,
@@ -61,7 +63,27 @@ export async function resolveReportTemplateData(
   customerId: string,
 ): Promise<ReportTemplateData> {
   const customer = await customersApi.get(customerId);
-  return resolveReportTemplateDataFromCustomer(templateId, customer);
+  // Client / consultant / contractor come from the customer's project, so each
+  // project's paperwork carries its own parties (not one hard-coded set).
+  const project = customer.projectId ? await projectsApi.get(customer.projectId).catch(() => undefined) : undefined;
+  return resolveReportTemplateDataFromCustomer(templateId, customer, project);
+}
+
+/**
+ * Wording and equipment that belong to one client's paperwork, applied only to
+ * that client's projects (matched on the project's Client name).
+ */
+const CLIENT_PROFILES: Array<{ match: RegExp; subtitle: string; meterMake: string; regulatorMake: string }> = [
+  {
+    match: /purba\s*bharati/i,
+    subtitle: "(A JVC of AGCL, OIL & GAIL Gas)",
+    meterMake: "RECHEM G-1.6",
+    regulatorMake: "GREENGLOB",
+  },
+];
+
+function clientProfile(client: string | undefined) {
+  return client ? CLIENT_PROFILES.find((profile) => profile.match.test(client)) : undefined;
 }
 
 /**
@@ -92,17 +114,20 @@ export function blankReportTemplateData(templateId: ReportTemplateId): ReportTem
 export function resolveReportTemplateDataFromCustomer(
   templateId: ReportTemplateId,
   customer: Customer,
+  project?: Project,
 ): ReportTemplateData {
   const connection = customer.customerConnection;
   const commissioning = customer.commissioningConversion;
+  const profile = clientProfile(project?.client);
 
   return {
-    companyName: "PURBA BHARATI GAS PVT. LTD.",
-    subtitle: "(A JVC of AGCL, OIL & GAIL Gas)",
-    client: "PURBA BHARATI GAS PRIVATE LIMITED",
-    consultant: "MECON LIMITED",
-    contractor: "PRADIP KUMAR GOGOI",
-    projectName: customer.projectName,
+    // Heading is the client company; blank when the project has no client.
+    companyName: project?.client ?? "",
+    subtitle: profile?.subtitle ?? "",
+    client: project?.client ?? "",
+    consultant: project?.consultant ?? "",
+    contractor: project?.contractor ?? "",
+    projectName: project?.name || customer.projectName,
     chargeArea: customer.city,
     location: customer.siteArea,
     reportNo: selectReportNo(templateId, connection.reportNoGi, connection.reportNoGc, connection.reportNoConversion),
@@ -113,10 +138,10 @@ export function resolveReportTemplateDataFromCustomer(
     customerAddress: connection.fullAddress,
     connectionType: connection.connectionType,
     meterNo: commissioning.meterNo,
-    meterMake: "RECHEM G-1.6",
+    meterMake: profile?.meterMake ?? "",
     meterType: commissioning.meterType,
     regulatorNo: commissioning.regulatorNo,
-    regulatorMake: "GREENGLOB",
+    regulatorMake: profile?.regulatorMake ?? "",
     regulatorPressure: commissioning.regulatorPressure,
     riserTestingPressure: "-",
     riserTestingTime: "-",

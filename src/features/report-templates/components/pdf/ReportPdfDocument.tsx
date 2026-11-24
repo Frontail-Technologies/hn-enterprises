@@ -433,7 +433,7 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
         </View>
 
         <View style={{ marginBottom: 12 }}>
-          <PlainInfoLine label="Project" value="City Gas Distribution Project at Kamrup & Kamrup Metropolitan GA" />
+          <PlainInfoLine label="Project" value={data.projectName} />
           <PlainInfoLine label={fieldLabel(data, "client", "Client")} value={data.client} />
           <PlainInfoLine label={fieldLabel(data, "consultant", "Consultant")} value={data.consultant} />
           <PlainInfoLine label={fieldLabel(data, "contractor", "Contractor")} value={data.contractor} />
