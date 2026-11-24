@@ -112,7 +112,10 @@ function CustomerImportRowEditor({ data, onChange, errors }: RowEditorProps<Cust
   );
 }
 
-export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportRowData> {
+/** `project`: import every row into this project (opened from the project page). */
+export function useCustomerImportConfig(
+  project?: { id: string; name: string },
+): ImportWorkspaceConfig<CustomerImportRowData> {
   const { data: activeCustomFields = [] } = useDynamicFieldsQuery("Active");
   const queryClient = useQueryClient();
 
@@ -121,8 +124,10 @@ export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportR
 
     return {
       module: "customers",
-      title: "Import Customers",
-      description: "Upload a customer master sheet. Rejected rows can be fixed and revalidated right here - no need to re-upload the file.",
+      title: project ? `Import customers into ${project.name}` : "Import Customers",
+      description: project
+        ? "Every customer in the sheet is added to this project (sites are matched by the sheet's site / area name). Rejected rows can be fixed right here."
+        : "Upload a customer master sheet. Customers go to the project in each row's Project Code (or Project Name) column. Rejected rows can be fixed and revalidated right here - no need to re-upload the file.",
       entityLabelPlural: "Customers",
       onDownloadTemplate: () => {
         void exportColumnTemplate(
@@ -134,7 +139,7 @@ export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportR
       renderEditor: (props) => <CustomerImportRowEditor {...props} />,
 
       async preview(file) {
-        const result = await masterImportApi.preview(file);
+        const result = await masterImportApi.preview(file, project?.id);
         return { batchId: result.batchId, rows: result.rows.map(toDraft) };
       },
 
@@ -161,8 +166,10 @@ export function useCustomerImportConfig(): ImportWorkspaceConfig<CustomerImportR
         // reset. Runs even on a partial failure, since any successfully
         // imported rows already changed the underlying dataset.
         void queryClient.invalidateQueries({ queryKey: customersKey });
+        // Project pages (summary counts, sites) change too.
+        void queryClient.invalidateQueries({ queryKey: ["projects"] });
         return { imported: result.imported, failed: result.failed };
       },
     };
-  }, [activeCustomFields, queryClient]);
+  }, [activeCustomFields, queryClient, project]);
 }

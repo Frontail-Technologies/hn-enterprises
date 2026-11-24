@@ -9,6 +9,7 @@ import {
   HashIcon,
   MapPinIcon,
   NotePencilIcon,
+  UploadSimpleIcon,
   TagIcon,
   UserIcon,
 } from "@phosphor-icons/react";
@@ -90,10 +91,16 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         ]}
         figure={project.contractValue ? { label: "Contract value", value: project.contractValue } : undefined}
         actions={
-          <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-            <NotePencilIcon size={15} />
-            Edit project
-          </Link>
+          <>
+            <Link href={`/customers/import?projectId=${encodeURIComponent(project.id)}`} className={buttonVariants({ variant: "outline" })}>
+              <UploadSimpleIcon size={15} />
+              Import customers
+            </Link>
+            <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+              <NotePencilIcon size={15} />
+              Edit project
+            </Link>
+          </>
         }
       />
 

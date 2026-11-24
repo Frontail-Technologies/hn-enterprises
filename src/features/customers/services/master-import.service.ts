@@ -69,9 +69,11 @@ export function getRowStatus(row: NormalizedImportRow): ImportRowStatus {
 type BackendImportPreviewResult = Omit<ImportPreviewResult, "rows"> & { rows: BackendNormalizedImportRow[] };
 
 export const masterImportApi = {
-  async preview(file: File): Promise<ImportPreviewResult> {
+  /** With `projectId`, every row is imported into that project. */
+  async preview(file: File, projectId?: string): Promise<ImportPreviewResult> {
     const formData = new FormData();
     formData.append("file", file);
+    if (projectId) formData.append("projectId", projectId);
     return apiRequest<BackendImportPreviewResult>("/master-import/preview", {
       method: "POST",
       body: formData,
