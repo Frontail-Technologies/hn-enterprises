@@ -10,6 +10,8 @@ import {
   MapPinIcon,
   NotePencilIcon,
   UploadSimpleIcon,
+  UsersIcon,
+  HardHatIcon,
   TagIcon,
   UserIcon,
 } from "@phosphor-icons/react";
@@ -20,9 +22,7 @@ import { PageLoading } from "@/components/shared/PageLoading";
 import { RecordHeader } from "@/components/shared/record";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectQuery } from "@/features/projects/hooks/useProjects";
-import { ProjectDocumentsTab } from "./detail/ProjectDocumentsTab";
-import { ProjectOverviewTab } from "./detail/ProjectOverviewTab";
-import { ProjectActivityCard, ProjectTeamCard } from "./detail/ProjectRailCards";
+import { ProjectTabs } from "./detail/ProjectOverviewTab";
 import { formatDate } from "./detail/project-detail.utils";
 
 /**
@@ -85,6 +85,8 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
           { icon: HashIcon, label: project.code },
           { icon: MapPinIcon, label: project.city },
           { icon: BuildingsIcon, label: project.client },
+          { icon: UsersIcon, label: project.consultant ? `Consultant: ${project.consultant}` : "" },
+          { icon: HardHatIcon, label: project.contractor ? `Contractor: ${project.contractor}` : "" },
           { icon: TagIcon, label: project.projectType },
           { icon: CalendarBlankIcon, label: dates.join(" – ") },
           { icon: UserIcon, label: project.assignedManager },
@@ -104,20 +106,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
         }
       />
 
-      <ProjectOverviewTab
-        project={project}
-        rail={
-          <>
-            <ProjectTeamCard projectId={project.id} />
-            <ProjectActivityCard projectId={project.id} />
-          </>
-        }
-      >
-        {/* Documents are uploaded and managed only here, so they stay on the page. */}
-        <section id="documents" className="flex scroll-mt-24 flex-col gap-4">
-          <ProjectDocumentsTab projectId={project.id} />
-        </section>
-      </ProjectOverviewTab>
+      <ProjectTabs project={project} />
     </div>
   );
 }

@@ -2,20 +2,45 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CaretRightIcon, ClipboardTextIcon, CurrencyInrIcon, MapPinIcon, PackageIcon, ReceiptIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  CaretRightIcon,
+  ClipboardTextIcon,
+  CurrencyInrIcon,
+  PackageIcon,
+  PathIcon,
+  ReceiptIcon,
+  UsersThreeIcon,
+} from "@phosphor-icons/react";
 import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
 import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { DetailRows, ProgressList, RecordLayout } from "@/components/shared/record";
+import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { money } from "@/features/commercial/utils/format";
+import { CustomersList } from "@/features/customers/components/CustomersList";
 import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
-import { formatCompactCount, formatFractionStat } from "@/lib/format";
-import type { Project } from "../../types/project.types";
-import { formatDate, toTitleCase } from "./project-detail.utils";
+import { formatCompactCount } from "@/lib/format";
+import type { Project, ProjectSummary } from "../../types/project.types";
+import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
+import { ProjectActivityCard, ProjectTeamCard } from "./ProjectRailCards";
+import { toTitleCase } from "./project-detail.utils";
 
-type ProjectSite = NonNullable<ReturnType<typeof useProjectSummaryQuery>["data"]>["sites"]["list"][number];
+type ProjectSite = ProjectSummary["sites"]["list"][number];
+type WorkTotals = NonNullable<ProjectSummary["work"]>;
+
+const TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "customers", label: "Customers" },
+  { value: "work", label: "Work" },
+  { value: "billing", label: "Billing" },
+  { value: "sites", label: "Sites" },
+  { value: "documents", label: "Documents" },
+] as const;
+type TabValue = (typeof TABS)[number]["value"];
 
 const siteColumns: ListColumn<ProjectSite>[] = [
   { id: "name", header: "Site / area", value: (site) => site.name, isTitle: true, hideable: false, sortable: true, width: 220, grow: true },
@@ -35,7 +60,7 @@ const siteColumns: ListColumn<ProjectSite>[] = [
 const metres = (value: number) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} m`;
 
 /** GI sizes that have any metres recorded (½" always shown). */
-function giRows(gi: NonNullable<NonNullable<ReturnType<typeof useProjectSummaryQuery>["data"]>["work"]>["gi"]) {
+function giRows(gi: WorkTotals["gi"]) {
   const sizes = [
     { label: 'GI ½"', value: gi.halfInch, always: true },
     { label: 'GI ¾"', value: gi.threeQuarterInch },
@@ -63,158 +88,208 @@ function RecordTile({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
+/** Shown in place of the work/billing figures until the backend provides them. */
+function NeedsBackendUpdate() {
+  return (
+    <p className="rounded-lg bg-muted/50 px-3 py-2 text-[13px] text-muted-foreground">
+      These figures appear once the server is updated.
+    </p>
+  );
+}
+
 /**
- * Project overview: key numbers (each opens the full page filtered to this
- * project), execution and billing progress, sites, and a facts rail. Lists
- * that have their own screens (customers, bills, expenses, materials, DPRs)
- * are linked, not embedded.
+ * Project workspace, one tab per area so nothing is repeated:
+ * Overview (headline numbers and progress), Customers (the full list),
+ * Work (LMC / GI laid, DPR, stock), Billing (amounts), Sites, Documents.
+ * The open tab is kept in the address (`?tab=`) so refresh and shared links keep it.
  */
-export function ProjectOverviewTab({ project, rail, children }: { project: Project; rail?: ReactNode; children?: ReactNode }) {
+export function ProjectTabs({ project }: { project: Project }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab");
+  const tab: TabValue = TABS.some((entry) => entry.value === requested) ? (requested as TabValue) : "overview";
+
   const { data: summary, isLoading } = useProjectSummaryQuery(project.id);
   const siteList = useListState({ pageSize: 25, storageKey: "project-sites" });
   const sites = useClientRows(summary?.sites.list ?? [], siteList, { columns: siteColumns });
+
   const scoped = (path: string) => `${path}?projectId=${encodeURIComponent(project.id)}`;
   // Same drill-down pages as the dashboard stats (customers with their status
   // for that stage, exportable), limited to this project.
   const stage = (statKey: string) => `/dashboard/stats/${statKey}?projectId=${encodeURIComponent(project.id)}`;
 
-  const facts = (
-    <>
-      <SectionCard title="Project facts">
-        <DetailRows
-          rows={[
-            { label: "Client", value: project.client },
-            { label: "Consultant", value: project.consultant },
-            { label: "Contractor", value: project.contractor },
-            { label: "Project type", value: project.projectType },
-            { label: "City", value: project.city },
-            { label: "Start date", value: formatDate(project.startDate) },
-            { label: "Planned end", value: formatDate(project.plannedEndDate) },
-            { label: "Project manager", value: project.assignedManager },
-            { label: "Contract value", value: project.contractValue },
-          ]}
-        />
-      </SectionCard>
-      {rail}
-    </>
-  );
-
-  if (isLoading || !summary) {
-    return (
-      <RecordLayout rail={facts}>
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-          {Array.from({ length: 6 }, (_, index) => (
-            <Skeleton key={index} className="h-[74px] rounded-card" />
-          ))}
-        </div>
-        <Skeleton className="h-64 rounded-card" />
-        {children}
-      </RecordLayout>
-    );
+  function selectTab(next: TabValue) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "overview") params.delete("tab");
+    else params.set("tab", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  const total = summary.customers.total;
+  const total = summary?.customers.total ?? 0;
+  const work = summary?.work;
 
   return (
-    <RecordLayout rail={facts}>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-        <RecordTile href={stage("total-customers")}>
-          <DashboardStatCard dense tone="primary" label="Customers" value={formatCompactCount(total)} helperText="See customers & status" icon={UsersThreeIcon} />
-        </RecordTile>
-        <RecordTile href="#sites">
-          <DashboardStatCard dense tone="info" label="Active sites" value={formatFractionStat(summary.sites.active, summary.sites.total)} helperText="See sites below" icon={MapPinIcon} />
-        </RecordTile>
-        <RecordTile href="/planning">
-          <DashboardStatCard dense tone="warning" label="DPR pending" value={formatCompactCount(summary.dpr.pending)} helperText="Open DPR / planning" icon={ClipboardTextIcon} />
-        </RecordTile>
-        <RecordTile href={scoped("/inventory")}>
-          <DashboardStatCard dense tone="danger" label="Stock alerts" value={formatCompactCount(summary.materials.lowStockAlerts)} helperText="Open materials" icon={PackageIcon} />
-        </RecordTile>
-        <RecordTile href={scoped("/payments")}>
-          <DashboardStatCard dense tone="success" label="Approved expenses" value={money(summary.expenses.total)} helperText="Open expenses" icon={CurrencyInrIcon} />
-        </RecordTile>
-        <RecordTile href={scoped("/billing")}>
-          <DashboardStatCard dense tone="info" label="JMR billed" value={formatFractionStat(summary.customers.jmrDone, total)} helperText="Open bills" icon={ReceiptIcon} />
-        </RecordTile>
-      </div>
+    <Tabs value={tab} onValueChange={(value) => value && selectTab(value as TabValue)} className="min-w-0 gap-5">
+      <ScrollableTabsList>
+        {TABS.map((entry) => (
+          <TabsTrigger key={entry.value} value={entry.value} className="shrink-0">
+            {entry.label}
+            {entry.value === "customers" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(total)}</span> : null}
+            {entry.value === "sites" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(summary.sites.total)}</span> : null}
+          </TabsTrigger>
+        ))}
+      </ScrollableTabsList>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <SectionCard title="Execution progress" description="Customers through each field stage · click a stage to see them">
-          <ProgressList
-            items={[
-              { label: "Survey", value: summary.customers.surveyDone, total, href: stage("survey-done") },
-              { label: "GI", value: summary.customers.giDone, total, href: stage("gi-done") },
-              { label: "GC", value: summary.customers.gcDone, total, href: stage("gc-done") },
-              { label: "Conversion", value: summary.customers.conversionDone, total, href: stage("conversion-done") },
-              { label: "JMR", value: summary.customers.jmrDone, total, href: stage("jmr-done") },
-            ]}
-          />
-        </SectionCard>
-        <SectionCard title="Billing status" description="Work billed so far · click a row to see the customers">
-          <ProgressList
-            items={[
-              { label: "JMR done", value: summary.customers.jmrDone, total, href: stage("jmr-done") },
-              { label: "GI billed", value: summary.customers.giBillDone, total, href: stage("gi-bill-done") },
-              { label: "GC billed", value: summary.customers.gcBillDone, total, href: stage("gc-bill-done") },
-              { label: "Conversion billed", value: summary.customers.conversionBillDone, total, href: stage("conversion-bill-done") },
-            ]}
-          />
-        </SectionCard>
-      </div>
+      <TabsContent value="overview">
+        <RecordLayout
+          rail={
+            <>
+              <ProjectTeamCard projectId={project.id} />
+              <ProjectActivityCard projectId={project.id} />
+            </>
+          }
+        >
+          {isLoading || !summary ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <Skeleton key={index} className="h-26 rounded-card" />
+                ))}
+              </div>
+              <Skeleton className="h-64 rounded-card" />
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <RecordTile href={stage("total-customers")}>
+                  <DashboardStatCard dense tone="primary" label="Customers" value={formatCompactCount(total)} helperText="See customers & status" icon={UsersThreeIcon} />
+                </RecordTile>
+                <RecordTile href={`/projects/${project.id}?tab=work`}>
+                  <DashboardStatCard dense tone="info" label="LMC laid" value={work ? metres(work.lmc.totalMetres) : "—"} helperText="By pipe size" icon={PathIcon} />
+                </RecordTile>
+                <RecordTile href={`/projects/${project.id}?tab=billing`}>
+                  <DashboardStatCard
+                    dense
+                    tone="success"
+                    label="Billed"
+                    value={work ? money(work.billing.billed) : "—"}
+                    helperText={work ? `${money(work.billing.outstanding)} outstanding` : "Billing amounts"}
+                    icon={ReceiptIcon}
+                  />
+                </RecordTile>
+                <RecordTile href={scoped("/payments")}>
+                  <DashboardStatCard dense tone="warning" label="Approved expenses" value={money(summary.expenses.total)} helperText="Open expenses" icon={CurrencyInrIcon} />
+                </RecordTile>
+              </div>
 
-      {summary.work ? (
+              <div className="grid gap-5 lg:grid-cols-2">
+                <SectionCard title="Execution progress" description="Customers through each field stage · click a stage to see them">
+                  <ProgressList
+                    items={[
+                      { label: "Survey", value: summary.customers.surveyDone, total, href: stage("survey-done") },
+                      { label: "GI", value: summary.customers.giDone, total, href: stage("gi-done") },
+                      { label: "GC", value: summary.customers.gcDone, total, href: stage("gc-done") },
+                      { label: "Conversion", value: summary.customers.conversionDone, total, href: stage("conversion-done") },
+                      { label: "JMR", value: summary.customers.jmrDone, total, href: stage("jmr-done") },
+                    ]}
+                  />
+                </SectionCard>
+                <SectionCard title="Billing status" description="Customers billed per stage · click a row to see them">
+                  <ProgressList
+                    items={[
+                      { label: "GI billed", value: summary.customers.giBillDone, total, href: stage("gi-bill-done") },
+                      { label: "GC billed", value: summary.customers.gcBillDone, total, href: stage("gc-bill-done") },
+                      { label: "Conversion billed", value: summary.customers.conversionBillDone, total, href: stage("conversion-bill-done") },
+                    ]}
+                  />
+                </SectionCard>
+              </div>
+            </>
+          )}
+        </RecordLayout>
+      </TabsContent>
+
+      <TabsContent value="customers">
+        {/* Mounted only while open, so the full list isn't fetched for other tabs. */}
+        {tab === "customers" ? <CustomersList projectId={project.id} embedded /> : null}
+      </TabsContent>
+
+      <TabsContent value="work" className="flex flex-col gap-5">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <RecordTile href="/planning">
+            <DashboardStatCard dense tone="warning" label="DPR pending" value={formatCompactCount(summary?.dpr.pending ?? 0)} helperText="Open DPR / planning" icon={ClipboardTextIcon} />
+          </RecordTile>
+          <RecordTile href={scoped("/inventory")}>
+            <DashboardStatCard dense tone="danger" label="Stock alerts" value={formatCompactCount(summary?.materials.lowStockAlerts ?? 0)} helperText="Open materials" icon={PackageIcon} />
+          </RecordTile>
+        </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <SectionCard
-            title="LMC & GI laid"
+            title="LMC laid"
             description={
               <>
-                Metres recorded on this project&apos;s customers ·{" "}
+                Metres per pipe size ·{" "}
                 <Link href={stage("laying-done")} className="font-medium text-primary hover:underline">
                   see laying status
                 </Link>
               </>
             }
           >
-            <DetailRows
-              rows={[
-                ...(summary.work.lmc.bySize.length
-                  ? summary.work.lmc.bySize.map((row) => ({
-                      label: `LMC ${row.pipeSize}`,
-                      value: `${metres(row.metres)} · ${formatCompactCount(row.customers)} customers`,
-                    }))
-                  : [{ label: "LMC pipe", value: "No LMC recorded yet" }]),
-                { label: "Total LMC", value: metres(summary.work.lmc.totalMetres) },
-                ...giRows(summary.work.gi),
-                { label: "Total GI", value: metres(summary.work.gi.totalMetres) },
-              ]}
-            />
+            {work ? (
+              <DetailRows
+                rows={[
+                  ...(work.lmc.bySize.length
+                    ? work.lmc.bySize.map((row) => ({
+                        label: `LMC ${row.pipeSize}`,
+                        value: `${metres(row.metres)} · ${formatCompactCount(row.customers)} customers`,
+                      }))
+                    : [{ label: "LMC pipe", value: "No LMC recorded yet" }]),
+                  { label: "Total LMC", value: metres(work.lmc.totalMetres) },
+                ]}
+              />
+            ) : (
+              <NeedsBackendUpdate />
+            )}
           </SectionCard>
-          <SectionCard
-            title="Billing amounts"
-            description={
-              <>
-                Bills raised on this project (drafts excluded) ·{" "}
-                <Link href={scoped("/billing")} className="font-medium text-primary hover:underline">
-                  open bills
-                </Link>
-              </>
-            }
-          >
-            <DetailRows
-              rows={[
-                { label: "Total billed", value: money(summary.work.billing.billed) },
-                { label: "Received", value: money(summary.work.billing.paid) },
-                { label: "Outstanding", value: money(summary.work.billing.outstanding) },
-                { label: "Bills", value: formatCompactCount(summary.work.billing.bills) },
-                { label: "Approved expenses", value: money(summary.expenses.total) },
-              ]}
-            />
+          <SectionCard title="GI laid" description="Metres per GI pipe size, from each customer's GI measurements">
+            {work ? <DetailRows rows={[...giRows(work.gi), { label: "Total GI", value: metres(work.gi.totalMetres) }]} /> : <NeedsBackendUpdate />}
           </SectionCard>
         </div>
-      ) : null}
+      </TabsContent>
 
-      <section id="sites" className="flex scroll-mt-24 flex-col gap-3">
-        <h2 className="text-section-title">Sites</h2>
+      <TabsContent value="billing">
+        <SectionCard
+          title="Billing amounts"
+          description={
+            <>
+              Bills raised on this project (drafts excluded) ·{" "}
+              <Link href={scoped("/billing")} className="font-medium text-primary hover:underline">
+                open bills
+              </Link>
+            </>
+          }
+          className="max-w-2xl"
+        >
+          {work ? (
+            <DetailRows
+              rows={[
+                { label: "Total billed", value: money(work.billing.billed) },
+                { label: "Received", value: money(work.billing.paid) },
+                { label: "Outstanding", value: money(work.billing.outstanding) },
+                { label: "Bills", value: formatCompactCount(work.billing.bills) },
+                { label: "Approved expenses", value: money(summary?.expenses.total ?? 0) },
+                { label: "Contract value", value: project.contractValue || "—" },
+              ]}
+            />
+          ) : (
+            <NeedsBackendUpdate />
+          )}
+        </SectionCard>
+      </TabsContent>
+
+      <TabsContent value="sites">
         <ListTable
           itemLabel="site"
           rows={sites.pageRows}
@@ -224,9 +299,11 @@ export function ProjectOverviewTab({ project, rail, children }: { project: Proje
           searchPlaceholder="Search sites or supervisors..."
           empty={{ illustration: "projects", title: "No sites added to this project yet." }}
         />
-      </section>
+      </TabsContent>
 
-      {children}
-    </RecordLayout>
+      <TabsContent value="documents">
+        <ProjectDocumentsTab projectId={project.id} />
+      </TabsContent>
+    </Tabs>
   );
 }
