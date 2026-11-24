@@ -112,6 +112,19 @@ export type ProjectSummary = {
   expenses: { total: number };
   materials: { lowStockAlerts: number };
   team: { supervisors: number; plumbers: number; staff: number };
+  /** Work done and billed (missing from older backends). */
+  work?: {
+    lmc: { bySize: { pipeSize: string; metres: number; customers: number }[]; totalMetres: number };
+    gi: {
+      halfInch: number;
+      threeQuarterInch: number;
+      oneInch: number;
+      oneAndHalfInch: number;
+      twoInch: number;
+      totalMetres: number;
+    };
+    billing: { bills: number; billed: number; paid: number; outstanding: number };
+  };
 };
 
 export type ProjectTeamSiteRef = { id: string; name: string };

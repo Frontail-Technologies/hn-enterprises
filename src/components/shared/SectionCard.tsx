@@ -1,8 +1,9 @@
+import type React from "react"
 import { cn } from '@/lib/utils'
 
 interface SectionCardProps {
   title: string
-  description?: string
+  description?: React.ReactNode
   action?: React.ReactNode
   className?: string
   children: React.ReactNode

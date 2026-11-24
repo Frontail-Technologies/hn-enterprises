@@ -32,6 +32,20 @@ const siteColumns: ListColumn<ProjectSite>[] = [
   { id: "customerCount", header: "Customers", value: (site) => site.customerCount, align: "end", sortable: true, width: 120 },
 ];
 
+const metres = (value: number) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} m`;
+
+/** GI sizes that have any metres recorded (½" always shown). */
+function giRows(gi: NonNullable<NonNullable<ReturnType<typeof useProjectSummaryQuery>["data"]>["work"]>["gi"]) {
+  const sizes = [
+    { label: 'GI ½"', value: gi.halfInch, always: true },
+    { label: 'GI ¾"', value: gi.threeQuarterInch },
+    { label: 'GI 1"', value: gi.oneInch },
+    { label: 'GI 1½"', value: gi.oneAndHalfInch },
+    { label: 'GI 2"', value: gi.twoInch },
+  ];
+  return sizes.filter((size) => size.always || size.value > 0).map((size) => ({ label: size.label, value: metres(size.value) }));
+}
+
 /** A stat tile that opens the full, project-filtered page for that record type. */
 function RecordTile({ href, children }: { href: string; children: ReactNode }) {
   return (
@@ -60,8 +74,9 @@ export function ProjectOverviewTab({ project, rail, children }: { project: Proje
   const siteList = useListState({ pageSize: 25, storageKey: "project-sites" });
   const sites = useClientRows(summary?.sites.list ?? [], siteList, { columns: siteColumns });
   const scoped = (path: string) => `${path}?projectId=${encodeURIComponent(project.id)}`;
-  // Customers of this project that have completed a stage (same keys as the dashboard stat drill-downs).
-  const stage = (statKey: string) => `${scoped("/customers")}&statKey=${statKey}`;
+  // Same drill-down pages as the dashboard stats (customers with their status
+  // for that stage, exportable), limited to this project.
+  const stage = (statKey: string) => `/dashboard/stats/${statKey}?projectId=${encodeURIComponent(project.id)}`;
 
   const facts = (
     <>
@@ -103,8 +118,8 @@ export function ProjectOverviewTab({ project, rail, children }: { project: Proje
   return (
     <RecordLayout rail={facts}>
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-        <RecordTile href={scoped("/customers")}>
-          <DashboardStatCard dense tone="primary" label="Customers" value={formatCompactCount(total)} helperText="Open customer list" icon={UsersThreeIcon} />
+        <RecordTile href={stage("total-customers")}>
+          <DashboardStatCard dense tone="primary" label="Customers" value={formatCompactCount(total)} helperText="See customers & status" icon={UsersThreeIcon} />
         </RecordTile>
         <RecordTile href="#sites">
           <DashboardStatCard dense tone="info" label="Active sites" value={formatFractionStat(summary.sites.active, summary.sites.total)} helperText="See sites below" icon={MapPinIcon} />
@@ -146,6 +161,57 @@ export function ProjectOverviewTab({ project, rail, children }: { project: Proje
           />
         </SectionCard>
       </div>
+
+      {summary.work ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SectionCard
+            title="LMC & GI laid"
+            description={
+              <>
+                Metres recorded on this project&apos;s customers ·{" "}
+                <Link href={stage("laying-done")} className="font-medium text-primary hover:underline">
+                  see laying status
+                </Link>
+              </>
+            }
+          >
+            <DetailRows
+              rows={[
+                ...(summary.work.lmc.bySize.length
+                  ? summary.work.lmc.bySize.map((row) => ({
+                      label: `LMC ${row.pipeSize}`,
+                      value: `${metres(row.metres)} · ${formatCompactCount(row.customers)} customers`,
+                    }))
+                  : [{ label: "LMC pipe", value: "No LMC recorded yet" }]),
+                { label: "Total LMC", value: metres(summary.work.lmc.totalMetres) },
+                ...giRows(summary.work.gi),
+                { label: "Total GI", value: metres(summary.work.gi.totalMetres) },
+              ]}
+            />
+          </SectionCard>
+          <SectionCard
+            title="Billing amounts"
+            description={
+              <>
+                Bills raised on this project (drafts excluded) ·{" "}
+                <Link href={scoped("/billing")} className="font-medium text-primary hover:underline">
+                  open bills
+                </Link>
+              </>
+            }
+          >
+            <DetailRows
+              rows={[
+                { label: "Total billed", value: money(summary.work.billing.billed) },
+                { label: "Received", value: money(summary.work.billing.paid) },
+                { label: "Outstanding", value: money(summary.work.billing.outstanding) },
+                { label: "Bills", value: formatCompactCount(summary.work.billing.bills) },
+                { label: "Approved expenses", value: money(summary.expenses.total) },
+              ]}
+            />
+          </SectionCard>
+        </div>
+      ) : null}
 
       <section id="sites" className="flex scroll-mt-24 flex-col gap-3">
         <h2 className="text-section-title">Sites</h2>
