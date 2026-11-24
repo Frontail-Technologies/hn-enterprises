@@ -5,9 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CaretRightIcon,
-  ClipboardTextIcon,
   CurrencyInrIcon,
-  PackageIcon,
   PathIcon,
   ReceiptIcon,
   UsersThreeIcon,
@@ -29,6 +27,7 @@ import type { Project, ProjectSummary } from "../../types/project.types";
 import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
 import { ProjectActivityTab } from "./ProjectActivityTab";
 import { ProjectTeamTab } from "./ProjectTeamTab";
+import { ProjectWorkTab } from "./ProjectWorkTab";
 import { toTitleCase } from "./project-detail.utils";
 
 type ProjectSite = ProjectSummary["sites"]["list"][number];
@@ -63,18 +62,6 @@ const siteColumns: ListColumn<ProjectSite>[] = [
 ];
 
 const metres = (value: number) => `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })} m`;
-
-/** GI sizes that have any metres recorded (½" always shown). */
-function giRows(gi: WorkTotals["gi"]) {
-  const sizes = [
-    { label: 'GI ½"', value: gi.halfInch, always: true },
-    { label: 'GI ¾"', value: gi.threeQuarterInch },
-    { label: 'GI 1"', value: gi.oneInch },
-    { label: 'GI 1½"', value: gi.oneAndHalfInch },
-    { label: 'GI 2"', value: gi.twoInch },
-  ];
-  return sizes.filter((size) => size.always || size.value > 0).map((size) => ({ label: size.label, value: metres(size.value) }));
-}
 
 /** A stat tile that opens the full, project-filtered page for that record type. */
 function RecordTile({ href, children }: { href: string; children: ReactNode }) {
@@ -214,44 +201,8 @@ export function ProjectTabs({ project }: { project: Project }) {
         {tab === "customers" ? <CustomersList projectId={project.id} embedded /> : null}
       </TabsContent>
 
-      <TabsContent value="work" className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <RecordTile href={scoped("/planning")}>
-            <DashboardStatCard dense tone="warning" label="DPR pending" value={formatCompactCount(summary?.dpr.pending ?? 0)} helperText="Open DPR / planning" icon={ClipboardTextIcon} />
-          </RecordTile>
-          <RecordTile href={scoped("/inventory")}>
-            <DashboardStatCard dense tone="danger" label="Stock alerts" value={formatCompactCount(summary?.materials.lowStockAlerts ?? 0)} helperText="Open materials" icon={PackageIcon} />
-          </RecordTile>
-        </div>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SectionCard
-            title="LMC laid"
-            action={
-              <Link href={stage("laying-done")} className="text-[13px] font-medium text-primary hover:underline">
-                Laying status
-              </Link>
-            }
-          >
-            {work ? (
-              <DetailRows
-                rows={[
-                  ...(work.lmc.bySize.length
-                    ? work.lmc.bySize.map((row) => ({
-                        label: `LMC ${row.pipeSize}`,
-                        value: `${metres(row.metres)} · ${formatCompactCount(row.customers)} customers`,
-                      }))
-                    : [{ label: "LMC pipe", value: "No LMC recorded yet" }]),
-                  { label: "Total LMC", value: metres(work.lmc.totalMetres) },
-                ]}
-              />
-            ) : (
-              <NeedsBackendUpdate />
-            )}
-          </SectionCard>
-          <SectionCard title="GI laid" description="Metres per GI pipe size, from each customer's GI measurements">
-            {work ? <DetailRows rows={[...giRows(work.gi), { label: "Total GI", value: metres(work.gi.totalMetres) }]} /> : <NeedsBackendUpdate />}
-          </SectionCard>
-        </div>
+      <TabsContent value="work">
+        {summary ? <ProjectWorkTab project={project} summary={summary} /> : <Skeleton className="h-64 rounded-card" />}
       </TabsContent>
 
       <TabsContent value="billing">

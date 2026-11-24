@@ -95,6 +95,8 @@ export type ProjectSummary = {
     gcBillDone: number;
     conversionBillDone: number;
     connectionRemark: number;
+    /** Every field stage count by dashboard stat key (newer backends). */
+    stages?: Record<string, number>;
   };
   sites: {
     total: number;
@@ -124,6 +126,17 @@ export type ProjectSummary = {
       totalMetres: number;
     };
     billing: { bills: number; billed: number; paid: number; outstanding: number };
+    bySite?: {
+      id: string;
+      name: string;
+      customers: number;
+      surveyDone: number;
+      giDone: number;
+      gcDone: number;
+      conversionDone: number;
+      lmcMetres: number;
+      giMetres: number;
+    }[];
   };
 };
 
