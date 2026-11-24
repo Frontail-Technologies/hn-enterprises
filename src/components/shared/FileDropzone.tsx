@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { UploadSimpleIcon } from "@phosphor-icons/react";
+import { filesFromDrop } from "@/lib/file-drop";
 import { cn } from "@/lib/utils";
 
 interface FileDropzoneProps {
@@ -49,7 +50,8 @@ export function FileDropzone({ onFiles, accept, multiple, hint, busy, invalid, l
         onDrop={(event) => {
           event.preventDefault();
           setIsDragging(false);
-          if (!busy) onFiles(Array.from(event.dataTransfer.files));
+          const files = filesFromDrop(event.dataTransfer);
+          if (!busy && files.length) onFiles(files);
         }}
         className={cn(
           "flex w-full flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-wait disabled:opacity-70",

@@ -29,6 +29,7 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageIcon, pageIconForPath } from "@/components/shared/PageIcon";
 import { FullViewPortal } from "@/components/shared/table/FullViewPortal";
 import { FullViewToggleButton } from "@/components/shared/table/FullViewToggleButton";
+import { filesFromDrop } from "@/lib/file-drop";
 import { cn } from "@/lib/utils";
 import { ImportFilterTabs } from "./ImportFilterTabs";
 import { ImportPreviewTable } from "./ImportPreviewTable";
@@ -183,7 +184,8 @@ export function ImportWorkspace<TData>({
               onDrop={(event) => {
                 event.preventDefault();
                 setIsDragging(false);
-                pickFile(event.dataTransfer.files[0]);
+                const [file] = filesFromDrop(event.dataTransfer);
+                if (file) pickFile(file);
               }}
               className={cn(
                 "group flex min-h-[44vh] cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed px-6 text-center outline-none transition-[border-color,background-color] duration-200 focus-visible:ring-3 focus-visible:ring-ring/50",
