@@ -1,5 +1,6 @@
-import type { ElementType, ReactNode } from "react";
+import { Suspense, type ElementType, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { BackToProjectLink } from "./BackToProjectLink";
 import { PageHeader } from "./PageHeader";
 
 interface PageShellProps {
@@ -40,6 +41,10 @@ export function PageShell({
       )}
     >
       <header className={cn("space-y-4", fillHeight && "md:shrink-0 md:space-y-3")}>
+        {/* Reads the address; its own Suspense keeps static pages buildable. */}
+        <Suspense fallback={null}>
+          <BackToProjectLink />
+        </Suspense>
         {hideTitle ? (
           actions ? <div className="flex justify-end">{actions}</div> : null
         ) : (

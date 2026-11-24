@@ -70,10 +70,13 @@ export function DashboardStatDetailPage({
       title={definition.title}
       description="Customers counted in this dashboard figure."
       actions={
-        <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "compact" })}>
-          <ArrowLeftIcon size={14} />
-          Back
-        </Link>
+        // Opened from a project: the page header already shows "Back to project".
+        projectId && projectId !== "all" ? undefined : (
+          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "compact" })}>
+            <ArrowLeftIcon size={14} />
+            Back
+          </Link>
+        )
       }
     >
       <ListTable

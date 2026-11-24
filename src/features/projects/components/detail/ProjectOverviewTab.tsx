@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { money } from "@/features/commercial/utils/format";
 import { CustomersList } from "@/features/customers/components/CustomersList";
+import { PaymentsExpensesPage } from "@/features/commercial/components/PaymentsExpensesPage";
 import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
@@ -38,6 +39,7 @@ const TABS = [
   { value: "customers", label: "Customers" },
   { value: "work", label: "Work" },
   { value: "billing", label: "Billing" },
+  { value: "expenses", label: "Expenses" },
   { value: "team", label: "Team" },
   { value: "sites", label: "Sites" },
   { value: "documents", label: "Documents" },
@@ -176,7 +178,7 @@ export function ProjectTabs({ project }: { project: Project }) {
                     icon={ReceiptIcon}
                   />
                 </RecordTile>
-                <RecordTile href={scoped("/payments")}>
+                <RecordTile href={`/projects/${project.id}?tab=expenses`}>
                   <DashboardStatCard dense tone="warning" label="Approved expenses" value={money(summary.expenses.total)} helperText="Open expenses" icon={CurrencyInrIcon} />
                 </RecordTile>
               </div>
@@ -215,7 +217,7 @@ export function ProjectTabs({ project }: { project: Project }) {
 
       <TabsContent value="work" className="flex flex-col gap-5">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <RecordTile href="/planning">
+          <RecordTile href={scoped("/planning")}>
             <DashboardStatCard dense tone="warning" label="DPR pending" value={formatCompactCount(summary?.dpr.pending ?? 0)} helperText="Open DPR / planning" icon={ClipboardTextIcon} />
           </RecordTile>
           <RecordTile href={scoped("/inventory")}>
@@ -284,6 +286,10 @@ export function ProjectTabs({ project }: { project: Project }) {
             <NeedsBackendUpdate />
           )}
         </SectionCard>
+      </TabsContent>
+
+      <TabsContent value="expenses">
+        {tab === "expenses" ? <PaymentsExpensesPage projectId={project.id} /> : null}
       </TabsContent>
 
       <TabsContent value="team">

@@ -29,14 +29,24 @@ const categories = paymentTabs as PaymentCategory[];
 
 // Same `from` / `to` query keys as the old date FilterDialog.
 
-export function PaymentsExpensesPage() {
+/**
+ * Payments & Expenses. With `projectId` it is embedded in a project page:
+ * fixed to that project (no project filter, no page title).
+ */
+export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?: string } = {}) {
   const [active, setActive] = useState<PaymentCategory>(categories[0]);
   const urlProjectId = useSearchParams().get("projectId");
-  const list = useListState({ pageSize: 50, storageKey: "payments", initialFilters: urlProjectId ? { projectId: urlProjectId } : {} });
+  const list = useListState({
+    pageSize: 50,
+    storageKey: fixedProjectId ? "project-payments" : "payments",
+    initialFilters: !fixedProjectId && urlProjectId ? { projectId: urlProjectId } : {},
+  });
   const { data: projects = [] } = useProjectsQuery();
-  const projectId = list.filters.projectId || undefined;
+  const projectId = fixedProjectId ?? (list.filters.projectId || undefined);
   const filters: ListFilter[] = [
-    { id: "projectId", label: "Project", quick: true, options: projects.map((project) => ({ value: project.id, label: project.name })) },
+    ...(fixedProjectId
+      ? []
+      : [{ id: "projectId", label: "Project", quick: true, options: projects.map((project) => ({ value: project.id, label: project.name })) } as ListFilter]),
     { type: "dateRange", id: "from", toId: "to", label: "Date" },
   ];
   const [isExporting, setIsExporting] = useState(false);
@@ -92,12 +102,8 @@ export function PaymentsExpensesPage() {
     }
   }
 
-  return (
-    <PageShell
-      title="Payments & Expenses"
-      description="Expenses and payments recorded by supervisors, by category."
-      actions={<PaymentDialog defaultCategory={active} />}
-    >
+  const content = (
+    <>
       <CompactStatGrid columns={3}>
         <DashboardStatCard label="Approved This Month" value={money(monthlyTotal)} icon={CheckCircleIcon} tone="success" dense />
         <DashboardStatCard label="Submitted" value={formatCompactCount(submittedCount)} icon={PaperPlaneTiltIcon} tone="info" dense />
@@ -141,6 +147,7 @@ export function PaymentsExpensesPage() {
         renderRowActions={(row) => <PaymentActions payment={row} />}
         actions={
           <>
+            {fixedProjectId ? <PaymentDialog defaultCategory={active} /> : null}
             <Link href="/payments/import" className={buttonVariants({ variant: "outline", size: "compact" })}>
               <UploadSimpleIcon size={14} />
               Import
@@ -152,6 +159,18 @@ export function PaymentsExpensesPage() {
           </>
         }
       />
+    </>
+  );
+
+  if (fixedProjectId) return <div className="flex flex-col gap-4">{content}</div>;
+
+  return (
+    <PageShell
+      title="Payments & Expenses"
+      description="Expenses and payments recorded by supervisors, by category."
+      actions={<PaymentDialog defaultCategory={active} />}
+    >
+      {content}
     </PageShell>
   );
 }
