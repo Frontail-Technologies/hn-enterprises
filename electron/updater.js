@@ -54,7 +54,14 @@ async function getText(url) {
 /** The few fields we need from electron-builder's latest.yml. */
 function parseLatestYml(text) {
   const field = (name) => (text.match(new RegExp(`^${name}:\\s*['"]?([^'"\\r\\n]+)`, "m")) || [])[1]?.trim();
-  return { version: field("version"), file: field("path"), sha512: field("sha512") };
+  // Newer electron-builder versions list the installer only under `files:`
+  // (`- url:` then `sha512:`); older ones also repeat top-level path/sha512.
+  const firstFile = text.match(/^\s*-\s*url:\s*['"]?([^'"\r\n]+?)['"]?\s*[\r\n]+\s*sha512:\s*['"]?([^'"\r\n]+)/m);
+  return {
+    version: field("version"),
+    file: field("path") || firstFile?.[1]?.trim(),
+    sha512: field("sha512") || firstFile?.[2]?.trim(),
+  };
 }
 
 function isNewer(candidate, current) {
@@ -139,4 +146,4 @@ function startAutoUpdates(getWindow) {
   app.on("will-quit", () => runInstaller(false));
 }
 
-module.exports = { startAutoUpdates, parseLatestYml, isNewer };
+module.exports = { startAutoUpdates, parseLatestYml, isNewer, getText, download };
