@@ -290,6 +290,9 @@ function attachExternalLinks(win) {
   win.webContents.on("will-navigate", (event, url) => {
     if (isAppUrl(url)) return;
     event.preventDefault();
+    // A file dropped outside an upload box "navigates" to file://...; never
+    // open it in another program - just ignore the drop.
+    if (url.startsWith("file:")) return;
     shell.openExternal(url);
   });
 }

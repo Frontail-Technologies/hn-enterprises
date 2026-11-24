@@ -5,6 +5,7 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import './globals.css'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
 import { QueryProvider } from '@/components/providers/QueryProvider'
+import { FileDropGuard } from '@/components/providers/FileDropGuard'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 const inter = Inter({
@@ -31,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <FileDropGuard />
         <NuqsAdapter>
           <QueryProvider>
             <AuthProvider>
