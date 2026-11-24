@@ -376,7 +376,7 @@ function CustomerFormFields({
                   </Button>
                 }
                 entityTypeLabel="Customer"
-                note="It goes to the Recycle Bin with these related records and can be restored for 30 days."
+                note="Goes to the Recycle Bin. You can restore it within 30 days."
                 impact={deleteImpact.data}
                 isLoading={deleteImpact.isLoading}
                 isError={deleteImpact.isError}

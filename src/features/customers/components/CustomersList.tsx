@@ -473,7 +473,6 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDeleteConfirm}
         recoverable
-        note="Customers with payments, DPR or site plans can't be deleted and stop the whole delete with an error."
       />
     </>
   );

@@ -57,7 +57,7 @@ export function BulkDeleteDialog({
           <AlertDialogDescription>
             {recoverable ? (
               <>
-                This moves <strong>{selectedCount}</strong> {noun.toLowerCase()} to the Recycle Bin. They can be restored from there for 30 days.
+                Goes to the Recycle Bin. You can restore {selectedCount === 1 ? "it" : "them"} within 30 days.
               </>
             ) : (
               <>

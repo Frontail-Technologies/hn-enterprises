@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { CaretDownIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { WarningCircleIcon } from "@phosphor-icons/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,15 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { cn } from "@/lib/utils";
-import type { DeleteImpactAction, DeleteImpactDependency, DeleteImpactResult } from "./delete-impact.types";
-
-const ACTION_META: Record<DeleteImpactAction, { label: string; badgeVariant: "destructive" | "secondary" | "outline" }> = {
-  delete: { label: "Will be deleted", badgeVariant: "destructive" },
-  detach: { label: "Will be detached", badgeVariant: "secondary" },
-  preserve: { label: "Preserved", badgeVariant: "outline" },
-  block: { label: "Blocks deletion", badgeVariant: "destructive" },
-};
+import type { DeleteImpactResult } from "./delete-impact.types";
 
 const DEFAULT_HIGH_IMPACT_THRESHOLD = 10;
 
@@ -111,9 +102,9 @@ export function DeleteImpactDialog({
   }
 
   const entityLabel = impact?.entity.label;
-  const deleteCtaLabel =
-    confirmLabel ??
-    (impact && impact.totalAffected > 0 ? `${action.verb} ${entityTypeLabel} & Related Data` : `${action.verb} ${entityTypeLabel}`);
+  const deleteCtaLabel = confirmLabel ?? action.verb;
+  // Only what is removed together with the record, as short tags ("3 notes").
+  const removedWithIt = impact?.dependencies.filter((dependency) => dependency.action === "delete" && dependency.count > 0) ?? [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -121,7 +112,8 @@ export function DeleteImpactDialog({
       <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
         <DialogHeader className="shrink-0 border-b border-border/70 p-4">
           <DialogTitle>{action.verb} {entityLabel ? `"${entityLabel}"` : entityTypeLabel}?</DialogTitle>
-          <DialogDescription>
+          {/* Kept for screen readers only: no visible sub-label under the title. */}
+          <DialogDescription className="sr-only">
             {isLoading
               ? "Checking what's linked to this record..."
               : impact?.canDelete === false
@@ -154,9 +146,7 @@ export function DeleteImpactDialog({
             </Alert>
           ) : impact ? (
             <>
-              {impact.canDelete && note ? (
-                <p className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">{note}</p>
-              ) : null}
+              {impact.canDelete && note ? <p className="text-sm text-muted-foreground">{note}</p> : null}
               {impact.blockers.length > 0 ? (
                 <Alert variant="destructive">
                   <WarningCircleIcon />
@@ -169,24 +159,20 @@ export function DeleteImpactDialog({
                     </ul>
                   </AlertDescription>
                 </Alert>
-              ) : impact.totalAffected === 0 ? (
-                <p className="text-sm text-muted-foreground">No related records will be affected.</p>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">This will also affect:</p>
-                  <div className="space-y-1.5">
-                    {impact.dependencies.map((dependency) => (
-                      <DependencyRow key={dependency.key} dependency={dependency} />
-                    ))}
-                  </div>
+              ) : removedWithIt.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {removedWithIt.map((dependency) => (
+                    <span key={dependency.key} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                      {dependency.count} {dependency.label.toLowerCase()}
+                    </span>
+                  ))}
                 </div>
-              )}
+              ) : null}
 
               {isHighImpact ? (
                 <div className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
                   <label className="block text-xs font-medium text-foreground">
-                    Type <span className="font-semibold">{impact.entity.label}</span> to confirm ({impact.totalAffected} records
-                    affected)
+                    Type <span className="font-semibold">{impact.entity.label}</span> to confirm
                   </label>
                   <Input
                     value={confirmText}
@@ -229,45 +215,5 @@ export function DeleteImpactDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DependencyRow({ dependency }: { dependency: DeleteImpactDependency }) {
-  const [expanded, setExpanded] = useState(false);
-  const meta = ACTION_META[dependency.action];
-  const hasPreview = Boolean(dependency.preview?.length);
-
-  return (
-    <div className="rounded-md border border-border/70 px-3 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{dependency.label}</span>
-          <Badge variant={meta.badgeVariant}>{meta.label}</Badge>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-sm tabular-nums text-muted-foreground">{dependency.count}</span>
-          {hasPreview ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label={expanded ? "Hide sample records" : "Show sample records"}
-              onClick={() => setExpanded((current) => !current)}
-            >
-              <CaretDownIcon className={cn("transition-transform", expanded && "rotate-180")} size={13} />
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {hasPreview && expanded ? (
-        <ul className="mt-1.5 space-y-0.5 border-t border-border/60 pt-1.5 pl-1 text-xs text-muted-foreground">
-          {dependency.preview!.map((row) => (
-            <li key={row.id} className="truncate">
-              {row.label}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
   );
 }
