@@ -8,6 +8,17 @@ import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { customersKey } from "@/features/customers/queries/customer.query-keys";
 import { recycleBinApi, type RecycleBinItem } from "./recycle-bin.api";
 
@@ -76,9 +87,45 @@ export function RecycleBinPage() {
     onError: (error) => toast.error("Couldn't delete", { description: error instanceof Error ? error.message : undefined }),
   });
 
+  const purgeAll = useMutation({
+    mutationFn: recycleBinApi.purgeAll,
+    onSuccess: (result) => {
+      toast.success(`Recycle bin emptied (${result.count} deleted for good)`);
+      void queryClient.invalidateQueries({ queryKey: binKey });
+    },
+    onError: (error) => toast.error("Couldn't empty the recycle bin", { description: error instanceof Error ? error.message : undefined }),
+  });
+
+  const emptyButton = (
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={<Button type="button" variant="outline" className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive" />}
+        disabled={!data.length || purgeAll.isPending}
+      >
+        <TrashIcon size={15} />
+        {purgeAll.isPending ? "Emptying…" : "Empty Recycle Bin"}
+      </AlertDialogTrigger>
+      <AlertDialogContent className="sm:max-w-sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Empty the Recycle Bin?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {data.length.toLocaleString("en-IN")} deleted customer{data.length === 1 ? "" : "s"} will be removed for good. This can&apos;t be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => purgeAll.mutate()} className="bg-destructive text-white hover:bg-destructive/90">
+            Delete all for good
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   return (
     <PageShell
       title="Recycle Bin"
+      actions={emptyButton}
       description="Deleted customers stay here for 30 days with their documents, notes, LMC records and complaints. Restore puts everything back as it was."
       fillHeight
     >

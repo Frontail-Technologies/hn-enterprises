@@ -18,4 +18,6 @@ export const recycleBinApi = {
   list: () => apiRequest<RecycleBinItem[]>("/recycle-bin"),
   restore: (id: string) => apiRequest<{ label: string; entityId: string }>(`/recycle-bin/${id}/restore`, { method: "POST" }),
   purge: (id: string) => apiRequest<{ label: string }>(`/recycle-bin/${id}`, { method: "DELETE" }),
+  /** Delete everything in the bin for good. */
+  purgeAll: () => apiRequest<{ count: number }>("/recycle-bin", { method: "DELETE" }),
 };
