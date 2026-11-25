@@ -291,6 +291,26 @@ export function MaterialDrawer({
     </FormField>
   );
 
+  // Return / adjustment: blank = the project the plumber got this material for
+  // (filled in by the server), so the balance nets off on the same line.
+  const plumberProjectField = (
+    <FormField label="Project" helper="Leave empty to use the project this plumber got the material for.">
+      <Controller
+        control={control}
+        name="projectId"
+        render={({ field }) => (
+          <SearchableSelect
+            value={field.value || undefined}
+            onValueChange={(projectId) => field.onChange(projectId ?? "")}
+            placeholder="Automatic"
+            options={projects.map(projectOption)}
+            className="w-full"
+          />
+        )}
+      />
+    </FormField>
+  );
+
   const quantityField = (labelText: string) => (
     <FormField label={labelText} required>
       <Input type="number" {...register("quantity")} />
@@ -418,6 +438,7 @@ export function MaterialDrawer({
               {sourceField}
               {dateField("Return Date")}
               {plumberField}
+              {plumberProjectField}
               {addressField}
               {quantityField("Return Quantity")}
               <FormField label="Condition">
@@ -446,6 +467,7 @@ export function MaterialDrawer({
           {type === "adjustment" ? (
             <>
               {plumberField}
+              {plumberProjectField}
               {sourceField}
               {directionField}
               {quantityField("Adjustment Quantity")}
