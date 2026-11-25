@@ -102,7 +102,7 @@ export function GlobalSearch() {
         }}
         title="Search"
         description="Search customers, projects and pages"
-        className="sm:max-w-xl"
+        className="top-1/2 -translate-y-1/2 sm:max-w-xl"
       >
         {/* Results come from the server, so cmdk's own filtering is off. */}
         <Command shouldFilter={false}>
