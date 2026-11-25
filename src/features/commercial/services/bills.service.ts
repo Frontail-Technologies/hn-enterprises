@@ -54,6 +54,7 @@ type BackendBill = {
   pendingAmount: number;
   status: BackendBillStatus;
   remarks: string | null;
+  attachments?: { id: string; label: string; fileName: string; fileUrl: string }[] | null;
 };
 
 type BackendBillPayment = {
@@ -80,6 +81,7 @@ function mapBill(raw: BackendBill): Bill {
     pendingAmount: raw.pendingAmount,
     status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
     remarks: raw.remarks ?? "",
+    attachments: (raw.attachments ?? []).map((item) => ({ ...item, status: "uploaded" as const })),
   };
 }
 
@@ -93,6 +95,10 @@ function mapBillFormToBody(values: BillFormValues) {
     tax: Number(values.tax) || 0,
     status: STATUS_TO_BACKEND[values.status],
     remarks: values.remarks || undefined,
+    // Only uploaded photos are sent (the dialog uploads them before saving).
+    attachments: (values.attachments ?? [])
+      .filter((item) => item.fileUrl)
+      .map((item) => ({ id: item.id, label: item.label, fileName: item.fileName, fileUrl: item.fileUrl! })),
   };
 }
 

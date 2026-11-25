@@ -32,6 +32,8 @@ import { useCreateBill, useUpdateBill, useDeleteBill } from "../../hooks/useBill
 import { billFormSchema } from "../../schemas/bill.schema";
 import type { Bill, BillFormValues, BillStatus } from "../../types/bill.types";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { flushImageUploads } from "@/components/shared/ImageUploadPreview";
+import { ImageProofField } from "../shared/ImageProofField";
 
 const billStatuses: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
 
@@ -45,6 +47,7 @@ function emptyValues(defaultProjectId = ""): BillFormValues {
     tax: "",
     status: "Draft",
     remarks: "",
+    attachments: [],
   };
 }
 
@@ -58,6 +61,7 @@ function valuesFromBill(bill: Bill): BillFormValues {
     tax: String(bill.tax),
     status: bill.status,
     remarks: bill.remarks,
+    attachments: bill.attachments,
   };
 }
 
@@ -82,7 +86,8 @@ export function BillDialog({
   const createBill = useCreateBill();
   const updateBill = useUpdateBill(bill?.id ?? "");
   const deleteBill = useDeleteBill();
-  const isSaving = createBill.isPending || updateBill.isPending;
+  const [uploading, setUploading] = useState(false);
+  const isSaving = createBill.isPending || updateBill.isPending || uploading;
   const projectLocked = Boolean(defaultProjectId) && !bill;
 
   const form = useForm<BillFormValues>({
@@ -103,10 +108,20 @@ export function BillDialog({
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError("");
     try {
+      // Upload new photos first; the bill then stores their URLs.
+      setUploading(true);
+      let attachments = values.attachments;
+      try {
+        attachments = await flushImageUploads(values.attachments, "bills", bill?.id);
+      } finally {
+        setUploading(false);
+      }
+      form.setValue("attachments", attachments);
+      const next = { ...values, attachments };
       if (bill) {
-        await updateBill.mutateAsync(values);
+        await updateBill.mutateAsync(next);
       } else {
-        await createBill.mutateAsync(values);
+        await createBill.mutateAsync(next);
       }
       setOpen(false);
     } catch (error) {
@@ -222,6 +237,22 @@ export function BillDialog({
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
 
+          <Controller
+            control={control}
+            name="attachments"
+            render={({ field }) => (
+              <ImageProofField
+                label="Bill photos"
+                description="Photo or scan of the bill. Click a photo to view it."
+                images={field.value}
+                onChange={field.onChange}
+                module="bills"
+                recordId={bill?.id}
+                className="sm:col-span-2"
+              />
+            )}
+          />
+
           {validationMessage || submitError ? (
             <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
           ) : null}
@@ -242,7 +273,7 @@ export function BillDialog({
           <div className="flex items-center gap-2">
             <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
             <Button type="button" onClick={() => void onSubmit()} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Bill"}
+              {uploading ? "Uploading photos..." : isSaving ? "Saving..." : "Save Bill"}
             </Button>
           </div>
         </DialogFooter>

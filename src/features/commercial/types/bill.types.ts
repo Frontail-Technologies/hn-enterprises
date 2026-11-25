@@ -1,3 +1,5 @@
+import type { ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
+
 export type BillStatus = "Draft" | "Submitted" | "Completed" | "Overdue";
 export type BillPaymentStatus = "Pending" | "Cleared" | "Bounced";
 export type PaymentMode = string;
@@ -16,6 +18,8 @@ export type Bill = {
   pendingAmount: number;
   status: BillStatus;
   remarks: string;
+  /** Bill photos. */
+  attachments: ImagePreviewItem[];
 };
 
 export type BillFormValues = {
@@ -27,6 +31,7 @@ export type BillFormValues = {
   tax: string;
   status: BillStatus;
   remarks: string;
+  attachments: ImagePreviewItem[];
 };
 
 export type BillPayment = {

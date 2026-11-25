@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ImagePreviewItem } from "@/components/shared/ImageUploadPreview";
 import type { BillStatus } from "../types/bill.types";
 
 export const billFormSchema = z
@@ -11,6 +12,7 @@ export const billFormSchema = z
     tax: z.string(),
     status: z.custom<BillStatus>(),
     remarks: z.string(),
+    attachments: z.custom<ImagePreviewItem[]>(),
   })
   .superRefine((values, ctx) => {
     if (!values.projectId) {

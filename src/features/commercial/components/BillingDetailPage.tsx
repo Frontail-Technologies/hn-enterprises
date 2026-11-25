@@ -20,6 +20,7 @@ import { formatDate, money } from "../utils/format";
 import { BillDialog } from "./billing/BillDialog";
 import { PaymentDialog } from "./billing/PaymentDialog";
 import { PageLoading } from "@/components/shared/PageLoading";
+import { resolveFileUrl } from "@/lib/upload";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 
 export function BillingDetailPage({ id }: { id: string }) {
@@ -98,6 +99,7 @@ export function BillingDetailPage({ id }: { id: string }) {
 
       <RecordLayout
         rail={
+          <div className="flex flex-col gap-5">
           <SectionCard title="Bill summary">
             <div className="flex flex-col gap-4">
               <ProgressList items={[{ label: "Collected", value: bill.paidAmount, total: billed }]} />
@@ -114,6 +116,27 @@ export function BillingDetailPage({ id }: { id: string }) {
               />
             </div>
           </SectionCard>
+          {bill.attachments.length ? (
+            <SectionCard title="Bill photos">
+              <ul className="grid grid-cols-3 gap-2">
+                {bill.attachments.map((item) => (
+                  <li key={item.id}>
+                    <a
+                      href={resolveFileUrl(item.fileUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={item.label || item.fileName}
+                      className="block aspect-square overflow-hidden rounded-md border border-border bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={resolveFileUrl(item.fileUrl)} alt={item.label || "Bill photo"} className="size-full object-cover" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          ) : null}
+          </div>
         }
       >
         <section className="flex flex-col gap-3">
