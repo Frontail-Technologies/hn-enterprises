@@ -26,6 +26,7 @@ import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
 import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
+import { ProjectDprTab } from "./ProjectDprTab";
 import { ProjectActivityTab } from "./ProjectActivityTab";
 import { ProjectTeamTab } from "./ProjectTeamTab";
 import { ProjectWorkTab } from "./ProjectWorkTab";
@@ -37,6 +38,7 @@ const TABS = [
   { value: "overview", label: "Overview" },
   { value: "customers", label: "Customers" },
   { value: "work", label: "Work" },
+  { value: "dpr", label: "DPR" },
   { value: "billing", label: "Billing" },
   { value: "expenses", label: "Expenses" },
   { value: "team", label: "Team" },
@@ -129,6 +131,9 @@ export function ProjectTabs({ project }: { project: Project }) {
           <TabsTrigger key={entry.value} value={entry.value} className="shrink-0">
             {entry.label}
             {entry.value === "customers" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(total)}</span> : null}
+            {entry.value === "dpr" && summary?.dpr.awaitingApproval ? (
+              <span className="ms-1 rounded-full bg-warning-soft px-1.5 text-[11px] font-semibold text-warning-foreground tabular-nums">{summary.dpr.awaitingApproval}</span>
+            ) : null}
             {entry.value === "sites" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(summary.sites.total)}</span> : null}
           </TabsTrigger>
         ))}
@@ -223,6 +228,10 @@ export function ProjectTabs({ project }: { project: Project }) {
 
       <TabsContent value="work">
         {summary ? <ProjectWorkTab project={project} summary={summary} /> : <Skeleton className="h-64 rounded-card" />}
+      </TabsContent>
+
+      <TabsContent value="dpr">
+        {tab === "dpr" ? <ProjectDprTab projectId={project.id} summary={summary} /> : null}
       </TabsContent>
 
       <TabsContent value="billing">

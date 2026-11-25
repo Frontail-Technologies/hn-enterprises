@@ -45,7 +45,7 @@ export function ProjectWorkTab({ project, summary }: { project: Project; summary
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <DashboardStatCard dense tone="info" label="LMC laid" value={work ? metres(work.lmc.totalMetres) : "—"} icon={PathIcon} />
       <DashboardStatCard dense tone="primary" label="GI laid" value={work ? metres(work.gi.totalMetres) : "—"} icon={PipeIcon} />
-      <Link href={`${scoped("/planning")}&tab=approval`} className="block rounded-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Link href={`/projects/${project.id}?tab=dpr`} className="block rounded-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
         <DashboardStatCard
           dense
           tone="warning"
@@ -93,7 +93,7 @@ export function ProjectWorkTab({ project, summary }: { project: Project; summary
       <SectionCard
         title="Daily progress reports (DPR)"
         action={
-          <Link href={`${scoped("/planning")}&tab=approval`} className="text-[13px] font-medium text-primary hover:underline">
+          <Link href={`/projects/${project.id}?tab=dpr`} className="text-[13px] font-medium text-primary hover:underline">
             Review DPRs
           </Link>
         }
