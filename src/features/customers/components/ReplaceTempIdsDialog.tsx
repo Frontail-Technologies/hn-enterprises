@@ -71,6 +71,8 @@ export function ReplaceTempIdsDialog({ triggerClassName }: { triggerClassName?: 
           { label: NUMBER_COLUMN, getValue: () => "" },
         ],
         data,
+        // Filled in and imported back: keep the columns exactly as the import expects.
+        { serial: false }
       );
     } catch (error) {
       toast.error("Couldn't download the list", { description: error instanceof Error ? error.message : undefined });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { ColumnFiltersState, RowSelectionState, SortingState } from "@tanstack/react-table";
 import { CaretLeftIcon, CaretRightIcon, CornersOutIcon, DotsThreeIcon, XIcon } from "@phosphor-icons/react";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -54,6 +54,7 @@ export type ListTableProps<T extends { id: string }> = {
   selectable?: boolean;
   getRowLabel?: (row: T) => string;
   bulkActions?: (selectedIds: string[], clear: () => void) => ReactNode;
+  /** "Sr. No." column (1, 2, 3... in the order shown, continuing across pages). Default true. */
   showSerial?: boolean;
   empty: ListEmpty;
   pageSizes?: number[];
@@ -222,7 +223,7 @@ export function ListTable<T extends { id: string }>({
   selectable,
   getRowLabel,
   bulkActions,
-  showSerial,
+  showSerial = true,
   empty,
   pageSizes = PAGE_SIZES,
   enableFullView,
@@ -238,6 +239,16 @@ export function ListTable<T extends { id: string }>({
   className,
 }: ListTableProps<T>) {
   const offset = (state.page - 1) * state.pageSize;
+  // Rows left after the grid's own Excel-style column filters, in display order,
+  // so Sr. No. stays 1, 2, 3... without gaps when a column filter hides rows.
+  const [visibleIds, setVisibleIds] = useState<string[] | null>(null);
+  const handleVisibleRows = useCallback(
+    (context: { filteredIds: string[]; filterSignature: string }) => {
+      setVisibleIds(context.filterSignature ? context.filteredIds : null);
+      onVisibleRowsChange?.(context);
+    },
+    [onVisibleRowsChange],
+  );
   const [fullView, setFullView] = useState(false);
   const hideableCount = columns.filter((column) => column.hideable !== false).length;
   const showToolbar = searchable || filters.length > 0 || hideableCount > 1 || Boolean(actions) || Boolean(enableFullView);
@@ -274,13 +285,14 @@ export function ListTable<T extends { id: string }>({
       mapped[mapped.length - 1] = { ...mapped[mapped.length - 1], grow: true };
     }
     if (!showSerial) return mapped;
-    const position = new Map(rows.map((row, index) => [row.id, offset + index + 1]));
+    const order = visibleIds ?? rows.map((row) => row.id);
+    const position = new Map(order.map((id, index) => [id, offset + index + 1]));
     return [
       {
         key: SERIAL_COLUMN_ID,
-        label: "#",
-        width: 56,
-        minWidth: 56,
+        label: "Sr. No.",
+        width: 72,
+        minWidth: 72,
         enableResizing: false,
         enableSorting: false,
         filterable: false,
@@ -290,7 +302,7 @@ export function ListTable<T extends { id: string }>({
       },
       ...mapped,
     ];
-  }, [columns, state, showSerial, rows, offset]);
+  }, [columns, state, showSerial, rows, offset, visibleIds]);
 
   const sorting = useMemo<SortingState>(() => (state.sort ? [state.sort] : []), [state.sort]);
   const sortableKeys = useMemo(() => columns.filter((column) => column.sortable).map((column) => column.id), [columns]);
@@ -355,7 +367,7 @@ export function ListTable<T extends { id: string }>({
           sortableColumnKeys={sortableKeys}
           columnFilters={columnFilters}
           onColumnFiltersChange={onColumnFiltersChange}
-          onVisibleRowsChange={onVisibleRowsChange}
+          onVisibleRowsChange={showSerial || onVisibleRowsChange ? handleVisibleRows : undefined}
           rowSelection={externalRowSelection ?? (selectable ? rowSelection : undefined)}
           onRowSelectionChange={
             onExternalRowSelectionChange ?? (selectable ? (next) => state.replaceSelection(Object.keys(next).filter((id) => next[id])) : undefined)

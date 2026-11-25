@@ -82,14 +82,21 @@ export async function readExcelRows(file: File): Promise<Record<string, string>[
   return rows;
 }
 
-export async function exportRowsToExcel<T>(filename: string, columns: ExportColumn<T>[], rows: T[]) {
+/**
+ * Download rows as .xlsx. A "Sr. No." column comes first (1, 2, 3...) unless
+ * `serial: false` - e.g. for a sheet that is filled in and imported back.
+ */
+export async function exportRowsToExcel<T>(filename: string, columns: ExportColumn<T>[], rows: T[], options: { serial?: boolean } = {}) {
+  const serial = options.serial ?? true;
   const ExcelJSMod = await loadExcelJS();
   const workbook = new ExcelJSMod.Workbook();
   const sheet = workbook.addWorksheet("Sheet1");
-  sheet.columns = columns.map((column) => ({ header: column.label, width: columnWidth(column.label) }));
+  const headers = [...(serial ? ["Sr. No."] : []), ...columns.map((column) => column.label)];
+  sheet.columns = headers.map((label) => ({ header: label, width: label === "Sr. No." ? 8 : columnWidth(label) }));
   styleHeaderRow(sheet.getRow(1));
-  rows.forEach((row) => {
-    const excelRow = sheet.addRow(columns.map((column) => column.getValue(row) ?? ""));
+  rows.forEach((row, index) => {
+    const values = columns.map((column) => column.getValue(row) ?? "");
+    const excelRow = sheet.addRow(serial ? [index + 1, ...values] : values);
     styleDataRow(excelRow);
   });
   sheet.views = [{ state: "frozen", ySplit: 1 }];
