@@ -204,8 +204,16 @@ function mapTotalIssueSummaryRow(raw: BackendTotalIssueSummaryRow): TotalIssueSu
   };
 }
 
-function buildTransactionFormData(type: MaterialTransactionType, values: MaterialTransactionFormValues): FormData {
+function buildTransactionFormData(
+  type: MaterialTransactionType,
+  values: MaterialTransactionFormValues,
+  shortage?: { reason: string },
+): FormData {
   const formData = new FormData();
+  if (shortage) {
+    formData.append("allowShortage", "true");
+    formData.append("shortageReason", shortage.reason);
+  }
   formData.append("materialId", values.materialId);
   formData.append("type", type);
   formData.append("quantity", String(Number(values.quantity) || 0));
@@ -336,10 +344,11 @@ export const materialsApi = {
   async createTransaction(
     type: MaterialTransactionType,
     values: MaterialTransactionFormValues,
+    shortage?: { reason: string },
   ): Promise<MaterialTransaction> {
     const raw = await apiRequest<BackendMaterialTransaction>("/materials/transactions", {
       method: "POST",
-      body: buildTransactionFormData(type, values),
+      body: buildTransactionFormData(type, values, shortage),
     });
     return mapTransaction(raw);
   },

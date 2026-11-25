@@ -231,7 +231,8 @@ export function useMaterialTransactionsQuery(
 export function useCreateMaterialTransaction(type: MaterialTransactionType) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (values: MaterialTransactionFormValues) => materialsApi.createTransaction(type, values),
+    mutationFn: ({ values, shortage }: { values: MaterialTransactionFormValues; shortage?: { reason: string } }) =>
+      materialsApi.createTransaction(type, values, shortage),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialsKey });
       queryClient.invalidateQueries({ queryKey: ["materials", "transactions"] });

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { FormField } from "@/components/shared/FormField";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -117,6 +118,9 @@ export function MaterialDrawer({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const [submitError, setSubmitError] = useState("");
+  // Set when the server says stock (or the plumber's balance) is short: the
+  // admin can still save it with a reason (e.g. the purchase isn't entered yet).
+  const [shortage, setShortage] = useState<{ message: string; confirmed: boolean; reason: string } | null>(null);
   const { data: materials = [] } = useMaterialsQuery();
   const { data: plumbers = [] } = usePlumbersQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
@@ -137,6 +141,7 @@ export function MaterialDrawer({
     if (nextOpen) {
       reset(emptyValues(defaultMaterialId));
       setSubmitError("");
+      setShortage(null);
     }
     if (controlledOnOpenChange) controlledOnOpenChange(nextOpen);
     else setUncontrolledOpen(nextOpen);
@@ -144,11 +149,17 @@ export function MaterialDrawer({
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError("");
+    const override = shortage?.confirmed && shortage.reason.trim() ? { reason: shortage.reason.trim() } : undefined;
     try {
-      await createTransaction.mutateAsync(values);
+      await createTransaction.mutateAsync({ values, shortage: override });
       handleOpenChange(false);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Unable to save transaction");
+      const message = error instanceof Error ? error.message : "Unable to save transaction";
+      if (/^Not enough stock/i.test(message)) {
+        setShortage((current) => ({ message, confirmed: current?.confirmed ?? false, reason: current?.reason ?? "" }));
+      } else {
+        setSubmitError(message);
+      }
     }
   });
 
@@ -526,6 +537,27 @@ export function MaterialDrawer({
           <FormField label="Remarks" className="sm:col-span-2">
             <Textarea {...register("remarks")} className="min-h-20" />
           </FormField>
+
+          {shortage ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2.5 sm:col-span-2">
+              <p className="text-sm font-medium text-warning-foreground">{shortage.message}</p>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={shortage.confirmed}
+                  onCheckedChange={(checked) => setShortage((current) => (current ? { ...current, confirmed: Boolean(checked) } : current))}
+                />
+                Save anyway
+              </label>
+              {shortage.confirmed ? (
+                <Input
+                  value={shortage.reason}
+                  onChange={(event) => setShortage((current) => (current ? { ...current, reason: event.target.value } : current))}
+                  placeholder="Why? e.g. purchase not entered yet"
+                  autoFocus
+                />
+              ) : null}
+            </div>
+          ) : null}
 
           {validationMessage || submitError ? (
             <p className="text-xs text-destructive sm:col-span-2">{validationMessage || submitError}</p>
