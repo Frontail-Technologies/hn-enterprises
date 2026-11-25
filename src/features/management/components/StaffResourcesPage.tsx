@@ -182,6 +182,9 @@ export function StaffResourcesPage() {
   );
 }
 
+// Same size and colour as the view/edit icons next to it; red only on hover.
+const DELETE_ICON_CLASS = "hover:bg-destructive/10 hover:text-destructive";
+
 /** Staff without a login: just the record. */
 function PlainStaffDeleteAction({ staff }: { staff: Staff }) {
   const deleteStaff = useDeleteStaff();
@@ -191,7 +194,7 @@ function PlainStaffDeleteAction({ staff }: { staff: Staff }) {
       isConfirming={deleteStaff.isPending}
       onConfirm={() => deleteStaff.mutateAsync(staff.id)}
       trigger={
-        <Button type="button" variant="ghost" size="icon-sm" aria-label={`Delete ${staff.name}`} className="text-destructive">
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={`Delete ${staff.name}`} className={DELETE_ICON_CLASS}>
           <TrashIcon size={15} />
         </Button>
       }
@@ -228,6 +231,9 @@ function StaffDeleteAction({ staff }: { staff: Staff }) {
       onRetryImpact={() => void deleteImpact.refetch()}
       isDeleting={deleteUser.isPending}
       onDelete={() => deleteUser.mutateAsync(staff.userId)}
+      triggerSize="icon-sm"
+      iconSize={15}
+      triggerClassName={DELETE_ICON_CLASS}
     />
   );
 }
