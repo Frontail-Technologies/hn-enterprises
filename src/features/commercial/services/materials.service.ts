@@ -235,7 +235,7 @@ function buildTransactionFormData(type: MaterialTransactionType, values: Materia
 
 export const materialsApi = {
   async list(search?: string): Promise<Material[]> {
-    const query = new URLSearchParams({ limit: "200" });
+    const query = new URLSearchParams({ limit: "1000" });
     if (search) query.set("search", search);
     const rows = await apiRequest<BackendMaterial[]>(`/materials?${query.toString()}`);
     return rows.map(mapMaterial);
@@ -467,10 +467,11 @@ export const materialsApi = {
     if (input.vehicleNo) body.vehicleNo = input.vehicleNo;
     if (input.vehicleQty) body.vehicleQty = Number(input.vehicleQty);
     if (input.remarks) body.remarks = input.remarks;
-    const raw = await apiRequest<BackendMaterialTransaction>(`/materials/transactions/${id}/correct`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    return mapTransaction(raw);
+    // The server answers with both new rows; the corrected one is the live record.
+    const raw = await apiRequest<{ reversal: BackendMaterialTransaction; corrected: BackendMaterialTransaction }>(
+      `/materials/transactions/${id}/correct`,
+      { method: "POST", body: JSON.stringify(body) },
+    );
+    return mapTransaction(raw.corrected);
   },
 };

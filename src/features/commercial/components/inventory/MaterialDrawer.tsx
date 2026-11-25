@@ -63,9 +63,9 @@ const TYPE_DESCRIPTIONS: Record<MaterialTransactionType, string> = {
   consumption: "Record customer/site material consumption for reconciliation.",
 };
 
-function emptyValues(): MaterialTransactionFormValues {
+function emptyValues(defaultMaterialId = ""): MaterialTransactionFormValues {
   return {
-    materialId: "",
+    materialId: defaultMaterialId,
     quantity: "",
     transactionDate: format(new Date(), "yyyy-MM-dd"),
     source: "",
@@ -101,7 +101,10 @@ export function MaterialDrawer({
   hideTrigger = false,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  defaultMaterialId = "",
 }: {
+  /** Opened from a material's own page: that material is picked already. */
+  defaultMaterialId?: string;
   type: MaterialTransactionType;
   triggerLabel?: string;
   icon?: ReactNode;
@@ -125,14 +128,14 @@ export function MaterialDrawer({
 
   const form = useForm<MaterialTransactionFormValues>({
     resolver: zodResolver(buildMaterialTransactionSchema(type)),
-    defaultValues: emptyValues(),
+    defaultValues: emptyValues(defaultMaterialId),
   });
   const { control, register, handleSubmit, reset, formState } = form;
   const validationMessage = Object.values(formState.errors)[0]?.message as string | undefined;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      reset(emptyValues());
+      reset(emptyValues(defaultMaterialId));
       setSubmitError("");
     }
     if (controlledOnOpenChange) controlledOnOpenChange(nextOpen);

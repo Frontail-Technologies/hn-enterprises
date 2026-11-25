@@ -1,6 +1,7 @@
 "use client";
 
 import type { ListFilter } from "@/components/shared/list";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { MonthPicker } from "@/components/shared/MonthPicker";
 import { projectOption } from "@/features/projects/utils/project-option";
 
@@ -30,7 +31,7 @@ export function inventoryListFilters({
   showPlumberFilter,
 }: {
   projects: { id: string; name: string }[];
-  plumbers: { id: string; name: string }[];
+  plumbers: { id: string; name: string; category?: "plumber" | "labour" }[];
   showPlumberFilter: boolean;
 }): ListFilter[] {
   return [
@@ -45,7 +46,7 @@ export function inventoryListFilters({
     },
     { id: "source", label: "Source", quick: true, options: SOURCE_OPTIONS },
     ...(showPlumberFilter
-      ? [{ id: "plumberId", label: "Plumber", quick: true, options: plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name })) }]
+      ? [{ id: "plumberId", label: "Plumber", quick: true, options: plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) })) }]
       : []),
   ];
 }

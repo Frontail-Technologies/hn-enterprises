@@ -29,7 +29,9 @@ type Lookups = {
 };
 
 export function TransactionRowActions({ transaction, lookups }: { transaction: MaterialTransaction; lookups: Lookups }) {
-  const isLinkRow = transaction.linkType !== "";
+  // A reversal row only undoes another row; a correction row is the live record
+  // and can itself be corrected or reversed.
+  const isLinkRow = transaction.linkType === "reversal";
   const isSuperseded = transaction.isReversed || transaction.isCorrected;
 
   return (
@@ -38,7 +40,7 @@ export function TransactionRowActions({ transaction, lookups }: { transaction: M
         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {transaction.isCorrected ? "Corrected" : "Reversed"}
         </span>
-      ) : isLinkRow ? (
+      ) : transaction.linkType ? (
         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {transaction.linkType === "correction" ? "Correction" : "Reversal"}
         </span>

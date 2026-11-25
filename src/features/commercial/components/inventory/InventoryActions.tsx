@@ -57,6 +57,7 @@ export function InventoryActions({ material }: { material: Material }) {
         <MaterialDrawer
           key={item.type}
           type={item.type}
+          defaultMaterialId={material.id}
           hideTrigger
           open={openType === item.type}
           onOpenChange={(open) => setOpenType(open ? item.type : null)}

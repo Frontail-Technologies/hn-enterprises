@@ -65,7 +65,9 @@ export function useMaterialDetailTransactionsQuery(
     queryKey: materialDetailTransactionsKey(id, { tab: params.tab, page: params.page, limit: params.limit, from: params.from, to: params.to }),
     queryFn: () => materialsApi.listDetailTransactions(id, params),
     enabled: Boolean(id) && enabled,
-    placeholderData: (previous) => previous,
+    // Keep the old rows only while paging within the same tab, never under another tab's columns.
+    placeholderData: (previous, previousQuery) =>
+      (previousQuery?.queryKey.at(-1) as { tab?: string } | undefined)?.tab === params.tab ? previous : undefined,
   });
 }
 
@@ -151,7 +153,11 @@ export function useInventoryTransactionsPageQuery(
     }),
     queryFn: () => materialsApi.listTransactionsPage(params),
     enabled,
-    placeholderData: (previous) => previous,
+    // Keep the old rows only while paging within the same tab, never under another tab's columns.
+    placeholderData: (previous, previousQuery) => {
+      const key = previousQuery?.queryKey.at(-1) as { type?: string; types?: string } | undefined;
+      return key && key.type === params.type && key.types === params.types?.join(",") ? previous : undefined;
+    },
   });
 }
 
@@ -161,6 +167,7 @@ export function useCreateMaterial() {
     mutationFn: (values: MaterialFormValues) => materialsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialsKey });
+      queryClient.invalidateQueries({ queryKey: inventoryOverviewNamespace });
       toast.success("Material created successfully");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to create material"),
@@ -186,6 +193,7 @@ export function useDeleteMaterial() {
     mutationFn: (id: string) => materialsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialsKey });
+      queryClient.invalidateQueries({ queryKey: inventoryOverviewNamespace });
       toast.success("Material deleted successfully");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete material"),

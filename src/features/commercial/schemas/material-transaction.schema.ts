@@ -39,6 +39,9 @@ export function buildMaterialTransactionSchema(type: MaterialTransactionType) {
       if (SOURCE_REQUIRED_TYPES.includes(type) && !values.source) {
         ctx.addIssue({ code: "custom", path: ["source"], message: "Material source (Purchase or PBG) is required" });
       }
+      if (type === "adjustment" && !values.plumberId) {
+        ctx.addIssue({ code: "custom", path: ["plumberId"], message: "Plumber is required for a balance adjustment" });
+      }
       if (type === "adjustment" && !values.direction) {
         ctx.addIssue({ code: "custom", path: ["direction"], message: "Adjustment direction (In or Out) is required" });
       }
