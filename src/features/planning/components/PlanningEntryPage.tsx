@@ -34,6 +34,7 @@ import { SupervisorOverviewTable } from "./SupervisorOverviewTable";
 import { PlanningTable } from "./PlanningTable";
 import { DprTable } from "./DprTable";
 import { projectOption } from "@/features/projects/utils/project-option";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 type ViewTab = "overview" | "planning" | "dpr";
 
@@ -47,7 +48,7 @@ export function PlanningEntryPage() {
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [projectId, setProjectId] = useState("");
   const [supervisorId, setSupervisorId] = useState("");
-  const [activeTab, setActiveTab] = useState<ViewTab>("overview");
+  const [activeTab, setActiveTab] = useUrlTab<ViewTab>(["overview", "planning", "dpr"], "overview");
   const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
 
   const { data: projects = [] } = useProjectsQuery();

@@ -25,6 +25,7 @@ import { money } from "../utils/format";
 import { PaymentActions } from "./PaymentActions";
 import { PaymentDialog } from "./PaymentDialog";
 import { projectOption } from "@/features/projects/utils/project-option";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 const categories = paymentTabs as PaymentCategory[];
 
@@ -35,7 +36,7 @@ const categories = paymentTabs as PaymentCategory[];
  * fixed to that project (no project filter, no page title).
  */
 export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?: string } = {}) {
-  const [active, setActive] = useState<PaymentCategory>(categories[0]);
+  const [active, setActive] = useUrlTab<PaymentCategory>(categories, categories[0], "category");
   const urlProjectId = useSearchParams().get("projectId");
   const list = useListState({
     pageSize: 50,

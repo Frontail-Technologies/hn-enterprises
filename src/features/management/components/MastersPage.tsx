@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { HolidaysTab } from "./masters/HolidaysTab";
 import { MasterValuesTab } from "./masters/MasterValuesTab";
-import type { MasterTabId, MasterValueCategory } from "../types/masters.types";
+import { masterTabs, type MasterTabId, type MasterValueCategory } from "../types/masters.types";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 export function MastersPage() {
-  const [activeTab, setActiveTab] = useState<MasterTabId>("Payment Types");
+  const [activeTab, setActiveTab] = useUrlTab<MasterTabId>(masterTabs.map((tab) => tab.id), "Payment Types");
 
   if (activeTab === "Holidays") {
     return <HolidaysTab activeTab={activeTab} onTabChange={setActiveTab} />;

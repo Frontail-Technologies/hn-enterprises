@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DownloadSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { ListTable, useClientRows, useListState } from "@/components/shared/list";
@@ -23,6 +23,7 @@ import { InventoryMonthFilter, inventoryFiltersToDateRange, inventoryListFilters
 import { MaterialDrawer } from "./inventory/MaterialDrawer";
 import { MaterialItemDrawer } from "./inventory/MaterialItemDrawer";
 import { MaterialCategoryDrawer } from "./inventory/MaterialCategoryDrawer";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 const PLUMBER_FILTER_TABS = new Set<InventoryTab>(["storeIssue", "plumberBalance", "plumberConsumption"]);
 
@@ -59,7 +60,10 @@ const TAB_ACTION_TYPE: Partial<Record<InventoryTab, MaterialTransactionType>> = 
 
 export function InventoryPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<InventoryTab>("stock");
+  const [activeTab, setActiveTab] = useUrlTab<InventoryTab>(
+    ["stock", "purchase", "pbgIssue", "pbgConsumption", "storeIssue", "totalIssue", "plumberBalance", "plumberConsumption"],
+    "stock",
+  );
   // One list state for the page: filters carry across tabs (as before); paging resets per tab.
   const urlProjectId = useSearchParams().get("projectId");
   const list = useListState({ pageSize: 50, storageKey: "inventory", initialFilters: urlProjectId ? { projectId: urlProjectId } : {} });

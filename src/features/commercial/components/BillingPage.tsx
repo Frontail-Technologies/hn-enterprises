@@ -34,6 +34,7 @@ import { BillingActions } from "./billing/BillingActions";
 import { WageDialog } from "./billing/WageDialog";
 import { WageRegister } from "./billing/WageRegister";
 import { projectOption } from "@/features/projects/utils/project-option";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 const BILL_STATUSES: BillStatus[] = ["Draft", "Submitted", "Completed", "Overdue"];
 
@@ -76,7 +77,7 @@ function monthOptions() {
 }
 
 export function BillingPage() {
-  const [activeView, setActiveView] = useState<BillingView>("wages");
+  const [activeView, setActiveView] = useUrlTab<BillingView>(["wages", "bills"], "wages");
   const wageMonthOptions = useMemo(() => monthOptions(), []);
   const [wageMonth, setWageMonth] = useState(wageMonthOptions[0].value);
   const downloadWageRegister = useDownloadWageRegister();

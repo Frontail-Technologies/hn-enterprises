@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { DownloadSimpleIcon, RulerIcon, TagIcon, WarningIcon } from "@phosphor-icons/react";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -24,6 +24,7 @@ import { InventoryActions } from "./inventory/InventoryActions";
 import { StockStatus } from "./inventory/StockStatus";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 const detailTabs: { id: InventoryDetailTab; label: string }[] = [
   { id: "purchase", label: "Purchase / PBG Received" },
@@ -35,7 +36,7 @@ const detailTabs: { id: InventoryDetailTab; label: string }[] = [
 
 export function InventoryDetailPage({ id }: { id: string }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<InventoryDetailTab>("purchase");
+  const [activeTab, setActiveTab] = useUrlTab<InventoryDetailTab>(["purchase", "storeIssue", "consumption", "plumberLedger", "transactions"], "purchase");
   const list = useListState({ pageSize: 50, storageKey: "inventory-detail" });
 
   // Each tab is its own independently-paginated dataset, so switching tabs

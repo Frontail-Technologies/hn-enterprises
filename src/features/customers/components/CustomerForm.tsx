@@ -46,6 +46,7 @@ import { StickyFormFooter } from "@/components/shared/StickyFormFooter";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import type { CustomerCompletionAudit, CustomerFormValues, CustomerSectionCompletion } from "../types/customer.types";
 import { projectOption } from "@/features/projects/utils/project-option";
+import { useUrlTab } from "@/hooks/useUrlTab";
 
 interface CustomerFormProps {
   mode: "create" | "edit";
@@ -150,6 +151,13 @@ function CustomerFormFields({
     }
     return groups;
   }, [customFields, isAdmin]);
+  // The open tab is kept in the address (?tab=...), so refresh and links keep it.
+  const formTabValues = [
+    "customer", "survey", "gi", "isolation", "fittings", "lmc", "civil", "mdpe", "commissioning",
+    "milestones", "billing", "notes", "images", "reports", "complaints",
+    ...Object.keys(customFieldGroups).map((group) => `custom-${group}`),
+  ];
+  const [formTab, setFormTab] = useUrlTab<string>(formTabValues, "customer");
 
   const projectOptions = projects.map(projectOption);
 
@@ -217,7 +225,7 @@ function CustomerFormFields({
             void onSubmit();
           }}
         >
-          <Tabs defaultValue="customer" className="flex flex-col gap-3">
+          <Tabs value={formTab} onValueChange={(value) => value && setFormTab(String(value))} className="flex flex-col gap-3">
             <ScrollableTabsList>
               <FormTab value="customer">Customer Details</FormTab>
               <FormTab value="survey">Survey</FormTab>
