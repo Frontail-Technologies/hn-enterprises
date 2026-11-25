@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -175,6 +176,16 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   const effectiveFillHeight = fillHeight || isFullViewActive;
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  // The scroll area is also kept in state: opening/closing full view moves the
+  // grid into (or out of) a dialog, so the element changes after this render.
+  // Re-rendering when it appears lets the row/column virtualizers measure the
+  // new element - otherwise full view kept the old (empty) column window and
+  // showed blank columns.
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+  const attachScrollArea = useCallback((element: HTMLDivElement | null) => {
+    scrollAreaRef.current = element;
+    setScrollElement(element);
+  }, []);
 
   const [internalColumnFilters, setInternalColumnFilters] = useState<ColumnFiltersState>([]);
   const isExternalColumnFilters = externalColumnFilters !== undefined && onExternalColumnFiltersChange !== undefined;
@@ -324,7 +335,7 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollAreaRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () => ROW_HEIGHT,
     getItemKey: (index) => rows[index]?.id ?? index,
     overscan: OVERSCAN,
@@ -340,7 +351,7 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   const columnVirtualizer = useVirtualizer({
     horizontal: true,
     count: virtualizeColumns ? centerColumns.length : 0,
-    getScrollElement: () => scrollAreaRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: (index) => centerColumns[index]?.getSize() ?? 140,
     getItemKey: (index) => centerColumns[index]?.id ?? index,
     paddingStart: startWidth,
@@ -492,7 +503,7 @@ export function EnterpriseDataGrid<T extends { id: string }>({
         ) : (
           <>
             <div
-              ref={scrollAreaRef}
+              ref={attachScrollArea}
               className="min-w-0 flex-1 overflow-auto will-change-scroll"
             >
               <div style={{ width: table.getTotalSize(), minWidth: "100%" }}>
