@@ -22,5 +22,9 @@ export function formatFieldValue(value: string | boolean, input?: string) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (!value) return "-";
   if (input === "date") return formatDate(value);
+  // Select options saved as codes ("draft", "not_started") read as words.
+  if (input === "select" && /^[a-z][a-z_ ]*$/.test(value)) {
+    return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
   return value;
 }

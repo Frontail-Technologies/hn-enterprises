@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { tabItemClassName } from "@/components/shared/tabs/tab-style";
 
@@ -23,6 +24,36 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
   const [activeHref, setActiveHref] = useState(items[0]?.href ?? "");
   const tabRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const itemsKey = items.map((item) => item.href).join("|");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      observer.disconnect();
+    };
+  }, [updateScrollState, itemsKey]);
+
+  const scrollByTabs = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction === "left" ? -el.clientWidth * 0.8 : el.clientWidth * 0.8, behavior: "smooth" });
+  };
 
   // Follow the URL hash (deep links, back/forward).
   useEffect(() => {
@@ -67,12 +98,17 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
     <nav
       className={cn(
         // Sits below the sticky mobile nested header (h-12) / desktop top bar (h-14).
-        "sticky top-12 z-20 -mx-1 overflow-x-auto overflow-y-hidden bg-background/95 px-1 backdrop-blur md:top-14",
+        "sticky top-12 z-20 -mx-1 flex items-center gap-1 border-b border-border bg-background/95 px-1 backdrop-blur md:top-14",
         className,
       )}
       aria-label="Section navigation"
     >
-      <div className="flex w-max min-w-full items-center gap-1 border-b border-border">
+      {canScrollLeft || canScrollRight ? (
+        <ScrollArrow direction="left" disabled={!canScrollLeft} onClick={() => scrollByTabs("left")} />
+      ) : null}
+      <div className="relative min-w-0 flex-1">
+      <div ref={scrollRef} className="scrollbar-hidden overflow-x-auto overflow-y-hidden">
+      <div className="flex w-max min-w-full items-center gap-1">
         {items.map((item) => {
           const active = activeHref === item.href;
           return (
@@ -92,6 +128,32 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
           );
         })}
       </div>
+      </div>
+      {canScrollLeft ? (
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent" />
+      ) : null}
+      {canScrollRight ? (
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
+      ) : null}
+      </div>
+      {canScrollLeft || canScrollRight ? (
+        <ScrollArrow direction="right" disabled={!canScrollRight} onClick={() => scrollByTabs("right")} />
+      ) : null}
     </nav>
+  );
+}
+
+function ScrollArrow({ direction, disabled, onClick }: { direction: "left" | "right"; disabled: boolean; onClick: () => void }) {
+  const Icon = direction === "left" ? CaretLeftIcon : CaretRightIcon;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={direction === "left" ? "Previous sections" : "More sections"}
+      className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+    >
+      <Icon size={14} />
+    </button>
   );
 }

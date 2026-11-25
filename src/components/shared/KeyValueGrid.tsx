@@ -35,13 +35,13 @@ export function KeyValueGrid({
       {items.map((item) => (
         <div
           key={item.label}
-          className={cn("grid min-w-0 grid-cols-[minmax(125px,0.42fr)_1fr] items-center gap-4", itemClassName)}
+          className={cn("grid min-w-0 grid-cols-[minmax(140px,0.45fr)_1fr] items-baseline gap-4", itemClassName)}
         >
-          <dt className="flex min-w-0 items-center gap-2 truncate text-[13px] text-muted-foreground">
+          <dt className="flex min-w-0 items-center gap-2 text-[13px] leading-snug break-words text-muted-foreground">
             {item.icon ? <span className="text-primary">{item.icon}</span> : null}
             {item.label}
           </dt>
-          <dd className="min-w-0 text-sm font-medium text-foreground">
+          <dd className="min-w-0 text-sm font-medium break-words text-foreground">
             {item.value || "-"}
           </dd>
         </div>
