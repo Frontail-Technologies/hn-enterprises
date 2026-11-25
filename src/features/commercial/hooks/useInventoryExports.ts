@@ -44,11 +44,11 @@ export function useInventoryExports(params: {
     if (activeTab === "stock") {
       void downloadStockSheet.mutateAsync({ projectId, source });
     } else if (activeTab === "purchase") {
-      void downloadPurchaseRegister.mutateAsync({ projectId, from, to });
+      void downloadPurchaseRegister.mutateAsync({ projectId, source, from, to });
     } else if (activeTab === "pbgIssue") {
-      void downloadPbgIssue.mutateAsync({ projectId, from, to });
+      void downloadPbgIssue.mutateAsync({ projectId, source, from, to });
     } else if (activeTab === "pbgConsumption") {
-      void downloadPbgConsumption.mutateAsync({ projectId, plumberId, from, to });
+      void downloadPbgConsumption.mutateAsync({ projectId, source, plumberId, from, to });
     } else if (activeTab === "storeIssue") {
       void downloadStoreIssueBook.mutateAsync({ projectId, source, plumberId, from, to });
     } else if (activeTab === "totalIssue") {

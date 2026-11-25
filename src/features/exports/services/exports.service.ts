@@ -75,13 +75,13 @@ export const exportsApi = {
     return downloadXlsx(`/exports/inventory/stock${query ? `?${query}` : ""}`, "Stock-Sheet.xlsx");
   },
 
-  inventoryPurchaseRegister(params: { projectId?: string; from?: string; to?: string } = {}) {
-    const query = buildQuery({ projectId: params.projectId, from: params.from, to: params.to });
+  inventoryPurchaseRegister(params: { projectId?: string; source?: string; from?: string; to?: string } = {}) {
+    const query = buildQuery({ projectId: params.projectId, source: params.source, from: params.from, to: params.to });
     return downloadXlsx(`/exports/inventory/purchases${query ? `?${query}` : ""}`, "Purchase-Register.xlsx");
   },
 
-  inventoryPbgIssue(params: { projectId?: string; from?: string; to?: string } = {}) {
-    const query = buildQuery({ projectId: params.projectId, from: params.from, to: params.to });
+  inventoryPbgIssue(params: { projectId?: string; source?: string; from?: string; to?: string } = {}) {
+    const query = buildQuery({ projectId: params.projectId, source: params.source, from: params.from, to: params.to });
     return downloadXlsx(`/exports/inventory/pbg-issues${query ? `?${query}` : ""}`, "PBG-Issue.xlsx");
   },
 
@@ -107,9 +107,10 @@ export const exportsApi = {
     return downloadXlsx(`/exports/inventory/consumption${query ? `?${query}` : ""}`, "Plumber-Consumption.xlsx");
   },
 
-  inventoryPbgConsumption(params: { projectId?: string; plumberId?: string; materialId?: string; from?: string; to?: string } = {}) {
+  inventoryPbgConsumption(params: { projectId?: string; source?: string; plumberId?: string; materialId?: string; from?: string; to?: string } = {}) {
     const query = buildQuery({
       projectId: params.projectId,
+      source: params.source,
       plumberId: params.plumberId,
       materialId: params.materialId,
       from: params.from,
