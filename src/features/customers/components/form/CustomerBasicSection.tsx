@@ -45,7 +45,7 @@ export function CustomerBasicSection({
   return (
     <SectionCard title="Customer & Connection Details">
       <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <FormField label="Project">
+        <FormField label="Project" required>
           {defaultProjectId && !isEdit ? (
             <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
               {currentProjectName || "-"}
@@ -70,7 +70,7 @@ export function CustomerBasicSection({
             />
           )}
         </FormField>
-        <FormField label="Assigned Plumber">
+        <FormField label="Assigned Plumber" required={!isEdit}>
           <Controller
             control={control}
             name="customerConnection.plumberId"
@@ -114,6 +114,7 @@ export function CustomerBasicSection({
         render={({ field }) => (
           <SectionFields
             fields={customerConnectionFields}
+            requiredFields={["customerName"]}
             values={field.value}
             onChange={field.onChange}
           />

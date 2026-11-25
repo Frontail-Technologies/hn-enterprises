@@ -108,7 +108,7 @@ export function PlumberDialog({
                 <AvatarUploadField name={watchedName || kind} value={field.value} onChange={field.onChange} recordId={plumber?.id} />
               )}
             />
-            <FormField label="Name">
+            <FormField label="Name" required>
               <Input {...register("name")} placeholder="e.g. Rahim Sheikh or Group A" />
               {formState.errors.name ? (
                 <p className="text-xs text-destructive">{formState.errors.name.message}</p>

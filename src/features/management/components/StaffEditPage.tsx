@@ -144,7 +144,7 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
           ) : (
             <SelectField label="Designation" control={control} name="designation" options={STAFF_DESIGNATIONS.filter((item) => item !== "Supervisor")} />
           )}
-          <EditField label="Name" registration={register("name")} />
+          <EditField label="Name" required registration={register("name")} />
           {formState.errors.name ? <p className="self-end text-xs text-destructive">{formState.errors.name.message}</p> : null}
           <EditField label="Mobile" registration={register("mobile")} />
           <SelectField label="Status" control={control} name="status" options={statuses} />
@@ -226,14 +226,19 @@ function EditField({
   label,
   registration,
   type = "text",
+  required,
 }: {
   label: string;
   registration: UseFormRegisterReturn;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-[13px] font-medium text-foreground">{label}</span>
+      <span className="text-[13px] font-medium text-foreground">
+        {label}
+        {required ? <span className="ml-0.5 text-destructive">*</span> : null}
+      </span>
       <Input type={type} {...registration} />
     </label>
   );

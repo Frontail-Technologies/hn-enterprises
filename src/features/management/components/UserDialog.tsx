@@ -136,18 +136,18 @@ export function UserDialog({
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
-            <FormField label="Name">
+            <FormField label="Name" required>
               <Input {...register("name")} />
               {formState.errors.name ? <p className="text-xs text-destructive">{formState.errors.name.message}</p> : null}
             </FormField>
             <FormField label="Mobile">
               <Input {...register("mobile")} />
             </FormField>
-            <FormField label="Username">
+            <FormField label="Username" required>
               <Input {...register("username")} disabled={Boolean(user)} />
               {formState.errors.username ? <p className="text-xs text-destructive">{formState.errors.username.message}</p> : null}
             </FormField>
-            <FormField label="Email">
+            <FormField label="Email" required>
               <Input type="email" {...register("email")} disabled={Boolean(user)} />
               {formState.errors.email ? <p className="text-xs text-destructive">{formState.errors.email.message}</p> : null}
             </FormField>
@@ -203,7 +203,7 @@ export function UserDialog({
                 </div>
               </div>
             ) : (
-              <FormField label="Password" className="sm:col-span-2">
+              <FormField label="Password" required className="sm:col-span-2">
                 <Input type="password" {...register("password")} />
                 {formState.errors.password ? (
                   <p className="text-xs text-destructive">{formState.errors.password.message}</p>

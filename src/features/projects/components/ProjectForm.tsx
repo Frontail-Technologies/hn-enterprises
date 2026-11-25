@@ -123,7 +123,7 @@ function ProjectFormFields({
       >
           <SectionCard title="Project details">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <FormField label="Project Name">
+              <FormField label="Project Name" required>
                 <Input {...register("name")} placeholder="Project name" />
                 {formState.errors.name ? (
                   <p className="text-xs text-destructive">{formState.errors.name.message}</p>

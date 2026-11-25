@@ -101,7 +101,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
-            <FormField label="Designation" className="sm:col-span-2">
+            <FormField label="Designation" required className="sm:col-span-2">
               <Controller
                 control={control}
                 name="designation"
@@ -124,7 +124,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
             {!isSupervisor ? (
               <>
-                <FormField label="Name">
+                <FormField label="Name" required>
                   <Input {...register("newUser.name")} />
                   {formState.errors.newUser?.name ? (
                     <p className="text-xs text-destructive">{formState.errors.newUser.name.message}</p>
@@ -157,7 +157,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
             ) : null}
 
             {!isSupervisor ? null : mode === "existing" ? (
-              <FormField label="User">
+              <FormField label="User" required>
                 <Controller
                   control={control}
                   name="userId"
@@ -177,19 +177,19 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
               </FormField>
             ) : (
               <>
-                <FormField label="Name">
+                <FormField label="Name" required>
                   <Input {...register("newUser.name")} />
                   {formState.errors.newUser?.name ? (
                     <p className="text-xs text-destructive">{formState.errors.newUser.name.message}</p>
                   ) : null}
                 </FormField>
-                  <FormField label="Username">
+                  <FormField label="Username" required>
                     <Input {...register("newUser.username")} />
                     {formState.errors.newUser?.username ? (
                       <p className="text-xs text-destructive">{formState.errors.newUser.username.message}</p>
                     ) : null}
                   </FormField>
-                  <FormField label="Email">
+                  <FormField label="Email" required>
                     <Input type="email" {...register("newUser.email")} />
                     {formState.errors.newUser?.email ? (
                       <p className="text-xs text-destructive">{formState.errors.newUser.email.message}</p>
@@ -201,7 +201,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                   <FormField label="Role">
                     <p className="flex h-9 items-center text-sm text-muted-foreground">Supervisor</p>
                   </FormField>
-                <FormField label="Initial Password" className="sm:col-span-2">
+                <FormField label="Initial Password" required className="sm:col-span-2">
                   <Input type="password" {...register("newUser.password")} />
                   {formState.errors.newUser?.password ? (
                     <p className="text-xs text-destructive">{formState.errors.newUser.password.message}</p>

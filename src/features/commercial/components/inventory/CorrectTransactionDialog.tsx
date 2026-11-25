@@ -121,7 +121,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
   const type = transaction.type;
 
   const sourceField = (
-    <FormField label="Material Source">
+    <FormField label="Material Source" required>
       <Select value={values.source || undefined} onValueChange={(source) => set("source", (source as MaterialSource) ?? "")}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select source" />
@@ -135,7 +135,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
   );
 
   const directionField = (
-    <FormField label="Direction">
+    <FormField label="Direction" required>
       <Select value={values.direction || undefined} onValueChange={(direction) => set("direction", (direction as AdjustmentDirection) ?? "")}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select direction" />
@@ -206,7 +206,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
   );
 
   const quantityField = (
-    <FormField label="Quantity">
+    <FormField label="Quantity" required>
       <Input type="number" value={values.quantity ?? ""} onChange={(event) => set("quantity", event.target.value)} />
     </FormField>
   );

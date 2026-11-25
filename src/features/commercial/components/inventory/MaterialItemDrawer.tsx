@@ -85,7 +85,7 @@ export function MaterialItemDrawer() {
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
-          <FormField label="Material Name" helper={'Example: GI Pipe 20MM, 1/2" GI Tee, 90MM Coupler.'}>
+          <FormField label="Material Name" required helper={'Example: GI Pipe 20MM, 1/2" GI Tee, 90MM Coupler.'}>
             <Input {...register("name")} placeholder="Enter material name" />
           </FormField>
           <FormField label="Category" helper="Grouping only. Example: GI Pipe, MDPE Pipe, Valve, Tools.">
@@ -108,7 +108,7 @@ export function MaterialItemDrawer() {
               )}
             />
           </FormField>
-          <FormField label="Unit">
+          <FormField label="Unit" required>
             <Controller
               control={control}
               name="unit"

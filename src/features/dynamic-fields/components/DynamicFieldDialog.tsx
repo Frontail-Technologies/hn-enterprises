@@ -139,11 +139,11 @@ export function DynamicFieldDialog({
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
-            <FormField label="Field Label">
+            <FormField label="Field Label" required>
               <Input {...register("label")} />
               {formState.errors.label ? <p className="text-xs text-destructive">{formState.errors.label.message}</p> : null}
             </FormField>
-            <FormField label="Group">
+            <FormField label="Group" required>
               <Input list="dynamic-field-groups" {...register("group")} placeholder="e.g. KYC Details" />
               <datalist id="dynamic-field-groups">
                 {groups.map((group) => (

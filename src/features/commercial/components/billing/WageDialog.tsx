@@ -136,7 +136,7 @@ export function WageDialog({
         </DialogHeader>
 
         <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
-          <FormField label="Plumber / Worker">
+          <FormField label="Plumber / Worker" required>
             <Controller
               control={control}
               name="plumberId"
@@ -174,10 +174,10 @@ export function WageDialog({
             />
           </FormField>
 
-            <FormField label="Rate of Wage">
+            <FormField label="Rate of Wage" required>
               <Input type="number" {...register("wageRate")} />
             </FormField>
-            <FormField label="Days Worked">
+            <FormField label="Days Worked" required>
               <Input type="number" {...register("daysWorked")} />
             </FormField>
 

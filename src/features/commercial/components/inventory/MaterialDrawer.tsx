@@ -150,7 +150,7 @@ export function MaterialDrawer({
   });
 
   const materialField = (
-    <FormField label="Material" className="sm:col-span-2">
+    <FormField label="Material" required className="sm:col-span-2">
       <Controller
         control={control}
         name="materialId"
@@ -231,7 +231,7 @@ export function MaterialDrawer({
   );
 
   const sourceField = (
-    <FormField label="Material Source">
+    <FormField label="Material Source" required>
       <Controller
         control={control}
         name="source"
@@ -251,7 +251,7 @@ export function MaterialDrawer({
   );
 
   const directionField = (
-    <FormField label="Direction">
+    <FormField label="Direction" required>
       <Controller
         control={control}
         name="direction"
@@ -289,13 +289,13 @@ export function MaterialDrawer({
   );
 
   const quantityField = (labelText: string) => (
-    <FormField label={labelText}>
+    <FormField label={labelText} required>
       <Input type="number" {...register("quantity")} />
     </FormField>
   );
 
   const dateField = (labelText: string) => (
-    <FormField label={labelText}>
+    <FormField label={labelText} required>
       <Controller
         control={control}
         name="transactionDate"

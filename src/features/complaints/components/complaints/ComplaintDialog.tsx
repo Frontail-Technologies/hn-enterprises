@@ -124,7 +124,7 @@ export function ComplaintDialog({
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {!preselectedCustomerId && (
-              <FormField label="Customer">
+              <FormField label="Customer" required>
                 <Controller
                   control={control}
                   name="customerId"
@@ -147,7 +147,7 @@ export function ComplaintDialog({
               </FormField>
             )}
 
-            <FormField label="Title">
+            <FormField label="Title" required>
               <Input {...register("title")} />
               {formState.errors.title ? <p className="text-xs text-destructive">{formState.errors.title.message}</p> : null}
             </FormField>
@@ -173,7 +173,7 @@ export function ComplaintDialog({
               />
             </FormField>
 
-            <FormField label="Description">
+            <FormField label="Description" required>
               <Textarea {...register("description")} className="min-h-24" />
               {formState.errors.description ? (
                 <p className="text-xs text-destructive">{formState.errors.description.message}</p>

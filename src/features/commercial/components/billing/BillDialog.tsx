@@ -159,7 +159,7 @@ export function BillDialog({
         </DialogHeader>
 
         <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
-          <FormField label="Project">
+          <FormField label="Project" required>
             {projectLocked ? (
               <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
                 {defaultProjectName || "-"}
@@ -181,7 +181,7 @@ export function BillDialog({
             )}
           </FormField>
 
-          <FormField label="Bill Number">
+          <FormField label="Bill Number" required>
             <Input {...register("billNumber")} />
           </FormField>
 
@@ -192,7 +192,7 @@ export function BillDialog({
                 render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} />}
               />
             </FormField>
-            <FormField label="Total Amount">
+            <FormField label="Total Amount" required>
               <Input type="number" {...register("totalAmount")} />
             </FormField>
 
