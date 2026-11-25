@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowClockwiseIcon, ImageSquareIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, ImageSquareIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { FileDropzone } from "@/components/shared/FileDropzone";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { filesFromDrop } from "@/lib/file-drop";
 import { resolveFileUrl, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,8 @@ export function ImageUploadPreview({
 }: ImageUploadPreviewProps) {
   const [localItems, setLocalItems] = useState<ImagePreviewItem[]>(images);
   const [previewItem, setPreviewItem] = useState<ImagePreviewItem | null>(null);
+  const addInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingAdd, setIsDraggingAdd] = useState(false);
   const isControlled = Boolean(onChange);
   const items = isControlled ? images : localItems;
   const itemsRef = useRef(items);
@@ -161,12 +164,28 @@ export function ImageUploadPreview({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <FileDropzone
+      {/* The big drop area only while empty; after that a small "+" tile sits after the photos. */}
+      {items.length ? null : (
+        <FileDropzone
+          accept="image/*"
+          multiple
+          label="Choose images"
+          hint="PNG, JPG or WEBP · you can add several at once"
+          onFiles={addFiles}
+        />
+      )}
+      <input
+        ref={addInputRef}
+        type="file"
         accept="image/*"
         multiple
-        label="Choose images"
-        hint="PNG, JPG or WEBP · you can add several at once"
-        onFiles={addFiles}
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Add more images"
+        onChange={(event) => {
+          addFiles(Array.from(event.target.files ?? []));
+          event.target.value = "";
+        }}
       />
 
       {items.length ? (
@@ -260,6 +279,34 @@ export function ImageUploadPreview({
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              onClick={() => addInputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDraggingAdd(true);
+              }}
+              onDragLeave={() => setIsDraggingAdd(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setIsDraggingAdd(false);
+                const files = filesFromDrop(event.dataTransfer);
+                if (files.length) addFiles(files);
+              }}
+              aria-label="Add more images"
+              title="Add more images"
+              className={cn(
+                "flex h-full min-h-16 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed text-[13px] font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                isDraggingAdd
+                  ? "border-primary bg-primary-soft text-primary"
+                  : "border-border text-muted-foreground hover:border-primary/60 hover:bg-primary-soft/40 hover:text-primary",
+              )}
+            >
+              <PlusIcon size={16} />
+              Add more
+            </button>
+          </li>
         </ul>
       ) : null}
 
