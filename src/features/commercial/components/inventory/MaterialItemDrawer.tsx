@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { PlusIcon } from "@phosphor-icons/react";
+import { NotePencilIcon, PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/shared/FormField";
 import { Input } from "@/components/ui/input";
@@ -24,9 +24,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useCreateMaterial } from "../../hooks/useMaterials";
+import { useCreateMaterial, useUpdateMaterial } from "../../hooks/useMaterials";
 import { materialItemFormSchema } from "../../schemas/material-item.schema";
-import type { MaterialFormValues } from "../../types/material.types";
+import type { Material, MaterialFormValues } from "../../types/material.types";
 import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 
 const unitOptions = ["Meter", "Nos", "Roll", "Set", "Kg", "Litre"];
@@ -40,21 +40,28 @@ function emptyValues(): MaterialFormValues {
   };
 }
 
-export function MaterialItemDrawer() {
+function valuesFrom(material: Material): MaterialFormValues {
+  return { name: material.name, category: material.category, unit: material.unit, reorderLevel: String(material.reorderLevel ?? 0) };
+}
+
+/** Add a material, or (with `material`) edit its name, category, unit and reorder level. */
+export function MaterialItemDrawer({ material, trigger }: { material?: Material; trigger?: ReactNode } = {}) {
   const [open, setOpen] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const createMaterial = useCreateMaterial();
+  const updateMaterial = useUpdateMaterial(material?.id ?? "");
+  const saving = createMaterial.isPending || updateMaterial.isPending;
   const { data: categories = [] } = useMasterValuesQuery("Material Categories");
   const form = useForm<MaterialFormValues>({
     resolver: zodResolver(materialItemFormSchema),
-    defaultValues: emptyValues(),
+    defaultValues: material ? valuesFrom(material) : emptyValues(),
   });
   const { control, register, handleSubmit, reset, formState } = form;
   const validationMessage = Object.values(formState.errors)[0]?.message as string | undefined;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      reset(emptyValues());
+      reset(material ? valuesFrom(material) : emptyValues());
       setSubmitError("");
     }
     setOpen(nextOpen);
@@ -63,7 +70,8 @@ export function MaterialItemDrawer() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError("");
     try {
-      await createMaterial.mutateAsync(values);
+      if (material) await updateMaterial.mutateAsync(values);
+      else await createMaterial.mutateAsync(values);
       setOpen(false);
     } catch (saveError) {
       setSubmitError(saveError instanceof Error ? saveError.message : "Unable to add material.");
@@ -72,15 +80,19 @@ export function MaterialItemDrawer() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button type="button" size="compact" />}>
-        <PlusIcon size={13} />
-        Add Material
-      </DialogTrigger>
+      {trigger ?? (
+        <DialogTrigger render={<Button type="button" size="compact" variant={material ? "outline" : "default"} />}>
+          {material ? <NotePencilIcon size={13} /> : <PlusIcon size={13} />}
+          {material ? "Edit Material" : "Add Material"}
+        </DialogTrigger>
+      )}
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
-          <DialogTitle>Add Material</DialogTitle>
+          <DialogTitle>{material ? "Edit Material" : "Add Material"}</DialogTitle>
           <DialogDescription>
-            Create an actual stock item. Categories only group materials; they are not selectable stock items.
+            {material
+              ? "Changes apply everywhere this material appears; past transactions keep their quantities."
+              : "Create an actual stock item. Categories only group materials; they are not selectable stock items."}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,8 +151,8 @@ export function MaterialItemDrawer() {
 
         <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
-          <Button type="button" onClick={() => void onSubmit()} disabled={createMaterial.isPending}>
-            {createMaterial.isPending ? "Saving..." : "Save Material"}
+          <Button type="button" onClick={() => void onSubmit()} disabled={saving}>
+            {saving ? "Saving..." : "Save Material"}
           </Button>
         </DialogFooter>
       </DialogContent>

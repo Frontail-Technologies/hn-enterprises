@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Material } from "../../types/material.types";
 import { MaterialDrawer } from "./MaterialDrawer";
+import { MaterialItemDrawer } from "./MaterialItemDrawer";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import { useDeleteMaterial, useMaterialDeleteImpactQuery } from "../../hooks/useMaterials";
 
@@ -38,6 +39,7 @@ export function InventoryActions({ material }: { material: Material }) {
 
   return (
     <div className="flex items-center gap-1.5">
+      <MaterialItemDrawer material={material} />
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button type="button" size="compact" />}>
           Add Transaction
