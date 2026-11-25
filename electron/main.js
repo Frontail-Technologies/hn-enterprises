@@ -28,6 +28,26 @@ let mainWindow = null;
 let splashWindow = null;
 
 // ---------------------------------------------------------------------------
+// Startup timing: how long each launch step took, written to
+// %APPDATA%/HN Enterprises/startup-timing.log (last 20 launches) so slow
+// starts can be diagnosed on a user's PC.
+// ---------------------------------------------------------------------------
+const launchStartedAt = Date.now();
+const timings = [];
+function mark(step) {
+  timings.push(`${step}=${Date.now() - launchStartedAt}ms`);
+}
+function writeTimings() {
+  try {
+    const file = path.join(app.getPath("userData"), "startup-timing.log");
+    const previous = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").filter(Boolean).slice(-19) : [];
+    fs.writeFileSync(file, [...previous, `${new Date().toISOString()} v${app.getVersion()} ${timings.join(" ")}`].join("\n") + "\n");
+  } catch {
+    // Timing is best-effort only.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Single instance: a second launch focuses the running window.
 // ---------------------------------------------------------------------------
 const hasInstanceLock = app.requestSingleInstanceLock();
@@ -191,7 +211,7 @@ function waitForServer(url, timeoutMs = 30000) {
             reject(new Error(`Next.js server did not respond within ${timeoutMs}ms`));
             return;
           }
-          setTimeout(attempt, 200);
+          setTimeout(attempt, 50);
         });
     };
     attempt();
@@ -352,6 +372,8 @@ function createWindow() {
     if (state.maximized) mainWindow.maximize();
     mainWindow.show();
     splashWindow?.close();
+    mark("window-shown");
+    writeTimings();
   });
 
   // Re-apply the saved display size on every page load (before first paint where possible).
@@ -378,12 +400,20 @@ function createWindow() {
   });
 }
 
+// The local server needs nothing from Electron's window system, so start it
+// right away - it boots while Electron itself is still getting ready.
+if (hasInstanceLock) {
+  startServer();
+  mark("server-spawned");
+}
+
 app.whenReady().then(async () => {
   if (!hasInstanceLock) return;
+  mark("electron-ready");
   // No File/Edit/View menu bar; the shortcuts above cover what users need.
   Menu.setApplicationMenu(null);
   createSplash();
-  startServer();
+  mark("splash");
   // Build the (hidden) main window while the server boots, then load the page
   // the moment the server answers. Readiness is probed with a static file so
   // no page has to be rendered just to find out the server is up.
@@ -396,7 +426,10 @@ app.whenReady().then(async () => {
     showSplashError("HN Enterprises couldn't start. Close this window and open the app again. If it keeps happening, contact your administrator.");
     return;
   }
-  mainWindow?.loadURL(APP_URL);
+  mark("server-up");
+  // Straight to the dashboard (it sends to /login when signed out): skips the
+  // "/" redirect hop on every launch.
+  mainWindow?.loadURL(`${APP_URL}/dashboard`);
   startAutoUpdates(() => mainWindow);
 
   app.on("activate", () => {
