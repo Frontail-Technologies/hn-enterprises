@@ -188,11 +188,12 @@ export const staffApi = {
       values.designation !== "Supervisor"
         ? {
             ...mapPayrollToBody(values),
+            avatarUrl: values.avatarUrl || undefined,
             name: values.newUser.name.trim(),
             mobile: values.newUser.mobile.trim() || undefined,
           }
         : values.mode === "existing"
-        ? { userId: values.userId, ...mapPayrollToBody(values) }
+        ? { userId: values.userId, avatarUrl: values.avatarUrl || undefined, ...mapPayrollToBody(values) }
         : {
             newUser: {
               name: values.newUser.name,
@@ -202,6 +203,7 @@ export const staffApi = {
               role: ROLE_TO_BACKEND[values.newUser.role],
               password: values.newUser.password,
             },
+            avatarUrl: values.avatarUrl || undefined,
             ...mapPayrollToBody(values),
           };
 

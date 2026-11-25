@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AvatarUploadField } from "@/components/shared/AvatarUploadField";
 import { useCreateStaff } from "../hooks/useStaff";
 import { buildStaffFormSchema } from "../schemas/staff-form.schema";
 import { STAFF_DESIGNATIONS, type CreateStaffFormValues } from "../types/staff.types";
@@ -34,6 +35,7 @@ const paymentAccountTypes: CreateStaffFormValues["paymentAccountType"][] = ["Ban
 function emptyValues(): CreateStaffFormValues {
   return {
     designation: "Supervisor",
+    avatarUrl: "",
     mode: "new",
     userId: "",
     newUser: { name: "", email: "", username: "", mobile: "", role: "Supervisor", password: "" },
@@ -69,6 +71,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const mode = useWatch({ control, name: "mode" });
   const designation = useWatch({ control, name: "designation" });
   const isSupervisor = designation === "Supervisor";
+  const photoName = useWatch({ control, name: "newUser.name" });
   const paymentAccountType = useWatch({ control, name: "paymentAccountType" });
 
   function handleOpenChange(nextOpen: boolean) {
@@ -101,6 +104,14 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
+            <Controller
+              control={control}
+              name="avatarUrl"
+              render={({ field }) => (
+                <AvatarUploadField name={photoName || "Staff"} value={field.value} onChange={field.onChange} className="sm:col-span-2" />
+              )}
+            />
+
             <FormField label="Designation" required className="sm:col-span-2">
               <Controller
                 control={control}

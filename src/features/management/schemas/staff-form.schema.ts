@@ -6,6 +6,7 @@ export function buildStaffFormSchema() {
   return z
     .object({
       designation: z.custom<StaffDesignation>(),
+      avatarUrl: z.string(),
       mode: z.enum(["existing", "new"]),
       userId: z.string(),
       newUser: z.object({

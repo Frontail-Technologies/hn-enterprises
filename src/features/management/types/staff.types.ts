@@ -91,6 +91,8 @@ export type NewStaffUserFormValues = {
 
 export type CreateStaffFormValues = StaffPayrollFormValues & {
   designation: StaffDesignation;
+  /** Profile photo URL (already uploaded); "" = none. */
+  avatarUrl: string;
   /** Supervisors only: link an existing login or create one. Others use newUser.name / newUser.mobile. */
   mode: "existing" | "new";
   userId: string;
