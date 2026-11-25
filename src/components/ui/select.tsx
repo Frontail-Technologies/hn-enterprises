@@ -145,6 +145,9 @@ function SelectContent({
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
+        // Fixed, not absolute: an absolutely placed popup near the bottom made the
+        // page taller for a moment, showing a scrollbar and shifting the layout.
+        positionMethod="fixed"
         side={side}
         sideOffset={sideOffset}
         align={align}

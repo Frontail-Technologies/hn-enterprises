@@ -41,6 +41,9 @@ function TooltipContent({
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
+        // Fixed, not absolute: an absolutely placed popup near the bottom made the
+        // page taller for a moment, showing a scrollbar and shifting the layout.
+        positionMethod="fixed"
         align={align}
         alignOffset={alignOffset}
         side={side}

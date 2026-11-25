@@ -33,6 +33,9 @@ function DropdownMenuContent({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
+        // Fixed, not absolute: an absolutely placed popup near the bottom made the
+        // page taller for a moment, showing a scrollbar and shifting the layout.
+        positionMethod="fixed"
         className="isolate z-50 outline-none"
         align={align}
         alignOffset={alignOffset}
