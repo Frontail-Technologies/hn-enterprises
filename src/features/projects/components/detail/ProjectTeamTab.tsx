@@ -189,12 +189,7 @@ function MemberSection({
         isError={isError}
         onRetry={onRetry}
         searchPlaceholder={`Search ${label.many.toLowerCase()}...`}
-        empty={{
-          illustration: "customers",
-          title: `No ${label.many.toLowerCase()} on this project yet.`,
-          description: kind === "supervisor" ? "Supervisors only see projects they are added to." : undefined,
-          action: { label: `Add ${label.one.toLowerCase()}`, onClick: () => setAdding(true) },
-        }}
+        empty={{ illustration: "customers", title: `No ${label.many.toLowerCase()} on this project yet.` }}
         rowActionsWidth={110}
         renderRowActions={(row) => (
           <DeleteConfirmDialog
