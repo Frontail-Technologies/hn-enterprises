@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         default: "app-primary-action bg-primary text-white hover:bg-primary/80 hover:text-white",
         outline:
-          "border-border bg-card hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-[color-mix(in_oklch,var(--border),black_12%)] bg-card shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         /**
          * Secondary ACTION button: navy/blue, backed by `--secondary-action`.
          * Deliberately NOT backed by `--secondary`/`bg-secondary` - that

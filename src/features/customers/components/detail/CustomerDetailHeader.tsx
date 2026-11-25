@@ -35,7 +35,7 @@ export function CustomerDetailHeader({ customer }: { customer: Customer }) {
         { icon: MapPinIcon, label: place },
       ]}
       actions={
-        <Link href={`/customers/${customer.id}?mode=edit`} className={buttonVariants({ variant: "outline" })}>
+        <Link href={`/customers/${customer.id}?mode=edit`} className={buttonVariants({ variant: "default" })}>
           <NotePencilIcon size={15} />
           Edit
         </Link>

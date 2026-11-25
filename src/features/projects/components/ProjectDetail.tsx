@@ -98,7 +98,7 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
               <UploadSimpleIcon size={15} />
               Import customers
             </Link>
-            <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+            <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "default" })}>
               <NotePencilIcon size={15} />
               Edit project
             </Link>
