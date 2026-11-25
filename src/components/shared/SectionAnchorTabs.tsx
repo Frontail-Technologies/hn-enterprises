@@ -97,8 +97,9 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
   return (
     <nav
       className={cn(
-        // Sits below the sticky mobile nested header (h-12) / desktop top bar (h-14).
-        "sticky top-12 z-20 -mx-1 flex items-center gap-1 border-b border-border bg-background/95 px-1 backdrop-blur md:top-14",
+        // Mobile: the page scrolls, so sit below the sticky nested header (h-12).
+        // Desktop: the content area itself scrolls, so stick to its very top.
+        "sticky top-12 z-20 -mx-1 flex items-center gap-1 border-b border-border bg-background/95 px-1 backdrop-blur md:top-0",
         className,
       )}
       aria-label="Section navigation"
@@ -151,9 +152,9 @@ function ScrollArrow({ direction, disabled, onClick }: { direction: "left" | "ri
       disabled={disabled}
       onClick={onClick}
       aria-label={direction === "left" ? "Previous sections" : "More sections"}
-      className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+      className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-30"
     >
-      <Icon size={14} />
+      <Icon size={15} weight="bold" />
     </button>
   );
 }

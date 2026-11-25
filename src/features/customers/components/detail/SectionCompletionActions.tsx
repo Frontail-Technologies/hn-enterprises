@@ -79,7 +79,7 @@ export function SectionCompletionActions({
       ) : (
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           size="sm"
           disabled={mutation.isPending}
           onClick={() => mutation.mutate({ sectionKey, completed: true })}
