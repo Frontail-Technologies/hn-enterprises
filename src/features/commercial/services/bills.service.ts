@@ -178,6 +178,10 @@ export const billsApi = {
             tax: values.tax != null ? Number(values.tax) : undefined,
             status: values.status ? STATUS_TO_BACKEND[values.status] : undefined,
             remarks: values.remarks,
+            // Sent whenever the form has the list, so removing every photo clears them too.
+            attachments: values.attachments
+              ?.filter((item) => item.fileUrl)
+              .map((item) => ({ id: item.id, label: item.label, fileName: item.fileName, fileUrl: item.fileUrl! })),
           }).filter(([, value]) => value !== undefined),
         ),
       ),
