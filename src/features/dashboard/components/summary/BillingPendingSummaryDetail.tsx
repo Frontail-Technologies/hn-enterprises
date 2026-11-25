@@ -46,6 +46,7 @@ export function BillingPendingSummaryDetail({
       searchPlaceholder="Search bill or project..."
       columns={columns}
       rows={rows}
+      getRowHref={(row) => `/billing/${row.id}`}
       isLoading={billsLoading}
       isError={isError}
       onRetry={() => void refetch()}

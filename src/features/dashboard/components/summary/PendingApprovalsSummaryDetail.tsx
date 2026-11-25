@@ -126,6 +126,7 @@ export function PendingApprovalsSummaryDetail({ projectId, city }: { projectId: 
       searchPlaceholder="Search pending approvals..."
       columns={columns}
       rows={rows}
+      getRowHref={(row) => row.actionHref}
       isLoading={customersQuery.isLoading || paymentsQuery.isLoading || billsQuery.isLoading}
       isError={customersQuery.isError || paymentsQuery.isError || billsQuery.isError}
       onRetry={() => {

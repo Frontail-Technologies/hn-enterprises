@@ -31,6 +31,7 @@ export function TotalProjectsSummaryDetail({ projectId, city }: { projectId: str
       searchPlaceholder="Search projects..."
       columns={columns}
       rows={rows}
+      getRowHref={(row) => `/projects/${row.id}`}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => void refetch()}

@@ -30,6 +30,7 @@ export function StockAlertsSummaryDetail() {
       searchPlaceholder="Search materials..."
       columns={columns}
       rows={rows}
+      getRowHref={(row) => `/inventory/${row.id}`}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => void refetch()}

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon, DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { ListTable, useListState } from "@/components/shared/list";
@@ -28,6 +29,7 @@ export function DashboardStatDetailPage({
   projectId?: string;
   city?: string;
 }) {
+  const router = useRouter();
   const list = useListState({ pageSize: 50, storageKey: `dashboard-stat-${statKey}` });
   const [isExporting, setIsExporting] = useState(false);
   const definition = getDashboardStatDefinition(statKey);
@@ -90,6 +92,7 @@ export function DashboardStatDetailPage({
         isError={!knownZero && isError}
         onRetry={() => void refetch()}
         maxHeightClassName="max-h-[68vh]"
+        onRowClick={(row) => router.push(`/customers/${row.customerId}`)}
         empty={
           knownZero
             ? { illustration: "records", title: `No records for ${definition.title}` }

@@ -52,6 +52,7 @@ export function FieldUpdatesSummaryDetail({ period }: { period: DashboardMetricP
       searchPlaceholder="Search field updates..."
       columns={columns}
       rows={rows}
+      getRowHref={(row) => (row.customerId ? `/customers/${row.customerId}` : undefined)}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => void refetch()}
