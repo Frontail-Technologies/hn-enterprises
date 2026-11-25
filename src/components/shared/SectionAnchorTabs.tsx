@@ -98,8 +98,9 @@ export function SectionAnchorTabs({ items, className }: SectionAnchorTabsProps) 
     <nav
       className={cn(
         // Mobile: the page scrolls, so sit below the sticky nested header (h-12).
-        // Desktop: the content area itself scrolls, so stick to its very top.
-        "sticky top-12 z-20 -mx-1 flex items-center gap-1 border-b border-border bg-background/95 px-1 backdrop-blur md:top-0",
+        // Desktop: the content area itself scrolls, and sticky stops below its top
+        // padding (md:py-5 / lg:py-6 in DashboardLayout), so pull up by that much.
+        "sticky top-12 z-20 -mx-1 flex items-center gap-1 border-b border-border bg-background/95 px-1 backdrop-blur md:-top-5 lg:-top-6",
         className,
       )}
       aria-label="Section navigation"
