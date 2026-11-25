@@ -29,6 +29,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCreateMaterialTransaction, useMaterialsQuery } from "../../hooks/useMaterials";
@@ -176,7 +177,7 @@ export function MaterialDrawer({
             value={field.value || undefined}
             onValueChange={(plumberId) => field.onChange(plumberId ?? "")}
             placeholder="Select plumber / team"
-            options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+            options={plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) }))}
             className="w-full"
           />
         )}

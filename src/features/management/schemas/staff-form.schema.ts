@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { UserRole } from "../services/users.service";
-import type { CreateStaffFormValues, StaffPaymentAccountType, StaffSalaryType } from "../types/staff.types";
+import type { CreateStaffFormValues, StaffDesignation, StaffPaymentAccountType, StaffSalaryType } from "../types/staff.types";
 
 export function buildStaffFormSchema() {
   return z
     .object({
+      designation: z.custom<StaffDesignation>(),
       mode: z.enum(["existing", "new"]),
       userId: z.string(),
       newUser: z.object({
@@ -33,6 +34,13 @@ export function buildStaffFormSchema() {
       remarks: z.string(),
     })
     .superRefine((values, ctx) => {
+      if (values.designation !== "Supervisor") {
+        // No login: just a name (mobile optional).
+        if (!values.newUser.name.trim()) {
+          ctx.addIssue({ code: "custom", path: ["newUser", "name"], message: "Name is required" });
+        }
+        return;
+      }
       if (values.mode === "existing" && !values.userId) {
         ctx.addIssue({ code: "custom", path: ["userId"], message: "Select a user to link" });
       }

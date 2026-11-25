@@ -5,6 +5,7 @@ import type { DeleteImpactResult } from "@/components/shared/delete-impact.types
 type BackendPlumber = {
   id: string;
   name: string;
+  category?: string;
   type: string;
   contactNumber: string | null;
   avatarUrl?: string | null;
@@ -17,6 +18,7 @@ function mapPlumber(raw: BackendPlumber): Plumber {
   return {
     id: raw.id,
     name: raw.name,
+    category: raw.category === "labour" ? "labour" : "plumber",
     type: raw.type === "team" ? "team" : "individual",
     contactNumber: raw.contactNumber ?? "",
     avatarUrl: raw.avatarUrl ?? "",
@@ -29,6 +31,7 @@ function mapPlumber(raw: BackendPlumber): Plumber {
 function mapPlumberFormToBody(values: PlumberFormValues) {
   return {
     name: values.name,
+    category: values.category,
     type: values.type,
     contactNumber: values.contactNumber || undefined,
     // Sent as-is so "" can remove the photo.
@@ -40,7 +43,7 @@ function mapPlumberFormToBody(values: PlumberFormValues) {
 
 export const plumbersApi = {
   async list(search?: string): Promise<Plumber[]> {
-    const query = new URLSearchParams({ limit: "200" });
+    const query = new URLSearchParams({ limit: "1000" });
     if (search) query.set("search", search);
     const rows = await apiRequest<BackendPlumber[]>(`/plumbers?${query.toString()}`);
     return rows.map(mapPlumber);

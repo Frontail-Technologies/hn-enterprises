@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { useUpsertWage } from "../../hooks/useWages";
 import { wageFormSchema } from "../../schemas/wage.schema";
 import type { WageCategory, WageFormValues, WageRecord, WageStatus } from "../../types/wage.types";
@@ -144,7 +145,7 @@ export function WageDialog({
                   value={field.value || undefined}
                   onValueChange={(plumberId) => field.onChange(plumberId ?? "")}
                   placeholder="Select plumber"
-                  options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+                  options={plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) }))}
                   disabled={Boolean(wage)}
                   className="w-full"
                 />

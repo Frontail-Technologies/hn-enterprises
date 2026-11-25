@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { useCreateStaff } from "../hooks/useStaff";
 import { buildStaffFormSchema } from "../schemas/staff-form.schema";
-import type { CreateStaffFormValues } from "../types/staff.types";
+import { STAFF_DESIGNATIONS, type CreateStaffFormValues } from "../types/staff.types";
 import type { User } from "../services/users.service";
 
 const salaryTypes: CreateStaffFormValues["salaryType"][] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
@@ -33,6 +33,7 @@ const paymentAccountTypes: CreateStaffFormValues["paymentAccountType"][] = ["Ban
 
 function emptyValues(): CreateStaffFormValues {
   return {
+    designation: "Supervisor",
     mode: "new",
     userId: "",
     newUser: { name: "", email: "", username: "", mobile: "", role: "Supervisor", password: "" },
@@ -65,6 +66,8 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const createStaff = useCreateStaff();
   const availableUsers = users.filter((user) => !staffedUserIds.has(user.id) && user.role === "Supervisor");
   const mode = useWatch({ control, name: "mode" });
+  const designation = useWatch({ control, name: "designation" });
+  const isSupervisor = designation === "Supervisor";
   const paymentAccountType = useWatch({ control, name: "paymentAccountType" });
 
   function handleOpenChange(nextOpen: boolean) {
@@ -83,18 +86,56 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger render={<Button type="button" size="compact" />}>
         <PlusIcon size={13} />
-        Add Supervisor
+        Add Staff
       </SheetTrigger>
       <SheetContent className="w-full border-border bg-card sm:max-w-xl">
         <SheetHeader className="border-b border-border/70">
-          <SheetTitle>Add Supervisor</SheetTitle>
+          <SheetTitle>Add Staff</SheetTitle>
           <SheetDescription>
-            Link an existing supervisor login or create a new one — payroll details attach to that account.
+            {isSupervisor
+              ? "Supervisors get a login for the mobile app: link an existing one or create a new one."
+              : `${designation}s have no app access, only their details and salary are kept.`}
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-1 sm:grid-cols-2">
+            <FormField label="Designation" className="sm:col-span-2">
+              <Controller
+                control={control}
+                name="designation"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={(value) => { if (value) field.onChange(value); }}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAFF_DESIGNATIONS.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </FormField>
+
+            {!isSupervisor ? (
+              <>
+                <FormField label="Name">
+                  <Input {...register("newUser.name")} />
+                  {formState.errors.newUser?.name ? (
+                    <p className="text-xs text-destructive">{formState.errors.newUser.name.message}</p>
+                  ) : null}
+                </FormField>
+                <FormField label="Mobile">
+                  <Input {...register("newUser.mobile")} />
+                </FormField>
+              </>
+            ) : null}
+
+            {isSupervisor ? (
             <FormField label="Account">
               <Controller
                 control={control}
@@ -112,8 +153,9 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                 )}
               />
             </FormField>
+            ) : null}
 
-            {mode === "existing" ? (
+            {!isSupervisor ? null : mode === "existing" ? (
               <FormField label="User">
                 <Controller
                   control={control}

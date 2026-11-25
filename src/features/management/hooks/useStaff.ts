@@ -47,6 +47,28 @@ export function useUpdateStaff(id: string) {
   });
 }
 
+/** Delete staff without a login (drivers, helpers...). */
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffKey });
+      toast.success("Staff member deleted");
+    },
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete staff member"),
+  });
+}
+
+export function useBulkDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => staffApi.bulkRemove(ids),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffKey }),
+    onError: (error: Error) => toast.error(error?.message || "Failed to delete staff"),
+  });
+}
+
 /**
  * Deleting a staff-linked supervisor is done through the canonical user
  * hard-delete workflow (useDeleteUser/useBulkDeleteUsers/

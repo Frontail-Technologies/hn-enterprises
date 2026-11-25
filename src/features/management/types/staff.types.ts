@@ -1,11 +1,37 @@
 import type { UserRole, UserStatus } from "../services/users.service";
 
+/** Job title. Only supervisors have an app login. */
+export type StaffDesignation =
+  | "Supervisor"
+  | "Site Manager"
+  | "Project Manager"
+  | "Driver"
+  | "Jointer"
+  | "Helper"
+  | "Operator"
+  | "Store Incharge";
+
+export const STAFF_DESIGNATIONS: StaffDesignation[] = [
+  "Supervisor",
+  "Site Manager",
+  "Project Manager",
+  "Driver",
+  "Jointer",
+  "Helper",
+  "Operator",
+  "Store Incharge",
+];
+
 export type StaffSalaryType = "Monthly" | "Daily Wage" | "Work Basis" | "Contract";
 export type StaffPaymentAccountType = "Bank Account" | "UPI" | "Cash" | "Other";
 
 export type Staff = {
   id: string;
+  /** "" for staff without an app login. */
   userId: string;
+  designation: StaffDesignation;
+  /** Supervisors have a login account; everyone else has none. */
+  hasLogin: boolean;
   name: string;
   username: string;
   email: string;
@@ -34,6 +60,8 @@ export type Staff = {
 };
 
 export type StaffPayrollFormValues = {
+  /** Sent only for staff without a login (a supervisor stays a supervisor). */
+  designation?: StaffDesignation;
   assignedProjectId: string;
   salaryType: StaffSalaryType;
   monthlySalary: string;
@@ -62,6 +90,8 @@ export type NewStaffUserFormValues = {
 };
 
 export type CreateStaffFormValues = StaffPayrollFormValues & {
+  designation: StaffDesignation;
+  /** Supervisors only: link an existing login or create one. Others use newUser.name / newUser.mobile. */
   mode: "existing" | "new";
   userId: string;
   newUser: NewStaffUserFormValues;

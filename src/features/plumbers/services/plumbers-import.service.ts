@@ -2,6 +2,8 @@ import { apiRequest } from "@/lib/api-client";
 
 export type PlumberImportRowData = {
   name: string;
+  /** "plumber" or "labour". */
+  category: string;
   type: string;
   contactNumber: string;
   remarks: string;

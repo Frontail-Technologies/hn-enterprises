@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { exportColumnTemplate } from "@/lib/export-excel";
 import type {
   ImportPreviewColumn,
@@ -90,7 +91,7 @@ function PaymentImportRowEditor({ data, onChange, errors }: RowEditorProps<Payme
                 onChange({ ...data, plumberName: plumber?.name ?? "" });
               }}
               placeholder="Select plumber"
-              options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+              options={plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) }))}
               className="w-full"
             />
           </FormField>

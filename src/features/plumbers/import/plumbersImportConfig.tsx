@@ -18,10 +18,12 @@ import {
   type PlumberImportRowData,
 } from "../services/plumbers-import.service";
 
-const TEMPLATE_HEADERS = ["Name", "Type", "Contact Number", "Remarks"];
+// Category: "Plumber" (default when blank) or "Labour".
+const TEMPLATE_HEADERS = ["Name", "Category", "Type", "Contact Number", "Remarks"];
 
 function toDraft(row: PlumberImportRow): ImportRowDraft<PlumberImportRowData> {
-  const { rowNumber, error, ...data } = row;
+  const { rowNumber, error, ...rest } = row;
+  const data = { ...rest, category: rest.category === "labour" ? "labour" : "plumber" };
   return {
     tempId: String(rowNumber),
     rowNumber,
@@ -36,6 +38,7 @@ function toDraft(row: PlumberImportRow): ImportRowDraft<PlumberImportRowData> {
 
 const PREVIEW_COLUMNS: ImportPreviewColumn<PlumberImportRowData>[] = [
   { key: "name", label: "Name", width: 200, getValue: (row) => row.data.name },
+  { key: "category", label: "Category", width: 110, getValue: (row) => (row.data.category === "labour" ? "Labour" : "Plumber") },
   { key: "type", label: "Type", width: 120, getValue: (row) => row.data.type },
   { key: "contactNumber", label: "Contact Number", width: 150, getValue: (row) => row.data.contactNumber },
 ];
@@ -52,6 +55,17 @@ function PlumberImportRowEditor({ data, onChange, errors }: RowEditorProps<Plumb
       ) : null}
       <FormField label="Name" required>
         <Input value={data.name} onChange={(event) => onChange({ ...data, name: event.target.value })} />
+      </FormField>
+      <FormField label="Category">
+        <Select value={data.category === "labour" ? "labour" : "plumber"} onValueChange={(category) => onChange({ ...data, category: category ?? "plumber" })}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="plumber">Plumber</SelectItem>
+            <SelectItem value="labour">Labour</SelectItem>
+          </SelectContent>
+        </Select>
       </FormField>
       <FormField label="Type">
         <Select value={data.type === "team" ? "team" : "individual"} onValueChange={(type) => onChange({ ...data, type: type ?? "individual" })}>
@@ -78,9 +92,9 @@ export function usePlumbersImportConfig(): ImportWorkspaceConfig<PlumberImportRo
   return useMemo<ImportWorkspaceConfig<PlumberImportRowData>>(
     () => ({
       module: "plumbers",
-      title: "Import Plumbers",
-      description: "Upload an Excel file to bulk import plumbers. Rejected rows can be fixed right here.",
-      entityLabelPlural: "Plumbers",
+      title: "Import Plumbers & Labour",
+      description: "Upload an Excel file to bulk import plumbers and labour (Category column: Plumber or Labour). Rejected rows can be fixed right here.",
+      entityLabelPlural: "Records",
       onDownloadTemplate: () => void exportColumnTemplate("plumbers_template.xlsx", TEMPLATE_HEADERS),
       columns: PREVIEW_COLUMNS,
       renderEditor: (props) => <PlumberImportRowEditor {...props} />,

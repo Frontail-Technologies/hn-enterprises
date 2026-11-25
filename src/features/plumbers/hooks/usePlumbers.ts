@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { plumbersApi } from "../services/plumbers.service";
 import type { PlumberFormValues } from "../types/plumber.types";
+import { categoryLabel } from "../utils/plumber-label";
 
 const plumbersKey = ["plumbers"] as const;
 const plumberKey = (id: string) => ["plumbers", id] as const;
@@ -17,9 +18,9 @@ export function useCreatePlumber() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (values: PlumberFormValues) => plumbersApi.create(values),
-    onSuccess: () => {
+    onSuccess: (_, values) => {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
-      toast.success("Plumber created successfully");
+      toast.success(`${categoryLabel(values.category)} added`);
     },
     onError: (error: Error) => toast.error(error?.message || "Failed to create plumber"),
   });
@@ -31,7 +32,7 @@ export function useUpdatePlumber(id: string) {
     mutationFn: (values: PlumberFormValues) => plumbersApi.update(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
-      toast.success("Plumber updated successfully");
+      toast.success("Saved");
     },
     onError: (error: Error) => toast.error(error?.message || "Failed to update plumber"),
   });
@@ -43,7 +44,7 @@ export function useDeletePlumber() {
     mutationFn: (id: string) => plumbersApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
-      toast.success("Plumber deleted successfully");
+      toast.success("Deleted");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete plumber"),
   });
@@ -64,7 +65,7 @@ export function useBulkDeletePlumbers() {
     mutationFn: (ids: string[]) => plumbersApi.bulkRemove(ids),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: plumbersKey });
-      toast.success(`${result.count} plumber${result.count === 1 ? "" : "s"} deleted`);
+      toast.success(`${result.count} deleted`);
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete plumbers"),
   });

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
+import { Tabs, TabsTrigger } from "@/components/ui/tabs";
+import { formatCompactCount } from "@/lib/format";
 import { DownloadSimpleIcon, NotePencilIcon, PlusIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
@@ -19,7 +22,7 @@ import {
   useUpdatePlumber,
 } from "../hooks/usePlumbers";
 import { PlumberDialog } from "./PlumberDialog";
-import type { Plumber } from "../types/plumber.types";
+import type { Plumber, PlumberCategory } from "../types/plumber.types";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 
 const exportColumns: ExportColumn<Plumber>[] = [
@@ -66,10 +69,27 @@ const columns: ListColumn<Plumber>[] = [
 
 export function PlumbersPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Plumbers and labour share one roster; the tab is kept in the address (?tab=labour).
+  const category: PlumberCategory = searchParams.get("tab") === "labour" ? "labour" : "plumber";
+  const isLabour = category === "labour";
+  const kind = isLabour ? "Labour" : "Plumber";
   const list = useListState({ pageSize: 50, storageKey: "plumbers" });
   // Search is sent to the API (as before); type/status filters, sort and paging run on the loaded rows.
-  const { data: plumbers = [], isLoading, isError, refetch } = usePlumbersQuery(list.debouncedSearch || undefined);
+  const { data: everyone = [], isLoading, isError, refetch } = usePlumbersQuery(list.debouncedSearch || undefined);
+  const plumbers = useMemo(() => everyone.filter((row) => row.category === category), [everyone, category]);
+  const labourCount = useMemo(() => everyone.filter((row) => row.category === "labour").length, [everyone]);
   const { rows: filteredPlumbers, pageRows, total } = useClientRows(plumbers, list, { columns, filters, clientSearch: false });
+
+  function selectTab(next: PlumberCategory) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "labour") params.set("tab", "labour");
+    else params.delete("tab");
+    list.clearSelection();
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
   const [drawerState, setDrawerState] = useState<{ open: boolean; plumber?: Plumber }>({ open: false });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const bulkDelete = useBulkDeletePlumbers();
@@ -82,23 +102,35 @@ export function PlumbersPage() {
 
   return (
     <PageShell
-      title="Plumbers"
-      description="Individual plumbers and plumber teams working on sites."
+      title="Plumbers & Labour"
+      description="Plumbers and labour (individuals or teams) working on sites. Only plumbers are set on customers."
       actions={
         <Button type="button" size="compact" onClick={() => setDrawerState({ open: true })}>
           <PlusIcon size={13} />
-          Add Plumber
+          Add {kind}
         </Button>
       }
     >
+      <Tabs value={category} onValueChange={(value) => value && selectTab(value as PlumberCategory)} className="mb-4">
+        <ScrollableTabsList>
+          <TabsTrigger value="plumber" className="shrink-0">
+            Plumbers
+            {!isLoading ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(everyone.length - labourCount)}</span> : null}
+          </TabsTrigger>
+          <TabsTrigger value="labour" className="shrink-0">
+            Labour
+            {!isLoading ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(labourCount)}</span> : null}
+          </TabsTrigger>
+        </ScrollableTabsList>
+      </Tabs>
       <ListTable
-        itemLabel="plumber"
+        itemLabel={isLabour ? "labour" : "plumber"}
         rows={pageRows}
         total={total}
         columns={columns}
         state={list}
         filters={filters}
-        searchPlaceholder="Search plumbers..."
+        searchPlaceholder={isLabour ? "Search labour..." : "Search plumbers..."}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => void refetch()}
@@ -113,13 +145,13 @@ export function PlumbersPage() {
         )}
         empty={{
           illustration: "customers",
-          title: "No plumbers yet",
-          description: "Add plumbers one by one or import them from Excel.",
-          action: { label: "Add plumber", onClick: () => setDrawerState({ open: true }) },
+          title: isLabour ? "No labour yet" : "No plumbers yet",
+          description: isLabour ? "Add labour one by one or import them from Excel (Category column: Labour)." : "Add plumbers one by one or import them from Excel.",
+          action: { label: `Add ${kind.toLowerCase()}`, onClick: () => setDrawerState({ open: true }) },
         }}
         actions={
           <>
-            <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel("plumbers.xlsx", exportColumns, filteredPlumbers)}>
+            <Button type="button" variant="outline" size="compact" onClick={() => void exportRowsToExcel(isLabour ? "labour.xlsx" : "plumbers.xlsx", exportColumns, filteredPlumbers)}>
               <DownloadSimpleIcon size={14} />
               Export
             </Button>
@@ -132,7 +164,7 @@ export function PlumbersPage() {
         rowActionsWidth={84}
         renderRowActions={(row) => (
           <div className="flex items-center gap-0.5">
-            <ActionTooltip label="Edit plumber">
+            <ActionTooltip label="Edit">
               <Button type="button" variant="ghost" size="icon-sm" aria-label={`Edit ${row.name}`} onClick={() => setDrawerState({ open: true, plumber: row })}>
                 <NotePencilIcon size={15} />
               </Button>
@@ -146,10 +178,10 @@ export function PlumbersPage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         selectedCount={list.selection.size}
-        entityLabel="Plumber"
+        entityLabel={kind}
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
-        note="Plumbers with associated records (e.g. wage records) will be skipped with an error instead of partially deleted."
+        note="If any selected person has wage or other records, nothing is deleted and an error is shown."
       />
 
       <PlumberDialog
@@ -157,6 +189,7 @@ export function PlumbersPage() {
         open={drawerState.open}
         onOpenChange={(open) => setDrawerState((current) => ({ ...current, open }))}
         plumber={drawerState.plumber}
+        category={category}
       />
     </PageShell>
   );
@@ -173,7 +206,7 @@ function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
       open={open}
       onOpenChange={setOpen}
       itemName={plumber.name}
-      entityTypeLabel="Plumber"
+      entityTypeLabel={plumber.category === "labour" ? "Labour" : "Plumber"}
       impact={deleteImpact.data}
       isImpactLoading={deleteImpact.isLoading}
       isImpactError={deleteImpact.isError}
@@ -181,10 +214,11 @@ function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
       isDeleting={deletePlumber.isPending}
       onDelete={() => deletePlumber.mutateAsync(plumber.id)}
       isDeactivating={deactivatePlumber.isPending}
-      deactivateLabel="Deactivate Plumber"
+      deactivateLabel="Deactivate"
       onDeactivate={() =>
         deactivatePlumber.mutateAsync({
           name: plumber.name,
+          category: plumber.category,
           type: plumber.type,
           contactNumber: plumber.contactNumber,
           // Keep the existing photo (an empty value would remove it).

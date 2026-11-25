@@ -27,9 +27,9 @@ export function StaffDetailPage({ id }: { id: string }) {
     return (
       <EmptyState
         illustration="error"
-        title="Supervisor not found"
+        title="Staff member not found"
         description="This record may have been removed, or the connection failed."
-        action={{ label: "Back to supervisors", onClick: () => router.push("/staff") }}
+        action={{ label: "Back to staff", onClick: () => router.push("/staff") }}
       />
     );
   }
@@ -44,20 +44,20 @@ export function StaffDetailPage({ id }: { id: string }) {
         title={staffMember.name}
         badges={<StatusBadge status={staffMember.status} />}
         meta={[
-          { icon: IdentificationBadgeIcon, label: staffMember.role },
-          { icon: AtIcon, label: staffMember.username },
-          { icon: PhoneIcon, label: staffMember.contact },
-          { icon: EnvelopeSimpleIcon, label: staffMember.email },
+          { icon: IdentificationBadgeIcon, label: staffMember.designation },
+          ...(staffMember.hasLogin ? [{ icon: AtIcon, label: staffMember.username }] : []),
+          ...(staffMember.contact ? [{ icon: PhoneIcon, label: staffMember.contact }] : []),
+          ...(staffMember.hasLogin ? [{ icon: EnvelopeSimpleIcon, label: staffMember.email }] : []),
         ]}
         actions={
           <>
             <Link href="/staff" className={buttonVariants({ variant: "outline" })}>
               <ArrowLeftIcon size={15} />
-              Back to Supervisors
+              Back to Staff
             </Link>
             <Link href={`/staff/${staffMember.id}/edit`} className={buttonVariants({ variant: "default" })}>
               <NotePencilIcon size={15} />
-              Edit Supervisor
+              Edit
             </Link>
           </>
         }
@@ -67,12 +67,18 @@ export function StaffDetailPage({ id }: { id: string }) {
         rail={
           <SectionCard title="Account">
             <DetailRows
-              rows={[
+              rows={staffMember.hasLogin ? [
+                { label: "Designation", value: staffMember.designation },
                 { label: "Role", value: staffMember.role },
                 { label: "Username", value: staffMember.username },
                 { label: "Mobile", value: staffMember.contact },
                 { label: "Email", value: staffMember.email },
                 { label: "Last login", value: staffMember.lastLogin ? formatDateTime(staffMember.lastLogin) : "Never" },
+                { label: "Status", value: <StatusBadge status={staffMember.status} /> },
+              ] : [
+                { label: "Designation", value: staffMember.designation },
+                { label: "Mobile", value: staffMember.contact || "-" },
+                { label: "App access", value: "None" },
                 { label: "Status", value: <StatusBadge status={staffMember.status} /> },
               ]}
             />

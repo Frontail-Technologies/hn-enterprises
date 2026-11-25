@@ -12,6 +12,7 @@ import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { onlyPlumbers } from "@/features/plumbers/utils/plumber-label";
 import { useDynamicFieldsQuery } from "@/features/dynamic-fields/hooks/useDynamicFields";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
@@ -120,7 +121,9 @@ function CustomerFormFields({
       setValue("projectName", project.name);
     }
   }
-  const { data: plumbers = [] } = usePlumbersQuery();
+  const { data: roster = [] } = usePlumbersQuery();
+  // A customer's plumber is never labour.
+  const plumbers = useMemo(() => onlyPlumbers(roster), [roster]);
   const saveCustomer = useSaveCustomerWithPipeRecords(mode, customerId);
   const archiveCustomer = useUpdateCustomer(customerId ?? "");
   const deleteCustomer = useDeleteCustomer();

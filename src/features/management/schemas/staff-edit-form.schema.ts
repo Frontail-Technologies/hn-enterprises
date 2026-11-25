@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { UserRole, UserStatus } from "../services/users.service";
-import type { StaffPaymentAccountType, StaffSalaryType } from "../types/staff.types";
+import type { StaffDesignation, StaffPaymentAccountType, StaffSalaryType } from "../types/staff.types";
 
 export function buildStaffEditFormSchema() {
   return z.object({
-    name: z.string(),
+    designation: z.custom<StaffDesignation>(),
+    name: z.string().trim().min(1, "Name is required"),
     mobile: z.string(),
     role: z.custom<UserRole>(),
     status: z.custom<UserStatus>(),

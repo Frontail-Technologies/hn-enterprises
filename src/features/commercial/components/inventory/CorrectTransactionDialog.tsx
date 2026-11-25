@@ -27,6 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useCorrectMaterialTransaction } from "../../hooks/useMaterials";
@@ -165,7 +166,7 @@ export function CorrectTransactionDialog({ transaction, materialName }: { transa
         value={values.plumberId || undefined}
         onValueChange={(plumberId) => set("plumberId", plumberId ?? "")}
         placeholder="Select plumber / team"
-        options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+        options={plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) }))}
         className="w-full"
       />
     </FormField>

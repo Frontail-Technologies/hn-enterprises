@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { usePlumbersQuery } from "@/features/plumbers/hooks/usePlumbers";
+import { plumberLabel } from "@/features/plumbers/utils/plumber-label";
 import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
 import { useCustomerSelectorOptions } from "@/features/customers/hooks/useCustomerSelectorOptions";
@@ -246,7 +247,7 @@ export function PaymentDialog({
                     value={field.value || undefined}
                     onValueChange={(plumberId) => field.onChange(plumberId ?? "")}
                     placeholder="Select plumber / team"
-                    options={plumbers.map((plumber) => ({ value: plumber.id, label: plumber.name }))}
+                    options={plumbers.map((plumber) => ({ value: plumber.id, label: plumberLabel(plumber) }))}
                     className="w-full"
                   />
                 )}

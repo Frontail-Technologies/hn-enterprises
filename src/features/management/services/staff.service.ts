@@ -10,11 +10,37 @@ import {
 import type {
   CreateStaffFormValues,
   Staff,
+  StaffDesignation,
   StaffPaymentAccountType,
   StaffPayrollFormValues,
   StaffSalaryType,
   StaffUserPatchValues,
 } from "../types/staff.types";
+
+type BackendDesignation =
+  | "supervisor"
+  | "site_manager"
+  | "project_manager"
+  | "driver"
+  | "jointer"
+  | "helper"
+  | "operator"
+  | "store_incharge";
+
+const DESIGNATION_TO_FRONTEND: Record<BackendDesignation, StaffDesignation> = {
+  supervisor: "Supervisor",
+  site_manager: "Site Manager",
+  project_manager: "Project Manager",
+  driver: "Driver",
+  jointer: "Jointer",
+  helper: "Helper",
+  operator: "Operator",
+  store_incharge: "Store Incharge",
+};
+
+const DESIGNATION_TO_BACKEND = Object.fromEntries(
+  Object.entries(DESIGNATION_TO_FRONTEND).map(([backend, label]) => [label, backend]),
+) as Record<StaffDesignation, BackendDesignation>;
 
 type BackendSalaryType = "monthly" | "daily_wage" | "work_basis" | "contract";
 type BackendPaymentAccountType = "bank_account" | "upi" | "cash" | "other";
@@ -53,7 +79,13 @@ function toDateOnly(value: string | null | undefined) {
 
 type BackendStaff = {
   id: string;
-  userId: string;
+  userId: string | null;
+  designation?: BackendDesignation;
+  /** Resolved by the server from the login (supervisors) or the staff row. */
+  name?: string;
+  mobile?: string | null;
+  avatarUrl?: string | null;
+  status?: BackendStatus;
   assignedProjectId: string | null;
   salaryType: BackendSalaryType;
   monthlySalary: string;
@@ -80,21 +112,23 @@ type BackendStaff = {
     role: BackendRole;
     status: BackendStatus;
     lastLoginAt: string | null;
-  };
+  } | null;
 };
 
 function mapStaff(raw: BackendStaff): Staff {
   return {
     id: raw.id,
-    userId: raw.userId,
-    name: raw.user.name,
-    username: raw.user.username,
-    email: raw.user.email,
-    contact: raw.user.mobile ?? "",
-    role: ROLE_TO_FRONTEND[raw.user.role] ?? "Viewer",
-    status: STATUS_TO_FRONTEND[raw.user.status] ?? "Active",
-    lastLogin: raw.user.lastLoginAt ?? "",
-    avatarUrl: raw.user.avatarUrl ?? "",
+    userId: raw.userId ?? "",
+    designation: DESIGNATION_TO_FRONTEND[raw.designation ?? "supervisor"] ?? "Supervisor",
+    hasLogin: Boolean(raw.user),
+    name: raw.name ?? raw.user?.name ?? "",
+    username: raw.user?.username ?? "",
+    email: raw.user?.email ?? "",
+    contact: raw.mobile ?? raw.user?.mobile ?? "",
+    role: raw.user ? (ROLE_TO_FRONTEND[raw.user.role] ?? "Viewer") : "Viewer",
+    status: STATUS_TO_FRONTEND[raw.status ?? raw.user?.status ?? "active"] ?? "Active",
+    lastLogin: raw.user?.lastLoginAt ?? "",
+    avatarUrl: raw.avatarUrl ?? raw.user?.avatarUrl ?? "",
     assignedProjectId: raw.assignedProjectId ?? "",
     salaryType: SALARY_TYPE_TO_FRONTEND[raw.salaryType] ?? "Monthly",
     monthlySalary: raw.monthlySalary,
@@ -116,6 +150,7 @@ function mapStaff(raw: BackendStaff): Staff {
 
 function mapPayrollToBody(values: StaffPayrollFormValues) {
   return {
+    designation: values.designation ? DESIGNATION_TO_BACKEND[values.designation] : undefined,
     assignedProjectId: values.assignedProjectId || undefined,
     salaryType: SALARY_TYPE_TO_BACKEND[values.salaryType],
     monthlySalary: Number(values.monthlySalary) || 0,
@@ -137,7 +172,7 @@ function mapPayrollToBody(values: StaffPayrollFormValues) {
 
 export const staffApi = {
   async list(params: { search?: string; role?: string; status?: string } = {}): Promise<Staff[]> {
-    const query = new URLSearchParams({ limit: "200" });
+    const query = new URLSearchParams({ limit: "1000" });
     if (params.search) query.set("search", params.search);
     const rows = await apiRequest<BackendStaff[]>(`/staff?${query.toString()}`);
     return rows.map(mapStaff);
@@ -150,7 +185,13 @@ export const staffApi = {
 
   async create(values: CreateStaffFormValues): Promise<Staff> {
     const body =
-      values.mode === "existing"
+      values.designation !== "Supervisor"
+        ? {
+            ...mapPayrollToBody(values),
+            name: values.newUser.name.trim(),
+            mobile: values.newUser.mobile.trim() || undefined,
+          }
+        : values.mode === "existing"
         ? { userId: values.userId, ...mapPayrollToBody(values) }
         : {
             newUser: {
@@ -191,7 +232,16 @@ export const staffApi = {
     return mapStaff(raw);
   },
 
-  // No delete/deleteImpact/bulkDelete here anymore - deleting a staff-linked
+  /** Staff without a login only; supervisors are deleted with their account (usersApi). */
+  async remove(id: string): Promise<void> {
+    await apiRequest<unknown>(`/staff/${id}`, { method: "DELETE" });
+  },
+
+  async bulkRemove(ids: string[]): Promise<{ count: number }> {
+    return apiRequest<{ count: number }>("/staff/bulk/delete", { method: "POST", body: JSON.stringify({ ids }) });
+  },
+
+  // Supervisors: no delete/deleteImpact/bulkDelete here - deleting a staff-linked
   // supervisor goes through the canonical user hard-delete endpoints
   // (usersApi.delete/getDeleteImpact/bulkDelete, keyed by staff.userId).
   // See remove-staff-block brief §8.
