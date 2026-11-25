@@ -14,6 +14,8 @@ export type Plumber = {
   status: PlumberStatus;
   remarks: string;
   createdAt: string;
+  /** Projects they are currently on. */
+  projectNames: string[];
 };
 
 export type PlumberFormValues = {

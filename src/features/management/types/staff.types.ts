@@ -30,6 +30,8 @@ export type Staff = {
   /** "" for staff without an app login. */
   userId: string;
   designation: StaffDesignation;
+  /** Projects a supervisor is currently on (what they see in the mobile app). */
+  projectNames: string[];
   /** Supervisors have a login account; everyone else has none. */
   hasLogin: boolean;
   name: string;

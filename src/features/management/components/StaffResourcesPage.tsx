@@ -23,6 +23,7 @@ import { UserAvatar } from "@/components/shared/UserAvatar";
 const exportColumns: ExportColumn<Staff>[] = [
   { label: "Name", getValue: (row) => row.name },
   { label: "Designation", getValue: (row) => row.designation },
+  { label: "Projects", getValue: (row) => row.projectNames.join(", ") },
   { label: "Contact", getValue: (row) => row.contact },
   { label: "Status", getValue: (row) => row.status },
   { label: "Last Login", getValue: (row) => (row.hasLogin ? (row.lastLogin ? formatDateTime(row.lastLogin) : "Never") : "No app access") },
@@ -46,6 +47,15 @@ const columns: ListColumn<Staff>[] = [
     ),
   },
   { id: "designation", header: "Designation", value: (row) => row.designation, sortable: true, width: 160 },
+  {
+    id: "projects",
+    header: "Projects",
+    value: (row) => (row.hasLogin ? row.projectNames.join(", ") || "None" : "-"),
+    sortable: true,
+    width: 220,
+    cell: (row) =>
+      row.hasLogin && !row.projectNames.length ? <span className="text-destructive">None (sees nothing)</span> : row.hasLogin ? row.projectNames.join(", ") : "-",
+  },
   { id: "contact", header: "Contact", value: (row) => row.contact, sortable: true, width: 180 },
   { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
   {

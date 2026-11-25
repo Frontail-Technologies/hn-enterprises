@@ -29,6 +29,7 @@ const exportColumns: ExportColumn<Plumber>[] = [
   { label: "Name", getValue: (row) => row.name },
   { label: "Type", getValue: (row) => (row.type === "team" ? "Team" : "Individual") },
   { label: "Contact Number", getValue: (row) => row.contactNumber },
+  { label: "Projects", getValue: (row) => row.projectNames.join(", ") },
   { label: "Status", getValue: (row) => (row.status === "active" ? "Active" : "Inactive") },
   { label: "Remarks", getValue: (row) => row.remarks },
 ];
@@ -56,6 +57,7 @@ const columns: ListColumn<Plumber>[] = [
   },
   { id: "type", header: "Type", value: (row) => row.type, sortable: true, width: 120, cell: (row) => (row.type === "team" ? "Team" : "Individual") },
   { id: "contactNumber", header: "Contact number", value: (row) => row.contactNumber, width: 160 },
+  { id: "projects", header: "Projects", value: (row) => row.projectNames.join(", ") || "-", sortable: true, width: 240 },
   {
     id: "status",
     header: "Status",

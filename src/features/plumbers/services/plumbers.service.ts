@@ -12,6 +12,7 @@ type BackendPlumber = {
   status: string;
   remarks: string | null;
   createdAt: string;
+  projectNames?: string[] | null;
 };
 
 function mapPlumber(raw: BackendPlumber): Plumber {
@@ -25,6 +26,7 @@ function mapPlumber(raw: BackendPlumber): Plumber {
     status: raw.status === "inactive" ? "inactive" : "active",
     remarks: raw.remarks ?? "",
     createdAt: raw.createdAt,
+    projectNames: raw.projectNames ?? [],
   };
 }
 

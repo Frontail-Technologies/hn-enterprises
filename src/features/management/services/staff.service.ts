@@ -81,6 +81,7 @@ type BackendStaff = {
   id: string;
   userId: string | null;
   designation?: BackendDesignation;
+  projectNames?: string[] | null;
   /** Resolved by the server from the login (supervisors) or the staff row. */
   name?: string;
   mobile?: string | null;
@@ -121,6 +122,7 @@ function mapStaff(raw: BackendStaff): Staff {
     userId: raw.userId ?? "",
     designation: DESIGNATION_TO_FRONTEND[raw.designation ?? "supervisor"] ?? "Supervisor",
     hasLogin: Boolean(raw.user),
+    projectNames: raw.projectNames ?? [],
     name: raw.name ?? raw.user?.name ?? "",
     username: raw.user?.username ?? "",
     email: raw.user?.email ?? "",
