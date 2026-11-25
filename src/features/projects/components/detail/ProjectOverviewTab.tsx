@@ -13,6 +13,7 @@ import {
 import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
 import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { DetailRows, ProgressList } from "@/components/shared/record";
+import { KeyValueGrid } from "@/components/shared/KeyValueGrid";
 import { ScrollableTabsList } from "@/components/shared/ScrollableTabsList";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge, type StatusValue } from "@/components/shared/StatusBadge";
@@ -28,7 +29,7 @@ import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
 import { ProjectActivityTab } from "./ProjectActivityTab";
 import { ProjectTeamTab } from "./ProjectTeamTab";
 import { ProjectWorkTab } from "./ProjectWorkTab";
-import { toTitleCase } from "./project-detail.utils";
+import { formatDate, toTitleCase } from "./project-detail.utils";
 
 type ProjectSite = ProjectSummary["sites"]["list"][number];
 
@@ -135,6 +136,26 @@ export function ProjectTabs({ project }: { project: Project }) {
 
       <TabsContent value="overview">
         <div className="flex flex-col gap-5">
+          <SectionCard title="Project details">
+            <KeyValueGrid
+              columns={3}
+              items={[
+                { label: "Project code", value: project.code },
+                { label: "Status", value: <StatusBadge status={project.status as StatusValue} /> },
+                { label: "Project type", value: project.projectType },
+                { label: "Client", value: project.client },
+                { label: "Consultant", value: project.consultant },
+                { label: "Contractor", value: project.contractor },
+                { label: "City", value: project.city },
+                { label: "Area", value: project.area },
+                { label: "Manager", value: project.assignedManager },
+                { label: "Start date", value: project.startDate ? formatDate(project.startDate) : "" },
+                { label: "Planned end", value: project.plannedEndDate ? formatDate(project.plannedEndDate) : "" },
+                { label: "Contract value", value: project.contractValue },
+              ]}
+            />
+            {project.description ? <p className="mt-4 border-t border-border pt-3 text-sm text-foreground/80">{project.description}</p> : null}
+          </SectionCard>
           {isLoading || !summary ? (
             <>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

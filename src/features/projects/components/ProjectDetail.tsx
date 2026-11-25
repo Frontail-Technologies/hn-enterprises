@@ -3,18 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  BuildingsIcon,
-  CalendarBlankIcon,
-  HashIcon,
-  MapPinIcon,
-  NotePencilIcon,
-  UploadSimpleIcon,
-  UsersIcon,
-  HardHatIcon,
-  TagIcon,
-  UserIcon,
-} from "@phosphor-icons/react";
+import { NotePencilIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -23,7 +12,6 @@ import { RecordHeader } from "@/components/shared/record";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useProjectQuery } from "@/features/projects/hooks/useProjects";
 import { ProjectTabs } from "./detail/ProjectOverviewTab";
-import { formatDate } from "./detail/project-detail.utils";
 
 /**
  * Old Project-detail links (`?section=…`, from when this page embedded every
@@ -74,37 +62,31 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
     );
   }
 
-  const dates = [project.startDate, project.plannedEndDate].filter(Boolean).map((date) => formatDate(date));
-
   return (
     <div className="flex flex-col gap-6">
-      <RecordHeader
-        title={project.name}
-        badges={<StatusBadge status={project.status} />}
-        meta={[
-          { icon: HashIcon, label: project.code },
-          { icon: MapPinIcon, label: project.city },
-          { icon: BuildingsIcon, label: project.client },
-          { icon: UsersIcon, label: project.consultant ? `Consultant: ${project.consultant}` : "" },
-          { icon: HardHatIcon, label: project.contractor ? `Contractor: ${project.contractor}` : "" },
-          { icon: TagIcon, label: project.projectType },
-          { icon: CalendarBlankIcon, label: dates.join(" – ") },
-          { icon: UserIcon, label: project.assignedManager },
-        ]}
-        figure={project.contractValue ? { label: "Contract value", value: project.contractValue } : undefined}
-        actions={
-          <>
-            <Link href={`/customers/import?projectId=${encodeURIComponent(project.id)}`} className={buttonVariants({ variant: "outline" })}>
-              <UploadSimpleIcon size={15} />
-              Import customers
-            </Link>
+      {/* Name and status on top; contract value and actions in a row under it,
+          above the tabs. The project's other details live on the Overview tab. */}
+      <div className="flex flex-col gap-4">
+        <RecordHeader title={project.name} badges={<StatusBadge status={project.status} />} />
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {project.contractValue ? (
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-muted-foreground">Contract value</span>
+              <span className="text-2xl leading-tight font-bold tracking-tight text-foreground tabular-nums">{project.contractValue}</span>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
             <Link href={`/projects/${project.id}/edit`} className={buttonVariants({ variant: "default" })}>
               <NotePencilIcon size={15} />
               Edit project
             </Link>
-          </>
-        }
-      />
+            <Link href={`/customers/import?projectId=${encodeURIComponent(project.id)}`} className={buttonVariants({ variant: "outline" })}>
+              <UploadSimpleIcon size={15} />
+              Import customers
+            </Link>
+          </div>
+        </div>
+      </div>
 
       <ProjectTabs project={project} />
     </div>
