@@ -5,7 +5,8 @@ export type MasterValueCategory =
   | "Schemes"
   | "Document Categories"
   | "Material Categories"
-  | "Meter Types";
+  | "Meter Types"
+  | "Project Types";
 
 export type MasterValueStatus = "Active" | "Inactive";
 
@@ -50,6 +51,7 @@ export const masterValueCategories: MasterValueCategory[] = [
   "Document Categories",
   "Material Categories",
   "Meter Types",
+  "Project Types",
 ];
 
 export const masterTabs: Array<{ id: MasterTabId; label: string }> = [

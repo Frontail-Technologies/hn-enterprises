@@ -17,7 +17,8 @@ type BackendCategory =
   | "schemes"
   | "document_categories"
   | "material_categories"
-  | "meter_types";
+  | "meter_types"
+  | "project_types";
 
 type BackendStatus = "active" | "inactive";
 type BackendHolidayType = "national" | "restricted" | "company";
@@ -30,6 +31,7 @@ const CATEGORY_TO_FRONTEND: Record<BackendCategory, MasterValueCategory> = {
   document_categories: "Document Categories",
   material_categories: "Material Categories",
   meter_types: "Meter Types",
+  project_types: "Project Types",
 };
 
 export const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> = {
@@ -40,6 +42,7 @@ export const CATEGORY_TO_BACKEND: Record<MasterValueCategory, BackendCategory> =
   "Document Categories": "document_categories",
   "Material Categories": "material_categories",
   "Meter Types": "meter_types",
+  "Project Types": "project_types",
 };
 
 const STATUS_TO_FRONTEND: Record<BackendStatus, MasterValueStatus> = {

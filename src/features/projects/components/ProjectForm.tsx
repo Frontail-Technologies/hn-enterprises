@@ -35,6 +35,8 @@ import { projectFormSchema } from "../schemas/project-form.schema";
 import type { ProjectFormValues } from "../types/project.types";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { useMasterValuesQuery } from "@/features/management/hooks/useMasters";
 
 const defaultValues: ProjectFormValues = {
   name: "",
@@ -87,6 +89,8 @@ function ProjectFormFields({
 }) {
   const router = useRouter();
   const isEdit = mode === "edit";
+  // Project types come from Masters > Project Types (admins manage the list).
+  const { data: projectTypeValues = [] } = useMasterValuesQuery("Project Types");
   const { control, register, handleSubmit, formState } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: initialValues,
@@ -142,7 +146,29 @@ function ProjectFormFields({
                 <Input {...register("contractor")} placeholder="Contractor" />
               </FormField>
               <FormField label="Project Type">
-                <Input {...register("projectType")} placeholder="CGD Network" />
+                <Controller
+                  control={control}
+                  name="projectType"
+                  render={({ field }) => {
+                    const options = projectTypeValues
+                      .filter((item) => item.status === "Active")
+                      .map((item) => ({ value: item.value, label: item.value }));
+                    // Keep a saved type selectable even if it isn't in the list (anymore).
+                    if (field.value && !options.some((option) => option.value.toLowerCase() === field.value.toLowerCase())) {
+                      options.unshift({ value: field.value, label: field.value });
+                    }
+                    const selected = options.find((option) => option.value.toLowerCase() === (field.value ?? "").toLowerCase());
+                    return (
+                      <SearchableSelect
+                        value={selected?.value}
+                        onValueChange={(value) => field.onChange(value ?? "")}
+                        placeholder="Select project type"
+                        options={options}
+                        className="w-full"
+                      />
+                    );
+                  }}
+                />
               </FormField>
               <FormField label="City">
                 <Input {...register("city")} placeholder="Enter city" />
