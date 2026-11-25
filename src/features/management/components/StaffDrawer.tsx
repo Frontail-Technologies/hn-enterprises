@@ -14,15 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useCreateStaff } from "../hooks/useStaff";
 import { buildStaffFormSchema } from "../schemas/staff-form.schema";
 import { STAFF_DESIGNATIONS, type CreateStaffFormValues } from "../types/staff.types";
@@ -56,6 +56,7 @@ function emptyValues(): CreateStaffFormValues {
   };
 }
 
+/** "Add Staff" dialog. */
 export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedUserIds: Set<string> }) {
   const [open, setOpen] = useState(false);
   const schema = buildStaffFormSchema();
@@ -83,23 +84,23 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   });
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger render={<Button type="button" size="compact" />}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger render={<Button type="button" size="compact" />}>
         <PlusIcon size={13} />
         Add Staff
-      </SheetTrigger>
-      <SheetContent className="w-full border-border bg-card sm:max-w-xl">
-        <SheetHeader className="border-b border-border/70">
-          <SheetTitle>Add Staff</SheetTitle>
-          <SheetDescription>
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
+          <DialogTitle>Add Staff</DialogTitle>
+          <DialogDescription>
             {isSupervisor
               ? "Supervisors get a login for the mobile app: link an existing one or create a new one."
               : `${designation}s have no app access, only their details and salary are kept.`}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-          <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-1 sm:grid-cols-2">
+          <div className="grid flex-1 content-start gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
             <FormField label="Designation" className="sm:col-span-2">
               <Controller
                 control={control}
@@ -279,16 +280,16 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
             ) : null}
           </div>
 
-          <SheetFooter className="border-t border-border/70">
+          <DialogFooter className="flex w-full shrink-0 flex-row items-center justify-end border-t border-border px-6 py-4">
             <div className="flex items-center justify-end gap-2">
-              <SheetClose render={<Button type="button" variant="outline" />}>Cancel</SheetClose>
+              <DialogClose render={<Button type="button" variant="outline" />}>Cancel</DialogClose>
               <Button type="submit" disabled={createStaff.isPending || formState.isSubmitting}>
                 {createStaff.isPending ? "Saving..." : "Save"}
               </Button>
             </div>
-          </SheetFooter>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
