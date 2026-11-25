@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ArrowLeftIcon } from "@phosphor-icons/react";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Shown above a page title when the page was opened from a project (its
  * address carries ?projectId=...): one click back to that project.
@@ -11,7 +13,8 @@ import { ArrowLeftIcon } from "@phosphor-icons/react";
 export function BackToProjectLink() {
   const projectId = useSearchParams().get("projectId");
   const pathname = usePathname();
-  if (!projectId || pathname.startsWith("/projects/")) return null;
+  // Dashboard links carry projectId=all ("every project"): no single project to go back to.
+  if (!projectId || !UUID.test(projectId) || pathname.startsWith("/projects/")) return null;
   return (
     <Link
       href={`/projects/${encodeURIComponent(projectId)}`}
