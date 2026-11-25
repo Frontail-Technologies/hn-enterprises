@@ -15,8 +15,10 @@ type BillRow = Bill;
 
 const columns: ListColumn<BillRow>[] = [
   { id: "billNumber", header: "Bill Number", width: 160, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.billNumber },
+  { id: "projectName", header: "Project", width: 220, sortable: true, columnFilter: true, value: (row) => row.projectName || "-" },
   { id: "billDate", header: "Bill Date", width: 130, sortable: true, columnFilter: true, value: (row) => row.billDate, cell: (row) => formatDate(row.billDate) },
-  { id: "totalAmount", header: "Total Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.totalAmount, cell: (row) => money(row.totalAmount) },
+  { id: "totalAmount", header: "Bill Amount", width: 140, align: "end", sortable: true, columnFilter: true, value: (row) => row.totalAmount, cell: (row) => money(row.totalAmount) },
+  { id: "tax", header: "Tax", width: 120, align: "end", sortable: true, columnFilter: true, value: (row) => row.tax, cell: (row) => money(row.tax) },
   { id: "paidAmount", header: "Paid Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.paidAmount, cell: (row) => money(row.paidAmount) },
   { id: "pendingAmount", header: "Pending Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.pendingAmount, cell: (row) => money(row.pendingAmount) },
   { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status, cell: (row) => <StatusBadge status={row.status} /> },
@@ -41,7 +43,7 @@ export function BillingPendingSummaryDetail({
   return (
     <SummaryStatShell
       title={getAdminSummaryStatDefinition("billing-pending").title}
-      searchPlaceholder="Search bill..."
+      searchPlaceholder="Search bill or project..."
       columns={columns}
       rows={rows}
       isLoading={billsLoading}

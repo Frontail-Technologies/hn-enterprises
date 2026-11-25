@@ -14,6 +14,7 @@ type OverdueBillRow = Bill & { daysOverdue: number };
 
 const columns: ListColumn<OverdueBillRow>[] = [
   { id: "billNumber", header: "Bill Number", width: 160, isTitle: true, hideable: false, sortable: true, columnFilter: true, value: (row) => row.billNumber },
+  { id: "projectName", header: "Project", width: 220, sortable: true, columnFilter: true, value: (row) => row.projectName || "-" },
   { id: "dueDate", header: "Due Date", width: 130, sortable: true, columnFilter: true, value: (row) => row.dueDate, cell: (row) => formatDate(row.dueDate) },
   { id: "daysOverdue", header: "Days Overdue", width: 120, align: "end", sortable: true, columnFilter: true, value: (row) => row.daysOverdue },
   { id: "pendingAmount", header: "Pending Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.pendingAmount, cell: (row) => money(row.pendingAmount) },
@@ -38,7 +39,7 @@ export function OverdueBillsSummaryDetail({ projectId }: { projectId: string }) 
   return (
     <SummaryStatShell
       title={getAdminSummaryStatDefinition("overdue-bills").title}
-      searchPlaceholder="Search bill..."
+      searchPlaceholder="Search bill or project..."
       columns={columns}
       rows={rows}
       isLoading={billsLoading}
