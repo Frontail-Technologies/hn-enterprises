@@ -8,6 +8,12 @@ export type EnterpriseColumn<T extends { id: string }> = {
   maxWidth?: number;
   grow?: boolean;
   pin?: boolean;
+  /**
+   * Helper column (e.g. Sr. No.) that is always pinned first. It doesn't count
+   * as the grid's own pin choice, so grids without explicit pins keep pinning
+   * their first four business columns.
+   */
+  leadingPin?: boolean;
   enableResizing?: boolean;
   enableSorting?: boolean;
   getValue: (row: T) => string | number | boolean | null | undefined;

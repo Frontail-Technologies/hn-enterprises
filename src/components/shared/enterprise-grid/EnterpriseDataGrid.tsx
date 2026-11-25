@@ -187,9 +187,11 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   const pinnedStart = useMemo(() => {
     // Columns marked `pin` are pinned; grids that mark none keep the original
     // first-four pinning.
-    const explicit = columns.filter((column) => column.pin);
-    const businessPins = (explicit.length ? explicit : columns.slice(0, LEGACY_PIN_COUNT)).map((column) => column.key);
-    return enableSelection ? [SELECT_COLUMN_ID, ...businessPins] : businessPins;
+    const leading = columns.filter((column) => column.leadingPin).map((column) => column.key);
+    const business = columns.filter((column) => !column.leadingPin);
+    const explicit = business.filter((column) => column.pin);
+    const businessPins = (explicit.length ? explicit : business.slice(0, LEGACY_PIN_COUNT)).map((column) => column.key);
+    return [...(enableSelection ? [SELECT_COLUMN_ID] : []), ...leading, ...businessPins];
   }, [columns, enableSelection]);
 
   // Pinning is visually/functionally disabled on mobile (narrow tables are

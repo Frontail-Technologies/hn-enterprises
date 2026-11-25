@@ -296,7 +296,7 @@ export function ListTable<T extends { id: string }>({
         enableResizing: false,
         enableSorting: false,
         filterable: false,
-        pin: true,
+        leadingPin: true,
         getValue: (row) => position.get(row.id),
         render: (row) => <span className="text-muted-foreground tabular-nums">{position.get(row.id)}</span>,
       },
