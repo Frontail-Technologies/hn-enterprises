@@ -70,6 +70,10 @@ export type DprRecord = {
   evidence: EvidenceFile[];
   remarks: string;
   tasks: DprTask[];
+  /** Admin review: when, by whom, and the reason it was sent back ("" if none). */
+  reviewedAt: string;
+  reviewedByName: string;
+  reviewNote: string;
 };
 
 export type PlanningEntryRow = {

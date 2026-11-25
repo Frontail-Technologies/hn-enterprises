@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import {
   CalendarCheckIcon,
@@ -36,19 +37,15 @@ import { DprTable } from "./DprTable";
 import { projectOption } from "@/features/projects/utils/project-option";
 import { useUrlTab } from "@/hooks/useUrlTab";
 
-type ViewTab = "overview" | "planning" | "dpr";
-
-const TABS: Array<{ id: ViewTab; label: string }> = [
-  { id: "overview", label: "Supervisor Overview" },
-  { id: "planning", label: "Planning" },
-  { id: "dpr", label: "DPR" },
-];
+type ViewTab = "overview" | "planning" | "dpr" | "approval";
 
 export function PlanningEntryPage() {
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
-  const [projectId, setProjectId] = useState("");
+  // Opened from a project page: start filtered to that project.
+  const searchParams = useSearchParams();
+  const [projectId, setProjectId] = useState(() => searchParams.get("projectId") ?? "");
   const [supervisorId, setSupervisorId] = useState("");
-  const [activeTab, setActiveTab] = useUrlTab<ViewTab>(["overview", "planning", "dpr"], "overview");
+  const [activeTab, setActiveTab] = useUrlTab<ViewTab>(["overview", "planning", "dpr", "approval"], "overview");
   const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
 
   const { data: projects = [] } = useProjectsQuery();
@@ -59,6 +56,19 @@ export function PlanningEntryPage() {
     () => ({ date, projectId: projectId || undefined, supervisorId: supervisorId || undefined }),
     [date, projectId, supervisorId],
   );
+
+  // Every submitted DPR waiting for an admin, any date (same project / supervisor filter).
+  const approvalQuery = useDprRecordsQuery({ status: "submitted", projectId: projectId || undefined, supervisorId: supervisorId || undefined });
+  const awaiting = useMemo(
+    () => [...(approvalQuery.data ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
+    [approvalQuery.data],
+  );
+  const tabs: Array<{ id: ViewTab; label: string }> = [
+    { id: "overview", label: "Supervisor Overview" },
+    { id: "planning", label: "Planning" },
+    { id: "dpr", label: "DPR" },
+    { id: "approval", label: awaiting.length ? `Awaiting approval (${awaiting.length})` : "Awaiting approval" },
+  ];
 
   const sitePlansQuery = useSitePlansQuery(queryParams);
   const dprRecordsQuery = useDprRecordsQuery(queryParams);
@@ -140,10 +150,18 @@ export function PlanningEntryPage() {
           <DashboardStatCard label="Supervisors" value={formatCompactCount(summary.supervisorsCount)} icon={UsersThreeIcon} tone="primary" dense />
         </CompactStatGrid>
 
-        <UnderlineTabs items={TABS} active={activeTab} onChange={(id) => setActiveTab(id as ViewTab)} />
+        <UnderlineTabs items={tabs} active={activeTab} onChange={(id) => setActiveTab(id as ViewTab)} />
 
         <section className="overflow-hidden rounded-card border border-border bg-card shadow-card">
-          {isLoading ? (
+          {activeTab === "approval" ? (
+            approvalQuery.isLoading ? (
+              <PageLoading className="min-h-24" />
+            ) : awaiting.length ? (
+              <DprTable rows={awaiting} planByKey={planByKey} projectNameById={projectNameById} date={date} showDate />
+            ) : (
+              <EmptyState illustration="allClear" title="No DPRs waiting for approval" />
+            )
+          ) : isLoading ? (
             <PageLoading className="min-h-24" />
           ) : isError ? (
             <EmptyState

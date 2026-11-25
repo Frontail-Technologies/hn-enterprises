@@ -61,6 +61,9 @@ type BackendDprRecord = {
   tasks: BackendDprTask[];
   evidence: BackendEvidenceFile[] | null;
   submittedAt: string | null;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  reviewNote?: string | null;
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
   project: BackendJoinedRef;
@@ -135,6 +138,9 @@ function mapDprRecord(raw: BackendDprRecord): DprRecord {
     evidence: mapEvidence(raw.evidence),
     remarks: raw.remarks ?? "",
     tasks: mapTasksToDprTasks(raw.tasks),
+    reviewedAt: raw.reviewedAt ?? "",
+    reviewedByName: raw.reviewedByName ?? "",
+    reviewNote: raw.reviewNote ?? "",
   };
 }
 
@@ -146,6 +152,7 @@ type ListParams = {
   date?: string;
   from?: string;
   to?: string;
+  status?: string;
 };
 
 function buildQuery(params: ListParams) {
@@ -157,6 +164,7 @@ function buildQuery(params: ListParams) {
   if (params.date) query.set("date", params.date);
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
+  if (params.status) query.set("status", params.status);
   return query.toString();
 }
 
@@ -169,5 +177,13 @@ export const planningApi = {
   async listDprRecords(params: ListParams = {}): Promise<DprRecord[]> {
     const rows = await apiRequest<BackendDprRecord[]>(`/planning/dpr-records?${buildQuery(params)}`);
     return rows.map(mapDprRecord);
+  },
+
+  /** Approve submitted DPRs, or send them back to the supervisor with a reason. */
+  reviewDprRecords(ids: string[], action: "approve" | "reject", note?: string) {
+    return apiRequest<{ updated: number; skipped: number }>("/planning/dpr-records/review", {
+      method: "POST",
+      body: JSON.stringify({ ids, action, note }),
+    });
   },
 };

@@ -110,7 +110,15 @@ export type ProjectSummary = {
       customerCount: number;
     }[];
   };
-  dpr: { pending: number; submittedThisMonth: number };
+  dpr: {
+    pending: number;
+    submittedThisMonth: number;
+    /** Newer servers: submitted and waiting for an admin, approved, not yet submitted, sent back. */
+    awaitingApproval?: number;
+    approved?: number;
+    drafts?: number;
+    sentBack?: number;
+  };
   expenses: { total: number };
   materials: { lowStockAlerts: number };
   team: { supervisors: number; plumbers: number; staff: number };
