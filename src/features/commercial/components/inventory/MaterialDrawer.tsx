@@ -64,14 +64,14 @@ const TYPE_DESCRIPTIONS: Record<MaterialTransactionType, string> = {
   consumption: "Record customer/site material consumption for reconciliation.",
 };
 
-function emptyValues(defaultMaterialId = ""): MaterialTransactionFormValues {
+function emptyValues(defaultMaterialId = "", defaultProjectId = ""): MaterialTransactionFormValues {
   return {
     materialId: defaultMaterialId,
     quantity: "",
     transactionDate: format(new Date(), "yyyy-MM-dd"),
     source: "",
     direction: "",
-    projectId: "",
+    projectId: defaultProjectId,
     referenceNo: "",
     vendorName: "",
     rate: "",
@@ -103,7 +103,10 @@ export function MaterialDrawer({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   defaultMaterialId = "",
+  defaultProjectId = "",
 }: {
+  /** Opened from a project: that project is picked already. */
+  defaultProjectId?: string;
   /** Opened from a material's own page: that material is picked already. */
   defaultMaterialId?: string;
   type: MaterialTransactionType;
@@ -132,14 +135,14 @@ export function MaterialDrawer({
 
   const form = useForm<MaterialTransactionFormValues>({
     resolver: zodResolver(buildMaterialTransactionSchema(type)),
-    defaultValues: emptyValues(defaultMaterialId),
+    defaultValues: emptyValues(defaultMaterialId, defaultProjectId),
   });
   const { control, register, handleSubmit, reset, formState } = form;
   const validationMessage = Object.values(formState.errors)[0]?.message as string | undefined;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      reset(emptyValues(defaultMaterialId));
+      reset(emptyValues(defaultMaterialId, defaultProjectId));
       setSubmitError("");
       setShortage(null);
     }
