@@ -14,6 +14,19 @@ export type Bill = {
   dueDate: string;
   totalAmount: number;
   tax: number;
+  /** Deductions by the client. */
+  tdsIncome: number;
+  tdsGst: number;
+  prs: number;
+  bankGuarantee: number;
+  bgReleased: number;
+  holdAmount: number;
+  holdReleased: number;
+  /** Bank guarantee / hold amounts the client still keeps. */
+  bgHeld: number;
+  holdHeld: number;
+  /** total + tax - TDS - PRS - BG held - hold held. */
+  netPayable: number;
   paidAmount: number;
   pendingAmount: number;
   status: BillStatus;
@@ -29,6 +42,11 @@ export type BillFormValues = {
   dueDate: string;
   totalAmount: string;
   tax: string;
+  tdsIncome: string;
+  tdsGst: string;
+  prs: string;
+  bankGuarantee: string;
+  holdAmount: string;
   status: BillStatus;
   remarks: string;
   attachments: ImagePreviewItem[];

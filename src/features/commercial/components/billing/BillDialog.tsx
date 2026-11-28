@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { PlusIcon } from "@phosphor-icons/react";
 import { ActionTooltip } from "@/components/shared/ActionTooltip";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,11 @@ function emptyValues(defaultProjectId = ""): BillFormValues {
     dueDate: "",
     totalAmount: "",
     tax: "",
+    tdsIncome: "",
+    tdsGst: "",
+    prs: "",
+    bankGuarantee: "",
+    holdAmount: "",
     status: "Draft",
     remarks: "",
     attachments: [],
@@ -59,6 +64,11 @@ function valuesFromBill(bill: Bill): BillFormValues {
     dueDate: bill.dueDate,
     totalAmount: String(bill.totalAmount),
     tax: String(bill.tax),
+    tdsIncome: bill.tdsIncome ? String(bill.tdsIncome) : "",
+    tdsGst: bill.tdsGst ? String(bill.tdsGst) : "",
+    prs: bill.prs ? String(bill.prs) : "",
+    bankGuarantee: bill.bankGuarantee ? String(bill.bankGuarantee) : "",
+    holdAmount: bill.holdAmount ? String(bill.holdAmount) : "",
     status: bill.status,
     remarks: bill.remarks,
     attachments: bill.attachments,
@@ -207,6 +217,8 @@ export function BillDialog({
               />
             </FormField>
 
+          <DeductionFields form={form} />
+
           <FormField label="Status" className="sm:col-span-2">
             <Controller
               control={control}
@@ -280,5 +292,67 @@ export function BillDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** TDS (income tax / GST), PRS, bank guarantee and hold - with "% of bill" helpers and the net to receive. */
+function DeductionFields({ form }: { form: ReturnType<typeof useForm<BillFormValues>> }) {
+  const { register, setValue, control } = form;
+  const [total, tax, tdsIncome, tdsGst, prs, bankGuarantee, holdAmount] = useWatch({
+    control,
+    name: ["totalAmount", "tax", "tdsIncome", "tdsGst", "prs", "bankGuarantee", "holdAmount"],
+  });
+  const num = (value: string | undefined) => Number(value) || 0;
+  const net = num(total) + num(tax) - num(tdsIncome) - num(tdsGst) - num(prs) - num(bankGuarantee) - num(holdAmount);
+  const percent = (field: "tdsIncome" | "tdsGst", rate: number) =>
+    setValue(field, num(total) ? String(Math.round(num(total) * rate) / 100) : "", { shouldDirty: true });
+
+  const quick = (field: "tdsIncome" | "tdsGst", rates: number[]) => (
+    <span className="flex gap-1">
+      {rates.map((rate) => (
+        <button
+          key={rate}
+          type="button"
+          onClick={() => percent(field, rate)}
+          className="rounded border border-border px-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
+          title={`${rate}% of the bill amount`}
+        >
+          {rate}%
+        </button>
+      ))}
+    </span>
+  );
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:col-span-2 sm:grid-cols-2">
+      <p className="text-xs font-medium text-muted-foreground sm:col-span-2">Deductions by the client</p>
+      <FormField label="TDS (Income tax)">
+        <div className="flex items-center gap-2">
+          <Input type="number" {...register("tdsIncome")} placeholder="0" />
+          {quick("tdsIncome", [1, 2])}
+        </div>
+      </FormField>
+      <FormField label="TDS (GST)">
+        <div className="flex items-center gap-2">
+          <Input type="number" {...register("tdsGst")} placeholder="0" />
+          {quick("tdsGst", [2])}
+        </div>
+      </FormField>
+      <FormField label="PRS">
+        <Input type="number" {...register("prs")} placeholder="0" />
+      </FormField>
+      <FormField label="Bank Guarantee">
+        <Input type="number" {...register("bankGuarantee")} placeholder="0" />
+      </FormField>
+      <FormField label="Hold Amount">
+        <Input type="number" {...register("holdAmount")} placeholder="0" />
+      </FormField>
+      <div className="flex flex-col justify-end">
+        <span className="text-xs text-muted-foreground">Net to receive</span>
+        <span className="text-lg font-semibold tabular-nums text-foreground">
+          {net.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}
+        </span>
+      </div>
+    </div>
   );
 }

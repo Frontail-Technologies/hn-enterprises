@@ -110,3 +110,17 @@ export function useUpdateBillPaymentStatus(billId: string) {
     onError: (error: Error) => toast.error(error.message || "Failed to update payment status"),
   });
 }
+
+export function useReleaseBillAmount(billId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { kind: "bg" | "hold"; amount: number; paymentDate: string; mode: string; remarks?: string }) =>
+      billsApi.releaseAmount(billId, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["bills"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Released amount recorded");
+    },
+    onError: (error: Error) => toast.error(error.message || "Couldn't record the release"),
+  });
+}

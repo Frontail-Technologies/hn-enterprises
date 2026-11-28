@@ -135,7 +135,7 @@ export type ProjectSummary = {
       twoInch: number;
       totalMetres: number;
     };
-    billing: { bills: number; billed: number; paid: number; outstanding: number };
+    billing: { bills: number; billed: number; paid: number; outstanding: number; tds?: number; bgHeld?: number; holdHeld?: number };
     bySite?: {
       id: string;
       name: string;

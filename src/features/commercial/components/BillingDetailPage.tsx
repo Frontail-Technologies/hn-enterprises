@@ -22,6 +22,7 @@ import { PaymentDialog } from "./billing/PaymentDialog";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { resolveFileUrl } from "@/lib/upload";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
+import { ReleaseAmountDialog } from "./billing/ReleaseAmountDialog";
 
 export function BillingDetailPage({ id }: { id: string }) {
   const router = useRouter();
@@ -106,9 +107,31 @@ export function BillingDetailPage({ id }: { id: string }) {
               <ProgressList items={[{ label: "Collected", value: bill.paidAmount, total: billed }]} />
               <DetailRows
                 rows={[
-                  { label: "Total", value: money(bill.totalAmount) },
+                  { label: "Bill amount", value: money(bill.totalAmount) },
                   { label: "Tax", value: money(bill.tax) },
-                  { label: "Paid", value: money(bill.paidAmount) },
+                  { label: "TDS (Income tax)", value: money(bill.tdsIncome) },
+                  { label: "TDS (GST)", value: money(bill.tdsGst) },
+                  { label: "PRS", value: money(bill.prs) },
+                  {
+                    label: "Bank guarantee",
+                    value: (
+                      <span className="flex items-center justify-end gap-2">
+                        {money(bill.bgHeld)} held{bill.bgReleased ? ` · ${money(bill.bgReleased)} released` : ""}
+                        {bill.bgHeld > 0 ? <ReleaseAmountDialog billId={bill.id} kind="bg" held={bill.bgHeld} /> : null}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: "Hold amount",
+                    value: (
+                      <span className="flex items-center justify-end gap-2">
+                        {money(bill.holdHeld)} held{bill.holdReleased ? ` · ${money(bill.holdReleased)} released` : ""}
+                        {bill.holdHeld > 0 ? <ReleaseAmountDialog billId={bill.id} kind="hold" held={bill.holdHeld} /> : null}
+                      </span>
+                    ),
+                  },
+                  { label: "Net to receive", value: money(bill.netPayable) },
+                  { label: "Received", value: money(bill.paidAmount) },
                   { label: "Pending", value: <span className="text-destructive">{money(bill.pendingAmount)}</span> },
                   { label: "Bill date", value: formatDate(bill.billDate) },
                   { label: "Due date", value: bill.dueDate ? formatDate(bill.dueDate) : null },

@@ -54,8 +54,22 @@ const billColumns: ListColumn<Bill>[] = [
   },
   { id: "project", header: "Project", value: (row) => row.projectName, width: 240, grow: true, cell: (row) => <span className="font-medium text-foreground">{row.projectName || "—"}</span> },
   { id: "billDate", header: "Bill date", value: (row) => row.billDate, width: 130, cell: (row) => formatDate(row.billDate) },
-  { id: "totalAmount", header: "Total amount", value: (row) => row.totalAmount, align: "end", width: 140, cell: (row) => money(row.totalAmount) },
-  { id: "paidAmount", header: "Paid amount", value: (row) => row.paidAmount, align: "end", width: 140, cell: (row) => money(row.paidAmount) },
+  { id: "totalAmount", header: "Bill amount", value: (row) => row.totalAmount, align: "end", width: 130, cell: (row) => money(row.totalAmount) },
+  { id: "tax", header: "Tax", value: (row) => row.tax, align: "end", width: 110, cell: (row) => money(row.tax) },
+  { id: "tds", header: "TDS", value: (row) => row.tdsIncome + row.tdsGst, align: "end", width: 110, cell: (row) => money(row.tdsIncome + row.tdsGst) },
+  { id: "prs", header: "PRS", value: (row) => row.prs, align: "end", width: 100, cell: (row) => money(row.prs) },
+  { id: "bgHeld", header: "Bank guarantee", value: (row) => row.bgHeld, align: "end", width: 130, cell: (row) => money(row.bgHeld) },
+  { id: "holdHeld", header: "Hold", value: (row) => row.holdHeld, align: "end", width: 110, cell: (row) => money(row.holdHeld) },
+  { id: "netPayable", header: "Net", value: (row) => row.netPayable, align: "end", width: 130, cell: (row) => money(row.netPayable) },
+  { id: "paidAmount", header: "Received", value: (row) => row.paidAmount, align: "end", width: 130, cell: (row) => money(row.paidAmount) },
+  {
+    id: "pendingAmount",
+    header: "Pending",
+    value: (row) => row.pendingAmount,
+    align: "end",
+    width: 130,
+    cell: (row) => <span className={row.pendingAmount > 0 ? "font-medium text-destructive" : undefined}>{money(row.pendingAmount)}</span>,
+  },
   { id: "status", header: "Status", value: (row) => row.status, width: 120, cell: (row) => <StatusBadge status={row.status} /> },
 ];
 
@@ -63,8 +77,18 @@ const exportColumns: ExportColumn<Bill>[] = [
   { label: "Bill Number", getValue: (row) => row.billNumber },
   { label: "Project", getValue: (row) => row.projectName || "-" },
   { label: "Bill Date", getValue: (row) => formatDate(row.billDate) },
-  { label: "Total Amount", getValue: (row) => row.totalAmount },
-  { label: "Paid Amount", getValue: (row) => row.paidAmount },
+  { label: "Bill Amount", getValue: (row) => row.totalAmount },
+  { label: "Tax", getValue: (row) => row.tax },
+  { label: "TDS (Income tax)", getValue: (row) => row.tdsIncome },
+  { label: "TDS (GST)", getValue: (row) => row.tdsGst },
+  { label: "PRS", getValue: (row) => row.prs },
+  { label: "Bank Guarantee", getValue: (row) => row.bankGuarantee },
+  { label: "BG Released", getValue: (row) => row.bgReleased },
+  { label: "Hold Amount", getValue: (row) => row.holdAmount },
+  { label: "Hold Released", getValue: (row) => row.holdReleased },
+  { label: "Net", getValue: (row) => row.netPayable },
+  { label: "Received", getValue: (row) => row.paidAmount },
+  { label: "Pending", getValue: (row) => row.pendingAmount },
   { label: "Status", getValue: (row) => row.status },
 ];
 
@@ -172,6 +196,10 @@ export function BillingPage() {
             <DashboardStatCard label="Received" value={money(totals?.received ?? 0)} icon={CoinsIcon} tone="success" dense />
             <DashboardStatCard label="Pending" value={money(totals?.pending ?? 0)} icon={HourglassIcon} tone="warning" dense />
             <DashboardStatCard label="Overdue" value={money(totals?.overdue ?? 0)} icon={WarningCircleIcon} tone="danger" dense />
+            <DashboardStatCard label="TDS deducted" value={money(totals?.tds ?? 0)} icon={ReceiptIcon} tone="primary" dense />
+            <DashboardStatCard label="PRS" value={money(totals?.prs ?? 0)} icon={ReceiptIcon} tone="primary" dense />
+            <DashboardStatCard label="Bank guarantee held" value={money(totals?.bgHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
+            <DashboardStatCard label="Hold amount held" value={money(totals?.holdHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
           </CompactStatGrid>
           <ListTable
             itemLabel="bill"

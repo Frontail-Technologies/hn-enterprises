@@ -257,6 +257,9 @@ export function ProjectTabs({ project }: { project: Project }) {
               rows={[
                 { label: "Total billed", value: money(work.billing.billed) },
                 { label: "Received", value: money(work.billing.paid) },
+                { label: "TDS deducted", value: money(work.billing.tds ?? 0) },
+                { label: "Bank guarantee held", value: money(work.billing.bgHeld ?? 0) },
+                { label: "Hold amount held", value: money(work.billing.holdHeld ?? 0) },
                 { label: "Outstanding", value: money(work.billing.outstanding) },
                 { label: "Bills", value: formatCompactCount(work.billing.bills) },
                 { label: "Approved expenses", value: money(summary?.expenses.total ?? 0) },

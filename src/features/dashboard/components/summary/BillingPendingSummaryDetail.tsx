@@ -19,7 +19,8 @@ const columns: ListColumn<BillRow>[] = [
   { id: "billDate", header: "Bill Date", width: 130, sortable: true, columnFilter: true, value: (row) => row.billDate, cell: (row) => formatDate(row.billDate) },
   { id: "totalAmount", header: "Bill Amount", width: 140, align: "end", sortable: true, columnFilter: true, value: (row) => row.totalAmount, cell: (row) => money(row.totalAmount) },
   { id: "tax", header: "Tax", width: 120, align: "end", sortable: true, columnFilter: true, value: (row) => row.tax, cell: (row) => money(row.tax) },
-  { id: "paidAmount", header: "Paid Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.paidAmount, cell: (row) => money(row.paidAmount) },
+  { id: "deductions", header: "TDS / PRS / BG / Hold", width: 160, align: "end", sortable: true, value: (row) => row.tdsIncome + row.tdsGst + row.prs + row.bgHeld + row.holdHeld, cell: (row) => money(row.tdsIncome + row.tdsGst + row.prs + row.bgHeld + row.holdHeld) },
+  { id: "paidAmount", header: "Received", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.paidAmount, cell: (row) => money(row.paidAmount) },
   { id: "pendingAmount", header: "Pending Amount", width: 150, align: "end", sortable: true, columnFilter: true, value: (row) => row.pendingAmount, cell: (row) => money(row.pendingAmount) },
   { id: "status", header: "Status", width: 130, sortable: true, columnFilter: true, value: (row) => row.status, cell: (row) => <StatusBadge status={row.status} /> },
 ];
