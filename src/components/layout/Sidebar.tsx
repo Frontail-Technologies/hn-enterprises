@@ -176,7 +176,7 @@ function NavGroupSection({
     return (
       <SidebarGroup className="border-t border-sidebar-border/50 pt-2 first:border-t-0 first:pt-1">
         <SidebarGroupContent>
-          <SidebarMenu>
+          <SidebarMenu className="gap-1">
             {group.items.map((item) => (
               <NavLink key={item.id} item={item} active={isItemActive(item)} />
             ))}
@@ -206,7 +206,7 @@ function NavGroupSection({
         </SidebarGroupLabel>
         <CollapsibleContent>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {group.items.map((item) => (
                 <NavLink
                   key={item.id}
@@ -297,7 +297,7 @@ export function Sidebar() {
       <SidebarContent className="px-1.5 py-2">
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {visibleTopItems.map((item) => (
                 <NavLink
                   key={item.id}
