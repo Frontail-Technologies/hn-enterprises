@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { MaintenanceCard } from "./MaintenanceCard";
 
 export function SettingsPage() {
   return (
@@ -9,6 +10,7 @@ export function SettingsPage() {
       <PageHeader
         title="Settings"
       />
+      <MaintenanceCard />
       <section className="grid gap-4 xl:grid-cols-3">
         <SettingsPanel
           title="Company Profile"
