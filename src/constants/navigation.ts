@@ -48,7 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "complaints", label: "Complaints", icon: "Warning", href: "/complaints" },
       { id: "planning", label: "DPR / Planning", icon: "ClipboardText", href: "/planning" },
       // /reports itself is only a placeholder for now, so link straight to the working templates.
-      { id: "reports", label: "Reports", icon: "FileText", href: "/reports/templates" },
+      { id: "reports", label: "Reports", icon: "FileText", href: "/reports" },
     ],
   },
   {
