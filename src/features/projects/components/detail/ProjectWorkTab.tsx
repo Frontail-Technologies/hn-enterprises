@@ -45,12 +45,12 @@ export function ProjectWorkTab({ project, summary }: { project: Project; summary
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <DashboardStatCard dense tone="info" label="LMC laid" value={work ? metres(work.lmc.totalMetres) : "—"} icon={PathIcon} />
       <DashboardStatCard dense tone="primary" label="GI laid" value={work ? metres(work.gi.totalMetres) : "—"} icon={PipeIcon} />
-      <Link href={`/projects/${project.id}?tab=dpr`} className="block rounded-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Link href={`/projects/${project.id}?tab=planning`} className="block rounded-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
         <DashboardStatCard
           dense
           tone="warning"
-          label="DPR awaiting approval"
-          value={formatCompactCount(summary.dpr.awaitingApproval ?? summary.dpr.pending)}
+          label="Plans awaiting approval"
+          value={formatCompactCount(summary.dpr.plans?.awaitingApproval ?? 0)}
           icon={ClipboardTextIcon}
         />
       </Link>
@@ -91,20 +91,19 @@ export function ProjectWorkTab({ project, summary }: { project: Project; summary
       </SectionCard>
 
       <SectionCard
-        title="Daily progress reports (DPR)"
+        title="Plans & DPR"
         action={
-          <Link href={`/projects/${project.id}?tab=dpr`} className="text-[13px] font-medium text-primary hover:underline">
-            Review DPRs
+          <Link href={`/projects/${project.id}?tab=planning`} className="text-[13px] font-medium text-primary hover:underline">
+            Review plans
           </Link>
         }
       >
         <DetailRows
           rows={[
-            { label: "Awaiting approval", value: formatCompactCount(summary.dpr.awaitingApproval ?? 0) },
-            { label: "Approved", value: formatCompactCount(summary.dpr.approved ?? 0) },
-            { label: "Not submitted yet", value: formatCompactCount(summary.dpr.drafts ?? 0) },
-            { label: "Sent back to supervisor", value: formatCompactCount(summary.dpr.sentBack ?? 0) },
-            { label: "Submitted this month", value: formatCompactCount(summary.dpr.submittedThisMonth) },
+            { label: "Plans awaiting approval", value: formatCompactCount(summary.dpr.plans?.awaitingApproval ?? 0) },
+            { label: "Approved plans", value: formatCompactCount(summary.dpr.plans?.approved ?? 0) },
+            { label: "Plans sent back", value: formatCompactCount(summary.dpr.plans?.sentBack ?? 0) },
+            { label: "DPRs submitted this month", value: formatCompactCount(summary.dpr.submittedThisMonth) },
           ]}
         />
       </SectionCard>

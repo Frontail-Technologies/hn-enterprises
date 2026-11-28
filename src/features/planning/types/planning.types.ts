@@ -23,17 +23,28 @@ export type PlanTask = {
   worker: string;
 };
 
+export type SitePlanStatus = "Submitted" | "Approved" | "Sent back";
+
 export type SitePlan = {
   id: string;
+  date: string;
   customerId: string;
   customerName: string;
   customerTrBpNo: string;
   projectId: string;
+  /** Server-joined from projects. */
+  projectName: string;
   siteId: string;
   siteLabel: string;
   supervisorId: string;
   supervisorName: string;
   tasks: PlanTask[];
+  /** Admin review of the plan. */
+  status: SitePlanStatus;
+  /** Reason it was sent back ("" if none). */
+  reviewNote: string;
+  reviewedAt: string;
+  reviewedByName: string;
 };
 
 export type EvidenceFile = {
@@ -70,10 +81,6 @@ export type DprRecord = {
   evidence: EvidenceFile[];
   remarks: string;
   tasks: DprTask[];
-  /** Admin review: when, by whom, and the reason it was sent back ("" if none). */
-  reviewedAt: string;
-  reviewedByName: string;
-  reviewNote: string;
 };
 
 export type PlanningEntryRow = {

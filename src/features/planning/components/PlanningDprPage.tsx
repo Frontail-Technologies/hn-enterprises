@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
-import { FilePdfIcon } from "@phosphor-icons/react";
+import { FilePdfIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -14,10 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { PageShell } from "@/components/shared/PageShell";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { resolveFileUrl } from "@/lib/upload";
 import { DprGeneratedPreview } from "./DprGeneratedPreview";
-import { useDprRecordsQuery } from "../hooks/usePlanning";
+import { useDeleteDpr, useDprRecordsQuery, useUpdateDpr } from "../hooks/usePlanning";
+import type { DprRecord, DprTask } from "../types/planning.types";
 import { PageLoading } from "@/components/shared/PageLoading";
 import {
   Table,
@@ -28,7 +34,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type EditableStatus = "draft" | "submitted";
+type DprDraft = { tasks: DprTask[]; remarks: string; status: EditableStatus };
+type EditableField = "plannedQty" | "completedQty" | "worker" | "delayReason";
+
+const STATUS_LABEL: Record<EditableStatus, string> = { draft: "Draft", submitted: "Submitted" };
+
+/** The record's status as the server spells it ("approved" only on old DPRs). */
+function backendStatus(status: DprRecord["status"]) {
+  return status === "Draft" ? "draft" : status === "Submitted" ? "submitted" : "approved";
+}
+
 export function PlanningDprPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customerId") ?? "";
   const supervisorId = searchParams.get("supervisorId") ?? "";
@@ -37,9 +55,15 @@ export function PlanningDprPage() {
   const { data: dprRecords = [], isLoading } = useDprRecordsQuery({ customerId, supervisorId, date });
   const record = dprRecords[0];
   const [previewOpen, setPreviewOpen] = useState(false);
+  const updateDpr = useUpdateDpr();
+  const deleteDpr = useDeleteDpr();
+  const [draft, setDraft] = useState<DprDraft | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const editing = draft !== null;
 
-  const tasks = useMemo(() => record?.tasks ?? [], [record]);
-  const remarks = record?.remarks ?? "";
+  const savedTasks = useMemo(() => record?.tasks ?? [], [record]);
+  const tasks = draft?.tasks ?? savedTasks;
+  const remarks = draft?.remarks ?? record?.remarks ?? "";
   const siteLabel = record?.siteLabel || "Unknown site";
   const supervisorName = record?.supervisorName || "Unknown supervisor";
   const customerName = record?.customerName || "Unknown customer";
@@ -49,24 +73,94 @@ export function PlanningDprPage() {
     [tasks],
   );
 
+  function startEdit() {
+    if (!record) return;
+    setDraft({ tasks: savedTasks, remarks: record.remarks, status: record.status === "Draft" ? "draft" : "submitted" });
+  }
+
+  function setTask(id: DprTask["id"], key: EditableField, value: string) {
+    setDraft((current) =>
+      current ? { ...current, tasks: current.tasks.map((task) => (task.id === id ? { ...task, [key]: value } : task)) } : current,
+    );
+  }
+
+  function save() {
+    if (!record || !draft) return;
+    // The server replaces the task list, so send only the filled-in tasks.
+    const payload = draft.tasks
+      .map((task) => ({
+        id: task.id,
+        plannedQty: task.plannedQty.trim(),
+        completedQty: task.completedQty.trim(),
+        worker: task.worker.trim(),
+        delayReason: task.delayReason.trim(),
+      }))
+      .filter((task) => task.plannedQty || task.completedQty || task.worker || task.delayReason);
+    // Send the status only when it changed (an old "approved" DPR keeps it otherwise).
+    const statusChanged = backendStatus(record.status) !== draft.status;
+    updateDpr.mutate(
+      { id: record.id, input: { tasks: payload, remarks: draft.remarks.trim(), ...(statusChanged ? { status: draft.status } : {}) } },
+      { onSuccess: () => setDraft(null) },
+    );
+  }
+
+  const cell = (task: DprTask, key: EditableField, label: string, className?: string) =>
+    editing ? (
+      <Input
+        value={task[key]}
+        onChange={(event) => setTask(task.id, key, event.target.value)}
+        aria-label={`${task.label} ${label}`}
+        inputMode={key === "plannedQty" || key === "completedQty" ? "decimal" : undefined}
+        className={cn("h-8", className)}
+      />
+    ) : (
+      task[key] || "-"
+    );
+
   return (
     <PageShell
       title="DPR"
       actions={
-        <div className={cn("grid gap-2 sm:contents", record ? "grid-cols-2" : "grid-cols-1")}>
-          <Link
-            href={`/planning/plan?supervisorId=${supervisorId}&customerId=${customerId}&date=${date}`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            Open Planning
-          </Link>
-          {record ? (
-            <Button type="button" onClick={() => setPreviewOpen(true)}>
-              <FilePdfIcon size={15} />
-              Generate DPR
+        editing ? (
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <Button type="button" variant="outline" disabled={updateDpr.isPending} onClick={() => setDraft(null)}>
+              Cancel
             </Button>
-          ) : null}
-        </div>
+            <Button type="button" disabled={updateDpr.isPending} onClick={save}>
+              {updateDpr.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        ) : (
+          <div className={cn("grid gap-2 sm:contents", record ? "grid-cols-2" : "grid-cols-1")}>
+            <Link
+              href={`/planning/plan?supervisorId=${supervisorId}&customerId=${customerId}&date=${date}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Open Planning
+            </Link>
+            {record ? (
+              <>
+                <Button type="button" variant="outline" onClick={startEdit}>
+                  <PencilSimpleIcon size={15} />
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <TrashIcon size={15} />
+                  Delete
+                </Button>
+                <Button type="button" onClick={() => setPreviewOpen(true)}>
+                  <FilePdfIcon size={15} />
+                  Generate DPR
+                </Button>
+              </>
+            ) : null}
+          </div>
+        )
       }
     >
       <div className="space-y-3">
@@ -90,6 +184,32 @@ export function PlanningDprPage() {
               <p className="text-xs font-medium text-muted-foreground">{siteLabel}</p>
               <p className="text-sm font-semibold text-primary">{totalCompleted} completed</p>
             </div>
+            {record ? (
+              <div>
+                <p className="mb-0.5 text-xs font-medium text-muted-foreground">Status</p>
+                {draft ? (
+                  <Select
+                    value={draft.status}
+                    onValueChange={(value) => {
+                      if (value === "draft" || value === "submitted") setDraft({ ...draft, status: value });
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-36">
+                      <SelectValue>{STATUS_LABEL[draft.status]}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(STATUS_LABEL) as EditableStatus[]).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {STATUS_LABEL[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <StatusBadge status={record.status} />
+                )}
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -103,7 +223,7 @@ export function PlanningDprPage() {
               <div className="border-b border-border/70 px-3 py-2">
                 <h2 className="text-sm font-semibold text-foreground">DPR Work Items</h2>
                 <p className="text-xs text-muted-foreground">
-                  Compact entry view for selected supervisor and site.
+                  {editing ? "Edit the work done, then save." : "Compact entry view for selected supervisor and site."}
                 </p>
               </div>
               <Table className="min-w-[980px]">
@@ -122,18 +242,10 @@ export function PlanningDprPage() {
                       <TableCell className="whitespace-normal font-medium text-foreground">
                         {task.label}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {task.plannedQty || "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {task.completedQty || "-"}
-                      </TableCell>
-                      <TableCell className="whitespace-normal">
-                        {task.worker || "-"}
-                      </TableCell>
-                      <TableCell className="whitespace-normal">
-                        {task.delayReason || "-"}
-                      </TableCell>
+                      <TableCell className="text-center">{cell(task, "plannedQty", "planned qty", "text-center")}</TableCell>
+                      <TableCell className="text-center">{cell(task, "completedQty", "completed qty", "text-center")}</TableCell>
+                      <TableCell className="whitespace-normal">{cell(task, "worker", "plumber / labour")}</TableCell>
+                      <TableCell className="whitespace-normal">{cell(task, "delayReason", "delay reason")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -142,7 +254,16 @@ export function PlanningDprPage() {
 
             <div className="rounded-card border border-border bg-card shadow-card px-3 py-2">
               <p className="text-xs font-medium text-muted-foreground">Supervisor Remarks</p>
-              <p className="mt-1 text-sm text-foreground">{remarks || "-"}</p>
+              {draft ? (
+                <Textarea
+                  value={draft.remarks}
+                  onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
+                  aria-label="Remarks"
+                  className="mt-1 min-h-20"
+                />
+              ) : (
+                <p className="mt-1 text-sm text-foreground">{remarks || "-"}</p>
+              )}
             </div>
 
             {record.evidence.length ? (
@@ -186,6 +307,23 @@ export function PlanningDprPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        itemName="this DPR"
+        isOpen={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        isConfirming={deleteDpr.isPending}
+        description="It moves to the recycle bin and can be restored for 30 days."
+        onConfirm={() => {
+          if (!record) return;
+          deleteDpr.mutate(record.id, {
+            onSuccess: () => {
+              setDeleteOpen(false);
+              router.push("/planning");
+            },
+          });
+        }}
+      />
     </PageShell>
   );
 }

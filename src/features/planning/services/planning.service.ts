@@ -6,6 +6,7 @@ import type {
   PlanTask,
   PlanningTaskTemplate,
   SitePlan,
+  SitePlanStatus,
 } from "../types/planning.types";
 
 export const planningTaskTemplates: PlanningTaskTemplate[] = [
@@ -43,6 +44,10 @@ type BackendSitePlan = {
   date: string;
   supervisorId?: string;
   tasks: BackendPlanTask[];
+  status?: "submitted" | "approved" | "sent_back";
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
   project: BackendJoinedRef;
@@ -61,9 +66,6 @@ type BackendDprRecord = {
   tasks: BackendDprTask[];
   evidence: BackendEvidenceFile[] | null;
   submittedAt: string | null;
-  reviewedAt?: string | null;
-  reviewedByName?: string | null;
-  reviewNote?: string | null;
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
   project: BackendJoinedRef;
@@ -74,6 +76,12 @@ const STATUS_TO_FRONTEND: Record<string, DprRecord["status"]> = {
   draft: "Draft",
   submitted: "Submitted",
   approved: "Approved",
+};
+
+const PLAN_STATUS_TO_FRONTEND: Record<string, SitePlanStatus> = {
+  submitted: "Submitted",
+  approved: "Approved",
+  sent_back: "Sent back",
 };
 
 function mapTasksToPlanTasks(tasks: BackendPlanTask[]): PlanTask[] {
@@ -109,16 +117,22 @@ function mapEvidence(files: BackendEvidenceFile[] | null): EvidenceFile[] {
 function mapSitePlan(raw: BackendSitePlan): SitePlan {
   return {
     id: raw.id,
+    date: raw.date,
     customerId: raw.customerId,
     customerName: raw.customer?.name ?? "",
     customerTrBpNo: raw.customer?.trBpNumber ?? "",
     projectId: raw.projectId,
+    projectName: raw.project?.name ?? "",
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
     // The API sends the supervisor as `supervisor.id` (supervisorId is folded into it).
     supervisorId: raw.supervisor?.id ?? raw.supervisorId ?? "",
     supervisorName: raw.supervisor?.name ?? "",
     tasks: mapTasksToPlanTasks(raw.tasks),
+    status: PLAN_STATUS_TO_FRONTEND[raw.status ?? ""] ?? "Submitted",
+    reviewNote: raw.reviewNote ?? "",
+    reviewedAt: raw.reviewedAt ?? "",
+    reviewedByName: raw.reviewedByName ?? "",
   };
 }
 
@@ -140,9 +154,6 @@ function mapDprRecord(raw: BackendDprRecord): DprRecord {
     evidence: mapEvidence(raw.evidence),
     remarks: raw.remarks ?? "",
     tasks: mapTasksToDprTasks(raw.tasks),
-    reviewedAt: raw.reviewedAt ?? "",
-    reviewedByName: raw.reviewedByName ?? "",
-    reviewNote: raw.reviewNote ?? "",
   };
 }
 
@@ -170,6 +181,14 @@ function buildQuery(params: ListParams) {
   return query.toString();
 }
 
+export type SitePlanUpdate = { tasks: { id: string; qty?: string; worker?: string }[] };
+
+export type DprRecordUpdate = {
+  tasks?: { id: string; plannedQty?: string; completedQty?: string; worker?: string; delayReason?: string }[];
+  remarks?: string;
+  status?: "draft" | "submitted";
+};
+
 export const planningApi = {
   async listSitePlans(params: ListParams = {}): Promise<SitePlan[]> {
     const rows = await apiRequest<BackendSitePlan[]>(`/planning/site-plans?${buildQuery(params)}`);
@@ -181,11 +200,35 @@ export const planningApi = {
     return rows.map(mapDprRecord);
   },
 
-  /** Approve submitted DPRs, or send them back to the supervisor with a reason. */
-  reviewDprRecords(ids: string[], action: "approve" | "reject", note?: string) {
-    return apiRequest<{ updated: number; skipped: number }>("/planning/dpr-records/review", {
+  /** Approve submitted plans, or send them back to the supervisor with a reason. */
+  reviewSitePlans(ids: string[], action: "approve" | "reject", note?: string) {
+    return apiRequest<{ updated: number; skipped: number }>("/planning/site-plans/review", {
       method: "POST",
       body: JSON.stringify({ ids, action, note }),
     });
+  },
+
+  updateSitePlan(id: string, input: SitePlanUpdate) {
+    return apiRequest<unknown>(`/planning/site-plans/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+
+  /** Moves the plan to the recycle bin. */
+  deleteSitePlan(id: string) {
+    return apiRequest<unknown>(`/planning/site-plans/${encodeURIComponent(id)}`, { method: "DELETE" });
+  },
+
+  updateDprRecord(id: string, input: DprRecordUpdate) {
+    return apiRequest<unknown>(`/planning/dpr-records/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  },
+
+  /** Moves the DPR to the recycle bin. */
+  deleteDprRecord(id: string) {
+    return apiRequest<unknown>(`/planning/dpr-records/${encodeURIComponent(id)}`, { method: "DELETE" });
   },
 };

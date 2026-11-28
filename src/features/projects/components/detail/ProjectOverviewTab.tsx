@@ -26,7 +26,8 @@ import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
 import { ProjectDocumentsTab } from "./ProjectDocumentsTab";
-import { ProjectDprTab } from "./ProjectDprTab";
+import { ProjectMaterialTab } from "./ProjectMaterialTab";
+import { ProjectPlanningTab } from "./ProjectPlanningTab";
 import { ProjectActivityTab } from "./ProjectActivityTab";
 import { ProjectTeamTab } from "./ProjectTeamTab";
 import { ProjectWorkTab } from "./ProjectWorkTab";
@@ -38,7 +39,8 @@ const TABS = [
   { value: "overview", label: "Overview" },
   { value: "customers", label: "Customers" },
   { value: "work", label: "Work" },
-  { value: "dpr", label: "DPR" },
+  { value: "planning", label: "Planning" },
+  { value: "material", label: "Material" },
   { value: "billing", label: "Billing" },
   { value: "expenses", label: "Expenses" },
   { value: "team", label: "Team" },
@@ -102,7 +104,9 @@ export function ProjectTabs({ project }: { project: Project }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const requested = searchParams.get("tab");
-  const tab: TabValue = TABS.some((entry) => entry.value === requested) ? (requested as TabValue) : "overview";
+  // Old links used ?tab=dpr for what is now the Planning tab.
+  const requestedTab = requested === "dpr" ? "planning" : requested;
+  const tab: TabValue = TABS.some((entry) => entry.value === requestedTab) ? (requestedTab as TabValue) : "overview";
 
   const { data: summary, isLoading } = useProjectSummaryQuery(project.id);
   const siteList = useListState({ pageSize: 25, storageKey: "project-sites" });
@@ -131,8 +135,8 @@ export function ProjectTabs({ project }: { project: Project }) {
           <TabsTrigger key={entry.value} value={entry.value} className="shrink-0">
             {entry.label}
             {entry.value === "customers" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(total)}</span> : null}
-            {entry.value === "dpr" && summary?.dpr.awaitingApproval ? (
-              <span className="ms-1 rounded-full bg-warning-soft px-1.5 text-[11px] font-semibold text-warning-foreground tabular-nums">{summary.dpr.awaitingApproval}</span>
+            {entry.value === "planning" && summary?.dpr.plans?.awaitingApproval ? (
+              <span className="ms-1 rounded-full bg-warning-soft px-1.5 text-[11px] font-semibold text-warning-foreground tabular-nums">{summary.dpr.plans.awaitingApproval}</span>
             ) : null}
             {entry.value === "sites" && summary ? <span className="ms-1 text-muted-foreground tabular-nums">{formatCompactCount(summary.sites.total)}</span> : null}
           </TabsTrigger>
@@ -230,8 +234,12 @@ export function ProjectTabs({ project }: { project: Project }) {
         {summary ? <ProjectWorkTab project={project} summary={summary} /> : <Skeleton className="h-64 rounded-card" />}
       </TabsContent>
 
-      <TabsContent value="dpr">
-        {tab === "dpr" ? <ProjectDprTab projectId={project.id} summary={summary} /> : null}
+      <TabsContent value="planning">
+        {tab === "planning" ? <ProjectPlanningTab projectId={project.id} summary={summary} /> : null}
+      </TabsContent>
+
+      <TabsContent value="material">
+        {tab === "material" ? <ProjectMaterialTab projectId={project.id} /> : null}
       </TabsContent>
 
       <TabsContent value="billing">

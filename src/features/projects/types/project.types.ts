@@ -118,6 +118,8 @@ export type ProjectSummary = {
     approved?: number;
     drafts?: number;
     sentBack?: number;
+    /** Plan review counts (newer servers). */
+    plans?: { awaitingApproval: number; approved: number; sentBack: number };
   };
   expenses: { total: number };
   materials: { lowStockAlerts: number };

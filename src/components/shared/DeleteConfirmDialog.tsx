@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,8 @@ interface DeleteConfirmDialogProps {
    * unaffected - same AlertDialogAction, same immediate-close behavior.
    */
   isConfirming?: boolean;
+  /** Replaces the default "cannot be undone" text (e.g. for recycle-bin deletes). */
+  description?: ReactNode;
 }
 
 export function DeleteConfirmDialog({
@@ -48,6 +50,7 @@ export function DeleteConfirmDialog({
   trigger,
   className,
   isConfirming = false,
+  description,
 }: DeleteConfirmDialogProps) {
   const isControlled = isOpen !== undefined;
 
@@ -84,7 +87,11 @@ export function DeleteConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {itemName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. <strong>{itemName}</strong> will be permanently removed.
+            {description ?? (
+              <>
+                This action cannot be undone. <strong>{itemName}</strong> will be permanently removed.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

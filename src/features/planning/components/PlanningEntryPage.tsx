@@ -23,7 +23,7 @@ import { formatCompactCount } from "@/lib/format";
 import { useDownloadDprPlanningSummary } from "@/features/exports/hooks/useExports";
 import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
 import { useRosterQuery } from "@/features/management/hooks/useAttendance";
-import { useDprRecordsQuery, useSitePlansQuery } from "../hooks/usePlanning";
+import { useDprByPlanDates, useDprRecordsQuery, useSitePlansQuery } from "../hooks/usePlanning";
 import {
   buildDprByKey,
   buildPlanByKey,
@@ -57,12 +57,14 @@ export function PlanningEntryPage() {
     [date, projectId, supervisorId],
   );
 
-  // Every submitted DPR waiting for an admin, any date (same project / supervisor filter).
-  const approvalQuery = useDprRecordsQuery({ status: "submitted", projectId: projectId || undefined, supervisorId: supervisorId || undefined });
+  // Every submitted plan waiting for an admin, any date (same project / supervisor filter).
+  const filters = { projectId: projectId || undefined, supervisorId: supervisorId || undefined };
+  const approvalQuery = useSitePlansQuery({ status: "submitted", ...filters });
   const awaiting = useMemo(
     () => [...(approvalQuery.data ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
     [approvalQuery.data],
   );
+  const awaitingDprByKey = useDprByPlanDates(awaiting, filters, activeTab === "approval");
   const tabs: Array<{ id: ViewTab; label: string }> = [
     { id: "overview", label: "Supervisor Overview" },
     { id: "planning", label: "Planning" },
@@ -156,10 +158,12 @@ export function PlanningEntryPage() {
           {activeTab === "approval" ? (
             approvalQuery.isLoading ? (
               <PageLoading className="min-h-24" />
+            ) : approvalQuery.isError ? (
+              <EmptyState illustration="error" title="Couldn't load plans" action={{ label: "Retry", onClick: () => void approvalQuery.refetch() }} />
             ) : awaiting.length ? (
-              <DprTable rows={awaiting} planByKey={planByKey} projectNameById={projectNameById} date={date} showDate />
+              <PlanningTable rows={awaiting} dprByKey={awaitingDprByKey} projectNameById={projectNameById} showDate />
             ) : (
-              <EmptyState illustration="allClear" title="No DPRs waiting for approval" />
+              <EmptyState illustration="allClear" title="No plans waiting for approval" />
             )
           ) : isLoading ? (
             <PageLoading className="min-h-24" />

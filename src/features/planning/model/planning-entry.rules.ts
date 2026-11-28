@@ -117,9 +117,14 @@ export function buildSupervisorGroups(rows: PlanningEntryRow[]): SupervisorGroup
   });
 }
 
-export function buildDprByKey(dprRecords: DprRecord[]): Map<string, DprRecord> {
+/** Key a plan / DPR by supervisor + customer, plus the date for lists that span several days. */
+export function planningKey(row: { supervisorId: string; customerId: string; date: string }, withDate = false) {
+  return withDate ? `${row.supervisorId}-${row.customerId}-${row.date}` : `${row.supervisorId}-${row.customerId}`;
+}
+
+export function buildDprByKey(dprRecords: DprRecord[], withDate = false): Map<string, DprRecord> {
   const map = new Map<string, DprRecord>();
-  dprRecords.forEach((record) => map.set(`${record.supervisorId}-${record.customerId}`, record));
+  dprRecords.forEach((record) => map.set(planningKey(record, withDate), record));
   return map;
 }
 
