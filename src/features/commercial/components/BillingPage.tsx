@@ -31,6 +31,7 @@ import { formatDate, money } from "../utils/format";
 import { getBillHref } from "../utils/billing.utils";
 import { BillDialog } from "./billing/BillDialog";
 import { BillingActions } from "./billing/BillingActions";
+import { BillingTrends } from "./billing/BillingTrends";
 import { WageDialog } from "./billing/WageDialog";
 import { WageRegister } from "./billing/WageRegister";
 import { projectOption } from "@/features/projects/utils/project-option";
@@ -201,6 +202,7 @@ export function BillingPage() {
             <DashboardStatCard label="Bank guarantee held" value={money(totals?.bgHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
             <DashboardStatCard label="Hold amount held" value={money(totals?.holdHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
           </CompactStatGrid>
+          <BillingTrends projectId={list.filters.project || undefined} />
           <ListTable
             itemLabel="bill"
             rows={bills}

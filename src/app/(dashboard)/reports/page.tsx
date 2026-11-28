@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { ReportsHubPage } from "@/features/reports/components/ReportsHubPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Reports" };
-
+/** Reports = the customer forms (work, billing and stock figures live on their own pages). */
 export default function Page() {
-  return <ReportsHubPage />;
+  redirect("/reports/templates");
 }

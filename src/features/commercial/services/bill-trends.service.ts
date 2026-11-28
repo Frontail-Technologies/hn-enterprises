@@ -1,5 +1,4 @@
 import { apiRequest } from "@/lib/api-client";
-import type { ReportFilters } from "../types";
 
 export type BillingReportTotals = {
   bills: number;
@@ -38,12 +37,11 @@ export type BillingReportData = {
   ageing: { bucket: string; label: string; bills: number; amount: number }[];
 };
 
-export function reportQueryString(filters: ReportFilters) {
-  const query = new URLSearchParams({ from: filters.from, to: filters.to });
-  if (filters.projectId) query.set("projectId", filters.projectId);
-  return query.toString();
-}
-
-export const billingReportApi = {
-  get: (filters: ReportFilters) => apiRequest<BillingReportData>(`/reports/billing?${reportQueryString(filters)}`),
+/** Bills by month and pending by age (backend GET /reports/billing). */
+export const billTrendsApi = {
+  get: (params: { from: string; to: string; projectId?: string }) => {
+    const query = new URLSearchParams({ from: params.from, to: params.to });
+    if (params.projectId) query.set("projectId", params.projectId);
+    return apiRequest<BillingReportData>(`/reports/billing?${query.toString()}`);
+  },
 };

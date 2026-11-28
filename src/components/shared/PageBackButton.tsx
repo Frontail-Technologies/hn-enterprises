@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Path levels that are not pages of their own; going up skips them. */
-const NOT_A_PAGE = new Set(["/dashboard/stats", "/dashboard/summary", "/masters/values"]);
+const NOT_A_PAGE = new Set(["/dashboard/stats", "/dashboard/summary", "/masters/values", "/reports"]);
+/** Nested addresses that are sidebar pages of their own (no back arrow). */
+const TOP_LEVEL = new Set(["/reports/templates"]);
 
 function parentPath(pathname: string) {
   let path = pathname.replace(/\/+$/, "");
@@ -26,7 +28,7 @@ function BackButton({ href, className }: Props) {
   const segments = pathname.split("/").filter(Boolean);
   // Opened from a project (?projectId=...): back goes to that project.
   const fromProject = Boolean(projectId && UUID.test(projectId) && !pathname.startsWith("/projects/"));
-  if (!href && !fromProject && segments.length <= 1) return null;
+  if (!href && !fromProject && (segments.length <= 1 || TOP_LEVEL.has(pathname))) return null;
 
   const target = href ?? (fromProject ? `/projects/${encodeURIComponent(projectId!)}` : parentPath(pathname));
   const label = fromProject && !href ? "Back to project" : "Back";
