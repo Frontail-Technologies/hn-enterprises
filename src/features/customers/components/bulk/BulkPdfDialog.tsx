@@ -20,10 +20,22 @@ const FETCH_CHUNK = 200;
 
 const safeName = (value: string) => value.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 80) || "customer";
 
+type OutputMode = "combined" | "separate";
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /**
- * Bulk PDFs: for every selected customer, the chosen report templates, all in
- * one ZIP (one folder per template). Uses each customer's project details and
- * the saved template labels, exactly like the single preview.
+ * Bulk PDFs for the selected customers and chosen forms, either as one PDF
+ * per form with every customer's copy (ready to print) or as a ZIP with a
+ * file per customer (one folder per form). Uses each customer's project
+ * details and the saved template labels, exactly like the single preview.
  */
 export function BulkPdfDialog({
   open,
@@ -36,11 +48,13 @@ export function BulkPdfDialog({
 }) {
   const { templates } = useEffectiveReportTemplates();
   const [chosen, setChosen] = useState<string[]>([]);
+  const [mode, setMode] = useState<OutputMode>("combined");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const cancelled = useRef(false);
 
   const selectedTemplates = templates.filter((template) => chosen.includes(template.id));
   const totalPdfs = selectedTemplates.length * customerIds.length;
+  // Progress counts customers' copies in both modes.
   const running = progress !== null;
 
   function toggle(id: string) {
@@ -51,7 +65,7 @@ export function BulkPdfDialog({
     cancelled.current = false;
     setProgress({ done: 0, total: totalPdfs });
     try {
-      const [{ pdf }, { ReportPdfDocument }, { default: JSZip }] = await Promise.all([
+      const [{ pdf }, { ReportPdfDocument, ReportPdfBundle }, { default: JSZip }] = await Promise.all([
         import("@react-pdf/renderer"),
         import("@/features/report-templates/components/pdf/ReportPdfDocument"),
         import("jszip"),
@@ -66,6 +80,36 @@ export function BulkPdfDialog({
         projects.set(projectId, await projectsApi.get(projectId).catch(() => undefined));
       }
 
+      const dataFor = (template: (typeof selectedTemplates)[number], customer: Customer) => ({
+        ...resolveReportTemplateDataFromCustomer(template.id, customer, projects.get(customer.projectId)),
+        fieldLabels: template.fieldLabels,
+      });
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (mode === "combined") {
+        // One PDF per form, every customer's copy one after another.
+        const files: { name: string; blob: Blob }[] = [];
+        let done = 0;
+        for (const template of selectedTemplates) {
+          if (cancelled.current) throw new Error("cancelled");
+          const items = customers.map((customer) => dataFor(template, customer));
+          const blob = await pdf(createElement(ReportPdfBundle, { templateId: template.id, items }) as Parameters<typeof pdf>[0]).toBlob();
+          files.push({ name: `${safeName(template.title)} - ${customers.length} customers.pdf`, blob });
+          done += customers.length;
+          setProgress({ done, total: totalPdfs });
+        }
+        if (files.length === 1) {
+          downloadBlob(files[0].blob, files[0].name);
+        } else {
+          const zip = new JSZip();
+          for (const file of files) zip.file(file.name, await file.blob.arrayBuffer());
+          downloadBlob(await zip.generateAsync({ type: "blob" }), `customer-forms-${today}.zip`);
+        }
+        toast.success(files.length === 1 ? "PDF downloaded" : `${files.length} PDFs downloaded`);
+        onOpenChange(false);
+        return;
+      }
+
       const zip = new JSZip();
       const usedNames = new Set<string>();
       let done = 0;
@@ -73,10 +117,7 @@ export function BulkPdfDialog({
         const folder = zip.folder(safeName(template.title))!;
         for (const customer of customers) {
           if (cancelled.current) throw new Error("cancelled");
-          const data = {
-            ...resolveReportTemplateDataFromCustomer(template.id, customer, projects.get(customer.projectId)),
-            fieldLabels: template.fieldLabels,
-          };
+          const data = dataFor(template, customer);
           const blob = await pdf(createElement(ReportPdfDocument, { templateId: template.id, data }) as Parameters<typeof pdf>[0]).toBlob();
           const base = safeName(`${customer.customerConnection.trBpNo || "no-id"} ${customer.customerConnection.customerName}`);
           let name = `${base}.pdf`;
@@ -89,13 +130,7 @@ export function BulkPdfDialog({
         }
       }
 
-      const archive = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(archive);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `customer-reports-${new Date().toISOString().slice(0, 10)}.zip`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      downloadBlob(await zip.generateAsync({ type: "blob" }), `customer-reports-${today}.zip`);
       toast.success(`${done} PDFs downloaded`);
       onOpenChange(false);
     } catch (error) {
@@ -118,7 +153,7 @@ export function BulkPdfDialog({
         <DialogHeader>
           <DialogTitle>Download PDFs</DialogTitle>
           <DialogDescription>
-            {customerIds.length.toLocaleString("en-IN")} selected customers. Pick the forms you need - you get one ZIP with a folder per form.
+            {customerIds.length.toLocaleString("en-IN")} selected customers. Pick the forms and how you want them.
           </DialogDescription>
         </DialogHeader>
 
@@ -131,9 +166,31 @@ export function BulkPdfDialog({
           ))}
         </div>
 
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { value: "combined", title: "One PDF per form", hint: "All customers in one file, ready to print" },
+              { value: "separate", title: "Separate files", hint: "ZIP with one PDF per customer" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              disabled={running}
+              onClick={() => setMode(option.value)}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                mode === option.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              }`}
+            >
+              <span className="block text-sm font-medium text-foreground">{option.title}</span>
+              <span className="block text-xs text-muted-foreground">{option.hint}</span>
+            </button>
+          ))}
+        </div>
+
         {totalPdfs >= LARGE_JOB && !running ? (
           <p className="rounded-lg bg-status-warning-bg px-3 py-2 text-[13px] text-status-warning-fg">
-            {totalPdfs.toLocaleString("en-IN")} PDFs will take a few minutes. Keep this window open until the download starts.
+            {totalPdfs.toLocaleString("en-IN")} forms will take a few minutes. Keep this window open until the download starts.
           </p>
         ) : null}
 
@@ -143,7 +200,7 @@ export function BulkPdfDialog({
               <div className="h-full bg-primary transition-[width]" style={{ width: `${(progress.done / Math.max(progress.total, 1)) * 100}%` }} />
             </div>
             <p className="text-[13px] tabular-nums text-muted-foreground">
-              Creating PDFs… {progress.done} / {progress.total}
+              Creating forms… {progress.done} / {progress.total}
             </p>
           </div>
         ) : null}
@@ -160,7 +217,11 @@ export function BulkPdfDialog({
           )}
           <Button type="button" onClick={generate} disabled={!totalPdfs || running}>
             <FilePdfIcon size={15} />
-            {totalPdfs ? `Download ${totalPdfs.toLocaleString("en-IN")} PDFs` : "Choose a form"}
+            {!totalPdfs
+              ? "Choose a form"
+              : mode === "combined"
+                ? `Download ${selectedTemplates.length === 1 ? "PDF" : `${selectedTemplates.length} PDFs`}`
+                : `Download ${totalPdfs.toLocaleString("en-IN")} PDFs`}
           </Button>
         </DialogFooter>
       </DialogContent>

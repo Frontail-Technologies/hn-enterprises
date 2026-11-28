@@ -16,6 +16,23 @@ import {
 } from "./PdfPrimitives";
 import { fieldLabel } from "../../template-fields";
 
+const DOCUMENT_TITLES: Record<ReportTemplateId, string> = {
+  "jmr-customer-consent": "JMR Sheet / Customer Consent Form",
+  "png-connection-job-card": "PNG Connection Job Card",
+  "testing-report-mdpe-line": "Testing Report MDPE Line",
+  "pressure-observation-chart": "Pressure Observation Chart",
+  "gc-report": "GC Report",
+  "pre-commissioning-report": "Pre-Commissioning Report",
+  "conversion-report": "Conversion Report",
+};
+
+/** Who signs: the project's own client / consultant / contractor (generic words when not set). */
+function party(data: ReportTemplateData, who: "client" | "consultant" | "contractor") {
+  const value = (data[who] ?? "").trim();
+  return value || who.charAt(0).toUpperCase() + who.slice(1);
+}
+
+/** One customer's form. */
 export function ReportPdfDocument({
   templateId,
   data,
@@ -23,36 +40,43 @@ export function ReportPdfDocument({
   templateId: ReportTemplateId;
   data: ReportTemplateData;
 }) {
-  if (templateId === "png-connection-job-card") {
-    return <PngJobCard data={data} />;
-  }
+  return (
+    <Document title={DOCUMENT_TITLES[templateId] ?? "Report"}>
+      <ReportPdfPages templateId={templateId} data={data} />
+    </Document>
+  );
+}
 
-  if (templateId === "testing-report-mdpe-line") {
-    return <TestingReport data={data} />;
-  }
+/** Many customers' copies of one form in a single PDF (to print in one go). */
+export function ReportPdfBundle({
+  templateId,
+  items,
+}: {
+  templateId: ReportTemplateId;
+  items: ReportTemplateData[];
+}) {
+  return (
+    <Document title={DOCUMENT_TITLES[templateId] ?? "Report"}>
+      {items.map((data, index) => (
+        <ReportPdfPages key={index} templateId={templateId} data={data} />
+      ))}
+    </Document>
+  );
+}
 
-  if (templateId === "pressure-observation-chart") {
-    return <PressureObservationChart data={data} />;
-  }
-
-  if (templateId === "gc-report") {
-    return <GcReport data={data} />;
-  }
-
-  if (templateId === "pre-commissioning-report") {
-    return <PreCommissioningReport data={data} />;
-  }
-
-  if (templateId === "conversion-report") {
-    return <ConversionReport data={data} />;
-  }
-
+function ReportPdfPages({ templateId, data }: { templateId: ReportTemplateId; data: ReportTemplateData }) {
+  if (templateId === "png-connection-job-card") return <PngJobCard data={data} />;
+  if (templateId === "testing-report-mdpe-line") return <TestingReport data={data} />;
+  if (templateId === "pressure-observation-chart") return <PressureObservationChart data={data} />;
+  if (templateId === "gc-report") return <GcReport data={data} />;
+  if (templateId === "pre-commissioning-report") return <PreCommissioningReport data={data} />;
+  if (templateId === "conversion-report") return <ConversionReport data={data} />;
   return <JmrCustomerConsent data={data} />;
 }
 
 function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
   return (
-    <Document title="JMR Sheet / Customer Consent Form">
+    <>
       <PdfPage>
         <PdfHeader title={data.companyName} subtitle={data.subtitle} />
         <PdfSectionTitle>JMR Sheet / Customer Consent Form</PdfSectionTitle>
@@ -124,15 +148,15 @@ function JmrCustomerConsent({ data }: { data: ReportTemplateData }) {
           ]}
         />
         <PdfRemarks value="If No. Reason For Non-Conversion" minHeight={52} />
-        <PdfSignatureGrid labels={["Customer Representative", "Consultant", "PBGPL", "Contractor"]} />
+        <PdfSignatureGrid labels={["Customer Representative", party(data, "consultant"), party(data, "client"), party(data, "contractor")]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
 
 function PngJobCard({ data }: { data: ReportTemplateData }) {
   return (
-    <Document title="PNG Connection Job Card">
+    <>
       <PdfPage>
         <PdfHeader title="PNG Connection Job Card" />
         <PdfKeyValueRow
@@ -197,15 +221,15 @@ function PngJobCard({ data }: { data: ReportTemplateData }) {
             />
           </View>
         </View>
-        <PdfSignatureGrid labels={["Contractor", "MECON", "PBG"]} />
+        <PdfSignatureGrid labels={[party(data, "contractor"), party(data, "consultant"), party(data, "client")]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
 
 function ConversionReport({ data }: { data: ReportTemplateData }) {
   return (
-    <Document title="Conversion Report">
+    <>
       <PdfPage>
         <PdfHeader title="NG Conversion Report" />
         <PdfSectionTitle>Customer / Connection Details</PdfSectionTitle>
@@ -271,9 +295,9 @@ function ConversionReport({ data }: { data: ReportTemplateData }) {
           compact
         />
         <PdfRemarks value={data.remarks} minHeight={92} />
-        <PdfSignatureGrid labels={["Customer Representative", "Contractor", "Consultant", "PBGPL"]} />
+        <PdfSignatureGrid labels={["Customer Representative", party(data, "contractor"), party(data, "consultant"), party(data, "client")]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
 function TestingReport({ data }: { data: ReportTemplateData }) {
@@ -290,7 +314,7 @@ function TestingReport({ data }: { data: ReportTemplateData }) {
   ];
 
   return (
-    <Document title="Testing Report MDPE Line">
+    <>
       <PdfPage>
         <View style={[pdfStyles.row, { borderWidth: 1, borderColor: "#222222" }]}>
           <View style={[pdfStyles.cell, { width: "16%", minHeight: 42, alignItems: "center", justifyContent: "center" }]}>
@@ -356,9 +380,9 @@ function TestingReport({ data }: { data: ReportTemplateData }) {
         <TestingDetailRow serial="9" label="Result" value="OK" />
 
         <PdfRemarks value={data.remarks} minHeight={58} />
-        <PdfSignatureGrid labels={["Pradip Kumar Gogoi", "MECON", "PBG"]} />
+        <PdfSignatureGrid labels={[party(data, "contractor"), party(data, "consultant"), party(data, "client")]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
 
@@ -383,7 +407,7 @@ function TestingDetailRow({ serial, label, value }: { serial: string; label: str
 }
 function PressureObservationChart({ data }: { data: ReportTemplateData }) {
   return (
-    <Document title="Pressure Observation Chart">
+    <>
       <PdfPage>
         <PdfHeader title="Pressure Observation Chart" />
         <PdfSectionTitle>Pressure Observation Chart</PdfSectionTitle>
@@ -394,9 +418,9 @@ function PressureObservationChart({ data }: { data: ReportTemplateData }) {
           compact
         />
         <PdfRemarks value={data.remarks} minHeight={84} />
-        <PdfSignatureGrid labels={["Pradip Kumar Gogoi", "MECON", "PBG"]} />
+        <PdfSignatureGrid labels={[party(data, "contractor"), party(data, "consultant"), party(data, "client")]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
 
@@ -418,7 +442,7 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
   ];
 
   return (
-    <Document title="Pre-Commissioning Report">
+    <>
       <PdfPage>
         <View style={[pdfStyles.row, { alignItems: "flex-start", marginBottom: 14 }]}>
           <View style={{ width: "18%" }}>
@@ -499,11 +523,7 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
         />
 
         <View style={[pdfStyles.row, { marginTop: 26, alignItems: "flex-end" }]}>
-          {[
-            data.contractor.toUpperCase(),
-            "MECON",
-            "PBGPL",
-          ].map((label) => (
+          {[party(data, "contractor"), party(data, "consultant"), party(data, "client")].map((label) => (
             <View key={label} style={{ width: "33.33%", minHeight: 72, alignItems: "center", justifyContent: "flex-end" }}>
               <Text style={{ marginBottom: 8, fontSize: 20, color: "#1f3270" }}>________</Text>
               <Text style={[pdfStyles.label, { textAlign: "center" }]}>{label}</Text>
@@ -511,7 +531,7 @@ function PreCommissioningReport({ data }: { data: ReportTemplateData }) {
           ))}
         </View>
       </PdfPage>
-    </Document>
+    </>
   );
 }
 
@@ -579,7 +599,7 @@ function formatNumber(value: number) {
 }
 function GcReport({ data }: { data: ReportTemplateData }) {
   return (
-    <Document title="GC Report Template">
+    <>
       <PdfPage>
         <PdfHeader title="GC Report Template" />
         <PdfKeyValueRow
@@ -628,6 +648,6 @@ function GcReport({ data }: { data: ReportTemplateData }) {
         <PdfRemarks value={data.remarks} minHeight={72} />
         <PdfSignatureGrid labels={["Submitted By", "Reviewer", "Client / Consultant"]} />
       </PdfPage>
-    </Document>
+    </>
   );
 }
