@@ -3,7 +3,7 @@
   "productName": "HN Enterprises",
   "description": "Desktop admin panel for HN Enterprises - manage customers, projects, field operations, inventory, and workforce.",
   "author": "Frontail Technologies",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
