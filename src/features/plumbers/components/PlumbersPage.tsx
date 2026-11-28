@@ -183,6 +183,7 @@ export function PlumbersPage() {
         entityLabel={kind}
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
+        recoverable
         note="If any selected person has wage or other records, nothing is deleted and an error is shown."
       />
 
@@ -210,6 +211,7 @@ function PlumberDeleteAction({ plumber }: { plumber: Plumber }) {
       onOpenChange={setOpen}
       itemName={plumber.name}
       entityTypeLabel={plumber.category === "labour" ? "Labour" : "Plumber"}
+      note="Goes to the Recycle Bin. You can restore it within 30 days."
       impact={deleteImpact.data}
       isImpactLoading={deleteImpact.isLoading}
       isImpactError={deleteImpact.isError}

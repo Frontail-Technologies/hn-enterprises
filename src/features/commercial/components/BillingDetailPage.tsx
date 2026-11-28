@@ -86,6 +86,7 @@ export function BillingDetailPage({ id }: { id: string }) {
             <BillDialog bill={bill} triggerLabel="Edit Bill" icon={<NotePencilIcon size={15} />} />
             <DeleteConfirmDialog
               itemName={`Bill ${bill.billNumber}`}
+              description="It moves to the Recycle Bin with its payments and can be restored within 30 days."
               variant="full"
               onConfirm={() =>
                 deleteMutation.mutate(bill.id, {

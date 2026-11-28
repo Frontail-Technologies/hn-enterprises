@@ -262,6 +262,7 @@ export function BillDialog({
           {bill?.id ? (
             <DeleteConfirmDialog
               itemName="this bill"
+              description="It moves to the Recycle Bin with its payments and can be restored within 30 days."
               onConfirm={async () => {
                 await deleteBill.mutateAsync(bill.id);
                 setOpen(false);

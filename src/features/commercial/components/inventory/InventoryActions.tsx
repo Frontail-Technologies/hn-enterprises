@@ -81,6 +81,7 @@ export function InventoryActions({ material }: { material: Material }) {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         entityTypeLabel="Material"
+        note="Goes to the Recycle Bin. You can restore it within 30 days."
         impact={deleteImpact.data}
         isLoading={deleteImpact.isLoading}
         isError={deleteImpact.isError}

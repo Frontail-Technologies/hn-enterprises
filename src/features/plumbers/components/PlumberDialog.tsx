@@ -182,6 +182,7 @@ export function PlumberDialog({
             {plumber?.id ? (
               <DeleteConfirmDialog
                 itemName={plumber.name}
+                description="It moves to the Recycle Bin and can be restored within 30 days."
                 onConfirm={async () => {
                   await deletePlumber.mutateAsync(plumber.id);
                   onOpenChange(false);

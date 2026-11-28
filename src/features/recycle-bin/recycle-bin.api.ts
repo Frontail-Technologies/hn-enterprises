@@ -6,6 +6,8 @@ export type RecycleBinItem = {
   entityId: string;
   label: string;
   trBpNumber: string | null;
+  /** Plumbers: "plumber" or "labour". */
+  subType: string | null;
   projectName: string | null;
   deletedAt: string;
   expiresAt: string;

@@ -244,6 +244,7 @@ function ProjectFormFields({
                 </Button>
               }
               entityTypeLabel="Project"
+              note="Goes to the Recycle Bin with everything linked to it. You can restore it within 30 days."
               impact={deleteImpact.data}
               isLoading={deleteImpact.isLoading}
               isError={deleteImpact.isError}

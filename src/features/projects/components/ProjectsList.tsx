@@ -131,7 +131,8 @@ export function ProjectsList() {
         entityLabel="Project"
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDelete}
-        note="This also permanently deletes everything linked to these projects - customers, sites, documents, bills and DPR records included."
+        recoverable
+        note="Everything linked to them (customers, sites, documents, bills, DPRs) goes with them."
       />
     </PageShell>
   );

@@ -176,7 +176,7 @@ export function StaffResourcesPage() {
         entityLabelPlural="Staff members"
         isSubmitting={bulkDelete.isPending || bulkDeleteStaff.isPending}
         onConfirm={handleBulkDelete}
-        note="Supervisors lose their login account too, and their active site assignments are cleared. Historical activity, audit records and payroll history are kept."
+        note="Staff without a login go to the Recycle Bin (restorable for 30 days). Supervisors are deleted for good and lose their login account too, and their active site assignments are cleared. Historical activity, audit records and payroll history are kept."
       />
     </PageShell>
   );
@@ -191,6 +191,7 @@ function PlainStaffDeleteAction({ staff }: { staff: Staff }) {
   return (
     <DeleteConfirmDialog
       itemName={staff.name}
+      description="It moves to the Recycle Bin and can be restored within 30 days."
       isConfirming={deleteStaff.isPending}
       onConfirm={() => deleteStaff.mutateAsync(staff.id)}
       trigger={

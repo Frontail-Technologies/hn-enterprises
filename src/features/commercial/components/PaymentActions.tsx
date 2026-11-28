@@ -17,6 +17,7 @@ export function PaymentActions({ payment }: { payment: Payment }) {
       <PaymentDialog payment={payment} iconOnly />
       <DeleteConfirmDialog
         itemName={payment.paidTo || payment.purpose || "this entry"}
+        description="It moves to the Recycle Bin and can be restored within 30 days."
         onConfirm={() => deletePayment.mutate(payment.id)}
       />
     </div>

@@ -65,6 +65,7 @@ export function BillingActions({
       />
       <DeleteConfirmDialog
         itemName={`Bill ${bill.billNumber}`}
+        description="It moves to the Recycle Bin with its payments and can be restored within 30 days."
         onConfirm={() => deleteMutation.mutateAsync(bill.id)}
       />
     </div>

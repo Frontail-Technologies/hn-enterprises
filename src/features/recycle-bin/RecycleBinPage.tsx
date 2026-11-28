@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowCounterClockwiseIcon, TrashIcon } from "@phosphor-icons/react";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
-import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
+import { ListTable, useClientRows, useListState, type ListColumn, type ListFilter } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +24,27 @@ import { recycleBinApi, type RecycleBinItem } from "./recycle-bin.api";
 
 const binKey = ["recycle-bin"] as const;
 
+/** Lists to refresh after a restore (whatever kind of item came back). */
+const RESTORED_KEYS = [
+  customersKey,
+  ["projects"],
+  ["materials"],
+  ["plumbers"],
+  ["staff"],
+  ["bills"],
+  ["billing"],
+  ["payments"],
+  ["expensesByCategory"],
+  ["site-plans"],
+  ["dpr-records"],
+  ["work-progress"],
+  ["dashboard"],
+  ["dashboard-stats"],
+] as const;
+
 const RELATED_LABELS: Record<string, string> = {
   complaints: "complaint",
-  customer_documents: "document",
+  customer_documents: "customer document",
   customer_lmc_pipe_records: "LMC record",
   customer_notes: "note",
   work_progress_updates: "work update",
@@ -34,7 +52,40 @@ const RELATED_LABELS: Record<string, string> = {
   dpr_records: "DPR",
   payments: "expense",
   material_transactions: "material entry",
+  customers: "customer",
+  project_sites: "site",
+  bills: "bill",
+  bill_payments: "bill payment",
+  project_members: "team member",
+  project_documents: "project document",
 };
+
+const TYPE_LABELS: Record<string, string> = {
+  customer: "Customer",
+  project: "Project",
+  project_site: "Site",
+  material: "Material",
+  plumber: "Plumber",
+  staff: "Staff",
+  bill: "Bill",
+  payment: "Expense",
+  site_plan: "Plan",
+  dpr_record: "DPR",
+};
+
+function typeLabel(item: RecycleBinItem) {
+  if (item.entityType === "plumber" && item.subType === "labour") return "Labour";
+  return TYPE_LABELS[item.entityType] ?? item.entityType;
+}
+
+const filters: ListFilter[] = [
+  {
+    id: "type",
+    label: "Type",
+    quick: true,
+    options: ["Customer", "Project", "Site", "Material", "Plumber", "Labour", "Staff", "Bill", "Expense", "Plan", "DPR"].map((value) => ({ value, label: value })),
+  },
+];
 
 function relatedSummary(item: RecycleBinItem) {
   const parts = Object.entries(item.related ?? {})
@@ -52,8 +103,9 @@ function daysLeft(expiresAt: string) {
 }
 
 const columns: ListColumn<RecycleBinItem>[] = [
-  { id: "label", header: "Customer", value: (item) => item.label, isTitle: true, hideable: false, sortable: true, width: 220, grow: true },
-  { id: "trBpNumber", header: "BR/TR No.", value: (item) => item.trBpNumber ?? "-", sortable: true, width: 150 },
+  { id: "label", header: "Item", value: (item) => item.label, isTitle: true, hideable: false, sortable: true, width: 240, grow: true },
+  { id: "type", header: "Type", value: typeLabel, sortable: true, width: 110 },
+  { id: "trBpNumber", header: "BR/TR No.", value: (item) => item.trBpNumber ?? "-", sortable: true, width: 150, defaultHidden: true },
   { id: "projectName", header: "Project", value: (item) => item.projectName ?? "-", sortable: true, width: 220 },
   { id: "related", header: "Deleted with it", value: relatedSummary, width: 220 },
   { id: "deletedByName", header: "Deleted by", value: (item) => item.deletedByName ?? "-", sortable: true, width: 160 },
@@ -61,12 +113,12 @@ const columns: ListColumn<RecycleBinItem>[] = [
   { id: "expiresAt", header: "Removed in", value: (item) => daysLeft(item.expiresAt), sortable: true, width: 110 },
 ];
 
-/** Deleted customers, restorable for 30 days (admins). */
+/** Deleted items (customers, projects, materials, ...), restorable for 30 days (admins). */
 export function RecycleBinPage() {
   const queryClient = useQueryClient();
   const list = useListState({ pageSize: 50, storageKey: "recycle-bin" });
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: binKey, queryFn: recycleBinApi.list });
-  const rows = useClientRows(data, list, { columns });
+  const rows = useClientRows(data, list, { columns, filters });
   const [busyId, setBusyId] = useState("");
 
   const restore = useMutation({
@@ -75,8 +127,7 @@ export function RecycleBinPage() {
     onSuccess: (result) => {
       toast.success(`"${result.label}" restored`);
       void queryClient.invalidateQueries({ queryKey: binKey });
-      void queryClient.invalidateQueries({ queryKey: customersKey });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      for (const queryKey of RESTORED_KEYS) void queryClient.invalidateQueries({ queryKey });
     },
     onError: (error) => toast.error("Couldn't restore", { description: error instanceof Error ? error.message : undefined }),
     onSettled: () => setBusyId(""),
@@ -113,7 +164,7 @@ export function RecycleBinPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Empty the Recycle Bin?</AlertDialogTitle>
           <AlertDialogDescription>
-            {data.length.toLocaleString("en-IN")} deleted customer{data.length === 1 ? "" : "s"} will be removed for good. This can&apos;t be undone.
+            {data.length.toLocaleString("en-IN")} deleted item{data.length === 1 ? "" : "s"} will be removed for good. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -130,11 +181,11 @@ export function RecycleBinPage() {
     <PageShell
       title="Recycle Bin"
       actions={emptyButton}
-      description="Deleted customers stay here for 30 days with their documents, notes, LMC records and complaints. Restore puts everything back as it was."
+      description="Deleted customers, projects, materials, plumbers, staff, bills, expenses and sites stay here for 30 days with everything deleted along with them. Restore puts it all back as it was."
       fillHeight
     >
       <ListTable
-        itemLabel="deleted customer"
+        itemLabel="deleted item"
         rows={rows.pageRows}
         total={rows.total}
         columns={columns}
@@ -142,6 +193,7 @@ export function RecycleBinPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => void refetch()}
+        filters={filters}
         searchPlaceholder="Search by name, BR/TR or project..."
         empty={{ illustration: "records", title: "The recycle bin is empty." }}
         fillHeight
