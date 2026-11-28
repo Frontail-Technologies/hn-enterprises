@@ -408,3 +408,13 @@ html[data-desktop] .app-drag-strip {
   line-height: 1.4;
   color: var(--foreground);
 }
+
+/* Dashboard map pins (3D SVG, features/dashboard/components/map/map-pins.ts). */
+.hn-map-pin svg {
+  overflow: visible;
+  transition: transform 120ms ease;
+  transform-origin: 50% 92%;
+}
+.hn-map-pin:hover svg {
+  transform: translateY(-2px) scale(1.12);
+}

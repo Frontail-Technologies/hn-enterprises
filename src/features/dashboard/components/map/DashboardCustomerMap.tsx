@@ -6,6 +6,7 @@ import { MapPinIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api-client";
 import { STAGE_STYLE, type CustomerMapPoint, type MapStage } from "./customer-map.types";
+import { stagePinMarkup } from "./map-pins";
 
 // Leaflet touches `window`: load it in the browser only.
 const CustomerLeafletMap = dynamic(() => import("./CustomerLeafletMap").then((module) => module.CustomerLeafletMap), {
@@ -47,7 +48,8 @@ export function DashboardCustomerMap({ projectId }: { projectId?: string }) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {LEGEND_ORDER.map((stage) => (
             <span key={stage} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="size-2.5 rounded-full" style={{ backgroundColor: STAGE_STYLE[stage].color }} />
+              {/* Same 3D pin as on the map, scaled down. Fixed markup from our own constants. */}
+              <span className="inline-flex h-4 w-3 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: stagePinMarkup(stage) }} />
               {STAGE_STYLE[stage].label}
               {counts[stage] ? <span className="tabular-nums text-foreground">{counts[stage]}</span> : null}
             </span>

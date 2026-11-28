@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import L from "leaflet";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { STAGE_STYLE, type CustomerMapPoint } from "./customer-map.types";
+import { stagePin } from "./map-pins";
 
 const INDIA_CENTER: [number, number] = [22.5, 80];
 
@@ -22,10 +23,10 @@ function FitToPoints({ points }: { points: CustomerMapPoint[] }) {
   return null;
 }
 
-/** Leaflet map with one dot per customer (canvas, so a few thousand dots stay fast). */
+/** Leaflet map with a 3D pin per customer, coloured by stage. */
 export function CustomerLeafletMap({ points }: { points: CustomerMapPoint[] }) {
   return (
-    <MapContainer center={INDIA_CENTER} zoom={4} scrollWheelZoom={false} preferCanvas className="h-full w-full">
+    <MapContainer center={INDIA_CENTER} zoom={4} scrollWheelZoom={false} className="h-full w-full">
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -34,12 +35,7 @@ export function CustomerLeafletMap({ points }: { points: CustomerMapPoint[] }) {
       {points.map((point) => {
         const style = STAGE_STYLE[point.stage];
         return (
-          <CircleMarker
-            key={point.id}
-            center={[point.lat, point.lng]}
-            radius={6}
-            pathOptions={{ color: "#ffffff", weight: 1.5, fillColor: style.color, fillOpacity: 0.95 }}
-          >
+          <Marker key={point.id} position={[point.lat, point.lng]} icon={stagePin(point.stage)} title={point.name || point.bpNo}>
             <Popup>
               <div className="min-w-40 space-y-0.5 text-[13px]">
                 <p className="font-semibold">{point.name || "Unnamed customer"}</p>
@@ -50,7 +46,7 @@ export function CustomerLeafletMap({ points }: { points: CustomerMapPoint[] }) {
                 </Link>
               </div>
             </Popup>
-          </CircleMarker>
+          </Marker>
         );
       })}
     </MapContainer>
