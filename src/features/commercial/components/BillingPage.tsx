@@ -157,7 +157,7 @@ export function BillingPage() {
       tabs={<UnderlineTabs items={billingTabs} active={activeView} onChange={(id) => setActiveView(id as BillingView)} />}
       actions={
         activeView === "bills" ? (
-          <BillDialog triggerLabel="Create Bill" />
+          <BillDialog triggerLabel="Create Bill" defaultProjectId={list.filters.project || undefined} />
         ) : (
           <>
             <Select value={wageMonth} onValueChange={(value) => value && setWageMonth(value)}>

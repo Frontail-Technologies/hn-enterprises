@@ -98,7 +98,8 @@ export function BillDialog({
   const deleteBill = useDeleteBill();
   const [uploading, setUploading] = useState(false);
   const isSaving = createBill.isPending || updateBill.isPending || uploading;
-  const projectLocked = Boolean(defaultProjectId) && !bill;
+  // Locked when opened from a project page (name given); only prefilled when opened from a filtered list.
+  const projectLocked = Boolean(defaultProjectId && defaultProjectName) && !bill;
 
   const form = useForm<BillFormValues>({
     resolver: zodResolver(billFormSchema),

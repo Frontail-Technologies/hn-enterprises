@@ -191,7 +191,7 @@ export function InventoryPage() {
             <MaterialItemDrawer />
           </>
         ) : TAB_ACTION_TYPE[activeTab] ? (
-          <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} />
+          <MaterialDrawer type={TAB_ACTION_TYPE[activeTab]} defaultProjectId={projectFilter && projectFilter !== "none" ? projectFilter : undefined} />
         ) : null
       }
       tabs={<InventoryTabNav activeTab={activeTab} onChange={handleTabChange} counts={counts} />}

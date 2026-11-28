@@ -156,7 +156,7 @@ export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?
         renderRowActions={(row) => <PaymentActions payment={row} />}
         actions={
           <>
-            {fixedProjectId ? <PaymentDialog defaultCategory={active} /> : null}
+            {fixedProjectId ? <PaymentDialog defaultCategory={active} defaultProjectId={fixedProjectId} /> : null}
             <Link href="/payments/import" className={buttonVariants({ variant: "outline", size: "compact" })}>
               <UploadSimpleIcon size={14} />
               Import
@@ -177,7 +177,7 @@ export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?
     <PageShell
       title="Payments & Expenses"
       description="Expenses and payments recorded by supervisors, by category."
-      actions={<PaymentDialog defaultCategory={active} />}
+      actions={<PaymentDialog defaultCategory={active} defaultProjectId={projectId && projectId !== "none" ? projectId : undefined} />}
     >
       {content}
     </PageShell>

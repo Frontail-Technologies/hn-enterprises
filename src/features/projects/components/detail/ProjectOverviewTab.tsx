@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { money } from "@/features/commercial/utils/format";
 import { CustomersList } from "@/features/customers/components/CustomersList";
 import { PaymentsExpensesPage } from "@/features/commercial/components/PaymentsExpensesPage";
+import { BillDialog } from "@/features/commercial/components/billing/BillDialog";
 import { useProjectSummaryQuery } from "@/features/projects/hooks/useProjects";
 import { formatCompactCount } from "@/lib/format";
 import type { Project, ProjectSummary } from "../../types/project.types";
@@ -246,9 +247,12 @@ export function ProjectTabs({ project }: { project: Project }) {
         <SectionCard
           title="Billing amounts"
           action={
-            <Link href={scoped("/billing")} className="text-[13px] font-medium text-primary hover:underline">
-              Open bills
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href={scoped("/billing")} className="text-[13px] font-medium text-primary hover:underline">
+                Open bills
+              </Link>
+              <BillDialog triggerLabel="Create Bill" defaultProjectId={project.id} defaultProjectName={project.name} />
+            </div>
           }
           className="max-w-2xl"
         >
