@@ -44,6 +44,7 @@ import { ReplaceTempIdsDialog } from "./ReplaceTempIdsDialog";
 import { BulkPdfDialog } from "./bulk/BulkPdfDialog";
 import { CustomizeColumnsDialog } from "./CustomizeColumnsDialog";
 import type { CustomerBulkChanges } from "../types/customer-bulk.types";
+import { CustomerDeleteOptions, DEFAULT_CUSTOMER_DELETE_CHOICES, type CustomerDeleteChoices } from "./CustomerDeleteOptions";
 
 interface CustomersListProps {
   projectId?: string;
@@ -145,6 +146,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   const bulkUpdate = useBulkUpdateCustomers();
   const bulkRemark = useBulkRemarkCustomers();
   const bulkDelete = useBulkDeleteCustomers();
+  const [deleteChoices, setDeleteChoices] = useState<CustomerDeleteChoices>(DEFAULT_CUSTOMER_DELETE_CHOICES);
 
   function openQuickAction(action: BulkQuickAction) {
     setActiveQuickAction(action);
@@ -178,7 +180,7 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
   }
 
   async function handleBulkDeleteConfirm() {
-    await bulkDelete.mutateAsync(Array.from(selection.selectedIds));
+    await bulkDelete.mutateAsync({ ids: Array.from(selection.selectedIds), choices: deleteChoices });
     setDeleteDialogOpen(false);
     selection.clear();
   }
@@ -473,7 +475,9 @@ export function CustomersList({ projectId, embedded = false, statKey }: Customer
         isSubmitting={bulkDelete.isPending}
         onConfirm={handleBulkDeleteConfirm}
         recoverable
-      />
+      >
+        <CustomerDeleteOptions choices={deleteChoices} onChange={setDeleteChoices} disabled={bulkDelete.isPending} />
+      </BulkDeleteDialog>
     </>
   );
 

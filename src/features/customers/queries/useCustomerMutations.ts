@@ -75,7 +75,8 @@ export function useSetSectionCompletion(id: string, sectionLabel: string) {
 export function useDeleteCustomer() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => customersApi.delete(id),
+    mutationFn: ({ id, choices }: { id: string; choices?: { deletePlans?: boolean; deletePayments?: boolean; deleteMaterial?: boolean } }) =>
+      customersApi.delete(id, choices),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customersKey });
       queryClient.invalidateQueries({ queryKey: ["activity"] });

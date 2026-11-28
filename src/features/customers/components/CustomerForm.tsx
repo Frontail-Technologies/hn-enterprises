@@ -47,6 +47,7 @@ import { DeleteImpactDialog } from "@/components/shared/DeleteImpactDialog";
 import type { CustomerCompletionAudit, CustomerFormValues, CustomerSectionCompletion } from "../types/customer.types";
 import { projectOption } from "@/features/projects/utils/project-option";
 import { useUrlTab } from "@/hooks/useUrlTab";
+import { CustomerDeleteOptions, DEFAULT_CUSTOMER_DELETE_CHOICES, type CustomerDeleteChoices } from "./CustomerDeleteOptions";
 
 interface CustomerFormProps {
   mode: "create" | "edit";
@@ -131,6 +132,16 @@ function CustomerFormFields({
   const createDocument = useCreateCustomerDocument(customerId ?? "");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteImpact = useCustomerDeleteImpactQuery(customerId ?? "", { enabled: deleteDialogOpen });
+  const [deleteChoices, setDeleteChoices] = useState<CustomerDeleteChoices>(DEFAULT_CUSTOMER_DELETE_CHOICES);
+  // Ticking "delete plans and DPRs" clears the only thing that blocks a customer delete.
+  const adjustedImpact = useMemo(() => {
+    const impact = deleteImpact.data;
+    if (!impact) return impact;
+    const blockers = deleteChoices.deletePlans
+      ? impact.blockers.filter((blocker) => blocker.key !== "sitePlans" && blocker.key !== "dprRecords")
+      : impact.blockers;
+    return { ...impact, blockers, canDelete: blockers.length === 0 };
+  }, [deleteImpact.data, deleteChoices.deletePlans]);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const { data: customFields = [] } = useDynamicFieldsQuery("Active");
@@ -389,13 +400,13 @@ function CustomerFormFields({
                 }
                 entityTypeLabel="Customer"
                 note="Goes to the Recycle Bin. You can restore it within 30 days."
-                impact={deleteImpact.data}
+                impact={adjustedImpact}
                 isLoading={deleteImpact.isLoading}
                 isError={deleteImpact.isError}
                 onRetry={() => void deleteImpact.refetch()}
                 isConfirming={deleteCustomer.isPending}
                 onConfirm={async () => {
-                  await deleteCustomer.mutateAsync(customerId);
+                  await deleteCustomer.mutateAsync({ id: customerId, choices: deleteChoices });
                   setDeleteDialogOpen(false);
                   router.push("/customers");
                 }}
@@ -405,7 +416,14 @@ function CustomerFormFields({
                   setDeleteDialogOpen(false);
                   router.push(`/customers/${customerId}`);
                 }}
-              />
+              >
+                <CustomerDeleteOptions
+                  choices={deleteChoices}
+                  onChange={setDeleteChoices}
+                  impact={deleteImpact.data}
+                  disabled={deleteCustomer.isPending}
+                />
+              </DeleteImpactDialog>
               ) : undefined
             }
           >

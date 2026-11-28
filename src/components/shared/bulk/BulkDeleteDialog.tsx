@@ -23,6 +23,8 @@ interface BulkDeleteDialogProps {
   note?: string;
   /** Deleted items go to the Recycle Bin (restorable) instead of being gone for good. */
   recoverable?: boolean;
+  /** Extra content above the buttons (e.g. "also delete" options). */
+  children?: React.ReactNode;
 }
 
 export function BulkDeleteDialog({
@@ -35,6 +37,7 @@ export function BulkDeleteDialog({
   onConfirm,
   note,
   recoverable = false,
+  children,
 }: BulkDeleteDialogProps) {
   const plural = entityLabelPlural ?? `${entityLabel}s`;
   const noun = selectedCount === 1 ? entityLabel : plural;
@@ -72,6 +75,7 @@ export function BulkDeleteDialog({
             ) : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>

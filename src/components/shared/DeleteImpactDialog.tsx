@@ -54,6 +54,8 @@ export type DeleteImpactDialogProps = {
   actionLabel?: "Delete" | "Deactivate";
   /** Overrides the auto-generated confirm button text (e.g. "Delete Permanently") when the default "Delete {entityTypeLabel}[& Related Data]" phrasing isn't right for this entity. */
   confirmLabel?: string;
+  /** Extra content under the impact summary (e.g. "also delete" options). */
+  children?: React.ReactNode;
 };
 
 export function DeleteImpactDialog({
@@ -74,6 +76,7 @@ export function DeleteImpactDialog({
   note,
   actionLabel = "Delete",
   confirmLabel,
+  children,
 }: DeleteImpactDialogProps) {
   const action = ACTION_COPY[actionLabel];
   const [confirmText, setConfirmText] = useState("");
@@ -168,6 +171,8 @@ export function DeleteImpactDialog({
                   ))}
                 </div>
               ) : null}
+
+              {children}
 
               {isHighImpact ? (
                 <div className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">

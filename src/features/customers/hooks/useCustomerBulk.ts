@@ -33,7 +33,8 @@ export function useBulkRemarkCustomers() {
 export function useBulkDeleteCustomers() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => customersBulkApi.remove(ids),
+    mutationFn: ({ ids, choices }: { ids: string[]; choices?: { deletePlans?: boolean; deletePayments?: boolean; deleteMaterial?: boolean } }) =>
+      customersBulkApi.remove(ids, choices),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: customersKey });
       toast.success(`${result.count} customer${result.count === 1 ? "" : "s"} deleted`);

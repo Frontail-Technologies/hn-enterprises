@@ -16,10 +16,10 @@ export const customersBulkApi = {
     });
   },
 
-  async remove(ids: string[]): Promise<CustomerBulkResult> {
+  async remove(ids: string[], choices: { deletePlans?: boolean; deletePayments?: boolean; deleteMaterial?: boolean } = {}): Promise<CustomerBulkResult> {
     return apiRequest<CustomerBulkResult>("/customers/bulk/delete", {
       method: "POST",
-      body: JSON.stringify({ selection: { mode: "ids", ids } }),
+      body: JSON.stringify({ selection: { mode: "ids", ids }, ...choices }),
     });
   },
 };

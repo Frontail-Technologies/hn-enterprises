@@ -243,8 +243,14 @@ export const customersApi = {
     return mapCustomer(raw);
   },
 
-  async delete(id: string): Promise<void> {
-    await apiRequest(`/customers/${id}`, { method: "DELETE" });
+  /** `choices`: related records to delete as well (ticked in the delete dialog). */
+  async delete(id: string, choices?: { deletePlans?: boolean; deletePayments?: boolean; deleteMaterial?: boolean }): Promise<void> {
+    const query = new URLSearchParams();
+    if (choices?.deletePlans) query.set("deletePlans", "true");
+    if (choices?.deletePayments) query.set("deletePayments", "true");
+    if (choices?.deleteMaterial) query.set("deleteMaterial", "true");
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    await apiRequest(`/customers/${id}${suffix}`, { method: "DELETE" });
   },
 
   async getDeleteImpact(id: string): Promise<DeleteImpactResult> {

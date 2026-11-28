@@ -30,6 +30,10 @@ const RELATED_LABELS: Record<string, string> = {
   customer_lmc_pipe_records: "LMC record",
   customer_notes: "note",
   work_progress_updates: "work update",
+  site_plans: "plan",
+  dpr_records: "DPR",
+  payments: "expense",
+  material_transactions: "material entry",
 };
 
 function relatedSummary(item: RecycleBinItem) {
