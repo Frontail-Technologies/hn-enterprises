@@ -31,7 +31,7 @@ type BackendDprTask = {
   delayReason?: string;
 };
 type BackendEvidenceFile = { id: string; fileName: string; fileUrl: string; mimeType?: string; capturedAt?: string };
-type BackendJoinedRef = { id: string; name: string } | null;
+type BackendJoinedRef = { id: string | null; name: string } | null;
 
 type BackendCustomerRef = { id: string; name: string; trBpNumber: string } | null;
 
@@ -41,7 +41,7 @@ type BackendSitePlan = {
   projectId: string;
   siteId: string;
   date: string;
-  supervisorId: string;
+  supervisorId?: string;
   tasks: BackendPlanTask[];
   supervisor: BackendJoinedRef;
   site: { id: string; name: string; address: string | null } | null;
@@ -55,7 +55,7 @@ type BackendDprRecord = {
   projectId: string;
   siteId: string;
   date: string;
-  supervisorId: string;
+  supervisorId?: string;
   status: "draft" | "submitted" | "approved";
   remarks: string | null;
   tasks: BackendDprTask[];
@@ -115,7 +115,8 @@ function mapSitePlan(raw: BackendSitePlan): SitePlan {
     projectId: raw.projectId,
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
-    supervisorId: raw.supervisorId,
+    // The API sends the supervisor as `supervisor.id` (supervisorId is folded into it).
+    supervisorId: raw.supervisor?.id ?? raw.supervisorId ?? "",
     supervisorName: raw.supervisor?.name ?? "",
     tasks: mapTasksToPlanTasks(raw.tasks),
   };
@@ -132,7 +133,8 @@ function mapDprRecord(raw: BackendDprRecord): DprRecord {
     projectName: raw.project?.name ?? "",
     siteId: raw.siteId,
     siteLabel: raw.site?.name ?? "",
-    supervisorId: raw.supervisorId,
+    // The API sends the supervisor as `supervisor.id` (supervisorId is folded into it).
+    supervisorId: raw.supervisor?.id ?? raw.supervisorId ?? "",
     supervisorName: raw.supervisor?.name ?? "",
     status: STATUS_TO_FRONTEND[raw.status] ?? "Draft",
     evidence: mapEvidence(raw.evidence),
