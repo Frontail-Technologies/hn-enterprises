@@ -21,7 +21,7 @@ type Kind = ProjectMember["kind"];
 type MemberRow = ProjectMember & { sites: string; customers: number; lastActivityAt: string | null };
 
 const KIND_LABEL: Record<Kind, { one: string; many: string }> = {
-  supervisor: { one: "Supervisor", many: "Supervisors" },
+  supervisor: { one: "Supervisor / Manager", many: "Supervisors & Managers" },
   plumber: { one: "Plumber", many: "Plumbers" },
   labour: { one: "Labour", many: "Labour" },
 };
@@ -35,9 +35,15 @@ function PersonCell({ name, avatarUrl }: { name: string; avatarUrl: string | nul
   );
 }
 
+const designationLabel = (value: string | null) =>
+  value ? value.replace(/_/g, " ").replace(/\w/g, (letter) => letter.toUpperCase()) : "Supervisor";
+
 function memberColumns(kind: Kind): ListColumn<MemberRow>[] {
   return [
     { id: "name", header: KIND_LABEL[kind].one, value: (row) => row.name, cell: (row) => <PersonCell name={row.name} avatarUrl={row.avatarUrl} />, isTitle: true, hideable: false, sortable: true, width: 240, grow: true },
+    ...(kind === "supervisor"
+      ? [{ id: "designation", header: "Designation", value: (row: MemberRow) => designationLabel(row.designation), sortable: true, width: 150 }]
+      : []),
     { id: "mobile", header: "Mobile", value: (row) => row.mobile ?? "-", width: 140 },
     ...(kind === "supervisor"
       ? [{ id: "sites", header: "Sites / areas", value: (row: MemberRow) => row.sites || "-", sortable: true, width: 220 }]

@@ -9,6 +9,8 @@ export type ProjectMember = {
   /** User id (supervisor) or plumber id (plumber / labour). */
   personId: string;
   name: string;
+  /** Supervisors: "supervisor" | "site_manager" | "project_manager" (null if no staff record). */
+  designation: string | null;
   avatarUrl: string | null;
   mobile: string | null;
   addedAt: string;

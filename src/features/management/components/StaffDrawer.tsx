@@ -26,7 +26,7 @@ import {
 import { AvatarUploadField } from "@/components/shared/AvatarUploadField";
 import { useCreateStaff } from "../hooks/useStaff";
 import { buildStaffFormSchema } from "../schemas/staff-form.schema";
-import { STAFF_DESIGNATIONS, type CreateStaffFormValues } from "../types/staff.types";
+import { hasAppLogin, STAFF_DESIGNATIONS, type CreateStaffFormValues } from "../types/staff.types";
 import type { User } from "../services/users.service";
 
 const salaryTypes: CreateStaffFormValues["salaryType"][] = ["Monthly", "Daily Wage", "Work Basis", "Contract"];
@@ -70,7 +70,8 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
   const availableUsers = users.filter((user) => !staffedUserIds.has(user.id) && user.role === "Supervisor");
   const mode = useWatch({ control, name: "mode" });
   const designation = useWatch({ control, name: "designation" });
-  const isSupervisor = designation === "Supervisor";
+  // Supervisor / Site Manager / Project Manager get a login for the mobile app.
+  const isSupervisor = hasAppLogin(designation);
   const photoName = useWatch({ control, name: "newUser.name" });
   const paymentAccountType = useWatch({ control, name: "paymentAccountType" });
 
@@ -97,7 +98,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
           <DialogTitle>Add Staff</DialogTitle>
           <DialogDescription>
             {isSupervisor
-              ? "Supervisors get a login for the mobile app: link an existing one or create a new one."
+              ? `${designation}s get a login for the mobile app (they only see their projects): link an existing one or create a new one.`
               : `${designation}s have no app access, only their details and salary are kept.`}
           </DialogDescription>
         </DialogHeader>

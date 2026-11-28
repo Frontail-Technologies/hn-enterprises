@@ -35,7 +35,7 @@ export function buildStaffFormSchema() {
       remarks: z.string(),
     })
     .superRefine((values, ctx) => {
-      if (values.designation !== "Supervisor") {
+      if (!["Supervisor", "Site Manager", "Project Manager"].includes(values.designation)) {
         // No login: just a name (mobile optional).
         if (!values.newUser.name.trim()) {
           ctx.addIssue({ code: "custom", path: ["newUser", "name"], message: "Name is required" });

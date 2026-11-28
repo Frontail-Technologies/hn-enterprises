@@ -187,7 +187,7 @@ export const staffApi = {
 
   async create(values: CreateStaffFormValues): Promise<Staff> {
     const body =
-      values.designation !== "Supervisor"
+      !["Supervisor", "Site Manager", "Project Manager"].includes(values.designation)
         ? {
             ...mapPayrollToBody(values),
             avatarUrl: values.avatarUrl || undefined,

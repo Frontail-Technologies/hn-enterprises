@@ -18,7 +18,7 @@ import { DatePicker } from "@/components/shared/DatePicker";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useStaffMemberQuery, useUpdateStaff } from "../hooks/useStaff";
 import { buildStaffEditFormSchema, type StaffEditFormValues } from "../schemas/staff-edit-form.schema";
-import { STAFF_DESIGNATIONS, type Staff, type StaffPaymentAccountType, type StaffSalaryType } from "../types/staff.types";
+import { LOGIN_DESIGNATIONS, STAFF_DESIGNATIONS, type Staff, type StaffPaymentAccountType, type StaffSalaryType } from "../types/staff.types";
 import type { UserStatus } from "../services/users.service";
 import { PageShell } from "@/components/shared/PageShell";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -96,8 +96,7 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
   const onSubmit = handleSubmit(async (values) => {
     await updateStaff.mutateAsync({
       values: {
-        // A supervisor is a login account and stays a supervisor.
-        designation: staffMember.hasLogin ? undefined : values.designation,
+        designation: values.designation,
         assignedProjectId: values.assignedProjectId,
         salaryType: values.salaryType,
         monthlySalary: values.monthlySalary,
@@ -136,14 +135,13 @@ function StaffEditForm({ id, staffMember }: { id: string; staffMember: Staff }) 
           description={staffMember.hasLogin ? "Photo, name and contact shown across the app and in the mobile app." : "Photo, name and contact. No app access."}
         >
           <AvatarField control={control} name={staffMember.name} userId={staffMember.userId || staffMember.id} />
-          {staffMember.hasLogin ? (
-            <label className="flex min-w-0 flex-col gap-1.5">
-              <span className="text-[13px] font-medium text-foreground">Designation</span>
-              <p className="flex h-9 items-center text-sm text-muted-foreground">Supervisor</p>
-            </label>
-          ) : (
-            <SelectField label="Designation" control={control} name="designation" options={STAFF_DESIGNATIONS.filter((item) => item !== "Supervisor")} />
-          )}
+          {/* App-login staff switch among the login designations; the rest among the others. */}
+          <SelectField
+            label="Designation"
+            control={control}
+            name="designation"
+            options={staffMember.hasLogin ? LOGIN_DESIGNATIONS : STAFF_DESIGNATIONS.filter((item) => !LOGIN_DESIGNATIONS.includes(item) || item === staffMember.designation)}
+          />
           <EditField label="Name" required registration={register("name")} />
           {formState.errors.name ? <p className="self-end text-xs text-destructive">{formState.errors.name.message}</p> : null}
           <EditField label="Mobile" registration={register("mobile")} />

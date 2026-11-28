@@ -11,6 +11,10 @@ export type StaffDesignation =
   | "Operator"
   | "Store Incharge";
 
+/** These get a login and use the mobile app (supervisor rules: only their projects). */
+export const LOGIN_DESIGNATIONS: StaffDesignation[] = ["Supervisor", "Site Manager", "Project Manager"];
+export const hasAppLogin = (designation: StaffDesignation) => LOGIN_DESIGNATIONS.includes(designation);
+
 export const STAFF_DESIGNATIONS: StaffDesignation[] = [
   "Supervisor",
   "Site Manager",
