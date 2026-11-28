@@ -5,6 +5,7 @@ export type CustomerMapPoint = {
   name: string;
   bpNo: string;
   projectId: string | null;
+  projectName: string;
   lat: number;
   lng: number;
   stage: MapStage;

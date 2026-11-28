@@ -27,6 +27,7 @@ import {
   WarningIcon as Warning,
   SlidersHorizontalIcon as SlidersHorizontal,
   TrashIcon as Trash,
+  MapTrifoldIcon as MapTrifold,
   SignOutIcon as SignOut,
   LockIcon as Lock,
   CaretUpDownIcon as CaretUpDown,
@@ -107,6 +108,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Warning,
   SlidersHorizontal,
   Trash,
+  MapTrifold,
 };
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {

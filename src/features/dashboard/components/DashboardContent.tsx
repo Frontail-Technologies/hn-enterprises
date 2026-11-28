@@ -1,6 +1,5 @@
 "use client";
 
-import { DashboardCustomerMap } from "./map/DashboardCustomerMap";
 import { formatDistanceToNow } from "date-fns";
 import { PageLoading } from "@/components/shared/PageLoading";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -75,8 +74,6 @@ export function DashboardContent() {
         ) : (
           <DashboardCharts charts={screen.charts} isLoading={screen.chartsLoading} />
         )}
-
-        <DashboardCustomerMap projectId={screen.filters.projectId} />
 
         <div className="grid items-start gap-5 xl:grid-cols-[0.75fr_1.25fr]">
           <AttendanceSummary rows={screen.overview.attendance} />

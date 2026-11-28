@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { STAGE_STYLE, type MapStage } from "./customer-map.types";
+import { STAGE_STYLE, type MapStage } from "../customer-map.types";
 
 /** Darker / lighter shade of a #rrggbb colour (amount -1..1). */
 function shade(hex: string, amount: number) {
