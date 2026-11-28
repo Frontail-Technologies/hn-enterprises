@@ -202,7 +202,6 @@ export function BillingPage() {
             <DashboardStatCard label="Bank guarantee held" value={money(totals?.bgHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
             <DashboardStatCard label="Hold amount held" value={money(totals?.holdHeld ?? 0)} icon={HourglassIcon} tone="warning" dense />
           </CompactStatGrid>
-          <BillingTrends projectId={list.filters.project || undefined} />
           <ListTable
             itemLabel="bill"
             rows={bills}
@@ -224,6 +223,8 @@ export function BillingPage() {
             rowActionsWidth={176}
             renderRowActions={(row) => <BillingActions bill={row} />}
           />
+          {/* Charts under the table, so the bills stay at the top. */}
+          <BillingTrends projectId={list.filters.project || undefined} />
         </div>
       ) : (
         <WageRegister month={wageMonth} />
