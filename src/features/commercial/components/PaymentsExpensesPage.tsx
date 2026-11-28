@@ -48,7 +48,14 @@ export function PaymentsExpensesPage({ projectId: fixedProjectId }: { projectId?
   const filters: ListFilter[] = [
     ...(fixedProjectId
       ? []
-      : [{ id: "projectId", label: "Project", quick: true, options: projects.map(projectOption) } as ListFilter]),
+      : [
+          {
+            id: "projectId",
+            label: "Project",
+            quick: true,
+            options: [{ value: "none", label: "General / office (no project)" }, ...projects.map(projectOption)],
+          } as ListFilter,
+        ]),
     { type: "dateRange", id: "from", toId: "to", label: "Date" },
   ];
   const [isExporting, setIsExporting] = useState(false);

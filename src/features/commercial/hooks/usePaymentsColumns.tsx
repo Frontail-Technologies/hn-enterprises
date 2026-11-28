@@ -25,7 +25,16 @@ export function usePaymentsColumns({ plumberNameById }: { plumberNameById: Map<s
   const columns: ListColumn<Payment>[] = [
     { id: "id", header: "Entry ID", width: 120, value: entryId, isTitle: true, hideable: false, columnFilter: true },
     { id: "category", header: "Category", width: 190, value: (row) => row.category, columnFilter: true },
-    { id: "customer", header: "Customer", width: 170, value: (row) => row.customerName || "-", columnFilter: true },
+    { id: "project", header: "Project", width: 190, value: (row) => row.projectName || (row.projectId ? "-" : "General / office"), columnFilter: true },
+    {
+      id: "customer",
+      header: "Customer",
+      width: 190,
+      value: (row) => (row.customerDeleted ? `Deleted customer (${row.customerName})` : row.customerName || "-"),
+      cell: (row) =>
+        row.customerDeleted ? <span className="text-muted-foreground italic">Deleted customer ({row.customerName})</span> : row.customerName || "-",
+      columnFilter: true,
+    },
     { id: "supervisor", header: "Supervisor", width: 160, value: (row) => row.supervisorName || "-", columnFilter: true },
     { id: "paidTo", header: "Paid To", width: 180, grow: true, value: paidTo, columnFilter: true },
     { id: "address", header: "Address", width: 190, grow: true, value: (row) => row.address || "-", columnFilter: true },

@@ -39,6 +39,8 @@ import { useCreatePayment, useUpdatePayment } from "../hooks/usePayments";
 import { paymentFormSchema } from "../schemas/payment.schema";
 import type { Payment, PaymentCategory, PaymentFormValues, PaymentStatus } from "../types/payment.types";
 import { ImageProofField } from "./shared/ImageProofField";
+import { useProjectsQuery } from "@/features/projects/hooks/useProjects";
+import { projectOption } from "@/features/projects/utils/project-option";
 
 const categories = paymentTabs as PaymentCategory[];
 const statuses: PaymentStatus[] = ["Draft", "Submitted", "Approved", "Rejected"];
@@ -98,8 +100,7 @@ export function PaymentDialog({
   const [submitError, setSubmitError] = useState("");
   const { data: paymentModes = [] } = useMasterValuesQuery("Payment Types");
   const { data: plumbers = [] } = usePlumbersQuery();
-  const { options: customerOptions, isLoading: customersLoading, onSearchChange: onCustomerSearchChange } =
-    useCustomerSelectorOptions(payment?.customerId);
+  const { data: projects = [] } = useProjectsQuery();
   const { data: supervisors = [] } = useRosterQuery("supervisor");
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
@@ -114,6 +115,11 @@ export function PaymentDialog({
   });
   const { control, register, handleSubmit, reset, formState } = form;
   const isPlumberCategory = useWatch({ control, name: "category" }) === "Plumber Payments";
+  // Project first: "" = General / office (no project, no customer); otherwise
+  // the customer list only shows that project's customers.
+  const selectedProjectId = useWatch({ control, name: "projectId" });
+  const { options: customerOptions, isLoading: customersLoading, onSearchChange: onCustomerSearchChange } =
+    useCustomerSelectorOptions(payment?.customerId, selectedProjectId || undefined);
   const validationMessage = Object.values(formState.errors)[0]?.message as string | undefined;
 
   function handleOpenChange(nextOpen: boolean) {
@@ -200,6 +206,27 @@ export function PaymentDialog({
             />
           </FormField>
 
+          <FormField label="Project">
+            <Controller
+              control={control}
+              name="projectId"
+              render={({ field }) => (
+                <SearchableSelect
+                  value={field.value || "none"}
+                  onValueChange={(projectId) => {
+                    const next = !projectId || projectId === "none" ? "" : projectId;
+                    if (next !== field.value) form.setValue("customerId", "");
+                    field.onChange(next);
+                  }}
+                  placeholder="Select project"
+                  options={[{ value: "none", label: "General / office (no project)" }, ...projects.map(projectOption)]}
+                  className="w-full"
+                />
+              )}
+            />
+          </FormField>
+
+          {selectedProjectId ? (
           <FormField label="Customer">
             <Controller
               control={control}
@@ -218,6 +245,7 @@ export function PaymentDialog({
               )}
             />
           </FormField>
+          ) : null}
 
           {isAdmin ? (
             <FormField label="Supervisor (this expense belongs to)">

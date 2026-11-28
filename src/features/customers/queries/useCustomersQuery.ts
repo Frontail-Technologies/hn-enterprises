@@ -45,8 +45,8 @@ export function useCustomersListQuery(params: CustomersListParams, options: { en
  * PaymentDialog, CorrectTransactionDialog, MaterialDrawer, ReportTemplatesPage).
  * Callers debounce `search` themselves before passing it in here.
  */
-export function useCustomerSearchQuery(search: string, options: { enabled?: boolean } = {}) {
-  const params = { search: search.trim(), limit: 20 };
+export function useCustomerSearchQuery(search: string, options: { enabled?: boolean; projectId?: string } = {}) {
+  const params = { search: search.trim(), limit: 20, ...(options.projectId ? { projectId: options.projectId } : {}) };
   return useQuery({
     queryKey: customersSearchKey(params),
     queryFn: () => customersApi.listPaginated(params),

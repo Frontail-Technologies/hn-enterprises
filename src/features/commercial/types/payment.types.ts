@@ -26,7 +26,11 @@ export type Payment = {
   customerName: string;
   /** Server-joined - BR/TR keeps customer identity unambiguous without loading the full customer list. */
   customerTrBpNumber: string;
+  /** The customer was deleted; customerName is the name saved on the expense. */
+  customerDeleted: boolean;
   projectId: string;
+  /** "" = General / office expense (no project). */
+  projectName: string;
   amount: number;
   paymentDate: string;
   mode: PaymentMode;

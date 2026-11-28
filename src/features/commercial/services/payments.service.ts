@@ -67,7 +67,9 @@ type BackendPayment = {
   customerId: string | null;
   customerName: string | null;
   customerTrBpNumber: string | null;
+  customerDeleted?: boolean;
   projectId: string | null;
+  projectName?: string | null;
   amount: string;
   paymentDate: string;
   mode: string;
@@ -91,7 +93,9 @@ function mapPayment(raw: BackendPayment): Payment {
     customerId: raw.customerId ?? "",
     customerName: raw.customerName ?? "",
     customerTrBpNumber: raw.customerTrBpNumber ?? "",
+    customerDeleted: Boolean(raw.customerDeleted),
     projectId: raw.projectId ?? "",
+    projectName: raw.projectName ?? "",
     amount: Number(raw.amount),
     paymentDate: toDateOnly(raw.paymentDate),
     mode: raw.mode,
@@ -113,7 +117,8 @@ function buildPaymentFormData(values: PaymentFormValues): FormData {
   if (values.paidTo) formData.append("paidTo", values.paidTo);
   if (values.address) formData.append("address", values.address);
   if (values.customerId) formData.append("customerId", values.customerId);
-  if (values.projectId) formData.append("projectId", values.projectId);
+  // Always sent: "" means General / office (no project), which also clears it on edit.
+  formData.append("projectId", values.projectId ?? "");
   if (values.supervisorId) formData.append("supervisorId", values.supervisorId);
   formData.append("amount", String(Number(values.amount) || 0));
   formData.append("paymentDate", values.paymentDate);

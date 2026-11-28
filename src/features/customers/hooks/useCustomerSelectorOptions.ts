@@ -12,9 +12,10 @@ import { toCustomerSelectOption, toCustomerSelectOptions } from "../utils/custom
  * is never shown as a raw UUID when it falls outside the current search page
  * (e.g. editing a record whose customer isn't among the latest/matching 20).
  */
-export function useCustomerSelectorOptions(selectedId?: string) {
+/** `projectId`: only that project's customers. */
+export function useCustomerSelectorOptions(selectedId?: string, projectId?: string) {
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useCustomerSearchQuery(search);
+  const { data, isLoading } = useCustomerSearchQuery(search, { projectId });
   const customers = useMemo(() => data?.data ?? [], [data]);
 
   const selectedInPage = Boolean(selectedId) && customers.some((customer) => customer.id === selectedId);
