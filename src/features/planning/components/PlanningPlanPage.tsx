@@ -49,14 +49,19 @@ export function PlanningPlanPage() {
   const totalQty = useMemo(() => shownTasks.reduce((sum, task) => sum + (Number(task.qty) || 0), 0), [shownTasks]);
 
   function setTask(id: PlanTask["id"], patch: Partial<Pick<PlanTask, "qty" | "worker">>) {
-    setDraft((current) => (current ?? tasks).map((task) => (task.id === id ? { ...task, ...patch } : task)));
+    // Typing a different name drops the picked plumber link.
+    setDraft((current) =>
+      (current ?? tasks).map((task) =>
+        task.id === id ? { ...task, ...patch, ...("worker" in patch ? { plumberId: undefined } : {}) } : task,
+      ),
+    );
   }
 
   function save() {
     if (!plan || !draft) return;
     // The server replaces the task list, so send only the filled-in tasks.
     const payload = draft
-      .map((task) => ({ id: task.id, qty: task.qty.trim(), worker: task.worker.trim() }))
+      .map((task) => ({ id: task.id, qty: task.qty.trim(), worker: task.worker.trim(), plumberId: task.plumberId }))
       .filter((task) => task.qty || task.worker);
     updatePlan.mutate({ id: plan.id, input: { tasks: payload } }, { onSuccess: () => setDraft(null) });
   }

@@ -23,12 +23,13 @@ export const planningTaskTemplates: PlanningTaskTemplate[] = [
   { id: "commissioning", label: "COMMISSING" },
 ];
 
-type BackendPlanTask = { id: string; qty?: string; worker?: string };
+type BackendPlanTask = { id: string; qty?: string; worker?: string; plumberId?: string };
 type BackendDprTask = {
   id: string;
   plannedQty?: string;
   completedQty?: string;
   worker?: string;
+  plumberId?: string;
   delayReason?: string;
 };
 type BackendEvidenceFile = { id: string; fileName: string; fileUrl: string; mimeType?: string; capturedAt?: string };
@@ -87,7 +88,7 @@ const PLAN_STATUS_TO_FRONTEND: Record<string, SitePlanStatus> = {
 function mapTasksToPlanTasks(tasks: BackendPlanTask[]): PlanTask[] {
   return planningTaskTemplates.map((template) => {
     const match = tasks.find((task) => task.id === template.id);
-    return { ...template, qty: match?.qty ?? "", worker: match?.worker ?? "" };
+    return { ...template, qty: match?.qty ?? "", worker: match?.worker ?? "", plumberId: match?.plumberId };
   });
 }
 
@@ -99,6 +100,7 @@ function mapTasksToDprTasks(tasks: BackendDprTask[]): DprTask[] {
       plannedQty: match?.plannedQty ?? "",
       completedQty: match?.completedQty ?? "",
       worker: match?.worker ?? "",
+      plumberId: match?.plumberId,
       delayReason: match?.delayReason ?? "",
     };
   });
@@ -181,10 +183,10 @@ function buildQuery(params: ListParams) {
   return query.toString();
 }
 
-export type SitePlanUpdate = { tasks: { id: string; qty?: string; worker?: string }[] };
+export type SitePlanUpdate = { tasks: { id: string; qty?: string; worker?: string; plumberId?: string }[] };
 
 export type DprRecordUpdate = {
-  tasks?: { id: string; plannedQty?: string; completedQty?: string; worker?: string; delayReason?: string }[];
+  tasks?: { id: string; plannedQty?: string; completedQty?: string; worker?: string; plumberId?: string; delayReason?: string }[];
   remarks?: string;
   status?: "draft" | "submitted";
 };

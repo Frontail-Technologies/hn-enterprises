@@ -21,6 +21,8 @@ export type PlanTask = {
   label: string;
   qty: string;
   worker: string;
+  /** Set when the worker was picked from the plumber list (mobile app). */
+  plumberId?: string;
 };
 
 export type SitePlanStatus = "Submitted" | "Approved" | "Sent back";
@@ -61,6 +63,7 @@ export type DprTask = {
   plannedQty: string;
   completedQty: string;
   worker: string;
+  plumberId?: string;
   delayReason: string;
 };
 

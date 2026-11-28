@@ -80,7 +80,14 @@ export function PlanningDprPage() {
 
   function setTask(id: DprTask["id"], key: EditableField, value: string) {
     setDraft((current) =>
-      current ? { ...current, tasks: current.tasks.map((task) => (task.id === id ? { ...task, [key]: value } : task)) } : current,
+      current
+        ? {
+            ...current,
+            tasks: current.tasks.map((task) =>
+              task.id === id ? { ...task, [key]: value, ...(key === "worker" ? { plumberId: undefined } : {}) } : task,
+            ),
+          }
+        : current,
     );
   }
 
@@ -93,6 +100,7 @@ export function PlanningDprPage() {
         plannedQty: task.plannedQty.trim(),
         completedQty: task.completedQty.trim(),
         worker: task.worker.trim(),
+        plumberId: task.plumberId,
         delayReason: task.delayReason.trim(),
       }))
       .filter((task) => task.plannedQty || task.completedQty || task.worker || task.delayReason);
