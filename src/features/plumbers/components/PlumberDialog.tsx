@@ -116,6 +116,23 @@ export function PlumberDialog({
             </FormField>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Category">
+                <Controller
+                  control={control}
+                  name="category"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(value) => { if (value) field.onChange(value); }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="plumber">Plumber</SelectItem>
+                        <SelectItem value="labour">Labour</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </FormField>
               <FormField label="Type">
                 <Controller
                   control={control}

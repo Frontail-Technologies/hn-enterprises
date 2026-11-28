@@ -187,7 +187,8 @@ export function PlumbersPage() {
       />
 
       <PlumberDialog
-        key={drawerState.plumber?.id ?? "new"}
+        // New record: remount per tab, so "Add Labour" really starts as labour.
+        key={drawerState.plumber?.id ?? `new-${category}`}
         open={drawerState.open}
         onOpenChange={(open) => setDrawerState((current) => ({ ...current, open }))}
         plumber={drawerState.plumber}
