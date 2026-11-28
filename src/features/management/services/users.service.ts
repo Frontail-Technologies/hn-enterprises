@@ -19,6 +19,8 @@ export type User = {
   email: string;
   mobile: string;
   role: UserRole;
+  /** Staff job title for supervisor-role logins (Site Manager, Project Manager...). */
+  designation?: string;
   status: UserStatus;
   lastLogin: string;
 };
@@ -71,8 +73,15 @@ type BackendUser = {
   email: string;
   mobile: string | null;
   role: BackendRole;
+  designation?: string | null;
   status: BackendStatus;
   lastLoginAt: string | null;
+};
+
+const DESIGNATION_LABEL: Record<string, string> = {
+  supervisor: "Supervisor",
+  site_manager: "Site Manager",
+  project_manager: "Project Manager",
 };
 
 function mapUser(raw: BackendUser): User {
@@ -83,6 +92,7 @@ function mapUser(raw: BackendUser): User {
     email: raw.email,
     mobile: raw.mobile ?? "",
     role: ROLE_TO_FRONTEND[raw.role] ?? "Viewer",
+    designation: raw.role === "supervisor" && raw.designation ? DESIGNATION_LABEL[raw.designation] : undefined,
     status: STATUS_TO_FRONTEND[raw.status] ?? "Active",
     lastLogin: raw.lastLoginAt ?? "",
   };

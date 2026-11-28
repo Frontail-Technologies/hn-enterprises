@@ -69,7 +69,8 @@ export function StaffDetailPage({ id }: { id: string }) {
             <DetailRows
               rows={staffMember.hasLogin ? [
                 { label: "Designation", value: staffMember.designation },
-                { label: "Role", value: staffMember.role },
+                // Their login role is "supervisor" (mobile app, own projects only); show the job title instead.
+                { label: "App access", value: staffMember.role === "Supervisor" ? "Mobile app" : staffMember.role },
                 { label: "Username", value: staffMember.username },
                 { label: "Mobile", value: staffMember.contact },
                 { label: "Email", value: staffMember.email },

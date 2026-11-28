@@ -178,7 +178,7 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                       value={field.value || undefined}
                       onValueChange={(userId) => field.onChange(userId ?? "")}
                       placeholder="Select a user without a staff record"
-                      options={availableUsers.map((user) => ({ value: user.id, label: `${user.name} (${user.role})` }))}
+                      options={availableUsers.map((user) => ({ value: user.id, label: `${user.name} (${user.designation ?? user.role})` }))}
                       className="w-full"
                     />
                   )}
@@ -210,8 +210,8 @@ export function StaffDrawer({ users, staffedUserIds }: { users: User[]; staffedU
                   <FormField label="Mobile">
                     <Input {...register("newUser.mobile")} />
                   </FormField>
-                  <FormField label="Role">
-                    <p className="flex h-9 items-center text-sm text-muted-foreground">Supervisor</p>
+                  <FormField label="App access">
+                    <p className="flex h-9 items-center text-sm text-muted-foreground">{designation} · mobile app</p>
                   </FormField>
                 <FormField label="Initial Password" required className="sm:col-span-2">
                   <Input type="password" {...register("newUser.password")} />

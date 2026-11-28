@@ -32,7 +32,7 @@ const columns: ListColumn<User>[] = [
       </>
     ),
   },
-  { id: "role", header: "Role", value: (row) => row.role, sortable: true, width: 150 },
+  { id: "role", header: "Role", value: (row) => row.designation ?? row.role, sortable: true, width: 160 },
   { id: "status", header: "Status", value: (row) => row.status, sortable: true, width: 130, cell: (row) => <StatusBadge status={row.status} /> },
   {
     id: "lastLogin",
