@@ -126,7 +126,7 @@ export function CustomerMapPage() {
                 <label key={stage} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-[13px] hover:bg-muted/60">
                   <Checkbox checked={stages.includes(stage)} onCheckedChange={() => toggleStage(stage)} />
                   {/* Same 3D pin as on the map. Fixed markup from our own constants. */}
-                  <span className="inline-flex h-4 w-3 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: stagePinMarkup(stage) }} />
+                  <span className="inline-flex h-6 w-[18px] shrink-0 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: stagePinMarkup(stage) }} />
                   <span className="flex-1">{STAGE_STYLE[stage].label}</span>
                   <span className="text-xs tabular-nums text-muted-foreground">{counts[stage] ?? 0}</span>
                 </label>

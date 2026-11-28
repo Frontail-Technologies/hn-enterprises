@@ -418,3 +418,24 @@ html[data-desktop] .app-drag-strip {
 .hn-map-pin:hover svg {
   transform: translateY(-2px) scale(1.12);
 }
+.hn-pin-label {
+  display: none;
+  position: absolute;
+  left: 30px;
+  top: 8px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border-left: 3px solid;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.95);
+  color: #0f172a;
+  font: 600 11px/1.4 var(--font-sans, system-ui, sans-serif);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.18);
+  pointer-events: none;
+}
+.hn-show-labels .hn-pin-label {
+  display: block;
+}

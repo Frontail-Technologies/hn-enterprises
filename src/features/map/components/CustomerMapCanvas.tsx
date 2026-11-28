@@ -101,13 +101,14 @@ export function CustomerMapCanvas({
       <FitToPoints points={points} fitKey={fitKey} />
       <FlyToSelected point={selected} markers={markers} />
       <InvalidateOnResize watch={resizeKey} />
+      <NameLabelsWhenZoomed />
       {points.map((point) => {
         const style = STAGE_STYLE[point.stage];
         return (
           <Marker
             key={point.id}
             position={[point.lat, point.lng]}
-            icon={stagePin(point.stage)}
+            icon={stagePin(point.stage, point.name || point.bpNo)}
             title={point.name || point.bpNo}
             ref={(marker) => {
               if (marker) markers.current.set(point.id, marker);
@@ -143,6 +144,20 @@ export function CustomerMapCanvas({
       })}
     </MapContainer>
   );
+}
+
+/** Customer names next to the pins only from street level (zoom 15+), so a wide view stays readable. */
+function NameLabelsWhenZoomed() {
+  const map = useMap();
+  useEffect(() => {
+    const update = () => map.getContainer().classList.toggle("hn-show-labels", map.getZoom() >= 15);
+    update();
+    map.on("zoomend", update);
+    return () => {
+      map.off("zoomend", update);
+    };
+  }, [map]);
+  return null;
 }
 
 /** + / − in the top right (Leaflet's own control, placed out of the panel's way). */
