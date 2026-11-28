@@ -1,6 +1,6 @@
-import { Suspense, type ElementType, type ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { BackToProjectLink } from "./BackToProjectLink";
+import { PageBackButton } from "./PageBackButton";
 import { PageHeader } from "./PageHeader";
 
 interface PageShellProps {
@@ -16,6 +16,8 @@ interface PageShellProps {
   className?: string;
   contentClassName?: string;
   fillHeight?: boolean;
+  /** Where the back arrow left of the title goes (default: previous page, nested pages only). */
+  backHref?: string;
 }
 
 export function PageShell({
@@ -31,6 +33,7 @@ export function PageShell({
   className,
   contentClassName,
   fillHeight = false,
+  backHref,
 }: PageShellProps) {
   return (
     <div
@@ -41,14 +44,13 @@ export function PageShell({
       )}
     >
       <header className={cn("space-y-4", fillHeight && "md:shrink-0 md:space-y-3")}>
-        {/* Reads the address; its own Suspense keeps static pages buildable. */}
-        <Suspense fallback={null}>
-          <BackToProjectLink />
-        </Suspense>
         {hideTitle ? (
-          actions ? <div className="flex justify-end">{actions}</div> : null
+          <div className="flex items-center justify-between gap-2">
+            <PageBackButton href={backHref} />
+            {actions ? <div className="ml-auto flex">{actions}</div> : null}
+          </div>
         ) : (
-          <PageHeader title={title} description={description} icon={icon} eyebrow={eyebrow} actions={actions} />
+          <PageHeader title={title} description={description} icon={icon} eyebrow={eyebrow} actions={actions} backHref={backHref} />
         )}
         {tabs ?? null}
         {toolbar ? <div>{toolbar}</div> : null}

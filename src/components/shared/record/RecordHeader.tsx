@@ -1,5 +1,6 @@
 import type { ElementType, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PageBackButton } from "../PageBackButton";
 
 export type RecordMeta = { icon?: ElementType; label: ReactNode };
 
@@ -14,16 +15,19 @@ interface RecordHeaderProps {
   /** One headline figure on the right, e.g. contract value. */
   figure?: { label: string; value: ReactNode };
   actions?: ReactNode;
+  /** Where the back arrow goes (default: previous page). */
+  backHref?: string;
   className?: string;
 }
 
 /** Top of every detail screen: who/what this is, its status, key facts and actions. */
-export function RecordHeader({ title, leading, badges, meta, figure, actions, className }: RecordHeaderProps) {
+export function RecordHeader({ title, leading, badges, meta, figure, actions, backHref, className }: RecordHeaderProps) {
   const facts = meta?.filter((item) => item.label !== null && item.label !== undefined && item.label !== "") ?? [];
   const hasFactsRow = Boolean(badges) || facts.length > 0;
   return (
     <header className={cn("flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8", className)}>
       <div className="flex min-w-0 flex-1 items-center gap-4">
+        <PageBackButton href={backHref} className="self-start mt-1" />
         {leading}
         <div className="flex min-w-0 flex-col gap-2">
           {/* Long names wrap to two lines (full name on hover) instead of being cut to one. */}

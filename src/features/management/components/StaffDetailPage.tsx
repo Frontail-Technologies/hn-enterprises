@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, AtIcon, EnvelopeSimpleIcon, IdentificationBadgeIcon, NotePencilIcon, PhoneIcon } from "@phosphor-icons/react";
+import { AtIcon, EnvelopeSimpleIcon, IdentificationBadgeIcon, NotePencilIcon, PhoneIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { useBreadcrumbLabel } from "@/components/layout/BreadcrumbLabelContext";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -51,10 +51,6 @@ export function StaffDetailPage({ id }: { id: string }) {
         ]}
         actions={
           <>
-            <Link href="/staff" className={buttonVariants({ variant: "outline" })}>
-              <ArrowLeftIcon size={15} />
-              Back to Staff
-            </Link>
             <Link href={`/staff/${staffMember.id}/edit`} className={buttonVariants({ variant: "default" })}>
               <NotePencilIcon size={15} />
               Edit

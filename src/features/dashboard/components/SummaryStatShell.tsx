@@ -1,12 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon } from "@phosphor-icons/react";
 import type { EmptyIllustrationName } from "@/components/shared/EmptyState";
 import { ListTable, useClientRows, useListState, type ListColumn } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
-import { buttonVariants } from "@/components/ui/button";
 
 export function SummaryStatShell<T extends { id: string }>({
   title,
@@ -43,12 +40,6 @@ export function SummaryStatShell<T extends { id: string }>({
     <PageShell
       title={title}
       description={description}
-      actions={
-        <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          <ArrowLeftIcon size={14} />
-          Back
-        </Link>
-      }
     >
       <ListTable
         onRowClick={

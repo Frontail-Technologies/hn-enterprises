@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftIcon, DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { ListTable, useListState } from "@/components/shared/list";
 import { PageShell } from "@/components/shared/PageShell";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -71,15 +71,6 @@ export function DashboardStatDetailPage({
     <PageShell
       title={definition.title}
       description="Customers counted in this dashboard figure."
-      actions={
-        // Opened from a project: the page header already shows "Back to project".
-        projectId && projectId !== "all" ? undefined : (
-          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "compact" })}>
-            <ArrowLeftIcon size={14} />
-            Back
-          </Link>
-        )
-      }
     >
       <ListTable
         itemLabel="customer"

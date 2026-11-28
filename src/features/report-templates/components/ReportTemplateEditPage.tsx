@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowCounterClockwiseIcon, ArrowLeftIcon, EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon, EyeIcon, FloppyDiskIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,10 +116,6 @@ function TemplateEditForm({ template, loadFailed }: { template: EffectiveReportT
         description="Rename the template and change the labels printed on the form. Saved for every admin."
         actions={
           <>
-            <Link href="/reports/templates" className={buttonVariants({ variant: "ghost" })}>
-              <ArrowLeftIcon size={15} />
-              Templates
-            </Link>
             <Link href={previewHref} className={buttonVariants({ variant: "outline" })}>
               <EyeIcon size={15} />
               Preview

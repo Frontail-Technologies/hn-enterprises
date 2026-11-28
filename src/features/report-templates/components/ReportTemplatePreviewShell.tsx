@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -44,10 +44,6 @@ export function ReportTemplatePreviewShell({ templateId }: { templateId: ReportT
       description={template.description}
       actions={
         <>
-          <Link href="/reports/templates" className={buttonVariants({ variant: "ghost" })}>
-            <ArrowLeftIcon size={15} />
-            Templates
-          </Link>
           <Link href={`/reports/templates/${template.id}/edit`} className={buttonVariants({ variant: "outline" })}>
             <PencilSimpleIcon size={15} />
             Edit template

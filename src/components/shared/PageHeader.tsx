@@ -3,6 +3,7 @@
 import type { ElementType, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { PageBackButton } from './PageBackButton'
 import { PageIcon, pageIconForPath, type PageIconName } from './PageIcon'
 
 interface PageHeaderProps {
@@ -14,10 +15,12 @@ interface PageHeaderProps {
   icon?: ElementType
   eyebrow?: ReactNode
   actions?: ReactNode
+  /** Where the back arrow goes; by default the previous page (shown on nested pages only). */
+  backHref?: string
   className?: string
 }
 
-export function PageHeader({ title, iconName, eyebrow, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, iconName, eyebrow, actions, backHref, className }: PageHeaderProps) {
   const pathname = usePathname()
   const name = iconName === false ? null : (iconName ?? pageIconForPath(pathname))
 
@@ -29,6 +32,7 @@ export function PageHeader({ title, iconName, eyebrow, actions, className }: Pag
       )}
     >
       <div className="flex min-w-0 items-center gap-3.5">
+        <PageBackButton href={backHref} />
         {name ? <PageIcon name={name} /> : null}
         <div className="flex min-w-0 flex-col gap-1">
           {eyebrow ? (
