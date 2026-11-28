@@ -31,7 +31,6 @@ import { formatDate, money } from "../utils/format";
 import { getBillHref } from "../utils/billing.utils";
 import { BillDialog } from "./billing/BillDialog";
 import { BillingActions } from "./billing/BillingActions";
-import { BillingTrends } from "./billing/BillingTrends";
 import { WageDialog } from "./billing/WageDialog";
 import { WageRegister } from "./billing/WageRegister";
 import { projectOption } from "@/features/projects/utils/project-option";
@@ -223,8 +222,6 @@ export function BillingPage() {
             rowActionsWidth={176}
             renderRowActions={(row) => <BillingActions bill={row} />}
           />
-          {/* Charts under the table, so the bills stay at the top. */}
-          <BillingTrends projectId={list.filters.project || undefined} />
         </div>
       ) : (
         <WageRegister month={wageMonth} />
