@@ -79,6 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/dynamic-fields",
         allowedRoles: ["super_admin", "admin"],
       },
+      { id: "settings", label: "Settings", icon: "Gear", href: "/settings", allowedRoles: ["super_admin", "admin"] },
     ],
   },
 ];
